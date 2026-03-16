@@ -22,7 +22,7 @@ World Model (.orb) → Compiler → Valid System
 
 ```bash
 # Install CLI globally
-npm install -g @almadar/orb-cli
+npm install -g @almadar/orb
 
 # Create a new project
 orb new my-app
@@ -220,10 +220,10 @@ Reuse pre-built behaviors:
 
 ```bash
 # npm (recommended)
-npm install -g @almadar/orb-cli
+npm install -g @almadar/orb
 
 # Or use npx
-npx @almadar/orb-cli validate schema.orb
+npx @almadar/orb validate schema.orb
 
 # macOS/Linux
 curl -fsSL https://orb.almadar.io/install.sh | sh
@@ -291,7 +291,7 @@ All `@almadar` packages are published to [npm](https://www.npmjs.com/org/almadar
 
 | Package | Description |
 |---------|-------------|
-| `@almadar/orb-cli` | Orb CLI (validate, compile, dev) |
+| `@almadar/orb` | Orb CLI (validate, compile, dev) |
 | `@almadar/extensions` | Editor extensions (VSCode, Zed) |
 
 ---
