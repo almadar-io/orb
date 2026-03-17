@@ -5,16 +5,16 @@ import Translate from '@docusaurus/Translate';
 import type { SExpr } from '@almadar/core';
 
 // Design system infrastructure — already synced into the website
-import { EventBusProvider } from '../../../../src/design-systems/almadar-ui/providers/OrbitalProvider';
+import { EventBusProvider } from '../design-systems/almadar-ui/providers/OrbitalProvider';
 import {
   UISlotProvider,
   useUISlots,
   type UISlot,
-} from '../../../../src/design-systems/almadar-ui/context/UISlotContext';
-import { UISlotComponent } from '../../../../src/design-systems/almadar-ui/components/organisms/UISlotRenderer';
+} from '../design-systems/almadar-ui/context/UISlotContext';
+import { UISlotComponent } from '../design-systems/almadar-ui/components/organisms/UISlotRenderer';
 
 // Theme CSS — provides data-theme CSS variable definitions
-import '../../../../src/design-systems/almadar-ui/themes/index.css';
+import '../design-systems/almadar-ui/themes/index.css';
 
 import { RENDER_UI_EXAMPLES, type RenderUIExample } from '../data/render-ui-registry';
 import styles from './RenderUIDemo.module.css';

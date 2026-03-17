@@ -10,7 +10,7 @@ import { MODULE_CATALOG } from "../data/module-catalog";
 import styles from "./playground.module.css";
 
 // Load all theme CSS so data-theme attributes resolve to actual variables
-import "../../../../src/design-systems/almadar-ui/themes/index.css";
+import "../design-systems/almadar-ui/themes/index.css";
 
 // ─── Runtime loader (shared) ──────────────────────────────────────────────────
 
