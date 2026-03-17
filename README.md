@@ -241,51 +241,40 @@ brew install almadar-io/tap/orb
 # Core packages
 npm install @almadar/core @almadar/validation @almadar/evaluator
 
-# Standard library
-npm install @almadar/std
+# Standard library and operators
+npm install @almadar/std @almadar/operators
 
 # UI patterns and components
 npm install @almadar/patterns @almadar/ui
 
 # Runtime
-npm install @almadar/runtime @almadar/server
-
-# AI agent infrastructure
-npm install @almadar/agent @almadar/llm @almadar/skills
+npm install @almadar/runtime
 ```
 
 ---
 
 ## Published Packages
 
-All `@almadar` packages are published to [npm](https://www.npmjs.com/org/almadar).
+The Orb language ecosystem is published to [npm](https://www.npmjs.com/org/almadar).
 
 ### Core
 
 | Package | Description |
 |---------|-------------|
 | `@almadar/core` | Core schema types and definitions |
+| `@almadar/operators` | S-expression operator definitions |
+| `@almadar/evaluator` | S-expression evaluator for guards and effects |
+| `@almadar/std` | Standard library operators (math, string, array, etc.) |
 | `@almadar/validation` | Schema validation rules |
-| `@almadar/evaluator` | S-expression evaluator |
-| `@almadar/std` | Standard library operators |
 | `@almadar/patterns` | Pattern registry and component mappings |
 
-### Runtime
+### Runtime & UI
 
 | Package | Description |
 |---------|-------------|
 | `@almadar/runtime` | Interpreted runtime for orbital applications |
-| `@almadar/server` | Server infrastructure (Express middleware) |
 | `@almadar/ui` | React UI components, hooks, and providers |
-| `@almadar/integrations` | External service integrations |
-
-### AI & Agent
-
-| Package | Description |
-|---------|-------------|
-| `@almadar/agent` | AI agent infrastructure |
-| `@almadar/llm` | Multi-provider LLM client |
-| `@almadar/skills` | AI skill generators and prompts |
+| `@almadar/mobile` | React Native UI components |
 
 ### Tooling
 
@@ -293,6 +282,7 @@ All `@almadar` packages are published to [npm](https://www.npmjs.com/org/almadar
 |---------|-------------|
 | `@almadar/orb` | Orb CLI (validate, compile, dev) |
 | `@almadar/extensions` | Editor extensions (VSCode, Zed) |
+| `@almadar/eslint-plugin` | ESLint rules for Almadar component architecture |
 
 ---
 
