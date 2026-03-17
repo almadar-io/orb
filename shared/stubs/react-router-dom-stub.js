@@ -3,7 +3,13 @@
  * to avoid circular alias) and adds v6-only stubs for @almadar/ui.
  */
 
-const real = require('../../node_modules/react-router-dom/index.js');
+let real = {};
+try {
+  // Use the resolved react-router-dom — Node finds it in any ancestor node_modules
+  real = require('react-router-dom/index.js');
+} catch (e) {
+  try { real = require('react-router-dom'); } catch (e2) { /* SSR safe fallback */ }
+}
 
 // Re-export all real v5 exports
 module.exports = {

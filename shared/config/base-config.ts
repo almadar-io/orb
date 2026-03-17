@@ -108,10 +108,10 @@ export function createConfig(opts: SiteConfig): Config {
                 alias: {
                   // Shared components accessible from all sites
                   '@shared': path.resolve(__dirname, '../components'),
-                  // Deduplicate react-router: force all imports to the repo's
+                  // Deduplicate react-router: force all imports to a
                   // single v5 copy so Router context is shared across the bundle.
-                  'react-router': path.resolve(__dirname, '../../node_modules/react-router'),
-                  'react-router-dom': path.resolve(__dirname, '../../node_modules/react-router-dom'),
+                  'react-router': path.dirname(require.resolve('react-router/package.json')),
+                  'react-router-dom': path.dirname(require.resolve('react-router-dom/package.json')),
                 },
                 // Node core modules are not available in the browser; stub them out
                 // (almadar-runtime pulls in fs/path for its Node-side external loader)

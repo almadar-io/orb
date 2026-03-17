@@ -329,6 +329,14 @@ function buildMockData(schema: Record<string, unknown>): Record<string, unknown[
   if (!entity) return {};
   const fields = (entity.fields as Record<string, unknown>[]) ?? [];
   const entityName = entity.name as string;
+
+  // Use entity instances if available (behaviors like isometric-canvas seed real data)
+  const instances = entity.instances as Record<string, unknown>[] | undefined;
+  if (instances && instances.length > 0) {
+    return { [entityName]: instances };
+  }
+
+  // Generate synthetic mock data from field definitions
   const items = Array.from({ length: 10 }, (_, i) => {
     const idx = i + 1;
     const item: Record<string, unknown> = { id: String(idx) };
