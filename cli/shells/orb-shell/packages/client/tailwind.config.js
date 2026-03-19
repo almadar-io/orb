@@ -3,7 +3,7 @@ const require = createRequire(import.meta.url);
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  presets: [require('./tailwind-preset.js')],
+  presets: [require('./tailwind-preset.cjs')],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
