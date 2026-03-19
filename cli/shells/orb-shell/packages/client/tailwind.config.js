@@ -3,7 +3,7 @@ const require = createRequire(import.meta.url);
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  presets: [require('@almadar/ui/tailwind-preset')],
+  presets: [require('./tailwind-preset.js')],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
