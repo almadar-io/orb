@@ -4,7 +4,7 @@ import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import Translate, { translate } from "@docusaurus/Translate";
-import BrowserOnly from "@docusaurus/BrowserOnly";
+// BrowserOnly import removed (TryIt section removed)
 import CodeBlock from "@theme/CodeBlock";
 import { MonitorSmartphone, ShieldCheck, Bot } from "lucide-react";
 import styles from "./index.module.css";
@@ -176,32 +176,7 @@ function StdLibSection() {
   );
 }
 
-function TryItSection() {
-  return (
-    <section className={`${styles.section} ${styles.sectionAlt}`}>
-      <div className="container">
-        <div className={styles.sectionHeader}>
-          <Heading as="h2">
-            <Translate id="orb.tryit.title">Try It</Translate>
-          </Heading>
-          <p className={styles.sectionSubtitle}>
-            <Translate id="orb.tryit.subtitle">
-              Describe an app. Get a valid .orb program in seconds.
-            </Translate>
-          </p>
-        </div>
-        <div className={styles.centered}>
-          <BrowserOnly fallback={<p style={{ color: '#94a3b8' }}>Loading builder...</p>}>
-            {() => {
-              const { AlmadarBuilder } = require('@site/src/components/AlmadarBuilder');
-              return <AlmadarBuilder compact />;
-            }}
-          </BrowserOnly>
-        </div>
-      </div>
-    </section>
-  );
-}
+// TryIt section removed
 
 function CommunitySection() {
   return (
@@ -218,7 +193,7 @@ function CommunitySection() {
           </p>
         </div>
         <div className={styles.communityLinks}>
-          <Link className="button button--primary button--lg" href="https://github.com/almadar-io/almadar">GitHub</Link>
+          <Link className="button button--primary button--lg" href="https://github.com/almadar-io/orb">GitHub</Link>
           <Link className="button button--secondary button--lg" href="https://discord.gg/q83VjPJx">Discord</Link>
         </div>
       </div>
@@ -237,7 +212,6 @@ export default function OrbHome(): ReactNode {
         <ExampleSection />
         <WhySection />
         <StdLibSection />
-        <TryItSection />
         <CommunitySection />
       </main>
     </Layout>

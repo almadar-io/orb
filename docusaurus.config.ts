@@ -11,7 +11,6 @@ export default createConfig({
   },
   navbarItems: [
     { to: "/docs/getting-started/introduction", label: "Docs", position: "left" },
-    { to: "/stdlib", label: "Standard Library", position: "left" },
     { to: "/downloads", label: "Downloads", position: "left" },
     { to: "/playground", label: "Playground", position: "left" },
   ],
