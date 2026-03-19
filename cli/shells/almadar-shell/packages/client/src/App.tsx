@@ -31,7 +31,8 @@ import defaultLocale from '@almadar/ui/locales/en.json';
 const schema = { name: 'app', orbitals: [] }; // Placeholder - replaced by compiler
 
 // {{GENERATED_I18N_VALUE}}
-const i18nValue = { locale: 'en', direction: 'ltr' as const, t: createTranslate(defaultLocale) };
+const { $meta: defaultMeta, ...defaultMessages } = defaultLocale;
+const i18nValue = { locale: defaultMeta?.locale ?? 'en', direction: (defaultMeta?.direction ?? 'ltr') as 'ltr' | 'rtl', t: createTranslate(defaultMessages) };
 
 const queryClient = new QueryClient({
   defaultOptions: {

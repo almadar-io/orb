@@ -13,6 +13,18 @@
 module.exports = {
   darkMode: 'class',
   safelist: [
+  // Standard utilities used via dynamic className from .orb schemas
+  'p-4', 'p-6', 'p-8',
+  'px-4', 'px-6', 'py-4', 'py-6',
+  'mx-auto',
+  'w-full',
+  'max-w-sm', 'max-w-md', 'max-w-lg', 'max-w-xl', 'max-w-2xl', 'max-w-3xl', 'max-w-4xl', 'max-w-5xl', 'max-w-6xl', 'max-w-7xl',
+  'min-h-screen',
+  'gap-1', 'gap-2', 'gap-3', 'gap-4', 'gap-6', 'gap-8',
+  'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4',
+  'sm:grid-cols-2', 'md:grid-cols-2', 'md:grid-cols-3', 'lg:grid-cols-3', 'lg:grid-cols-4',
+  'text-center', 'text-left', 'text-right',
+  // CSS variable-based classes from @almadar/ui components
   'accent-[var(--color-foreground)]',
   'accent-[var(--color-primary)]',
   'active:bg-[var(--color-muted)]',
