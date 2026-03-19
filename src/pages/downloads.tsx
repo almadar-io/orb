@@ -39,7 +39,7 @@ function CLISection() {
                 </p>
               </div>
               <div className={styles.installBox}>
-                <code>npm install -g @almadar/cli</code>
+                <code>curl -fsSL https://orb.almadar.io/install.sh | sh</code>
               </div>
             </div>
           </div>

@@ -25,7 +25,7 @@ function Hero() {
           </Translate>
         </p>
         <div className={styles.installBox}>
-          <code>npm install -g @almadar/cli</code>
+          <code>curl -fsSL https://orb.almadar.io/install.sh | sh</code>
         </div>
         <div className={styles.buttons}>
           <Link className="button button--primary button--lg" to="/docs/getting-started/introduction">
