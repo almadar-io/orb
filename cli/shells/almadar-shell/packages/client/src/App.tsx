@@ -21,6 +21,7 @@ import {
 } from '@almadar/ui/providers';
 import { NavigationProvider } from '@almadar/ui/renderer';
 import { I18nProvider, createTranslate } from '@almadar/ui/hooks';
+import defaultLocale from '@almadar/ui/locales/en.json';
 
 // {{GENERATED_I18N_IMPORT}}
 // {{GENERATED_IMPORTS}}
@@ -30,7 +31,7 @@ import { I18nProvider, createTranslate } from '@almadar/ui/hooks';
 const schema = { name: 'app', orbitals: [] }; // Placeholder - replaced by compiler
 
 // {{GENERATED_I18N_VALUE}}
-const i18nValue = { locale: 'en', direction: 'ltr' as const, t: createTranslate({}) };
+const i18nValue = { locale: 'en', direction: 'ltr' as const, t: createTranslate(defaultLocale) };
 
 const queryClient = new QueryClient({
   defaultOptions: {
