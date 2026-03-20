@@ -1,332 +1,309 @@
 # Standard Library
 
-> Standard library behaviors for Orb applications
+> 93 reusable behaviors organized as atoms, molecules, and organisms.
 
 ---
 
-## 1. Overview
+## Overview
 
-The Standard Library provides **34 reusable behaviors** (standard traits) for the Orbital system. Each behavior is a self-contained `OrbitalSchema` that can function as a standalone `.orb` file.
+The Standard Library provides **93 reusable behaviors** for Orb applications, organized in three tiers:
 
-### Behavior Categories
+| Tier | Count | Role | Examples |
+|------|-------|------|----------|
+| **Atoms** | 50 | Self-contained, irreducible state machines | std-browse, std-modal, std-search, std-filter, std-timer |
+| **Molecules** | 18 | Compose atoms via shared event bus | std-list, std-cart, std-detail, std-messaging |
+| **Organisms** | 25 | Compose molecules into full applications | std-ecommerce, std-crm, std-lms, std-helpdesk |
 
-| Category | Behaviors |
-|----------|-----------|
-| **Game Core** | GameLoop, Physics2D, Input, Collision |
-| **Game Entity** | Health, Score, Movement, Combat, Inventory |
-| **Game UI** | GameFlow, Dialogue, LevelProgress |
-| **UI Interaction** | List, Detail, Form, Modal, Drawer, Tabs, Wizard, MasterDetail, Filter |
-| **Data Management** | Pagination, Selection, Sort, Filter, Search |
-| **Async** | Loading, Fetch, Submit, Retry, Poll |
-| **Feedback** | Notification, Confirmation, Undo |
-
----
-
-## 2. Behavior Structure (OrbitalSchema)
-
-Each behavior is a complete `OrbitalSchema` (aliased as `BehaviorSchema`):
+Each behavior is a pure function that returns a complete `OrbitalDefinition` (entity + traits + pages). You call it with parameters (entity name, fields, page path) and get a ready-to-compile `.orb` structure.
 
 ```typescript
-import type { BehaviorSchema } from '@almadar/std';
+import { stdList } from '@almadar/std/behaviors/functions';
 
-export const LIST_BEHAVIOR: BehaviorSchema = {
-  name: 'std-list',
-  version: '1.0.0',
-  description: 'Entity list with selection and actions',
-  orbitals: [{
-    name: 'ListOrbital',
-    entity: {
-      name: 'ListState',
-      persistence: 'runtime',
-      fields: [
-        { name: 'id', type: 'string', required: true },
-        { name: 'selectedId', type: 'string', default: null },
-        { name: 'items', type: 'array', default: [] },
-      ],
-    },
-    traits: [{
-      name: 'List',
-      linkedEntity: 'ListState',
-      category: 'interaction',
-      stateMachine: {
-        states: [
-          { name: 'Empty', isInitial: true },
-          { name: 'Loaded' },
-          { name: 'ItemSelected' },
-        ],
-        events: [/* ... */],
-        transitions: [/* ... */],
-      },
-    }],
-    pages: [],
-  }],
-};
-```
-
-### Key Structure Points
-
-- **`name`**: Kebab-case with `std-` prefix (e.g., `std-list`, `std-gameloop`)
-- **`orbitals`**: Array containing one orbital with entity, traits, and pages
-- **`entity`**: Runtime state fields
-- **`traits`**: Array of trait definitions with `linkedEntity`
-- **`pages`**: Empty array (required by type, can be populated for pages)
-
----
-
-## 3. Type-Safe Pattern Validation
-
-### PatternType Union
-
-The `render-ui` effect enforces valid pattern types at compile-time:
-
-```typescript
-import type { PatternConfig } from '@almadar/core';
-
-export interface PatternConfig {
-  type: PatternType;  // 203 valid patterns
-  [key: string]: unknown;
-}
-```
-
-The `PatternType` union includes all registered patterns:
-
-```typescript
-export type PatternType =
-  | 'entity-table'
-  | 'card'
-  | 'form'
-  | 'button'
-  // ... 199 more patterns
-  ;
-```
-
-### Usage in Behaviors
-
-```typescript
-// ✅ Valid - 'entity-table' with typed props
-['render-ui', 'main', { patternType: 'entity-table', columns: ['name', 'email'] }]
-
-// ❌ TypeScript error - 'fake-pattern' is not a valid PatternType
-['render-ui', 'main', { patternType: 'fake-pattern' }]
-
-// ❌ TypeScript error - missing required 'columns' prop
-['render-ui', 'main', { patternType: 'entity-table' }]
+const orbital = stdList({
+  entityName: 'Product',
+  fields: [
+    { name: 'title', type: 'string', required: true },
+    { name: 'price', type: 'number', required: true },
+  ],
+  pagePath: '/products',
+  pageTitle: 'Products',
+});
+// Returns: entity + 4 traits (browse, create, edit, view) + 1 page
 ```
 
 ---
 
-## 4. Usage
+## Composition Model
 
-### Import Behaviors
+### Atoms: Building Blocks
 
-```typescript
-import { 
-  LIST_BEHAVIOR,
-  FORM_BEHAVIOR,
-  LOADING_BEHAVIOR,
-  STANDARD_BEHAVIORS,
-} from '@almadar/std';
+Atoms are irreducible. Each is a single trait with a single state machine. They don't know about each other.
 
-// Access all 34 behaviors
-console.log(STANDARD_BEHAVIORS.length); // 34
+```
+std-browse: Browsing ──INIT──► Browsing (fetch + render list)
+std-modal:  Closed ──OPEN──► Open ──CLOSE──► Closed
+std-search: Idle ──SEARCH──► Searching ──RESULTS──► Idle
+std-filter: Idle ──FILTER──► Filtered ──CLEAR──► Idle
 ```
 
-### Type Imports
+### Molecules: Composed Atoms
 
-```typescript
-import type { 
-  BehaviorSchema,   // OrbitalSchema alias
-  OrbitalSchema,    // Full schema type
-  Orbital,          // Single orbital
-  Entity,           // Entity definition
-} from '@almadar/std';
+Molecules combine atoms using `extractTrait` (pull out the trait) and `wire` (connect emit/listen events between traits). A molecule is NOT a new behavior. It's atoms wired together.
+
+```
+std-list = std-browse + std-modal(create) + std-modal(edit) + std-modal(view)
+  └─ browse emits SELECT ──► view listens
+  └─ create emits SAVED ──► browse listens (refresh)
+  └─ edit emits SAVED ──► browse listens (refresh)
 ```
 
-### Registry Functions
-
 ```typescript
-import { 
-  getBehavior,
-  isKnownBehavior,
-  getAllBehaviorNames,
-  getBehaviorLibraryStats,
-} from '@almadar/std';
+import { stdBrowse, stdModal } from '@almadar/std/behaviors/functions';
+import { connect, compose } from '@almadar/core/builders';
 
-// Get behavior by name
-const list = getBehavior('std-list');
+// std-list is roughly this composition:
+const browseTrait = extractTrait(stdBrowse({ entityName: 'Product', ... }));
+const createTrait = extractTrait(stdModal({ mode: 'create', ... }));
+const editTrait = extractTrait(stdModal({ mode: 'edit', ... }));
+const viewTrait = extractTrait(stdModal({ mode: 'view', ... }));
 
-// Check if valid
-if (isKnownBehavior('std-form')) { /* ... */ }
+// Wire events between traits
+wire(createTrait, 'PRODUCT_CREATED', browseTrait, 'INIT');
+wire(editTrait, 'PRODUCT_UPDATED', browseTrait, 'INIT');
 
-// Get stats
-const stats = getBehaviorLibraryStats();
-// { totalBehaviors: 34, totalStates: X, totalEvents: X, ... }
+// Compose into one orbital
+const orbital = compose({
+  entityName: 'Product',
+  traits: [browseTrait, createTrait, editTrait, viewTrait],
+  pages: [{ path: '/products', traits: ['ProductBrowse', 'ProductCreate', 'ProductEdit', 'ProductView'] }],
+});
+```
+
+### Organisms: Full Applications
+
+Organisms compose molecules into multi-page applications with cross-entity wiring.
+
+```
+std-ecommerce = std-list(Product) + std-cart(CartItem) + std-wizard(Checkout)
+  └─ Product browse emits ADD_TO_CART ──► Cart listens
+  └─ Cart emits CHECKOUT ──► Checkout listens
+  └─ Checkout emits ORDER_PLACED ──► Cart listens (clear)
 ```
 
 ---
 
-## Complete Behavior Reference (34 Behaviors)
+## Behavior Catalog
 
-### Game Behaviors (12)
+### Atoms (50)
 
-| Behavior | Description | States | Events |
-|----------|-------------|--------|--------|
-| `GAME_LOOP_BEHAVIOR` | Main game loop with update/render | Paused, Running | START, PAUSE, RESUME |
-| `PHYSICS_2D_BEHAVIOR` | 2D physics simulation | Static, Dynamic | COLLISION, APPLY_FORCE |
-| `INPUT_BEHAVIOR` | Input handling (keyboard, mouse, touch) | Idle, Active | KEY_DOWN, KEY_UP, CLICK |
-| `COLLISION_BEHAVIOR` | Collision detection | Clear, Colliding | ENTER, EXIT |
-| `HEALTH_BEHAVIOR` | Health/damage system | Healthy, Damaged, Dead | DAMAGE, HEAL, REVIVE |
-| `SCORE_BEHAVIOR` | Points/scoring system | Idle, Updating | ADD_POINTS, RESET |
-| `MOVEMENT_BEHAVIOR` | Entity movement | Idle, Moving | MOVE, STOP, TELEPORT |
-| `COMBAT_BEHAVIOR` | Combat mechanics | Peaceful, InCombat, Cooldown | ATTACK, DEFEND, DODGE |
-| `INVENTORY_BEHAVIOR` | Item inventory | Empty, HasItems | ADD_ITEM, REMOVE_ITEM |
-| `GAME_FLOW_BEHAVIOR` | Game state management | Menu, Playing, Paused, GameOver | START, PAUSE, RESUME, END |
-| `DIALOGUE_BEHAVIOR` | NPC dialogue system | Idle, Active | START_DIALOGUE, ADVANCE, END |
-| `LEVEL_PROGRESS_BEHAVIOR` | Level/quest tracking | InProgress, Completed | COMPLETE_OBJECTIVE, UNLOCK |
+#### UI Interaction
+| Behavior | Description |
+|----------|-------------|
+| `std-browse` | Entity list with fetch, render as data-grid or entity-cards |
+| `std-modal` | Open/close overlay for create, edit, or view |
+| `std-drawer` | Slide-in panel from edge of screen |
+| `std-tabs` | Tab switching with content panels |
+| `std-wizard` | Multi-step form with next/back navigation |
+| `std-confirmation` | Yes/no dialog before destructive actions |
+| `std-display` | Read-only entity detail view |
+| `std-input` | Form input with validation |
+| `std-upload` | File upload with progress |
+| `std-gallery` | Image gallery with lightbox |
+| `std-flip-card` | Card with front/back flip animation |
+| `std-rating` | Star or numeric rating input |
+| `std-text-effects` | Animated text (typewriter, fade, etc.) |
+| `std-theme` | Theme switching (light/dark/custom) |
 
-### UI Interaction Behaviors (9)
+#### Data Management
+| Behavior | Description |
+|----------|-------------|
+| `std-search` | Search input with debounced query + filtered results |
+| `std-filter` | Filter controls that narrow a dataset |
+| `std-sort` | Sort controls for column ordering |
+| `std-pagination` | Page navigation for large datasets |
+| `std-selection` | Multi-select with checkboxes |
+| `std-undo` | Undo/redo stack for reversible actions |
+| `std-calendar` | Date picker / calendar view |
 
-| Behavior | Description | Use Case |
-|----------|-------------|----------|
-| `LIST_BEHAVIOR` | Entity list with selection | Data tables, lists |
-| `DETAIL_BEHAVIOR` | Single entity display | Item detail, profile |
-| `FORM_BEHAVIOR` | Input form handling | Create/edit forms |
-| `MODAL_BEHAVIOR` | Modal dialog | Alerts, confirmations |
-| `DRAWER_BEHAVIOR` | Side panel drawer | Navigation, filters |
-| `TABS_BEHAVIOR` | Tab interface | Content sections |
-| `WIZARD_BEHAVIOR` | Multi-step wizard | Onboarding, checkout |
-| `MASTER_DETAIL_BEHAVIOR` | Master-detail layout | Email, file explorer |
-| `FILTER_BEHAVIOR` | Data filtering | Search results, lists |
+#### Async + State
+| Behavior | Description |
+|----------|-------------|
+| `std-async` | Loading/success/error state machine for async operations |
+| `std-loading` | Loading spinner with timeout |
+| `std-timer` | Countdown or stopwatch |
+| `std-notification` | Toast notifications with auto-dismiss |
+| `std-cache-aside` | Cache-aside pattern (check cache, fetch if miss) |
+| `std-circuit-breaker` | Circuit breaker for failing external calls |
+| `std-rate-limiter` | Rate limiting for API calls |
 
-### Data Management Behaviors (5)
+#### Game Core
+| Behavior | Description |
+|----------|-------------|
+| `std-combat` | Turn-based or real-time combat system |
+| `std-movement` | Grid or free movement on a map |
+| `std-collision` | Collision detection between game objects |
+| `std-physics2d` | 2D physics simulation (gravity, velocity) |
+| `std-quest` | Quest/mission tracking with objectives |
+| `std-overworld` | World map with location selection |
+| `std-gameflow` | Game state machine (menu, playing, paused, game-over) |
+| `std-sprite` | Sprite animation with frame sequences |
+| `std-score` | Score tracking with multipliers |
 
-| Behavior | Description | Features |
-|----------|-------------|----------|
-| `PAGINATION_BEHAVIOR` | Page through data | Page size, navigation |
-| `SELECTION_BEHAVIOR` | Multi-select items | Select all, range select |
-| `SORT_BEHAVIOR` | Sort data columns | Multi-column sort |
-| `SEARCH_BEHAVIOR` | Full-text search | Debounced, filters |
+#### Game UI
+| Behavior | Description |
+|----------|-------------|
+| `std-game-hud` | Heads-up display (health, mana, minimap) |
+| `std-score-board` | Leaderboard / high scores |
+| `std-game-menu` | Main menu, settings, credits |
+| `std-game-over-screen` | Game over with retry/quit |
+| `std-dialogue-box` | NPC dialogue with choices |
+| `std-inventory-panel` | Inventory grid with drag-and-drop |
+| `std-combat-log` | Scrolling combat event log |
+| `std-game-audio` | Music and sound effect management |
 
-### Async Behaviors (5)
+#### Game Canvas
+| Behavior | Description |
+|----------|-------------|
+| `std-game-canvas2d` | 2D canvas rendering loop |
+| `std-game-canvas3d` | 3D canvas with Three.js integration |
+| `std-isometric-canvas` | Isometric tile-based game canvas |
+| `std-platformer-canvas` | Side-scrolling platformer canvas |
+| `std-simulation-canvas` | Physics/particle simulation canvas |
 
-| Behavior | Description | States |
-|----------|-------------|--------|
-| `LOADING_BEHAVIOR` | Loading states | Idle, Loading, Success, Error |
-| `FETCH_BEHAVIOR` | Data fetching | Fresh, Stale, Refreshing |
-| `SUBMIT_BEHAVIOR` | Form submission | Ready, Submitting, Submitted |
-| `RETRY_BEHAVIOR` | Retry with backoff | Failed, Retrying, Recovered |
-| `POLL_BEHAVIOR` | Polling updates | Polling, Stopped |
+### Molecules (18)
 
-### Feedback Behaviors (3)
+| Behavior | Composed From | Description |
+|----------|--------------|-------------|
+| `std-list` | browse + modal(create/edit/view) | Full CRUD list with create, edit, view modals |
+| `std-detail` | display + modal(edit) | Detail view with inline editing |
+| `std-cart` | browse + selection + confirmation | Shopping cart with add/remove/checkout |
+| `std-inventory` | browse + selection + modal | Inventory management with stock tracking |
+| `std-messaging` | browse + input + async | Real-time message list with send |
+| `std-geospatial` | browse + modal + map | Location-based data with map markers |
+| `std-form-advanced` | wizard + input + validation | Multi-section form with conditional fields |
+| `std-quiz` | wizard + score + timer | Timed quiz with scoring |
+| `std-turn-based-battle` | combat + score + game-hud | Turn-based battle system |
+| `std-platformer-game` | movement + collision + physics2d | Side-scrolling platformer mechanics |
+| `std-puzzle-game` | selection + score + timer | Puzzle game with move counting |
+| `std-builder-game` | selection + inventory + canvas | Builder/crafting game mechanics |
+| `std-classifier-game` | selection + score + timer | Sorting/classification game |
+| `std-sequencer-game` | timer + score + input | Sequence memorization game |
+| `std-debugger-game` | browse + selection + score | Bug-finding debugging game |
+| `std-negotiator-game` | dialogue + score + timer | Negotiation/dialogue game |
+| `std-simulator-game` | simulation-canvas + timer + score | Physics simulation game |
+| `std-event-handler-game` | timer + score + input | Event-driven reaction game |
 
-| Behavior | Description | Features |
-|----------|-------------|----------|
-| `NOTIFICATION_BEHAVIOR` | Toast notifications | Auto-dismiss, actions |
-| `CONFIRMATION_BEHAVIOR` | Confirm actions | OK/Cancel, custom buttons |
-| `UNDO_BEHAVIOR` | Undo/redo stack | Time-limited undo |
+### Organisms (25)
+
+| Behavior | Domain | Description |
+|----------|--------|-------------|
+| `std-ecommerce` | Commerce | Product catalog + cart + checkout |
+| `std-crm` | Sales | Contact/deal/pipeline management |
+| `std-lms` | Education | Course/lesson/progress tracking |
+| `std-cms` | Content | Article/page/media management |
+| `std-helpdesk` | Support | Ticket triage, investigation, resolution |
+| `std-hr-portal` | HR | Employee/leave/review management |
+| `std-social-feed` | Social | Post/comment/like feed |
+| `std-project-manager` | PM | Task/sprint/board management |
+| `std-booking-system` | Hospitality | Room/slot/reservation management |
+| `std-finance-tracker` | Finance | Transaction/budget/report tracking |
+| `std-healthcare` | Medical | Patient/appointment/record management |
+| `std-realtime-chat` | Communication | Chat rooms with real-time messages |
+| `std-trading-dashboard` | Finance | Market data + order execution |
+| `std-iot-dashboard` | IoT | Device monitoring + alerts |
+| `std-devops-dashboard` | DevOps | Service health + deployment tracking |
+| `std-cicd-pipeline` | DevOps | Build/test/deploy pipeline |
+| `std-api-gateway` | Infrastructure | Route/rate-limit/auth management |
+| `std-coding-academy` | Education | Interactive coding lessons |
+| `std-stem-lab` | Education | Science experiment simulations |
+| `std-logic-training` | Education | Logic puzzle training |
+| `std-rpg-game` | Gaming | Role-playing game with quests + combat |
+| `std-platformer-app` | Gaming | Full platformer game application |
+| `std-puzzle-app` | Gaming | Puzzle game collection |
+| `std-strategy-game` | Gaming | Turn-based strategy game |
+| `std-arcade-game` | Gaming | Classic arcade game mechanics |
 
 ---
 
-## API Reference
+## Using Behaviors
 
-### Behavior Registry
-
-```typescript
-// Get single behavior
-import { getBehavior } from '@almadar/std';
-
-// Check if exists
-import { isKnownBehavior } from '@almadar/std';
-
-// List all
-import { getAllBehaviorNames, getAllBehaviors } from '@almadar/std';
-
-// Metadata
-import { getAllBehaviorMetadata } from '@almadar/std';
-
-// Find by use case
-import { findBehaviorsForUseCase } from '@almadar/std';
-
-// Event filtering
-import { getBehaviorsForEvent } from '@almadar/std';
-
-// State filtering
-import { getBehaviorsWithState } from '@almadar/std';
-
-// Validation
-import { validateBehaviorReference } from '@almadar/std';
-```
-
-### Standard Library Operators
+### As Pure Functions
 
 ```typescript
-// Math operations
-import { MATH_OPERATORS } from '@almadar/std';
+import { stdList, stdEcommerce } from '@almadar/std/behaviors/functions';
 
-// String operations
-import { STR_OPERATORS } from '@almadar/std';
+// Simple: one entity with CRUD
+const tasks = stdList({
+  entityName: 'Task',
+  fields: [
+    { name: 'title', type: 'string', required: true },
+    { name: 'status', type: 'enum', values: ['todo', 'doing', 'done'] },
+  ],
+  pagePath: '/tasks',
+});
 
-// Array operations
-import { ARRAY_OPERATORS } from '@almadar/std';
-
-// Object operations
-import { OBJECT_OPERATORS } from '@almadar/std';
-
-// Time operations
-import { TIME_OPERATORS } from '@almadar/std';
-
-// Validation
-import { VALIDATE_OPERATORS } from '@almadar/std';
-
-// Formatting
-import { FORMAT_OPERATORS } from '@almadar/std';
-
-// Async utilities
-import { ASYNC_OPERATORS } from '@almadar/std';
+// Complex: multi-entity e-commerce
+const shop = stdEcommerce({
+  productEntity: 'Product',
+  productFields: [...],
+  cartEntity: 'CartItem',
+  orderEntity: 'Order',
+});
 ```
 
-### Registry Access
+### As Golden .orb Files
+
+Every behavior is also exported as a `.orb` file in `@almadar/std/behaviors/exports/`:
+
+```bash
+# List all available behaviors
+ls node_modules/@almadar/std/behaviors/exports/atoms/
+ls node_modules/@almadar/std/behaviors/exports/molecules/
+ls node_modules/@almadar/std/behaviors/exports/organisms/
+```
+
+These golden files are used by:
+- The Orb compiler for behavior matching
+- The AI agent for schema generation
+- The Masar planner for structural comparison
+
+### Composing Custom Behaviors
 
 ```typescript
-// All operators lookup
-import {
-  STD_OPERATORS,
-  STD_OPERATORS_BY_MODULE,
-  getStdOperatorMeta,
-  isKnownStdOperator,
-} from '@almadar/std';
+import { stdBrowse, stdModal, stdSearch } from '@almadar/std/behaviors/functions';
+import { compose, wire, extractTrait } from '@almadar/core/builders';
 
-// Module queries
-import {
-  getModuleOperators,
-  getAllStdOperators,
-  getStdOperatorsByModule,
-} from '@almadar/std';
-
-// Classification
-import {
-  getLambdaOperators,
-  getStdEffectOperators,
-  getStdPureOperators,
-} from '@almadar/std';
-
-// Validation
-import {
-  validateStdOperatorArity,
-  isStdGuardOperator,
-  isStdEffectOperator,
-} from '@almadar/std';
+// Create a custom molecule: searchable list with create modal
+const searchableCatalog = compose({
+  appName: 'Catalog',
+  orbitals: [
+    stdBrowse({ entityName: 'Item', fields: [...] }),
+    stdSearch({ entityName: 'Item' }),
+    stdModal({ entityName: 'Item', mode: 'create' }),
+  ],
+});
 ```
 
-### Documentation Generation
+---
 
-```typescript
-import {
-  generateOperatorDoc,
-  generateModuleDoc,
-  generateBehaviorDoc,
-  generateModulesDocs,
-  generateBehaviorsDocs,
-  generateStdLibDocs,
-} from '@almadar/std';
-```
+## Pattern Integration
+
+Behaviors use patterns from the **pattern registry** (233 patterns) for their `render-ui` effects. Each pattern maps to a React component:
+
+| Pattern Category | Examples | Used By |
+|-----------------|----------|---------|
+| Data display | `data-grid`, `entity-table`, `entity-cards`, `data-list` | std-browse |
+| Forms | `form-section`, `form-field`, `form-wizard` | std-modal, std-wizard |
+| Navigation | `page-header`, `breadcrumb`, `tabs` | std-tabs, pages |
+| Feedback | `alert`, `toast`, `modal-dialog` | std-notification, std-confirmation |
+| Layout | `stack`, `grid`, `sidebar-layout` | All organisms |
+| Game | `game-canvas`, `game-hud`, `score-display` | Game behaviors |
+
+---
+
+## Next Steps
+
+- [Entities](./entities.md): How entity data models work
+- [Traits](./traits.md): How state machines define behavior
+- [Patterns](./patterns.md): How render-ui effects map to components
+- [Closed Circuit](./closed-circuit.md): The event flow pattern
