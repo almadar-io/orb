@@ -161,8 +161,11 @@ function SchemaRunner({ rt, schema, mockData }: { rt: RuntimeComponents; schema:
     const seen = new Set<string>();
     for (const page of ir.pages.values()) {
       for (const t of page.traits) {
-        const name = (t as { name?: string }).name ?? '';
-        if (!seen.has(name)) {
+        // Trait bindings have .trait.name (the inner trait) and .name (binding name)
+        const binding = t as Record<string, unknown>;
+        const traitObj = binding.trait as Record<string, unknown> | undefined;
+        const name = (traitObj?.name ?? binding.name ?? '') as string;
+        if (name && !seen.has(name)) {
           seen.add(name);
           combined.push(t);
         }
