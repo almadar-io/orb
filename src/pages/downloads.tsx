@@ -70,14 +70,14 @@ function CLISection() {
 const EXTENSIONS = [
   {
     titleId: "downloads.vscode.title", title: "VS Code Extension",
-    descId: "downloads.vscode.desc", desc: "Syntax highlighting, validation, and autocomplete for .orb files in Visual Studio Code.",
+    descId: "downloads.vscode.desc", desc: "Syntax highlighting, validation, and S-expression support for .orb files in Visual Studio Code.",
     linkId: "downloads.vscode.link", linkText: "Install from Marketplace",
-    href: "https://marketplace.visualstudio.com/items?itemName=almadar.orbital-vscode",
+    href: "https://marketplace.visualstudio.com/items?itemName=almadar.orb",
   },
   {
     titleId: "downloads.zed.title", title: "Zed Extension",
     descId: "downloads.zed.desc", desc: "Native .orb support for the Zed editor. Syntax highlighting and Tree-sitter grammar.",
-    linkId: "downloads.zed.link", linkText: "Install from Zed Extensions",
+    linkId: "downloads.zed.link", linkText: "View on GitHub",
     href: "https://github.com/almadar-io/zed-orbital",
   },
 ];
