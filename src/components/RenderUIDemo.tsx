@@ -4,17 +4,17 @@ import Heading from '@theme/Heading';
 import Translate from '@docusaurus/Translate';
 import type { SExpr } from '@almadar/core';
 
-// Design system infrastructure — already synced into the website
-import { EventBusProvider } from '../design-systems/almadar-ui/providers/OrbitalProvider';
+// Design system infrastructure — single source from @almadar/ui
+import { EventBusProvider } from '@almadar/ui/providers';
 import {
   UISlotProvider,
   useUISlots,
   type UISlot,
-} from '../design-systems/almadar-ui/context/UISlotContext';
-import { UISlotComponent } from '../design-systems/almadar-ui/components/organisms/UISlotRenderer';
+} from '@almadar/ui/context';
+import { UISlotComponent } from '@almadar/ui/components';
 
 // Theme CSS — provides data-theme CSS variable definitions
-import '../design-systems/almadar-ui/themes/index.css';
+import '@almadar/ui/themes/index.css';
 
 import { RENDER_UI_EXAMPLES, type RenderUIExample } from '../data/render-ui-registry';
 import styles from './RenderUIDemo.module.css';

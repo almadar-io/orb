@@ -151,6 +151,7 @@ export function createConfig(opts: SiteConfig): Config {
                       /node_modules\/(react-markdown|unified|bail|extend-error|is-plain-obj|trough|vfile|vfile-message|unist-util-|hast-util-|hast-to-hyperscript|mdast-util-|remark-|rehype-|micromark)/,
                       /packages\/almadar-std\/dist/,
                       /node_modules\/@almadar\/patterns/,
+                      /node_modules\/@almadar\/ui/,
                     ],
                     type: 'javascript/auto',
                   },
