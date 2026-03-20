@@ -40,6 +40,17 @@ function CLISection() {
               </div>
               <div className={styles.installBox}>
                 <code>curl -fsSL https://orb.almadar.io/install.sh | sh</code>
+                <button
+                  className={styles.copyBtn}
+                  onClick={() => {
+                    navigator.clipboard.writeText("curl -fsSL https://orb.almadar.io/install.sh | sh");
+                    const btn = document.querySelector(`.${styles.copyBtn}`) as HTMLButtonElement;
+                    if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 2000); }
+                  }}
+                  aria-label="Copy install command"
+                >
+                  Copy
+                </button>
               </div>
             </div>
           </div>

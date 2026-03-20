@@ -25,7 +25,18 @@ function Hero() {
           </Translate>
         </p>
         <div className={styles.installBox}>
-          <code>curl -fsSL https://orb.almadar.io/install.sh | sh</code>
+          <code id="install-cmd">curl -fsSL https://orb.almadar.io/install.sh | sh</code>
+          <button
+            className={styles.copyBtn}
+            onClick={() => {
+              navigator.clipboard.writeText("curl -fsSL https://orb.almadar.io/install.sh | sh");
+              const btn = document.querySelector(`.${styles.copyBtn}`) as HTMLButtonElement;
+              if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 2000); }
+            }}
+            aria-label="Copy install command"
+          >
+            Copy
+          </button>
         </div>
         <div className={styles.buttons}>
           <Link className="button button--primary button--lg" to="/docs/getting-started/introduction">
