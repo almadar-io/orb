@@ -396,10 +396,10 @@ The lifecycle trait (`TaskLifecycle`) doesn't need its own page here — it's wi
 
 ```bash
 # Validate the schema
-almadar validate schema.orb
+orb validate schema.orb
 
 # Start the dev server
-almadar dev
+orb dev
 ```
 
 Navigate to `http://localhost:3000/tasks` to see your task manager.

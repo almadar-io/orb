@@ -1,10 +1,10 @@
 ---
 id: contributing
-title: Contributing to Almadar
+title: Contributing to Orb
 sidebar_label: Contributing
 ---
 
-# Contributing to Almadar
+# Contributing to Orb
 
 We welcome contributions from the community!
 
@@ -14,7 +14,7 @@ We welcome contributions from the community!
 - **Suggest Features** - Start a discussion
 - **Submit PRs** - Fix bugs or add features
 - **Write Docs** - Improve documentation
-- **Share** - Tell others about Almadar
+- **Share** - Tell others about Orb
 
 ## Getting Started
 

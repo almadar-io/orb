@@ -1,4 +1,4 @@
-# Contributing to Almadar
+# Contributing to Orb
 
 Welcome to the Almadar community! We're excited to have you contribute.
 

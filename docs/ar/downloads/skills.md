@@ -18,7 +18,7 @@
 
 ```bash
 # عبر أداة المدار
-almadar skill install almadar-orbitals
+orb skill install almadar-orbitals
 
 # أو التحميل اليدوي
 curl -O https://almadar.io/skills/almadar-orbitals.zip
@@ -113,7 +113,7 @@ unzip almadar-orbitals.zip -d ~/.almadar/skills/
 
 ```bash
 # يتطلب اشتراك Pro
-almadar skill install almadar-design --pro
+orb skill install almadar-design --pro
 ```
 
 ### almadar-fixing
@@ -127,7 +127,7 @@ almadar skill install almadar-design --pro
 
 ```bash
 # يتطلب اشتراك Pro
-almadar skill install almadar-fixing --pro
+orb skill install almadar-fixing --pro
 ```
 
 ---

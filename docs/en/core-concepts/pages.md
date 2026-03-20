@@ -1,6 +1,6 @@
 # Pages
 
-> How pages work in the Almadar architecture - routing, trait binding, slots, and navigation.
+> How pages work in the Orb architecture - routing, trait binding, slots, and navigation.
 
 **Related:**
 - [Entities](./entities.md)
@@ -10,7 +10,7 @@
 
 ## Overview
 
-In Almadar, a **Page** is a route that composes traits to render UI. The fundamental composition is:
+In Orb, a **Page** is a route that composes traits to render UI. The fundamental composition is:
 
 ```
 Orbital = Entity + Traits + Pages
@@ -531,7 +531,7 @@ A complete page example with multiple traits:
 
 ## Summary
 
-The Almadar pages system provides:
+The Orb pages system provides:
 
 1. **Routing** - Path-based navigation with dynamic segments
 2. **Trait Composition** - Multiple traits per page, each contributing UI

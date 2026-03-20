@@ -1,12 +1,12 @@
 # Entities
 
-> How entities work in the Almadar architecture - from schema definition to runtime execution.
+> How entities work in the Orb architecture - from schema definition to runtime execution.
 
 ---
 
 ## Overview
 
-In Almadar, an **Entity** is the data model at the core of each Orbital Unit. The fundamental composition is:
+In Orb, an **Entity** is the data model at the core of each Orbital Unit. The fundamental composition is:
 
 ```
 Orbital Unit = Entity + Traits + Pages
@@ -48,7 +48,7 @@ An entity is defined in the `.orb` schema with the following structure:
 
 ## Field Types
 
-Almadar supports the following field types:
+Orb supports the following field types:
 
 | Type | Description | Example | TypeScript | Storage |
 |------|-------------|---------|------------|---------|
@@ -464,7 +464,7 @@ All orbitals see and modify the same `Player` data.
 
 ## Summary
 
-The Almadar entity system provides:
+The Orb entity system provides:
 
 1. **Typed Fields** - Strong typing with string, number, boolean, date, enum, relation, array, object
 2. **Persistence Modes** - Persistent (database), runtime (memory), singleton (global)
@@ -479,4 +479,4 @@ The entity is the foundation of the Orbital Unit - traits operate on it, pages d
 ---
 
 *Document created: 2026-02-02*
-*Based on codebase analysis of Almadar*
+*Based on codebase analysis of Orb*

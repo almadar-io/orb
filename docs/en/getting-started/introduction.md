@@ -1,20 +1,20 @@
-# Introduction to Almadar
+# Introduction to Orb
 
 > **The Physics of Software**: Natural Language → Schema → Production Application
 
-## What is Almadar?
+## What is Orb?
 
-Almadar (المدار) is a **declarative programming language** for building full-stack applications. Instead of writing imperative code scattered across frontend and backend, you declare your application as a schema of:
+Orb is a **declarative programming language** for building full-stack applications. Instead of writing imperative code scattered across frontend and backend, you declare your application as a schema of:
 
 - **Entities** - Your data structures with persistence rules
 - **Traits** - Behavior defined as state machines
 - **Pages** - Routes with UI bindings
 
-The Almadar compiler transforms this schema into a complete, production-ready application.
+The Orb compiler transforms this schema into a complete, production-ready application.
 
 <OrbitalDiagram />
 
-## The Problem Almadar Solves
+## The Problem Orb Solves
 
 ### Traditional Development
 
@@ -37,13 +37,13 @@ Frontend Team          Backend Team          Database Team
 - Documentation separate from code
 - Testing requires multiple approaches
 
-### Almadar Development
+### Orb Development
 
 ```
-Almadar Schema (.orb file)
+Orb Schema (.orb file)
         |
         v
-   almadar compile
+   orb compile
         |
         v
 Full-Stack Application
@@ -224,19 +224,19 @@ Every user action follows this path:
 5. Response → UI updates with real data
 ```
 
-## Why "Almadar"?
+## Why "Orb"?
 
-Almadar (المدار) means "orbit" in Arabic. The name comes from celestial mechanics:
+Orb draws its name from the celestial sphere. "Almadar" (المدار) means "orbit" in Arabic, and Orb is the language born from that vision. The name comes from celestial mechanics:
 
-| Physics | Almadar |
-|---------|---------|
+| Physics | Orb |
+|---------|-----|
 | Objects in space | Entities (data) |
 | Forces cause motion | Events trigger behavior |
 | Laws govern motion | Guards control transitions |
 | Reactions | Effects |
 | Stable orbits | Valid application states |
 
-Just as planets follow predictable paths governed by physical laws, applications built with Almadar follow predictable paths governed by state machines.
+Just as planets follow predictable paths governed by physical laws, applications built with Orb follow predictable paths governed by state machines.
 
 ## What You'll Build
 
@@ -250,7 +250,7 @@ By the end of this documentation, you'll be able to:
 
 ## Next Steps
 
-1. [Install the CLI](../downloads/cli.md) - Get Almadar on your system
+1. [Install the CLI](../downloads/cli.md) - Get the Orb CLI on your system
 2. [Build a Task Manager](/docs/tutorials/beginner/task-manager) - Your first schema
 3. [Core Concepts: Entities](../core-concepts/entities.md) - Deep dive into the fundamentals
 

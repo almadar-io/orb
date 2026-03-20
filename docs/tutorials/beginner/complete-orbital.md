@@ -1,12 +1,12 @@
 # Anatomy of a Complete Orbital
 
-> Every feature in Almadar is an orbital. An orbital is not complete without all four parts.
+> Every feature in Orb is an orbital. An orbital is not complete without all four parts.
 
 <OrbitalDiagram />
 
 ## The Four Parts of an Orbital
 
-An orbital is the fundamental unit of an Almadar application. It must contain:
+An orbital is the fundamental unit of an Orb application. It must contain:
 
 ```
 Orbital = Entity + Trait(s) + State Machine + Pages

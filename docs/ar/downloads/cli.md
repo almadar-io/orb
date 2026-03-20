@@ -1,25 +1,31 @@
 # تحميل أداة المدار
 
-أداة المدار (`almadar`) هي أداة سطر الأوامر للتحقق من صحة مخططات المدار وتصريفها والعمل معها.
+أداة المدار (`orb`) هي أداة سطر الأوامر للتحقق من صحة مخططات المدار وتصريفها والعمل معها.
 
 ## التثبيت السريع
 
 ### npm (موصى به)
 
 ```bash
-npm install -g @almadar/cli
+curl -fsSL https://orb.almadar.io/install.sh | sh
+```
+
+### npm
+
+```bash
+npm install -g @almadar/orb
 ```
 
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew install almadar/tap/almadar
+brew install almadar/tap/orb
 ```
 
 ### Cargo (لمطوري Rust)
 
 ```bash
-cargo install almadar-cli
+cargo install orb-cli
 ```
 
 ## التحميل حسب المنصة
@@ -28,55 +34,55 @@ cargo install almadar-cli
 
 | المعمارية | الصيغة | التحميل |
 |----------|--------|---------|
-| x86_64 | tar.gz | [almadar-linux-x86_64.tar.gz](#) |
-| x86_64 | deb | [almadar_x86_64.deb](#) |
-| x86_64 | rpm | [almadar-x86_64.rpm](#) |
-| ARM64 | tar.gz | [almadar-linux-aarch64.tar.gz](#) |
+| x86_64 | tar.gz | [orb-linux-x86_64.tar.gz](#) |
+| x86_64 | deb | [orb_x86_64.deb](#) |
+| x86_64 | rpm | [orb-x86_64.rpm](#) |
+| ARM64 | tar.gz | [orb-linux-aarch64.tar.gz](#) |
 
 **التثبيت (tar.gz):**
 
 ```bash
-tar -xzf almadar-linux-x86_64.tar.gz
-sudo mv almadar /usr/local/bin/
+tar -xzf orb-linux-x86_64.tar.gz
+sudo mv orb /usr/local/bin/
 ```
 
 ### macOS
 
 | المعمارية | الصيغة | التحميل |
 |----------|--------|---------|
-| Intel (x86_64) | tar.gz | [almadar-macos-x86_64.tar.gz](#) |
-| Apple Silicon (ARM64) | tar.gz | [almadar-macos-aarch64.tar.gz](#) |
-| Universal | pkg | [almadar-macos.pkg](#) |
+| Intel (x86_64) | tar.gz | [orb-macos-x86_64.tar.gz](#) |
+| Apple Silicon (ARM64) | tar.gz | [orb-macos-aarch64.tar.gz](#) |
+| Universal | pkg | [orb-macos.pkg](#) |
 
 ### Windows
 
 | المعمارية | الصيغة | التحميل |
 |----------|--------|---------|
-| x86_64 | zip | [almadar-windows-x86_64.zip](#) |
-| x86_64 | msi | [almadar-windows-x86_64.msi](#) |
+| x86_64 | zip | [orb-windows-x86_64.zip](#) |
+| x86_64 | msi | [orb-windows-x86_64.msi](#) |
 
 **التثبيت (winget):**
 
 ```powershell
-winget install Almadar.CLI
+winget install Almadar.Orb
 ```
 
 ## التحقق من التثبيت
 
 ```bash
-almadar --version
-# Almadar CLI v1.0.0
+orb --version
+# Orb CLI v1.0.0
 
-almadar --help
+orb --help
 # المدار - فيزياء البرمجيات
-# 
+#
 # الاستخدام:
-#     almadar <أمر>
-# 
+#     orb <أمر>
+#
 # الأوامر:
-#     validate   التحقق من صحة مخطط المدار
+#     validate   التحقق من صحة مخطط .orb
 #     compile    تصريف المخطط إلى الهدف
-#     format     تنسيق مخطط المدار
+#     format     تنسيق مخطط .orb
 #     dev        تشغيل خادم التطوير
 #     test       تشغيل اختبارات آلة الحالة
 #     new        إنشاء مشروع جديد
@@ -88,7 +94,7 @@ almadar --help
 ### التحقق من المخطط
 
 ```bash
-almadar validate my-app.orb
+orb validate my-app.orb
 # ✓ المخطط صالح
 # ✓ ٣ مدارات، ٥ سمات، ٨ كيانات
 ```
@@ -96,7 +102,7 @@ almadar validate my-app.orb
 ### التصريف إلى TypeScript
 
 ```bash
-almadar compile my-app.orb --shell typescript --output ./generated
+orb compile my-app.orb --shell typescript --output ./generated
 # ✓ تم توليد ٢٤ ملف
 # ✓ المخرجات: ./generated
 ```
@@ -104,7 +110,7 @@ almadar compile my-app.orb --shell typescript --output ./generated
 ### تشغيل خادم التطوير
 
 ```bash
-almadar dev my-app.orb
+orb dev my-app.orb
 # جاري تشغيل خادم تطوير المدار...
 # ✓ تم تحميل المخطط: my-app.orb
 # ✓ الخادم: http://localhost:3000
@@ -116,7 +122,7 @@ almadar dev my-app.orb
 ### تشغيل الاختبارات
 
 ```bash
-almadar test my-app.orb
+orb test my-app.orb
 # جاري تشغيل اختبارات آلة الحالة...
 # ✓ TaskLifecycle: ١٢ انتقال تم اختباره
 # ✓ UserAuth: ٨ انتقالات تم اختبارها
@@ -128,19 +134,19 @@ almadar test my-app.orb
 ### إنشاء مشروع جديد
 
 ```bash
-almadar new my-app
+orb new my-app
 # ✓ تم إنشاء my-app/
 # ✓ تم إنشاء my-app/schema.orb
-# ✓ تم إنشاء my-app/almadar.config.json
-# 
+# ✓ تم إنشاء my-app/orb.config.json
+#
 # ابدأ الآن:
 #   cd my-app
-#   almadar dev
+#   orb dev
 ```
 
 ## الإعدادات
 
-أنشئ ملف `almadar.config.json` في جذر مشروعك:
+أنشئ ملف `orb.config.json` في جذر مشروعك:
 
 ```json
 {
@@ -160,8 +166,8 @@ almadar new my-app
 ثم قم بتشغيل:
 
 ```bash
-almadar compile
-# يستخدم الإعدادات من almadar.config.json
+orb compile
+# يستخدم الإعدادات من orb.config.json
 ```
 
 ## دعم اللغة العربية
@@ -169,7 +175,7 @@ almadar compile
 المدار يدعم اللغة العربية بشكل كامل لرسائل الخطأ والمخرجات:
 
 ```bash
-almadar validate schema.orb --locale ar
+orb validate schema.orb --locale ar
 # ✓ المخطط صالح
 # ✓ ٣ مدارات، ٥ سمات، ٨ كيانات
 ```
@@ -189,17 +195,17 @@ almadar validate schema.orb --locale ar
 تأكد من أن الملف التنفيذي في مسار PATH:
 
 ```bash
-# تحقق من مكان تثبيت almadar
-which almadar
+# تحقق من مكان تثبيت orb
+which orb
 
 # أضف إلى PATH إذا لزم الأمر (أضف إلى ~/.bashrc أو ~/.zshrc)
-export PATH="$PATH:/path/to/almadar"
+export PATH="$PATH:/path/to/orb"
 ```
 
 ### رفض الصلاحيات (Linux/macOS)
 
 ```bash
-chmod +x /usr/local/bin/almadar
+chmod +x /usr/local/bin/orb
 ```
 
 ---

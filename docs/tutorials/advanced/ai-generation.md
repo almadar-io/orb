@@ -1,9 +1,9 @@
 # Generating Schemas with an LLM
 
-Almadar schemas are structured JSON — and that structure makes them ideal targets for LLM generation. You describe your application in plain language; the LLM outputs a valid `.orb` schema.
+Orb schemas are structured JSON, and that structure makes them ideal targets for LLM generation. You describe your application in plain language; the LLM outputs a valid `.orb` schema.
 
 This tutorial covers:
-- Installing and using the Almadar skill
+- Installing and using the Orb skill
 - Prompting an LLM to generate a complete schema
 - Validating the output
 - Fixing the most common mistakes LLMs make
@@ -12,9 +12,9 @@ This tutorial covers:
 
 ---
 
-## The Almadar Skill
+## The Orb Skill
 
-The `@almadar/skills` package includes a Claude Code skill that teaches the LLM the full Almadar language specification — orbitals, entities, traits, state machines, patterns, S-expressions, and more.
+The `@almadar/skills` package includes a Claude Code skill that teaches the LLM the full Orb language specification: orbitals, entities, traits, state machines, patterns, S-expressions, and more.
 
 ### Install
 
@@ -41,11 +41,11 @@ Or use it directly in Claude Code by referencing the skill file in your session.
        ↓
 3. LLM generates: entity + traits + state machines + pages
        ↓
-4. Validate: almadar validate schema.orb
+4. Validate: orb validate schema.orb
        ↓
 5. Fix any errors, iterate
        ↓
-6. Run: almadar dev
+6. Run: orb dev
 ```
 
 ---
@@ -67,7 +67,7 @@ todo → in progress → review → done.
 
 When a task is completed, the project's completed task count should update.
 
-Please decompose this into Almadar orbitals and generate a complete schema.
+Please decompose this into Orb orbitals and generate a complete schema.
 ```
 
 ### What to Include in Your Prompt
@@ -131,7 +131,7 @@ For each orbital, the LLM should output all four required parts:
 
 ## The Most Common LLM Mistakes
 
-LLMs that don't have the Almadar skill loaded will make predictable mistakes. Learn to spot them.
+LLMs that don't have the Orb skill loaded will make predictable mistakes. Learn to spot them.
 
 ### 1. Missing `pages` (most common)
 
@@ -287,7 +287,7 @@ This reduces errors and makes each piece reviewable before assembling.
 Always validate before running:
 
 ```bash
-almadar validate schema.orb
+orb validate schema.orb
 ```
 
 Common validation errors and what they mean:
@@ -305,10 +305,10 @@ Common validation errors and what they mean:
 
 ## A Reference Prompt (Copy & Use)
 
-This prompt works well with the Almadar skill installed:
+This prompt works well with the Orb skill installed:
 
 ```
-Using the Almadar language, generate a complete .orb schema for: [YOUR APP DESCRIPTION]
+Using the Orb language, generate a complete .orb schema for: [YOUR APP DESCRIPTION]
 
 Requirements:
 - Each feature domain becomes one orbital with: entity, traits, pages

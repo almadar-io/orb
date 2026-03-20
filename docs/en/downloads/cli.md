@@ -1,25 +1,31 @@
-# Download Almadar CLI
+# Download Orb CLI
 
-The Almadar CLI (`almadar`) is the command-line tool for validating, compiling, and working with Almadar schemas.
+The Orb CLI (`orb`) is the command-line tool for validating, compiling, and working with .orb schemas.
 
 ## Quick Install
 
-### npm (Recommended)
+### Install Script (Recommended)
 
 ```bash
-npm install -g @almadar/cli
+curl -fsSL https://orb.almadar.io/install.sh | sh
+```
+
+### npm
+
+```bash
+npm install -g @almadar/orb
 ```
 
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew install almadar/tap/almadar
+brew install almadar/tap/orb
 ```
 
 ### Cargo (Rust developers)
 
 ```bash
-cargo install almadar-cli
+cargo install orb-cli
 ```
 
 ## Platform-Specific Downloads
@@ -28,74 +34,74 @@ cargo install almadar-cli
 
 | Architecture | Format | Download |
 |-------------|--------|----------|
-| x86_64 | tar.gz | [almadar-linux-x86_64.tar.gz](#) |
-| x86_64 | deb | [almadar_x86_64.deb](#) |
-| x86_64 | rpm | [almadar-x86_64.rpm](#) |
-| ARM64 | tar.gz | [almadar-linux-aarch64.tar.gz](#) |
+| x86_64 | tar.gz | [orb-linux-x86_64.tar.gz](#) |
+| x86_64 | deb | [orb_x86_64.deb](#) |
+| x86_64 | rpm | [orb-x86_64.rpm](#) |
+| ARM64 | tar.gz | [orb-linux-aarch64.tar.gz](#) |
 
 **Installation (tar.gz):**
 
 ```bash
-tar -xzf almadar-linux-x86_64.tar.gz
-sudo mv almadar /usr/local/bin/
+tar -xzf orb-linux-x86_64.tar.gz
+sudo mv orb /usr/local/bin/
 ```
 
 **Installation (deb):**
 
 ```bash
-sudo dpkg -i almadar_x86_64.deb
+sudo dpkg -i orb_x86_64.deb
 ```
 
 ### macOS
 
 | Architecture | Format | Download |
 |-------------|--------|----------|
-| Intel (x86_64) | tar.gz | [almadar-macos-x86_64.tar.gz](#) |
-| Apple Silicon (ARM64) | tar.gz | [almadar-macos-aarch64.tar.gz](#) |
-| Universal | pkg | [almadar-macos.pkg](#) |
+| Intel (x86_64) | tar.gz | [orb-macos-x86_64.tar.gz](#) |
+| Apple Silicon (ARM64) | tar.gz | [orb-macos-aarch64.tar.gz](#) |
+| Universal | pkg | [orb-macos.pkg](#) |
 
 **Installation (tar.gz):**
 
 ```bash
-tar -xzf almadar-macos-aarch64.tar.gz
-sudo mv almadar /usr/local/bin/
+tar -xzf orb-macos-aarch64.tar.gz
+sudo mv orb /usr/local/bin/
 ```
 
 ### Windows
 
 | Architecture | Format | Download |
 |-------------|--------|----------|
-| x86_64 | zip | [almadar-windows-x86_64.zip](#) |
-| x86_64 | msi | [almadar-windows-x86_64.msi](#) |
+| x86_64 | zip | [orb-windows-x86_64.zip](#) |
+| x86_64 | msi | [orb-windows-x86_64.msi](#) |
 
 **Installation (winget):**
 
 ```powershell
-winget install Almadar.CLI
+winget install Almadar.Orb
 ```
 
 **Installation (zip):**
 
-1. Extract `almadar-windows-x86_64.zip`
+1. Extract `orb-windows-x86_64.zip`
 2. Add the extracted folder to your PATH
 3. Restart your terminal
 
 ## Verify Installation
 
 ```bash
-almadar --version
-# Almadar CLI v1.0.0
+orb --version
+# Orb CLI v1.0.0
 
-almadar --help
-# Almadar - The Physics of Software
-# 
+orb --help
+# Orb - The Physics of Software
+#
 # USAGE:
-#     almadar <COMMAND>
-# 
+#     orb <COMMAND>
+#
 # COMMANDS:
-#     validate   Validate an Almadar schema
+#     validate   Validate an .orb schema
 #     compile    Compile schema to target shell
-#     format     Format an Almadar schema
+#     format     Format an .orb schema
 #     dev        Start development server
 #     test       Run state machine tests
 #     new        Create a new project
@@ -107,7 +113,7 @@ almadar --help
 ### Validate a Schema
 
 ```bash
-almadar validate my-app.orb
+orb validate my-app.orb
 # ✓ Schema is valid
 # ✓ 3 orbitals, 5 traits, 8 entities
 ```
@@ -115,7 +121,7 @@ almadar validate my-app.orb
 ### Compile to TypeScript
 
 ```bash
-almadar compile my-app.orb --shell typescript --output ./generated
+orb compile my-app.orb --shell typescript --output ./generated
 # ✓ Generated 24 files
 # ✓ Output: ./generated
 ```
@@ -123,43 +129,43 @@ almadar compile my-app.orb --shell typescript --output ./generated
 ### Start Development Server
 
 ```bash
-almadar dev my-app.orb
-# Starting Almadar dev server...
+orb dev my-app.orb
+# Starting Orb dev server...
 # ✓ Schema loaded: my-app.orb
 # ✓ Server: http://localhost:3000
 # ✓ Client: http://localhost:5173
-# 
+#
 # Watching for changes...
 ```
 
 ### Run Tests
 
 ```bash
-almadar test my-app.orb
+orb test my-app.orb
 # Running state machine tests...
 # ✓ TaskLifecycle: 12 transitions tested
 # ✓ UserAuth: 8 transitions tested
 # ✓ All guards evaluated
-# 
+#
 # Tests: 20 passed, 0 failed
 ```
 
 ### Create New Project
 
 ```bash
-almadar new my-app
+orb new my-app
 # ✓ Created my-app/
 # ✓ Created my-app/schema.orb
-# ✓ Created my-app/almadar.config.json
-# 
+# ✓ Created my-app/orb.config.json
+#
 # Get started:
 #   cd my-app
-#   almadar dev
+#   orb dev
 ```
 
 ## Configuration
 
-Create an `almadar.config.json` in your project root:
+Create an `orb.config.json` in your project root:
 
 ```json
 {
@@ -179,20 +185,20 @@ Create an `almadar.config.json` in your project root:
 Then simply run:
 
 ```bash
-almadar compile
-# Uses settings from almadar.config.json
+orb compile
+# Uses settings from orb.config.json
 ```
 
 ## Locale Support
 
-Almadar supports multiple languages for error messages and operator aliases:
+Orb supports multiple languages for error messages and operator aliases:
 
 ```bash
 # English (default)
-almadar validate schema.orb --locale en
+orb validate schema.orb --locale en
 
 # Arabic
-almadar validate schema.orb --locale ar
+orb validate schema.orb --locale ar
 # ✓ المخطط صالح
 # ✓ ٣ مدارات، ٥ سمات، ٨ كيانات
 ```
@@ -212,22 +218,22 @@ almadar validate schema.orb --locale ar
 Ensure the binary is in your PATH:
 
 ```bash
-# Check where almadar is installed
-which almadar
+# Check where orb is installed
+which orb
 
 # Add to PATH if needed (add to ~/.bashrc or ~/.zshrc)
-export PATH="$PATH:/path/to/almadar"
+export PATH="$PATH:/path/to/orb"
 ```
 
 ### Permission Denied (Linux/macOS)
 
 ```bash
-chmod +x /usr/local/bin/almadar
+chmod +x /usr/local/bin/orb
 ```
 
 ### Windows Defender Warning
 
-The almadar.exe binary is signed but may trigger Windows Defender on first run. Click "More info" → "Run anyway" or add an exception.
+The orb.exe binary is signed but may trigger Windows Defender on first run. Click "More info" → "Run anyway" or add an exception.
 
 ---
 

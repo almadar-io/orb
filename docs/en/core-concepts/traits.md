@@ -1,10 +1,10 @@
 # Traits
 
-> Trait definitions and state machine types for Almadar
+> Trait definitions and state machine types for Orb
 
 ---
 
-> How traits work in the Almadar/Orbital architecture - state machines, guards, effects, and cross-orbital communication.
+> How traits work in the Orb architecture - state machines, guards, effects, and cross-orbital communication.
 
 **Related:** [Entities](./entities.md)
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-In Almadar, a **Trait** is a state machine that defines behavior for an entity. The fundamental composition is:
+In Orb, a **Trait** is a state machine that defines behavior for an entity. The fundamental composition is:
 
 ```
 Orbital Unit = Entity + Traits + Pages
@@ -795,7 +795,7 @@ A complete trait demonstrating all features:
 
 ## Summary
 
-The Almadar trait system provides:
+The Orb trait system provides:
 
 1. **State Machines** - Define possible states and transitions
 2. **Guards** - Protect transitions with boolean conditions

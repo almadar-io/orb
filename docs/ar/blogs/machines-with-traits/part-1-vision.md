@@ -218,7 +218,7 @@ class RobotArm:
 
 ### للمطورين
 
-1. **حمّل المُصرّف** — `npm install -g @almadar/cli`
+1. **حمّل المُصرّف** — `curl -fsSL https://orb.almadar.io/install.sh | sh`
 2. **اقرأ التوثيق** — [دليل البداية](../../getting-started/introduction.md)
 3. **جرّب المثال** — ابنِ أول سمة روبوتية
 

@@ -147,12 +147,35 @@ function TraitInitializer({ rt, traits }: { rt: RuntimeComponents; traits: unkno
 }
 
 function SchemaRunner({ rt, schema, mockData }: { rt: RuntimeComponents; schema: unknown; mockData: Record<string, unknown[]> }) {
-  const { traits, allEntities } = rt.useResolvedSchema(schema);
+  const { traits, allEntities, ir } = rt.useResolvedSchema(schema) as {
+    traits: unknown[];
+    allEntities: Map<string, unknown>;
+    ir: { pages?: Map<string, { traits: unknown[] }> } | null;
+  };
+
+  // For multi-page schemas (organisms), collect traits from ALL pages
+  // so every page's INIT fires and populates the main content slot.
+  const allPageTraits = React.useMemo(() => {
+    if (!ir?.pages || ir.pages.size <= 1) return traits;
+    const combined: unknown[] = [];
+    const seen = new Set<string>();
+    for (const page of ir.pages.values()) {
+      for (const t of page.traits) {
+        const name = (t as { name?: string }).name ?? '';
+        if (!seen.has(name)) {
+          seen.add(name);
+          combined.push(t);
+        }
+      }
+    }
+    return combined.length > 0 ? combined : traits;
+  }, [ir, traits]);
+
   return (
     <rt.VerificationProvider enabled>
       <rt.SlotsProvider>
         <rt.EntitySchemaProvider entities={Array.from(allEntities.values())}>
-          <TraitInitializer rt={rt} traits={traits} />
+          <TraitInitializer rt={rt} traits={allPageTraits} />
           <SlotBridge rt={rt} />
           <div className={styles.runtimePreview}>
             <rt.UISlotRenderer includeHud hudMode="inline" includeFloating />

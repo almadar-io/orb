@@ -1,43 +1,49 @@
 ---
 id: cli
-title: Almadar CLI
+title: Orb CLI
 sidebar_label: CLI
 ---
 
-# Almadar CLI
+# Orb CLI
 
-The Almadar Command Line Interface (CLI) is your gateway to the Almadar ecosystem.
+The Orb Command Line Interface (CLI) is your gateway to the Orb ecosystem.
 
 ## Installation
 
-### npm (Recommended)
+### Install Script (Recommended)
 
 ```bash
-npm install -g @almadar/cli
+curl -fsSL https://orb.almadar.io/install.sh | sh
+```
+
+### npm
+
+```bash
+npm install -g @almadar/orb
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `almadar new` | Create a new project |
-| `almadar validate` | Validate a schema |
-| `almadar compile` | Compile to target shell |
-| `almadar dev` | Start dev server |
-| `almadar test` | Run state machine tests |
-| `almadar format` | Format a schema |
+| `orb new` | Create a new project |
+| `orb validate` | Validate a schema |
+| `orb compile` | Compile to target shell |
+| `orb dev` | Start dev server |
+| `orb test` | Run state machine tests |
+| `orb format` | Format a schema |
 
 ## Quick Start
 
 ```bash
 # Create new project
-almadar new my-app
+orb new my-app
 
 # Navigate to project
 cd my-app
 
 # Start development
-almadar dev
+orb dev
 ```
 
 ## More Information

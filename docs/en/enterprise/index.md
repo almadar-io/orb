@@ -1,17 +1,17 @@
 # Almadar Enterprise
 
-> **Human Vision, AI Execution** — We build your applications with the Almadar Approach
+> **Human Vision, AI Execution** — We build your applications with the Orb Approach
 
 ## What We Offer
 
-Almadar is both the creator of the Almadar language and a full-service software development agency. We use our own technology to deliver projects faster, better, and more cost-effectively than traditional development.
+Almadar is the creator of the Orb language and a full-service software development agency. We use our own technology to deliver projects faster, better, and more cost-effectively than traditional development.
 
 ### For Enterprises
 
 | Service | Description |
 |---------|-------------|
-| **Custom Development** | Full-stack applications built with the Almadar Approach |
-| **Migration Services** | Convert legacy systems to modern Almadar architecture |
+| **Custom Development** | Full-stack applications built with the Orb Approach |
+| **Migration Services** | Convert legacy systems to modern Orb architecture |
 | **Training & Workshops** | On-site or virtual training for your team |
 | **Consulting** | Architecture review, technical advisory |
 | **Priority Support** | SLA-backed support with dedicated engineers |
@@ -33,7 +33,7 @@ Your Requirements
       ↓
 Discovery & Design (1-2 weeks)
       ↓
-Almadar Development (2-6 weeks)
+Orb Development (2-6 weeks)
       ↓
 Production Deployment
       ↓
@@ -81,7 +81,7 @@ Ongoing Support
 
 **Client:** Ministry of Inspection (Slovenia)  
 **Challenge:** Digitize 50+ inspection workflows across multiple departments  
-**Solution:** Almadar-based inspection management system  
+**Solution:** Orb-based inspection management system  
 **Results:**
 - 12 modules delivered in 8 weeks
 - 60% cost reduction vs traditional estimate
@@ -129,7 +129,7 @@ We specialize in projects for the Saudi and GCC market:
 ### Osama Alghanmi
 **Founder & Technical Lead**
 
-15 years of engineering expertise. Previously architected Saudi Arabia's national e-invoicing platform. Creator of Almadar.
+15 years of engineering expertise. Previously architected Saudi Arabia's national e-invoicing platform. Creator of Orb.
 
 - [LinkedIn](https://linkedin.com/in/osama-alghanmi-0957bb28/)
 - oalghnmi@gmail.com
@@ -154,7 +154,7 @@ We'll discuss your requirements and provide a preliminary estimate at no cost.
 
 ## FAQ
 
-### Do I need to learn Almadar to work with you?
+### Do I need to learn Orb to work with you?
 
 No. We handle all the technical implementation. You receive standard, readable code that any React/TypeScript developer can maintain.
 
@@ -168,7 +168,7 @@ Yes. We offer retainer plans for ongoing development, bug fixes, and feature add
 
 ### Can you work with our existing systems?
 
-Absolutely. We specialize in integrations and migrations. We can connect Almadar applications to your existing APIs, databases, and services.
+Absolutely. We specialize in integrations and migrations. We can connect Orb applications to your existing APIs, databases, and services.
 
 ### What about intellectual property?
 

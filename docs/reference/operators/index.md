@@ -6,7 +6,7 @@ sidebar_label: Overview
 
 # Operator Reference
 
-Almadar's standard library provides 213+ built-in operators organized into 9 modules.
+Orb's standard library provides 213+ built-in operators organized into 9 modules.
 All operators are available as s-expressions in guards and effects.
 
 ## Modules

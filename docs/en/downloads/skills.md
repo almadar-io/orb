@@ -1,10 +1,10 @@
-# Almadar Skills
+# Orb Skills
 
-Enhance your development workflow with AI-powered skills for Almadar schema generation.
+Enhance your development workflow with AI-powered skills for Orb schema generation.
 
 ## almadar-orbitals
 
-The primary skill for generating Almadar schemas from natural language descriptions.
+The primary skill for generating Orb schemas from natural language descriptions.
 
 ### What It Does
 
@@ -12,13 +12,13 @@ The primary skill for generating Almadar schemas from natural language descripti
 - Creates entities with proper field types and relations
 - Designs state machines with guards and effects
 - Produces UI patterns and page layouts
-- Follows Almadar best practices
+- Follows Orb best practices
 
 ### Installation
 
 ```bash
-# Via Almadar CLI
-almadar skill install almadar-orbitals
+# Via Orb CLI
+orb skill install almadar-orbitals
 
 # Or manual download
 curl -O https://almadar.io/skills/almadar-orbitals.zip
@@ -131,7 +131,7 @@ Advanced UI/UX design capabilities:
 
 ```bash
 # Requires Pro subscription
-almadar skill install almadar-design --pro
+orb skill install almadar-design --pro
 ```
 
 ### almadar-fixing
@@ -145,14 +145,14 @@ Automatic error resolution:
 
 ```bash
 # Requires Pro subscription
-almadar skill install almadar-fixing --pro
+orb skill install almadar-fixing --pro
 ```
 
 ---
 
 ## Creating Custom Skills
 
-Want to create your own Almadar skills? Contact the team at support@almadar.io or visit the [community discussions](https://github.com/almadar-io/almadar/discussions) for guidance.
+Want to create your own Orb skills? Contact the team at support@almadar.io or visit the [community discussions](https://github.com/almadar-io/almadar/discussions) for guidance.
 
 ---
 

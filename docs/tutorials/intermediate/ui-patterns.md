@@ -2,7 +2,7 @@
 
 > Source: [`tests/schemas/08-patterns.orb`](../../../../tests/schemas/08-patterns.orb)
 
-Almadar UI is driven entirely by `render-ui` effects inside state machine transitions. There is no JSX, no template files, no separate component tree — the state machine *is* the UI logic.
+Orb UI is driven entirely by `render-ui` effects inside state machine transitions. There is no JSX, no template files, no separate component tree — the state machine *is* the UI logic.
 
 <OrbitalDiagram />
 

@@ -1,15 +1,15 @@
-# Almadar
+# Orb
 
 > **The Physics of Software**: Declare your application, compile to production
 
-Welcome to the Almadar programming language documentation. Almadar is a declarative approach to building full-stack applications through state machines, entities, and traits.
+Welcome to the Orb programming language documentation. Orb is a declarative approach to building full-stack applications through state machines, entities, and traits.
 
 ## Quick Navigation
 
 ### Getting Started
 
-- [Introduction](getting-started/introduction.md) - What is Almadar and why should you use it?
-- [Install the CLI](downloads/cli.md) - Get the Almadar CLI on your system
+- [Introduction](getting-started/introduction.md) - What is Orb and why should you use it?
+- [Install the CLI](downloads/cli.md) - Get the Orb CLI on your system
 - [Build a Task Manager](tutorials/beginner/task-manager.md) - Build a task manager in 10 minutes
 - [Core Concepts: Entities](core-concepts/entities.md) - Entities, traits, and state machines
 
@@ -30,7 +30,7 @@ Welcome to the Almadar programming language documentation. Almadar is a declarat
 
 #### Business
 
-- [Why Almadar?](/enterprise) - Enterprise use cases and ROI
+- [Why Orb?](/enterprise) - Enterprise use cases and ROI
 - [Case Studies](/enterprise) - Inspection and Trainer case studies
 
 ### Tutorials
@@ -61,11 +61,11 @@ Welcome to the Almadar programming language documentation. Almadar is a declarat
 
 ---
 
-## The Almadar Philosophy
+## The Orb Philosophy
 
 ### The Closed Circuit Pattern
 
-Every user interaction in Almadar follows a guaranteed flow:
+Every user interaction in Orb follows a guaranteed flow:
 
 ```
 Event (User Action)
@@ -90,9 +90,9 @@ This pattern ensures:
 2. **Traits** - How your application behaves (state machines)
 3. **Pages** - Where your application appears (routes)
 
-### Why "Almadar"?
+### Why "Orb"?
 
-Like planets in orbit around a star, application components in Almadar follow predictable, law-governed paths. The laws of physics ensure stability; Almadar's state machines ensure application consistency.
+Like planets in orbit around a star, application components in Orb follow predictable, law-governed paths. The laws of physics ensure stability; Orb's state machines ensure application consistency.
 
 ---
 

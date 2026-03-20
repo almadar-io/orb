@@ -2,7 +2,7 @@
 
 > Source: [`tests/schemas/05-cross-orbital.orb`](../../../../tests/schemas/05-cross-orbital.orb)
 
-Orbitals are self-contained — but real applications need features to talk to each other. Almadar connects orbitals through a typed event bus: one orbital emits, others listen.
+Orbitals are self-contained — but real applications need features to talk to each other. Orb connects orbitals through a typed event bus: one orbital emits, others listen.
 
 <OrbitalDiagram />
 

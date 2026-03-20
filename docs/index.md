@@ -1,12 +1,12 @@
-# Almadar
+# Orb
 
 > **The Physics of Software**: Declare your application, compile to production
 
-Welcome to the Almadar programming language - a declarative approach to building full-stack applications through state machines, entities, and traits.
+Welcome to the Orb programming language, a declarative approach to building full-stack applications through state machines, entities, and traits.
 
-## What is Almadar?
+## What is Orb?
 
-Almadar is a **declarative language** that transforms how software is built. Instead of writing imperative code scattered across client and server, you declare applications as compositions of:
+Orb is a **declarative language** that transforms how software is built. Instead of writing imperative code scattered across client and server, you declare applications as compositions of:
 
 - **Entities** - Your data structures
 - **Traits** - Behavior as state machines
@@ -18,9 +18,9 @@ The compiler generates a complete, production-ready application.
 Your Vision → OrbitalSchema (.orb) → Full-Stack Application
 ```
 
-## Why Almadar?
+## Why Orb?
 
-| Traditional Development | Almadar Approach |
+| Traditional Development | Orb Approach |
 |------------------------|------------------|
 | Months of development | Weeks to production |
 | Scattered business logic | Centralized state machines |
@@ -100,9 +100,9 @@ export const taskSchema = {
 
 ## Get Started
 
-- **[Quick Start](en/getting-started/introduction.md)** — Build your first Almadar application in 10 minutes
-- **[Download CLI](en/downloads/cli.md)** — Get the Almadar compiler for your platform
-- **[Join Community](en/community/contributing.md)** — Connect with other Almadar developers
+- **[Quick Start](en/getting-started/introduction.md)** — Build your first Orb application in 10 minutes
+- **[Download CLI](en/downloads/cli.md)** — Get the Orb compiler for your platform
+- **[Join Community](en/community/contributing.md)** — Connect with other Orb developers
 
 ## Language Selector
 
@@ -113,7 +113,7 @@ export const taskSchema = {
 
 ## Enterprise Services
 
-Looking for a development partner? **Almadar** is both the creator of the Almadar language and a full-service software agency.
+Looking for a development partner? **Almadar** is the creator of the Orb language and a full-service software agency.
 
 - [Almadar Enterprise](/enterprise) — Custom development, training, consulting
 - [المدار للأعمال](/enterprise) — التطوير المخصص، التدريب، الاستشارات

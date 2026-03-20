@@ -1,6 +1,6 @@
 # Standard Library
 
-> Standard library behaviors for Almadar applications
+> Standard library behaviors for Orb applications
 
 ---
 

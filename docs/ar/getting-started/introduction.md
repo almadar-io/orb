@@ -41,7 +41,7 @@
 مخطط المدار (ملف .orb)
         |
         v
-   almadar compile
+   orb compile
         |
         v
 تطبيق متكامل
