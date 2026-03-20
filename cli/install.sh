@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 # Default values
 INSTALL_DIR="${ORB_INSTALL_DIR:-$HOME/.orb/bin}"
 VERSION="${ORB_VERSION:-latest}"
-GITHUB_REPO="almadar-io/orb"
+GITHUB_REPO="almadar-io/almadar"
 
 # Parse arguments
 while [ $# -gt 0 ]; do
