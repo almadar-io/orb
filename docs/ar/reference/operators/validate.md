@@ -158,7 +158,7 @@ sidebar_label: "التحقق"
 ### `validate/check`
 **فحص متعدد** · وسيطان · يُعيد `any`
 
-تشغيل قواعد تحقق متعددة، يُعيد { valid, errors }
+تشغيل قواعد تحقق متعددة، يُعيد `{ valid, errors }`
 ```json
 ["validate/check", "@payload.data", {
   "name": [["required"], ["minLength", 2], ["maxLength", 50]],

@@ -53,7 +53,7 @@ sidebar_label: "غير المتزامن"
 | المعامل | النوع | الوصف |
 |---------|-------|-------|
 | `effect` | `expression` | التأثير لإعادة محاولته |
-| `opts` | `object` | { attempts, backoff, baseDelay } |
+| `opts` | `object` | `{ attempts, backoff, baseDelay }` |
 
 ```json
 ["async/retry",

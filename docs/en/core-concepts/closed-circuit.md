@@ -70,17 +70,17 @@ Components that can trigger state transitions MUST emit events via the Event Bus
 
 | Component | Prop | Emits |
 |-----------|------|-------|
-| `page-header` | `actions` | `UI:{event}` for each action |
+| `page-header` | `actions` | `UI:\{event\}` for each action |
 | `form` | `actions` | `UI:SAVE`, `UI:CANCEL` |
-| `toolbar` | `actions` | `UI:{event}` for each action |
+| `toolbar` | `actions` | `UI:\{event\}` for each action |
 
 ### Components with `itemActions` prop (row-level)
 
 | Component | Prop | Emits |
 |-----------|------|-------|
-| `entity-table` | `itemActions` | `UI:{event}` with `{ row }` payload |
-| `entity-list` | `itemActions` | `UI:{event}` with `{ row }` payload |
-| `entity-cards` | `itemActions` | `UI:{event}` with `{ row }` payload |
+| `entity-table` | `itemActions` | `UI:\{event\}` with `{ row }` payload |
+| `entity-list` | `itemActions` | `UI:\{event\}` with `{ row }` payload |
+| `entity-cards` | `itemActions` | `UI:\{event\}` with `{ row }` payload |
 
 ### Overlay Components (MUST emit close events)
 
