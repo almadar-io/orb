@@ -25,10 +25,11 @@ interface SiteConfig {
 }
 
 const SITE_ICONS: Record<string, { logo: string; favicon: string }> = {
-  main: { logo: "img/almadar-icon-512.png", favicon: "img/favicon.ico" },
-  orb: { logo: "img/orb-icon-512.png", favicon: "img/favicon.ico" },
-  studio: { logo: "img/studio-icon.svg", favicon: "img/favicon.ico" },
-  services: { logo: "img/services-icon.svg", favicon: "img/favicon.ico" },
+  main: { logo: "img/almadar-icon-transparent.svg", favicon: "img/almadar-icon-transparent.svg" },
+  orb: { logo: "img/orb-icon-transparent.svg", favicon: "img/orb-icon-transparent.svg" },
+  studio: { logo: "img/studio-icon-transparent.svg", favicon: "img/studio-icon-transparent.svg" },
+  services: { logo: "img/services-icon-transparent.svg", favicon: "img/services-icon-transparent.svg" },
+  masar: { logo: "img/masar-icon.svg", favicon: "img/masar-icon.svg" },
 };
 
 const PRODUCT_SITES = [
@@ -51,7 +52,7 @@ function buildProductsDropdown(currentSite: string) {
 }
 
 export function createConfig(opts: SiteConfig): Config {
-  // In the standalone orb repo, the site root is two levels up from shared/config/
+  // In the standalone repo, the site root is two levels up from shared/config/
   const siteDir = path.resolve(__dirname, '../..');
 
   return {
@@ -61,7 +62,7 @@ export function createConfig(opts: SiteConfig): Config {
     url: opts.url,
     baseUrl: opts.baseUrl || "/",
     organizationName: "almadar-io",
-    projectName: "orb",
+    projectName: "services",
     onBrokenLinks: "warn",
     onBrokenAnchors: "warn",
     markdown: { hooks: { onBrokenMarkdownLinks: "warn", onBrokenMarkdownImages: "warn" } },
@@ -149,7 +150,6 @@ export function createConfig(opts: SiteConfig): Config {
                     test: /\.js$/,
                     include: [
                       /node_modules\/(react-markdown|unified|bail|extend-error|is-plain-obj|trough|vfile|vfile-message|unist-util-|hast-util-|hast-to-hyperscript|mdast-util-|remark-|rehype-|micromark)/,
-                      /packages\/almadar-std\/dist/,
                       /node_modules\/@almadar\/patterns/,
                       /node_modules\/@almadar\/ui/,
                     ],
@@ -192,7 +192,7 @@ export function createConfig(opts: SiteConfig): Config {
         items: [
           ...(opts.navbarItems || []),
           buildProductsDropdown(opts.site),
-          { href: "https://github.com/almadar-io/orb", label: "GitHub", position: "right" as const },
+          { href: "https://github.com/almadar-io/services", label: "GitHub", position: "right" as const },
           { href: "https://discord.gg/q83VjPJx", label: "Discord", position: "right" as const },
           { type: "localeDropdown" as const, position: "right" as const },
         ],
@@ -212,7 +212,7 @@ export function createConfig(opts: SiteConfig): Config {
             title: "Community",
             items: [
               { label: "Discord", href: "https://discord.gg/q83VjPJx" },
-              { label: "GitHub", href: "https://github.com/almadar-io/orb" },
+              { label: "GitHub", href: "https://github.com/almadar-io/services" },
               { label: "LinkedIn", href: "https://www.linkedin.com/company/almadar-io" },
             ],
           },

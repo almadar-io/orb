@@ -10,7 +10,10 @@
 
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { createRequire } from 'module';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const almadarPreset = require('@almadar/ui/tailwind-preset');
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -31,6 +34,7 @@ export default {
     // @almadar/ui components (absolute path, needed because Docusaurus CWD differs from config location)
     path.resolve(__dirname, 'node_modules/@almadar/ui/dist/**/*.js'),
   ],
+  presets: [almadarPreset],
   darkMode: 'class',
   theme: {
     fontFamily: {

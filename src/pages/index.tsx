@@ -15,6 +15,7 @@ import {
   Typography,
   Button,
   Box,
+  GradientDivider,
 } from "@almadar/ui/marketing";
 
 const EXAMPLE_CODE = `{
@@ -105,6 +106,8 @@ export default function OrbHome(): ReactNode {
           <FeatureGrid items={WHY_FEATURES} columns={3} />
         </VStack>
       </ContentSection>
+
+      <GradientDivider />
 
       <ContentSection>
         <SplitSection

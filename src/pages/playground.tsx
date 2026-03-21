@@ -7,7 +7,21 @@ import { Search, Sun, Moon, Code, ChevronDown, ChevronUp } from "lucide-react";
 import { translate } from "@docusaurus/Translate";
 import { BEHAVIOR_CATALOG, type BehaviorEntry } from "../data/behavior-catalog";
 import { MODULE_CATALOG } from "../data/module-catalog";
-import styles from "./playground.module.css";
+import {
+  Box,
+  VStack,
+  HStack,
+  Typography,
+  Button,
+  Badge,
+  Input,
+  Select,
+  Checkbox,
+  Tabs,
+  Icon,
+  Textarea,
+} from "@almadar/ui";
+import type { TabItem } from "@almadar/ui";
 
 // Load all theme CSS so data-theme attributes resolve to actual variables
 import "@almadar/ui/themes/index.css";
@@ -180,9 +194,9 @@ function SchemaRunner({ rt, schema, mockData }: { rt: RuntimeComponents; schema:
         <rt.EntitySchemaProvider entities={Array.from(allEntities.values())}>
           <TraitInitializer rt={rt} traits={allPageTraits} />
           <SlotBridge rt={rt} />
-          <div className={styles.runtimePreview}>
+          <Box className="min-h-full p-4">
             <rt.UISlotRenderer includeHud hudMode="inline" includeFloating />
-          </div>
+          </Box>
         </rt.EntitySchemaProvider>
       </rt.SlotsProvider>
     </rt.VerificationProvider>
@@ -197,8 +211,16 @@ function OrbitalPreview({ schema, mockData }: { schema: unknown; mockData: Recor
     loadRuntime().then(setRt).catch((e) => setError(String(e)));
   }, []);
 
-  if (error) return <div className={styles.previewError}><pre>{error}</pre></div>;
-  if (!rt) return <div className={styles.previewLoading}>Loading runtime…</div>;
+  if (error) return (
+    <Box className="p-4">
+      <Typography as="pre" color="error" variant="small" className="font-mono whitespace-pre-wrap break-all m-0">{error}</Typography>
+    </Box>
+  );
+  if (!rt) return (
+    <Box className="flex items-center justify-center h-[200px]">
+      <Typography color="muted" size="sm">Loading runtime...</Typography>
+    </Box>
+  );
 
   return (
     <rt.OrbitalProvider initialData={mockData} skipTheme verification>
@@ -242,27 +264,24 @@ function ThemeControls({
   onModeToggle: () => void;
 }) {
   return (
-    <div className={styles.themeControls}>
-      <select
+    <HStack gap="sm" align="center" className="flex-shrink-0">
+      <Select
         value={theme}
         onChange={(e) => onThemeChange(e.target.value)}
-        className={styles.themeSelect}
+        options={THEME_OPTIONS}
         title="Select theme"
-      >
-        {THEME_OPTIONS.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      <button
+        className="text-xs rounded-md"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onModeToggle}
-        className={styles.modeToggle}
         title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}
+        className="w-[30px] h-[30px] p-0 rounded-md"
       >
         {mode === "light" ? <Sun size={14} /> : <Moon size={14} />}
-      </button>
-    </div>
+      </Button>
+    </HStack>
   );
 }
 
@@ -295,36 +314,68 @@ function Picker<T extends { name: string; description: string }>({
   const sortedCategories = Object.keys(byCategory).sort();
 
   return (
-    <div className={styles.picker}>
-      <div className={styles.pickerSearch}>
-        <Search size={14} className={styles.pickerSearchIcon} />
-        <input
-          className={styles.pickerSearchInput}
-          placeholder="Search…"
+    <VStack className="w-[260px] flex-shrink-0 border-r border-[var(--color-border)] overflow-hidden">
+      <HStack gap="sm" align="center" className="p-3 border-b border-[var(--color-border)]">
+        <Icon icon={Search} size={14} className="flex-shrink-0" />
+        <Input
+          placeholder="Search..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          className="bg-transparent border-none outline-none text-xs w-full p-0 shadow-none ring-0 focus:ring-0"
         />
-      </div>
-      <div className={styles.pickerList}>
+      </HStack>
+      <Box className="flex-1 overflow-y-auto py-2">
         {sortedCategories.map((cat) => (
-          <div key={cat} className={styles.pickerGroup}>
-            <div className={styles.pickerGroupLabel}>{cat}</div>
+          <Box key={cat} className="mb-1">
+            <Typography
+              variant="overline"
+              color="muted"
+              weight="bold"
+              className="text-[0.65rem] uppercase tracking-wider px-3.5 pt-2.5 pb-1"
+            >
+              {cat}
+            </Typography>
             {byCategory[cat].map((b) => (
-              <button
+              <Box
                 key={b.name}
-                className={`${styles.pickerItem} ${b.name === selected ? styles.pickerItemActive : ""}`}
+                className={`flex flex-col w-full text-left py-1.5 px-3.5 cursor-pointer transition-colors duration-100 ${
+                  b.name === selected
+                    ? "border-l-2 border-l-[var(--color-primary)]"
+                    : ""
+                }`}
                 onClick={() => onSelect(b.name)}
-                title={b.description}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') onSelect(b.name); }}
               >
-                <span className={styles.pickerItemName}>{b.name.replace(/^std-/, "")}</span>
-                {b.description && <span className={styles.pickerItemDesc}>{b.description}</span>}
-              </button>
+                <Typography
+                  variant="body2"
+                  color={b.name === selected ? "primary" : "inherit"}
+                  weight="medium"
+                  className="text-[0.8rem] font-mono"
+                >
+                  {b.name.replace(/^std-/, "")}
+                </Typography>
+                {b.description && (
+                  <Typography
+                    variant="caption"
+                    color="muted"
+                    className="text-[0.7rem] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
+                  >
+                    {b.description}
+                  </Typography>
+                )}
+              </Box>
             ))}
-          </div>
+          </Box>
         ))}
-        {filtered.length === 0 && <div className={styles.pickerEmpty}>No matches for "{query}"</div>}
-      </div>
-    </div>
+        {filtered.length === 0 && (
+          <Typography variant="body2" color="muted" align="center" className="p-4 text-[0.8rem]">
+            No matches for &quot;{query}&quot;
+          </Typography>
+        )}
+      </Box>
+    </VStack>
   );
 }
 
@@ -338,9 +389,9 @@ const BEHAVIOR_LIST = Object.values(BEHAVIOR_CATALOG).map((b: BehaviorEntry) => 
 }));
 
 const LEVEL_LABELS: Record<string, string> = {
-  atom: "⚛ Atoms",
-  molecule: "🔬 Molecules",
-  organism: "🧬 Organisms",
+  atom: "Atoms",
+  molecule: "Molecules",
+  organism: "Organisms",
 };
 
 function getBehaviorCategory(name: string): string {
@@ -466,16 +517,32 @@ function BehaviorStateMachineInfo({ schema }: { schema: Record<string, unknown> 
     }
   }
   return (
-    <div className={styles.smInfo}>
-      <div className={styles.smSection}>
-        <span className={styles.smLabel}>States</span>
-        <div className={styles.smTags}>{states.map((s) => <span key={s} className={styles.smTag}>{s}</span>)}</div>
-      </div>
-      <div className={styles.smSection}>
-        <span className={styles.smLabel}>Events</span>
-        <div className={styles.smTags}>{events.map((e) => <span key={e} className={`${styles.smTag} ${styles.smTagEvent}`}>{e}</span>)}</div>
-      </div>
-    </div>
+    <HStack gap="lg" className="px-5 py-2.5 border-b border-[var(--color-border)] flex-shrink-0 flex-wrap">
+      <HStack gap="sm" align="center">
+        <Typography variant="overline" color="muted" weight="bold" className="text-[0.65rem] uppercase tracking-wider">
+          States
+        </Typography>
+        <HStack gap="xs" wrap>
+          {states.map((s) => (
+            <Badge key={s} variant="default" size="sm" className="text-[0.65rem] font-mono px-1.5 py-0.5 rounded-sm">
+              {s}
+            </Badge>
+          ))}
+        </HStack>
+      </HStack>
+      <HStack gap="sm" align="center">
+        <Typography variant="overline" color="muted" weight="bold" className="text-[0.65rem] uppercase tracking-wider">
+          Events
+        </Typography>
+        <HStack gap="xs" wrap>
+          {events.map((e) => (
+            <Badge key={e} variant="primary" size="sm" className="text-[0.65rem] font-mono px-1.5 py-0.5 rounded-sm">
+              {e}
+            </Badge>
+          ))}
+        </HStack>
+      </HStack>
+    </HStack>
   );
 }
 
@@ -494,42 +561,65 @@ function CodePanel({ entry }: { entry: BehaviorEntry }) {
   const lang = activeTab === "source" ? "typescript" : "json";
 
   return (
-    <div className={styles.codePanel}>
-      <button
-        className={styles.codePanelToggle}
+    <VStack className="flex-shrink-0 border-t border-[var(--color-border)]">
+      <Button
+        variant="ghost"
+        className="flex items-center gap-2 w-full px-5 py-2 rounded-none justify-start"
         onClick={() => setExpanded((v) => !v)}
       >
-        <Code size={14} />
-        <span>Code</span>
-        <span className={styles.codePanelLevel}>{entry.level}</span>
+        <Icon icon={Code} size={14} />
+        <Typography as="span" variant="caption" className="text-inherit">Code</Typography>
+        <Badge variant="primary" size="sm" className="ml-auto text-[0.6rem] px-2 py-0.5 rounded-full capitalize tracking-tight">
+          {entry.level}
+        </Badge>
         {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
+      </Button>
       {expanded && (
-        <div className={styles.codePanelBody}>
-          <div className={styles.codeTabs}>
+        <VStack>
+          <HStack className="border-b border-[var(--color-border)]">
             {hasSource && (
-              <button
-                className={`${styles.codeTab} ${activeTab === "source" ? styles.codeTabActive : ""}`}
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`px-4 py-1.5 rounded-none text-[0.7rem] font-semibold uppercase tracking-wide border-b-2 ${
+                  activeTab === "source"
+                    ? "border-b-[var(--color-primary)]"
+                    : "border-b-transparent"
+                }`}
                 onClick={() => setActiveTab("source")}
               >
                 Source (.ts)
-              </button>
+              </Button>
             )}
-            <button
-              className={`${styles.codeTab} ${activeTab === "schema" ? styles.codeTabActive : ""}`}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`px-4 py-1.5 rounded-none text-[0.7rem] font-semibold uppercase tracking-wide border-b-2 ${
+                activeTab === "schema"
+                  ? "border-b-[var(--color-primary)]"
+                  : "border-b-transparent"
+              }`}
               onClick={() => setActiveTab("schema")}
             >
               Schema (.orb)
-            </button>
-          </div>
-          <div className={styles.codeContent}>
-            <pre className={styles.codeBlock} data-language={lang}>
-              <code>{content}</code>
-            </pre>
-          </div>
-        </div>
+            </Button>
+          </HStack>
+          <Box className="max-h-[400px] overflow-auto">
+            <Typography
+              as="pre"
+              variant="small"
+              className="m-0 px-5 py-4 font-mono leading-relaxed whitespace-pre"
+              style={{ tabSize: 2 }}
+              data-language={lang}
+            >
+              <Typography as="code" color="inherit" className="p-0 border-none">
+                {content}
+              </Typography>
+            </Typography>
+          </Box>
+        </VStack>
       )}
-    </div>
+    </VStack>
   );
 }
 
@@ -576,60 +666,87 @@ function BehaviorsTab({ initialSelected }: { initialSelected?: string | null }) 
   }, []);
 
   return (
-    <div className={styles.liveLayout}>
+    <HStack className="h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] min-h-[600px] overflow-hidden">
       <Picker items={BEHAVIOR_LIST} selected={selected} onSelect={handleSelect} getCategory={getBehaviorCategory} />
-      <div className={styles.liveRight}>
-        <div className={styles.liveHeader}>
-          <div className={styles.liveHeaderInfo}>
-            <div className={styles.liveBehaviorName}>{selected}</div>
-            {entry && <div className={styles.liveBehaviorDesc}>{entry.description}</div>}
-          </div>
+      <VStack className="flex-1 min-h-0 overflow-hidden">
+        <HStack align="center" justify="between" className="gap-4 px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0">
+          <VStack className="flex-1 min-w-0">
+            <Typography variant="body2" color="primary" weight="semibold" className="text-[0.9rem] font-mono">
+              {selected}
+            </Typography>
+            {entry && (
+              <Typography variant="caption" color="muted" className="text-[0.8rem] mt-0.5">
+                {entry.description}
+              </Typography>
+            )}
+          </VStack>
           <ThemeControls
             theme={selectedTheme}
             mode={selectedMode}
             onThemeChange={setSelectedTheme}
             onModeToggle={handleModeToggle}
           />
-        </div>
+        </HStack>
         {schema && <BehaviorStateMachineInfo schema={schema} />}
         {schema && (
-          <div className={styles.mockDataBar}>
-            <label className={styles.mockDataToggle}>
-              <input
-                type="checkbox"
+          <HStack align="center" className="px-5 py-1.5 border-b border-[var(--color-border)] flex-shrink-0">
+            <Box className="ml-auto">
+              <Checkbox
                 checked={useMockData}
                 onChange={handleMockDataToggle}
+                label="Auto-fill initial state"
               />
-              <span className={styles.mockDataToggleLabel}>Auto-fill initial state</span>
-            </label>
-          </div>
+            </Box>
+          </HStack>
         )}
-        <div className={styles.livePreviewBox} data-theme={appliedTheme}>
+        <Box
+          className="flex-[1_1_0] h-0 overflow-x-hidden overflow-y-auto relative"
+          style={{
+            transform: 'translateZ(0)',
+            backgroundColor: 'var(--color-background, #ffffff)',
+            color: 'var(--color-foreground, #18181b)',
+            fontFamily: 'var(--font-family, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)',
+            lineHeight: 'var(--line-height, 1.6)',
+            letterSpacing: 'var(--letter-spacing, -0.01em)',
+            fontWeight: 'var(--font-weight-normal, 400)',
+            WebkitFontSmoothing: 'antialiased',
+            transition: 'background-color 0.2s, color 0.2s',
+          }}
+          data-theme={appliedTheme}
+        >
           {/* Pre-create portal root inside the preview box so UISlotRenderer's
               getOrCreatePortalRoot() finds it here instead of on document.body.
               This keeps theme CSS variables in scope. The portal root is a
               zero-height container; portal content uses position:fixed but the
               livePreviewBox has transform:translateZ(0) which constrains fixed
               elements to the preview box boundaries. */}
-          <div id="ui-slot-portal-root" style={{ position: 'relative', zIndex: 9999, pointerEvents: 'none' }} data-theme={appliedTheme} />
+          <Box
+            id="ui-slot-portal-root"
+            style={{ position: 'relative', zIndex: 9999, pointerEvents: 'none' }}
+            data-theme={appliedTheme}
+          />
           {adjustedSchema
             ? <OrbitalPreview key={previewKey} schema={adjustedSchema} mockData={useMockData ? mockData : {}} />
-            : <div className={styles.previewEmpty}>Select a behavior</div>
+            : (
+              <Box className="flex items-center justify-center h-[200px]">
+                <Typography color="muted" size="sm">Select a behavior</Typography>
+              </Box>
+            )
           }
-        </div>
+        </Box>
         {entry && <CodePanel entry={entry} />}
         {rt && (
-          <div className={styles.debuggerContainer}>
+          <Box className="flex-shrink-0 max-h-[240px] overflow-auto border-t border-[var(--color-border)]">
             <rt.RuntimeDebugger
               mode="inline"
               defaultCollapsed
               defaultTab="dispatch"
               schema={schema as Record<string, unknown> | undefined}
             />
-          </div>
+          </Box>
         )}
-      </div>
-    </div>
+      </VStack>
+    </HStack>
   );
 }
 
@@ -704,32 +821,58 @@ function ModuleOperatorPanel({ moduleName, opName, op }: {
   }, [opName]);
 
   return (
-    <div className={styles.opPanel}>
-      <div className={styles.opHeader}>
-        <code className={styles.opName}>{opName}</code>
-        <span className={styles.opReturn}>→ {op.returnType}</span>
-      </div>
-      <p className={styles.opDesc}>{op.description}</p>
+    <VStack gap="md" className="p-6 flex-1">
+      <HStack gap="md" align="center">
+        <Typography variant="body" color="primary" weight="semibold" className="font-mono">
+          {opName}
+        </Typography>
+        <Typography variant="caption" color="muted" className="font-mono">
+          {op.returnType}
+        </Typography>
+      </HStack>
+      <Typography variant="body2" color="muted" className="m-0">
+        {op.description}
+      </Typography>
 
-      <div className={styles.opExprRow}>
-        <textarea
-          className={styles.opExprInput}
+      <HStack gap="sm" align="start">
+        <Textarea
+          className="flex-1 font-mono text-[0.8rem] px-3 py-2 resize-none"
           value={expr}
           onChange={(e) => setExpr(e.target.value)}
           rows={2}
           spellCheck={false}
           onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); } }}
         />
-        <button className={styles.opRunBtn} onClick={run}>Run</button>
-      </div>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={run}
+          className="rounded-md whitespace-nowrap"
+        >
+          Run
+        </Button>
+      </HStack>
 
-      <div className={styles.opPreviewBox}>
+      <Box className="flex-1 min-h-[120px] max-h-[300px] overflow-auto rounded-lg border border-[var(--color-border)]">
         {result
-          ? <pre className={result.isError ? styles.opResultError : styles.opResultSuccess}>{result.text}</pre>
-          : <div className={styles.previewLoading}>Press Run to execute</div>
+          ? (
+            <Typography
+              as="pre"
+              color={result.isError ? "error" : "primary"}
+              variant="small"
+              className="m-0 p-4 font-mono leading-relaxed whitespace-pre-wrap break-words"
+            >
+              {result.text}
+            </Typography>
+          )
+          : (
+            <Box className="flex items-center justify-center h-full">
+              <Typography color="muted" size="sm">Press Run to execute</Typography>
+            </Box>
+          )
         }
-      </div>
-    </div>
+      </Box>
+    </VStack>
   );
 }
 
@@ -744,30 +887,52 @@ function ModuleDetail({ moduleName }: { moduleName: string }) {
   }, [moduleName]);
 
   return (
-    <div className={styles.moduleDetail}>
+    <HStack className="flex-1 overflow-hidden">
       {/* Op list */}
-      <div className={styles.opList}>
-        <div className={styles.opListLabel}>{moduleName} operators</div>
+      <VStack className="w-[220px] flex-shrink-0 border-r border-[var(--color-border)] overflow-y-auto">
+        <Typography
+          variant="overline"
+          color="muted"
+          weight="bold"
+          className="text-[0.65rem] uppercase tracking-wider px-3.5 pt-3 pb-1.5"
+        >
+          {moduleName} operators
+        </Typography>
         {opNames.map((op) => (
-          <button
+          <Box
             key={op}
-            className={`${styles.opListItem} ${op === selectedOp ? styles.opListItemActive : ""}`}
+            className={`flex flex-col py-1.5 px-3.5 cursor-pointer text-left transition-colors duration-100 ${
+              op === selectedOp
+                ? "border-l-2 border-l-[var(--color-primary)]"
+                : ""
+            }`}
             onClick={() => setSelectedOp(op)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') setSelectedOp(op); }}
           >
-            <code>{op}</code>
-            <span className={styles.opListDesc}>{ops[op].description}</span>
-          </button>
+            <Typography variant="caption" color={op === selectedOp ? "primary" : "muted"} className="font-mono">
+              {op}
+            </Typography>
+            <Typography variant="caption" color="muted" className="text-[0.65rem] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+              {ops[op].description}
+            </Typography>
+          </Box>
         ))}
-      </div>
+      </VStack>
 
       {/* Op detail + live execution */}
-      <div className={styles.opDetailPane}>
+      <VStack className="flex-1 overflow-y-auto">
         {selectedOp && ops[selectedOp]
           ? <ModuleOperatorPanel key={selectedOp} moduleName={moduleName} opName={selectedOp} op={ops[selectedOp]} />
-          : <div className={styles.previewEmpty}>Select an operator</div>
+          : (
+            <Box className="flex items-center justify-center h-full">
+              <Typography color="muted" size="sm">Select an operator</Typography>
+            </Box>
+          )
         }
-      </div>
-    </div>
+      </VStack>
+    </HStack>
   );
 }
 
@@ -777,16 +942,22 @@ function ModulesTab({ initialSelected }: { initialSelected?: string | null }) {
   );
 
   return (
-    <div className={styles.liveLayout}>
+    <HStack className="h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] min-h-[600px] overflow-hidden">
       <Picker items={MODULE_LIST} selected={selected} onSelect={setSelected} getCategory={getModuleCategory} />
-      <div className={styles.liveRight}>
-        <div className={styles.liveHeader}>
-          <div className={styles.liveBehaviorName}>{selected}</div>
-          <div className={styles.liveBehaviorDesc}>{Object.keys(MODULE_CATALOG[selected] ?? {}).length} operators — executed live via the Orbital evaluator</div>
-        </div>
+      <VStack className="flex-1 min-h-0 overflow-hidden">
+        <HStack className="px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0">
+          <VStack>
+            <Typography variant="body2" color="primary" weight="semibold" className="text-[0.9rem] font-mono">
+              {selected}
+            </Typography>
+            <Typography variant="caption" color="muted" className="text-[0.8rem] mt-0.5">
+              {Object.keys(MODULE_CATALOG[selected] ?? {}).length} operators - executed live via the Orbital evaluator
+            </Typography>
+          </VStack>
+        </HStack>
         <ModuleDetail moduleName={selected} />
-      </div>
-    </div>
+      </VStack>
+    </HStack>
   );
 }
 
@@ -804,49 +975,55 @@ function useUrlParams(): { tab: PlaygroundTab; selected: string | null } {
   return { tab, selected: params?.get("selected") ?? null };
 }
 
+const PAGE_TABS: TabItem[] = [
+  { id: "behaviors", label: "Behaviors" },
+  { id: "modules", label: "Modules" },
+];
+
 export default function Playground(): ReactNode {
   const urlParams = useUrlParams();
   const [activeTab, setActiveTab] = useState<PlaygroundTab>(urlParams.tab);
 
   return (
     <Layout
-      title={translate({ id: "playground.meta.title", message: "Playground — Almadar" })}
+      title={translate({ id: "playground.meta.title", message: "Playground - Almadar" })}
       description={translate({
         id: "playground.meta.description",
         message: "Live preview of Almadar standard behaviors and modules.",
       })}
     >
-      <div className={styles.pageHeader}>
-        <div className="container">
-          <Heading as="h1" className={styles.pageTitle}>Playground</Heading>
-          <p className={styles.pageSubtitle}>
-            Explore standard behaviors and modules — rendered live by the Orbital runtime.
-          </p>
-          <div className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${activeTab === "behaviors" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("behaviors")}
-            >
-              Behaviors
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "modules" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("modules")}
-            >
-              Modules
-            </button>
-          </div>
-        </div>
-      </div>
+      <Box className="py-12 pb-8 border-b border-[var(--color-border)]">
+        <Box className="container">
+          <Heading as="h1" className="text-[2rem] font-extrabold mb-2">
+            Playground
+          </Heading>
+          <Typography variant="body" color="muted" className="text-[1.05rem] m-0">
+            Explore standard behaviors and modules - rendered live by the Orbital runtime.
+          </Typography>
+          <Box className="mt-5">
+            <Tabs
+              items={PAGE_TABS}
+              activeTab={activeTab}
+              onTabChange={(tabId) => setActiveTab(tabId as PlaygroundTab)}
+              variant="pills"
+              className="gap-1"
+            />
+          </Box>
+        </Box>
+      </Box>
 
-      <main className={styles.playgroundMain}>
-        <BrowserOnly fallback={<div className={styles.loadingFallback}>Loading…</div>}>
+      <Box as="main" className="min-h-[calc(100vh-200px)] flex flex-col">
+        <BrowserOnly fallback={
+          <Box className="p-16 text-center">
+            <Typography color="muted">Loading...</Typography>
+          </Box>
+        }>
           {() => activeTab === "behaviors"
             ? <BehaviorsTab initialSelected={urlParams.tab === "behaviors" ? urlParams.selected : null} />
             : <ModulesTab initialSelected={urlParams.tab === "modules" ? urlParams.selected : null} />
           }
         </BrowserOnly>
-      </main>
+      </Box>
     </Layout>
   );
 }
