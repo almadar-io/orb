@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Standard Library
 
 > 93 reusable behaviors organized as atoms, molecules, and organisms.
@@ -15,8 +17,6 @@ The Standard Library provides **93 reusable behaviors** for Orb applications, or
 | **Organisms** | 25 | Compose molecules into full applications | std-ecommerce, std-crm, std-lms, std-helpdesk |
 
 Each behavior is a pure function that returns a complete `OrbitalDefinition` (entity + traits + pages). You call it with parameters (entity name, fields, page path) and get a ready-to-compile `.orb` structure.
-
-import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit

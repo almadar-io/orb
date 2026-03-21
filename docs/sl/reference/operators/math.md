@@ -1,5 +1,4 @@
 ---
-id: math
 title: "Matematicne operacije (math/*)"
 sidebar_label: "Math"
 ---

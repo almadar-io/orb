@@ -1,5 +1,4 @@
 ---
-id: prob
 title: "البرمجة الاحتمالية (prob/*)"
 sidebar_label: "الاحتمالات"
 ---

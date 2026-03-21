@@ -1,5 +1,4 @@
 ---
-id: time
 title: "Datum in cas (time/*)"
 sidebar_label: "Time"
 ---

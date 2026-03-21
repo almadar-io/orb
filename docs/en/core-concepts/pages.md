@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Pages
 
 > How pages work in the Orb architecture - routing, trait binding, slots, and navigation.
@@ -17,8 +19,6 @@ Orbital = Entity + Traits + Pages
 ```
 
 While [Entities](./entities.md) define data and [Traits](./traits.md) define behavior, Pages define **where** users interact with the system. Pages are **trait-driven** - they don't contain UI directly, but reference traits whose `render-ui` effects populate the page.
-
-import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit

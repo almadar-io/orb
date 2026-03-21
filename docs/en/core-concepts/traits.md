@@ -1,3 +1,5 @@
+import { AvlStateMachine } from '@almadar/ui/illustrations';
+
 # Traits
 
 > Trait definitions and state machine types for Orb
@@ -19,8 +21,6 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 While [Entities](./entities.md) define the shape of data, Traits define how that data changes over time through **states**, **transitions**, **guards**, and **effects**.
-
-import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine

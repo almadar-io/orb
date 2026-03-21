@@ -1,5 +1,4 @@
 ---
-id: str
 title: "عمليات النصوص (str/*)"
 sidebar_label: "النصوص"
 ---

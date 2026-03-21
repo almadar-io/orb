@@ -1,5 +1,4 @@
 ---
-id: validate
 title: "التحقق من المدخلات (validate/*)"
 sidebar_label: "التحقق"
 ---

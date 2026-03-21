@@ -1,3 +1,5 @@
+import { AvlClosedCircuit } from '@almadar/ui/illustrations';
+
 # Closed Circuit
 
 This document defines the **Closed Circuit Pattern** - the foundational architecture that ensures users are never stuck in an invalid UI state.
@@ -15,8 +17,6 @@ This is a **broken circuit**.
 ## The Closed Circuit Principle
 
 **Every UI interaction must complete a full circuit back to the state machine.**
-
-import { AvlClosedCircuit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlClosedCircuit animated />

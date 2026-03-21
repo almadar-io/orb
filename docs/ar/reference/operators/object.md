@@ -1,5 +1,4 @@
 ---
-id: object
 title: "أدوات الكائنات (object/*)"
 sidebar_label: "الكائنات"
 ---

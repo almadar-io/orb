@@ -1,5 +1,4 @@
 ---
-id: project-structure
 title: Struktura projekta
 sidebar_label: Struktura projekta
 ---

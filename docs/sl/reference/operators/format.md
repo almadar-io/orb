@@ -1,5 +1,4 @@
 ---
-id: format
 title: "Oblikovanje podatkov (format/*)"
 sidebar_label: "Format"
 ---

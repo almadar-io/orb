@@ -1,5 +1,4 @@
 ---
-id: validate
 title: "Preverjanje vnosov (validate/*)"
 sidebar_label: "Validate"
 ---

@@ -1,5 +1,4 @@
 ---
-id: quickstart
 title: البداية السريعة
 sidebar_label: البداية السريعة
 ---

@@ -1,5 +1,4 @@
 ---
-id: installation
 title: التثبيت
 sidebar_label: التثبيت
 ---

@@ -1,5 +1,4 @@
 ---
-id: index
 title: مرجع العوامل
 sidebar_label: نظرة عامة
 ---

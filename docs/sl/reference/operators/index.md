@@ -1,5 +1,4 @@
 ---
-id: index
 title: Referenca operatorjev
 sidebar_label: Pregled
 ---

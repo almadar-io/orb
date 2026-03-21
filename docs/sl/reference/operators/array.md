@@ -1,5 +1,4 @@
 ---
-id: array
 title: "Operacije s seznami (array/*)"
 sidebar_label: "Array"
 ---

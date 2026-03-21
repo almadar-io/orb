@@ -1,5 +1,4 @@
 ---
-id: str
 title: "Operacije z nizi (str/*)"
 sidebar_label: "String"
 ---

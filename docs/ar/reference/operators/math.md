@@ -1,5 +1,4 @@
 ---
-id: math
 title: "العمليات الرياضية (math/*)"
 sidebar_label: "الرياضيات"
 ---

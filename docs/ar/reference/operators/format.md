@@ -1,5 +1,4 @@
 ---
-id: format
 title: "تنسيق البيانات (format/*)"
 sidebar_label: "التنسيق"
 ---

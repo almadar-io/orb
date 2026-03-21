@@ -1,5 +1,4 @@
 ---
-id: array
 title: "عمليات المجموعات (array/*)"
 sidebar_label: "المصفوفات"
 ---

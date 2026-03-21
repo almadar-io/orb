@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Patterns
 
 > The bridge between declarative schemas and UI components
@@ -19,8 +21,6 @@ Schema (render-ui)  →  Pattern Registry  →  Component Mapping  →  Shell Co
                               ↓
                     Closed Circuit Validation
 ```
-
-import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit

@@ -1,5 +1,4 @@
 ---
-id: async
 title: "Asinhrone operacije (async/*)"
 sidebar_label: "Async"
 ---

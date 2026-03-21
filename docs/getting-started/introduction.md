@@ -3,6 +3,8 @@ id: introduction
 title: Introduction to Orb
 sidebar_label: Introduction
 ---
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Introduction to Orb
 
 > **The Physics of Software**: Natural Language → Schema → Production Application
@@ -16,8 +18,6 @@ Orb is a **declarative programming language** for building full-stack applicatio
 - **Pages** - Routes with UI bindings
 
 The Orb compiler transforms this schema into a complete, production-ready application.
-
-import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit

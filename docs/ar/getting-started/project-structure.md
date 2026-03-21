@@ -1,5 +1,4 @@
 ---
-id: project-structure
 title: بنية المشروع
 sidebar_label: بنية المشروع
 ---

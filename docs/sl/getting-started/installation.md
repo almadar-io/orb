@@ -1,5 +1,4 @@
 ---
-id: installation
 title: Namestitev
 sidebar_label: Namestitev
 ---

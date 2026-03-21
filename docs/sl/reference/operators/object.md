@@ -1,5 +1,4 @@
 ---
-id: object
 title: "Pripomocki za objekte (object/*)"
 sidebar_label: "Object"
 ---

@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Entities
 
 > How entities work in the Orb architecture - from schema definition to runtime execution.
@@ -13,8 +15,6 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 Entities define the shape of data, while Traits define behavior (state machines) that operate on that data. The binding between them is explicit and type-safe.
-
-import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit

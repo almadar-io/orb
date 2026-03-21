@@ -1,5 +1,4 @@
 ---
-id: async
 title: "العمليات غير المتزامنة (async/*)"
 sidebar_label: "غير المتزامن"
 ---

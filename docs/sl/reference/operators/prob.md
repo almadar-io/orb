@@ -1,5 +1,4 @@
 ---
-id: prob
 title: "Verjetnostno programiranje (prob/*)"
 sidebar_label: "Prob"
 ---

@@ -1,5 +1,4 @@
 ---
-id: time
 title: "التاريخ والوقت (time/*)"
 sidebar_label: "الوقت"
 ---

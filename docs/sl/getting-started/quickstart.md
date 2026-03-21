@@ -1,5 +1,4 @@
 ---
-id: quickstart
 title: Hitri zacetek
 sidebar_label: Hitri zacetek
 ---
