@@ -179,7 +179,7 @@ export function createConfig(opts: SiteConfig): Config {
     themeConfig: {
       image: "img/og-image.png",
       colorMode: {
-        defaultMode: "light",
+        defaultMode: "dark",
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },

@@ -17,6 +17,7 @@ import {
   Box,
   GradientDivider,
 } from "@almadar/ui/marketing";
+import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 
 const EXAMPLE_CODE = `{
   "entities": [{
@@ -83,6 +84,7 @@ export default function OrbHome(): ReactNode {
         installCommand="curl -fsSL https://orb.almadar.io/install.sh | sh"
         primaryAction={{ label: translate({ id: "orb.hero.cta1", message: "Get Started" }), href: "/docs/getting-started/introduction" }}
         secondaryAction={{ label: translate({ id: "orb.hero.cta2", message: "Standard Library" }), href: "/stdlib" }}
+        backgroundElement={<OrbitalHeroBackground />}
       />
 
       <ContentSection>
