@@ -5,83 +5,35 @@ image: /img/blog/s-expressions-json-functional.png
 authors: [osamah]
 tags: [architecture]
 ---
+import { AvlExprTree } from '@almadar/ui/illustrations';
 
-![S-Expressions, JSON, and the Functional Renaissance](/img/blog/s-expressions-json-functional.png)
-
-Why we chose Lisp-style S-expressions over JSON for logic definition, and why you might too.
-
-Everyone loves JSON, but when you need logic, you end up with string templates or JavaScript. What if your data format *was* your logic format?
+JSON holds data beautifully but has no answer for logic. String templates are error-prone and injectable. Custom DSLs are verbose and hard to validate. JavaScript functions are not serializable. S-expressions solve all three problems: they are structured, serializable, and executable, encoded as plain JSON arrays.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## The Problem
 
-## The JSON Limitation
+When you need conditional logic inside JSON, the options are all flawed:
 
-JSON is great for data:
+**String templates** like `"user.age >= 18 && user.verified"` invite typos, injection, and zero validation.
 
-```json
-{
-  "name": "John",
-  "age": 30,
-  "hobbies": ["coding", "reading"]
-}
-```
+**Custom DSL objects** like nested `"and"/"gte"/"eq"` structures work but are verbose and idiosyncratic.
 
-But what about logic? You have a few options:
+**JavaScript functions** are readable but not serializable, not cross-platform, and not safe.
 
-### Option 1: String Templates
-```json
-{
-  "condition": "user.age >= 18 && user.verified"
-}
-```
-- ❌ Error-prone (typos in strings)
-- ❌ No validation
-- ❌ Injection risk
+S-expressions give you the expressiveness of code with the safety of data.
 
-### Option 2: Custom DSL
-```json
-{
-  "condition": {
-    "and": [
-      { "gte": ["user.age", 18] },
-      { "eq": ["user.verified", true] }
-    ]
-  }
-}
-```
-- ✅ Structured
-- ❌ Verbose
-- ❌ Hard to read
+## S-Expressions in .orb
 
-### Option 3: JavaScript Functions
-```javascript
-const condition = (user) => user.age >= 18 && user.verified;
-```
-- ✅ Readable
-- ❌ Not serializable
-- ❌ Security risk (eval)
+The format is simple: `["operator", operand1, operand2, ...]`. In .orb, S-expressions appear in two places: guards (conditional logic) and effects (actions).
 
-## Enter S-Expressions
+<div style={{margin: '2rem 0'}}>
+<AvlExprTree animated />
+</div>
 
-S-expressions (symbolic expressions) have been around since 1958 with Lisp. They're simple:
+### Guards
 
-```
-(operator operand1 operand2 ...)
-```
-
-In JSON-friendly form:
-
-```json
-["operator", "operand1", "operand2", ...]
-```
-
-## S-Expressions in Almadar
-
-Almadar uses S-expressions for guards and effects:
-
-### Guards: Conditional Logic
+A guard is an S-expression that must evaluate to `true` for a transition to fire:
 
 ```json
 {
@@ -96,54 +48,25 @@ Almadar uses S-expressions for guards and effects:
 }
 ```
 
-This is equivalent to:
-```javascript
-if (user.roleLevel >= 5 && !entity.isFlagged && entity.amount > 0) {
-  // Allow transition
-}
-```
+Equivalent JavaScript: `if (user.roleLevel >= 5 && !entity.isFlagged && entity.amount > 0)`. But the S-expression version is serializable, validatable, secure (no eval), and cross-platform.
 
-But it's:
-- ✅ Serializable
-- ✅ Validatable
-- ✅ Secure (no eval)
-- ✅ Cross-platform
+### Effects
 
-### Effects: State Changes
+Effects are S-expressions that run after a guard passes:
 
 ```json
-{
-  "effects": [
-    ["set", "@entity.status", "approved"],
-    ["set", "@entity.approvedAt", "@now"],
-    ["set", "@entity.approvedBy", "@user.id"],
-    ["persist", "update", "Order", "@entity.id", "@entity"]
-  ]
-}
+"effects": [
+  ["set", "@entity.status", "approved"],
+  ["set", "@entity.approvedAt", "@now"],
+  ["persist", "update", "Order", "@entity"]
+]
 ```
 
-Each effect is an S-expression:
-- `["set", target, value]` — Set a value
-- `["persist", operation, entity, id, data]` — Save to database
-- `["emit", event, payload]` — Emit an event
+`set` writes a field. `persist` saves to the database. `emit` sends cross-orbital events. `render-ui` renders a component. `notify` shows a message. Each is a single array.
 
-## Why This Matters
+## Composability
 
-### 1. Homoiconicity (Code as Data)
-
-S-expressions are data that looks like code. This means:
-
-```json
-["+", "@entity.count", 1]
-```
-
-Is both:
-- A data structure (array of strings)
-- Executable code (add 1 to count)
-
-### 2. Composability
-
-You can nest S-expressions arbitrarily:
+S-expressions nest to any depth:
 
 ```json
 ["if",
@@ -151,129 +74,49 @@ You can nest S-expressions arbitrarily:
     [">", "@entity.score", 100],
     ["=", "@entity.status", "active"]
   ],
-  ["emit", "ACHIEVEMENT_UNLOCKED", { "level": "gold" }],
-  ["emit", "ACHIEVEMENT_PROGRESS", { "needed": ["-", 100, "@entity.score"] }]
+  ["emit", "ACHIEVEMENT_UNLOCKED"],
+  ["emit", "KEEP_GOING"]
 ]
 ```
 
-### 3. Serialization
-
-Because S-expressions are just arrays, they serialize perfectly:
-
-```javascript
-// JavaScript
-const guard = [">=", "@user.age", 18];
-JSON.stringify(guard); // '[">=","@user.age",18]'
-```
-
-```python
-# Python
-guard = [">=", "@user.age", 18]
-json.dumps(guard)  # '[">=","@user.age",18]'
-```
-
-```rust
-// Rust
-let guard = json!( [">=", "@user.age", 18] );
-serde_json::to_string(&guard).unwrap();
-```
+The `if` operator takes a condition, a then-branch, and an else-branch. Each branch can be another S-expression. There is no nesting limit.
 
 ## The Binding Context
 
-S-expressions in Almadar use special prefixes for context:
+S-expressions reference runtime data through prefixed bindings:
 
 | Prefix | Meaning | Example |
 |--------|---------|---------|
-| `@entity.field` | Current entity field | `"@entity.status"` |
-| `@payload.field` | Event payload | `"@payload.userId"` |
-| `@state` | Current state machine state name | `"@state"` (e.g. `"Browsing"`) |
-| `@user.field` | Current user | `"@user.id"` |
-| `@now` | Current timestamp | `"@now"` |
+| `@entity.field` | Current entity field | `@entity.status` |
+| `@payload.field` | Event payload | `@payload.userId` |
+| `@state` | Current state name | `@state` |
+| `@now` | Current timestamp | `@now` |
+| `@config.field` | App configuration | `@config.maxRetries` |
 
-This creates a **declarative binding system**:
-
-```json
-{
-  "guard": ["=", "@entity.ownerId", "@user.id"],
-  "effects": [
-    ["set", "@entity.updatedAt", "@now"],
-    ["set", "@entity.updatedBy", "@user.id"]
-  ]
-}
-```
-
-## Real-World Analogy: Excel Formulas
-
-If you've used Excel, you've used S-expressions:
-
-```excel
-=IF(AND(A1>100, B1="active"), "Gold", "Silver")
-```
-
-In Almadar:
-```json
-["if",
-  ["and", [">", "@entity.score", 100], ["=", "@entity.status", "active"]],
-  "Gold",
-  "Silver"
-]
-```
-
-Excel formulas are S-expressions. They're:
-- Declarative (you say what, not how)
-- Composable (functions call functions)
-- Safe (no arbitrary code execution)
+Bindings are validated at compile time. Reference a nonexistent field and `orbital validate` catches it before any code runs.
 
 ## Standard Operators
 
-Almadar's standard library includes:
+.orb includes a standard library of operators:
 
-### Comparison
-```json
-["=", "a", "b"]        // equality
-["!=", "a", "b"]       // not equal
-[">", "a", "b"]        // greater than
-[">=", "a", "b"]       // greater or equal
-```
+**Comparison**: `=`, `!=`, `>`, `>=`, `<`, `<=`
 
-### Logic
-```json
-["and", "a", "b", "c"] // all must be true
-["or", "a", "b", "c"]  // at least one true
-["not", "a"]           // negation
-```
+**Logic**: `and`, `or`, `not`
 
-### Math
-```json
-["+", "a", "b", "c"]   // sum
-["-", "a", "b"]        // difference
-["*", "a", "b"]        // product
-["/", "a", "b"]        // quotient
-```
+**Math**: `+`, `-`, `*`, `/`
 
-### Array
-```json
-["count", "@array"]    // array length
-["contains", "@array", "item"]  // membership
-["filter", "@array", ["predicate"]]
-```
+**Array**: `count`, `contains`, `filter`
 
-### String
-```json
-["concat", "a", "b"]   // concatenate
-["length", "str"]      // string length
-["matches", "str", "regex"]
-```
+**String**: `concat`, `length`, `matches`
 
-## Try It: Build a Guard
+**Existence**: `not-empty`, `is-null`
 
-Let's create a guard for an approval workflow:
+## A Real-World Guard
+
+Here is a guard for an approval workflow with role-based access, lock checking, and amount limits:
 
 ```json
 {
-  "from": "pending",
-  "to": "approved",
-  "event": "APPROVE",
   "guard": ["and",
     ["or",
       [">=", "@user.roleLevel", 5],
@@ -286,33 +129,26 @@ Let's create a guard for an approval workflow:
 }
 ```
 
-This translates to:
-```javascript
-if (
-  (user.roleLevel >= 5 || user.id === entity.ownerId) &&
-  !entity.isLocked &&
-  entity.amount > 0 &&
-  entity.amount < 10000
-) {
-  // Allow approval
-}
+This translates to: the user must be either a manager (role level 5+) or the owner. The entity must not be locked. The amount must be between 0 and 10,000. All four conditions enforced declaratively, serializable for audit logs, and validated at compile time.
+
+## The Excel Analogy
+
+If you have used Excel formulas, you have used S-expressions:
+
+```
+=IF(AND(A1>100, B1="active"), "Gold", "Silver")
 ```
 
-But with:
-- ✅ Declarative syntax
-- ✅ Automatic validation
-- ✅ No code injection risk
-- ✅ Serializable for audit logs
+In .orb:
 
-## The Takeaway
+```json
+["if",
+  ["and", [">", "@entity.score", 100], ["=", "@entity.status", "active"]],
+  "Gold",
+  "Silver"
+]
+```
 
-S-expressions aren't just a Lisp curiosity — they're a practical solution to "how do we put logic in JSON?"
+Declarative, composable, safe. No arbitrary code execution, no injection risk, no eval.
 
-They give you:
-- **The power of code** (composability, expressiveness)
-- **The safety of data** (serialization, validation, no eval)
-- **The clarity of Excel** (declarative, readable)
-
-Next time you're tempted to use `eval()` or string templates for dynamic logic, remember: there's a 60-year-old solution that actually works.
-
-Want to explore more? Check out the [standard library operators](https://orb.almadar.io/docs/stdlib).
+S-expressions are not a Lisp curiosity. They are a practical, 65-year-old solution to "how do you put logic in data?" that actually works. Explore the full operator list in the [standard library](https://orb.almadar.io/docs/stdlib).

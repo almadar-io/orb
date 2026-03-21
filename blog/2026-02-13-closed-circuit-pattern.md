@@ -1,211 +1,68 @@
 ---
 slug: closed-circuit-pattern
-title: "The Closed Circuit Pattern: Why Your Users Get Stuck (And How to Prevent It)"
+title: "The Closed Circuit Pattern in .orb"
 authors: [osamah]
 tags: [architecture, state-machines]
 image: /img/blog/closed-circuit-pattern.png
 ---
+import { AvlClosedCircuit } from '@almadar/ui/illustrations';
 
-![The Closed Circuit Pattern: Why Your Users Get Stuck (And How to Prevent It)](/img/blog/closed-circuit-pattern.png)
-
-Ever opened a modal and couldn't close it? That's a broken circuit. We made it impossible to build those.
+Ever opened a modal and could not close it? That is a broken circuit. The .orb compiler makes it impossible to build one.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## The Problem: Users Get Stuck
 
-## The Stuck User Problem
+A modal opens via `setIsOpen(true)`. The close button calls `setIsOpen(false)`. But if the handler has a bug, or the close button was never wired up, the user is trapped. In traditional codebases, this bug survives until someone reports it in production.
 
-You're using an app. You click "Open Settings." A modal appears. You click the X button. Nothing happens. You press Escape. Nothing. You click outside the modal. Still nothing.
+In .orb, every UI interaction must complete a full circuit: user action triggers an event, the event bus routes it to the state machine, the state machine transitions and updates the UI, and the updated UI is ready for the next action. No shortcuts, no direct state mutations.
 
-**You're stuck.**
+<div style={{margin: '2rem 0'}}>
+<AvlClosedCircuit
+  states={[{name: "browsing"}, {name: "modalOpen"}, {name: "saving"}]}
+  transitions={[
+    {from: "browsing", to: "modalOpen", event: "OPEN"},
+    {from: "modalOpen", to: "saving", event: "SAVE"},
+    {from: "saving", to: "browsing", event: "SUCCESS"},
+    {from: "modalOpen", to: "browsing", event: "CLOSE"},
+    {from: "saving", to: "modalOpen", event: "ERROR"}
+  ]}
+  animated
+/>
+</div>
 
-This happens because:
-1. The modal opened via internal state (`setIsOpen(true)`)
-2. The close button triggers `setIsOpen(false)`
-3. But if there's a bug, the state doesn't update
-4. Or worse — the close button was never wired up
+## How .orb Enforces the Circuit
 
-In Almadar, this is architecturally impossible.
+The compiler runs a closed-circuit validator that checks three rules:
 
-## The Closed Circuit Principle
-
-**Every UI interaction must complete a full circuit back to the state machine.**
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                                                                │
-│   User Click ──► Event Bus ──► State Machine ──► UI Update     │
-│       ▲                                              │         │
-│       └──────────────────────────────────────────────┘         │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-```
-
-No shortcuts. No direct state mutations. Every action flows through the circuit.
-
-## How It Works in Almadar
-
-### 1. User Triggers Event
-
-When you click a button:
-
-```typescript
-// ❌ NOT this:
-onClick={() => setIsModalOpen(false)}
-
-// ✅ This:
-onClick={() => eventBus.emit('UI:CLOSE')}
-```
-
-The component doesn't know what happens next. It just emits.
-
-### 2. Event Bus Routes to State Machine
-
-The event bus receives `UI:CLOSE` and routes it to the active trait's state machine.
-
-### 3. State Machine Processes
-
-```json
-{
-  "from": "modalOpen",
-  "to": "browsing",
-  "event": "CLOSE",
-  "effects": [
-    ["render-ui", "modal", null],
-    ["render-ui", "main", { "type": "page-header", ... }]
-  ]
-}
-```
-
-The state machine:
-1. Transitions from `modalOpen` to `browsing`
-2. Clears the modal slot
-3. Renders the main content
-
-### 4. UI Updates
-
-The component re-renders based on the new state. The modal disappears because the state machine said so.
-
-## Why This Prevents Stuck States
-
-### 1. Events Must Have Transitions
-
-If you define a button with an event:
-
-```json
-{
-  "type": "page-header",
-  "actions": [{ "label": "Open", "event": "OPEN_MODAL" }]
-}
-```
-
-The validator **requires** a matching transition:
-
-```json
-{
-  "from": "browsing",
-  "to": "modalOpen",
-  "event": "OPEN_MODAL"
-  // ✅ Required transition exists
-}
-```
-
-If you forget:
-```
-✗ Error: CIRCUIT_ORPHAN_EVENT
-  Action 'Open' emits event 'OPEN_MODAL' which has no transition handler
-```
-
-### 2. Overlay Slots Must Have Exits
-
-If you render to `modal` or `drawer`, the validator requires an exit:
-
-```json
-{
-  "from": "browsing",
-  "to": "modalOpen",
-  "event": "OPEN_MODAL",
-  "effects": [
-    ["render-ui", "modal", { "type": "form-section", ... }]
-  ]
-}
-```
-
-Must have:
-```json
-{
-  "from": "modalOpen",
-  "to": "browsing",
-  "event": "CLOSE"
-  // ✅ Required exit transition
-}
-```
-
-If you forget:
-```
-✗ Error: CIRCUIT_NO_OVERLAY_EXIT
-  State 'modalOpen' renders to 'modal' slot but has no exit transition.
-  Users will be stuck in this overlay.
-```
-
-### 3. Slot Wrappers Handle Escape Hatches
-
-Even if you forget a close button, the slot wrapper saves you:
-
-```typescript
-// ModalSlot.tsx (auto-generated wrapper)
-const handleClose = () => {
-  eventBus.emit('UI:CLOSE');
-  eventBus.emit('UI:CANCEL');
-};
-
-return (
-  <Modal 
-    isOpen={Boolean(children)} 
-    onClose={handleClose}  // Escape key, overlay click, X button
-  >
-    {children}
-  </Modal>
-);
-```
-
-The wrapper emits the event. The state machine handles it. The circuit completes.
-
-## Real-World Analogy: Traffic Lights
-
-Traffic lights follow a closed circuit:
+**Rule 1: Events must have transitions.** If a UI pattern includes a button with `"event": "OPEN_MODAL"`, a transition must handle that event in the current state. Otherwise:
 
 ```
-Red ──(timer)──► Green ──(timer)──► Yellow ──(timer)──► Red
+Error: CIRCUIT_ORPHAN_EVENT
+  Action 'Open' emits event 'OPEN_MODAL' which has no
+  transition handler in the current state.
+  The button will render but clicking it will do nothing.
 ```
 
-There's no "jump from Red to Green instantly" or "get stuck on Yellow." The circuit is closed — every state has defined transitions.
+**Rule 2: Overlay slots must have exits.** If a transition renders to the `modal` or `drawer` slot, another transition must exit that state and clear the overlay:
 
-Now imagine a broken traffic light:
-- Stuck on Red → traffic jam
-- Stuck on Green → accidents
-- Random transitions → chaos
+```
+Error: CIRCUIT_NO_OVERLAY_EXIT
+  State 'EditModal' renders to 'modal' slot but has no exit
+  transition. Users will be stuck in this overlay.
+  Fix: Add a transition from 'EditModal' with event 'CANCEL'
+  or 'CLOSE' that includes: ["render-ui", "modal", null]
+```
 
-Almadar's validator is like a traffic engineer who checks:
-- ✅ Every light has transitions
-- ✅ No impossible states
-- ✅ Emergency modes defined
+**Rule 3: Main slot must render.** Every state that the user can land in must render something to the main slot, or the page will be blank.
 
-## Example: Modal That Can't Break
-
-Here's a modal implementation that's **impossible to get stuck in**:
+## Example: A Modal That Cannot Break
 
 ```json
 {
   "states": [
     { "name": "browsing", "isInitial": true },
     { "name": "modalOpen" }
-  ],
-  "events": [
-    { "key": "OPEN_MODAL", "name": "Open Modal" },
-    { "key": "CLOSE", "name": "Close" },
-    { "key": "SAVE", "name": "Save" }
   ],
   "transitions": [
     {
@@ -228,7 +85,6 @@ Here's a modal implementation that's **impossible to get stuck in**:
         ["render-ui", "modal", {
           "type": "form-section",
           "entity": "Task",
-          "fields": ["title", "status"],
           "submitEvent": "SAVE",
           "cancelEvent": "CLOSE"
         }]
@@ -257,121 +113,26 @@ Here's a modal implementation that's **impossible to get stuck in**:
 }
 ```
 
-**Three ways to exit the modal:**
-1. Click "Cancel" → triggers `CLOSE` event
-2. Click "Save" → triggers `SAVE` event  
-3. Press Escape or click overlay → ModalSlot emits `UI:CLOSE`
-
-All three transition back to `browsing` and clear the modal.
+Three ways to exit: click Cancel (triggers `CLOSE`), click Save (triggers `SAVE`), or press Escape / click the overlay (the auto-generated modal wrapper emits `UI:CLOSE`, which the runtime routes to the `CLOSE` transition). All three paths transition back to `browsing` and clear the modal slot.
 
 ## The Slot Hierarchy
 
-Different slots have different return requirements:
+Different slots have different exit requirements:
 
-| Slot | Type | Return Requirement |
-|------|------|-------------------|
-| `main` | Primary | None — this is home base |
-| `sidebar` | Secondary | Optional — can coexist with main |
-| `modal` | Overlay | **REQUIRED** — Must have exit transition |
-| `drawer` | Overlay | **REQUIRED** — Must have exit transition |
-| `toast` | Notification | Auto-dismisses, no transition needed |
+| Slot | Exit Required? | Why |
+|------|---------------|-----|
+| `main` | No | This is home base |
+| `sidebar` | No | Can coexist with main |
+| `modal` | Yes | Blocks interaction |
+| `drawer` | Yes | Blocks interaction |
+| `toast` | No | Auto-dismisses |
 
-## Why This Architecture Matters
+The compiler only enforces exit transitions for overlay slots (`modal`, `drawer`) because those block the user from interacting with the rest of the application.
 
-### For Users
-- ✅ Never get stuck in modals
-- ✅ Consistent behavior across apps
-- ✅ Predictable UI patterns
+## Why This Matters
 
-### For Developers
-- ✅ Bugs caught at compile time
-- ✅ No manual close handler wiring
-- ✅ State changes are traceable
+The closed circuit pattern turns a class of runtime bugs into compile-time errors. You cannot ship a modal without a close path. You cannot render a button that triggers nothing. You cannot leave a user on a blank page.
 
-### For Teams
-- ✅ Schema = documentation
-- ✅ Easy to review state flows
-- ✅ Onboarding is faster
+Remove the `CLOSE` transition from the example above and run `orbital validate`. The compiler will refuse to proceed. The circuit must be complete before code generation begins.
 
-## Try It: Build a Break-Proof Modal
-
-Create `modal-demo.orb`:
-
-```json
-{
-  "name": "ModalDemo",
-  "orbitals": [{
-    "name": "Demo",
-    "entity": { "name": "Item", "fields": [{ "name": "name", "type": "string" }] },
-    "traits": [{
-      "name": "DemoTrait",
-      "linkedEntity": "Item",
-      "stateMachine": {
-        "states": [
-          { "name": "main", "isInitial": true },
-          { "name": "modalOpen" }
-        ],
-        "events": [
-          { "key": "INIT", "name": "Initialize" },
-          { "key": "OPEN", "name": "Open" },
-          { "key": "CLOSE", "name": "Close" }
-        ],
-        "transitions": [
-          {
-            "from": "main",
-            "to": "main",
-            "event": "INIT",
-            "effects": [
-              ["render-ui", "main", {
-                "type": "page-header",
-                "title": "Demo",
-                "actions": [{ "label": "Open Modal", "event": "OPEN" }]
-              }]
-            ]
-          },
-          {
-            "from": "main",
-            "to": "modalOpen",
-            "event": "OPEN",
-            "effects": [
-              ["render-ui", "modal", { "type": "page-header", "title": "I'm a Modal!" }]
-            ]
-          },
-          {
-            "from": "modalOpen",
-            "to": "main",
-            "event": "CLOSE",
-            "effects": [
-              ["render-ui", "modal", null],
-              ["emit", "INIT"]
-            ]
-          }
-        ]
-      }
-    }],
-    "pages": [{ "name": "DemoPage", "path": "/", "traits": [{ "ref": "DemoTrait" }] }]
-  }]
-}
-```
-
-Compile and try it:
-```bash
-orbital validate modal-demo.orb  # Will fail without CLOSE transition
-orbital compile modal-demo.orb --shell typescript
-```
-
-Try removing the `CLOSE` transition and validating again. The compiler won't let you create a broken circuit.
-
-## The Takeaway
-
-The Closed Circuit Pattern isn't just a good idea — it's enforced by the compiler.
-
-In Almadar:
-- Every UI action emits an event
-- Every event has a transition
-- Every overlay has an exit
-- Users never get stuck
-
-Because the best way to prevent bugs isn't testing — it's making them impossible to write.
-
-Learn more about [state machines in Almadar](https://orb.almadar.io/docs/traits).
+Traditional testing catches these bugs by running specific scenarios and hoping you covered the broken path. The .orb compiler proves the circuit is complete for every path, every time.

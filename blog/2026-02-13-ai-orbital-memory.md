@@ -1,321 +1,152 @@
 ---
 slug: ai-orbital-memory
-title: "Why We Gave Our AI Agent Orbital Memory Instead of a Vector Database"
+title: "Modeling Memory with .orb"
 authors: [osamah]
 tags: [architecture, ai]
 image: /img/blog/ai-orbital-memory.png
 ---
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
-![Why We Gave Our AI Agent Orbital Memory Instead of a Vector Database](/img/blog/ai-orbital-memory.png)
-
-Everyone's building RAG systems with vector DBs. We gave our AI a structured memory system that actually understands context.
+An AI agent needs memory. Most approaches reach for vector databases and similarity search. In .orb, memory is just another Orbital Unit with entities, traits, and state machines.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## Memory as an Orbital Unit
 
-## The RAG Problem
+In .orb, everything is an Orbital Unit: an entity (data shape), traits (state machine behaviors), and pages (routes). Memory fits this model naturally. A memory system has structured data (what to remember), state transitions (when to record and retrieve), and UI (how to surface context).
 
-Retrieval-Augmented Generation (RAG) is the standard approach for giving AI agents memory:
+Here is the Orbital Unit for an agent memory system:
 
-1. Take user query: *"How did I handle auth last time?"*
-2. Generate embedding vector
-3. Search vector database for similar vectors
-4. Inject top-K results into prompt
-5. Generate response
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="AgentMemory"
+  fields={8}
+  traits={[{name: "RecallTrait"}, {name: "RecordTrait"}]}
+  pages={[{name: "MemoryInspector"}]}
+  animated
+/>
+</div>
 
-**The problem?** Vector similarity ≠ contextual relevance.
+## The Entity: What Gets Remembered
 
-### When RAG Fails
-
-**Scenario 1: Temporal Context**
-- User: *"What did I work on last Tuesday?"*
-- Vector DB: Finds documents about "work" and "Tuesday meetings"
-- Reality: User wants their specific session from 5 days ago
-
-**Scenario 2: Pattern Matching**
-- User: *"Show me all the list views I've built"*
-- Vector DB: Finds documents containing "list" and "view"
-- Reality: User wants entity-table patterns used across sessions
-
-**Scenario 3: Causal Reasoning**
-- User: *"Why did my auth implementation fail?"*
-- Vector DB: Finds documents about auth
-- Reality: User needs the error → fix → success chain
-
-Vector search finds *similar text*. It doesn't understand *what you're actually asking*.
-
-## The Orbital Memory Alternative
-
-Instead of vector embeddings, Almadar's AI uses **structured orbital memory**:
-
-```typescript
-// Memory is structured as orbital schemas
-interface MemoryOrbital {
-  userPreferences: {
-    namingConvention: 'PascalCase' | 'camelCase';
-    preferredPatterns: string[];
-    commonEntities: string[];
-    validationStyle: 'strict' | 'minimal';
-  };
-  
-  generationSessions: {
-    threadId: string;
-    prompt: string;
-    skill: string;
-    patterns: string[];
-    entities: string[];
-    success: boolean;
-    createdAt: Date;
-  }[];
-  
-  projectContext: {
-    appId: string;
-    existingEntities: string[];
-    conventions: string[];
-    domain: string;
-  };
-}
-```
-
-This is memory as **structured data with relationships**, not text chunks with vectors.
-
-## Why Orbitals Make Better Memory
-
-### 1. Temporal State Transitions
-
-Instead of just timestamps, we capture the *journey*:
-
-```json
-{
-  "sessionId": "sess_123",
-  "prompt": "Create Order entity",
-  "timeline": [
-    { "state": "generated", "timestamp": "2025-03-01T10:00:00Z" },
-    { "state": "validation_failed", "timestamp": "2025-03-01T10:02:00Z", "errors": ["Missing INIT"] },
-    { "state": "fixed", "timestamp": "2025-03-01T10:05:00Z" },
-    { "state": "compiled", "timestamp": "2025-03-01T10:06:00Z" }
-  ]
-}
-```
-
-Now the AI can answer:
-- *"What errors did I fix last week?"* → Find validation_failed → fixed transitions
-- *"What's my success rate?"* → Count generated → compiled paths
-- *"Which patterns cause errors?"* → Correlate patterns with failure states
-
-### 2. Structured Querying
-
-Find sessions by actual fields:
-
-```typescript
-// Find all successful sessions using entity-table pattern
-const sessions = await memoryManager.getUserGenerationHistory(userId, {
-  filter: {
-    success: true,
-    patterns: { $contains: 'entity-table' }
-  }
-});
-
-// Find project context
-const context = await memoryManager.getProjectContext(appId);
-// Returns: { existingEntities: ['Order', 'User'], conventions: [...] }
-```
-
-No embeddings. No similarity thresholds. Just precise queries.
-
-### 3. Composable Memory
-
-Orbitals compose like regular orbitals:
-
-```json
-{
-  "name": "UserMemory",
-  "orbitals": [
-    { "name": "PreferenceMemory", "entity": "UserPreference" },
-    { "name": "GenerationMemory", "entity": "GenerationSession" },
-    { "name": "ProjectMemory", "entity": "ProjectContext" }
-  ],
-  "listens": [
-    { "event": "SESSION_COMPLETED", "triggers": "UPDATE_MEMORY" }
-  ]
-}
-```
-
-Memory updates are events that trigger state transitions — just like regular Almadar apps.
-
-## How It Works
-
-### Recording a Session
-
-```typescript
-// Internal: Almadar's memory system records generation sessions
-const memoryManager = createMemoryManager(db);
-
-// After completing a generation session
-await memoryManager.recordGeneration(userId, {
-  threadId: 'thread_123',
-  prompt: 'Create Order entity with validation',
-  skill: 'kflow-orbitals',
-  patterns: ['entity-form', 'validation-rules'],
-  entities: ['Order', 'OrderItem'],
-  success: true,
-});
-
-// Update user preferences based on patterns used
-await memoryManager.updateUserPreferences(userId, {
-  preferredPatterns: ['entity-form', 'validation-rules'],
-  commonEntities: ['Order', 'OrderItem'],
-});
-
-// Update project context
-await memoryManager.updateProjectContext(appId, {
-  existingEntities: ['Order', 'OrderItem'],
-  conventions: ['use-entity-table-for-lists'],
-});
-```
-
-### Using Memory in Generation
-
-```typescript
-// Internal: When the agent starts, memory is loaded automatically
-const agent = createAgent({
-  skill: 'kflow-orbitals',
-  userId: 'user_123',
-  appId: 'app_456',
-});
-
-// Memory context is automatically injected into the system prompt
-```
-
-The AI receives:
-
-```
-## User Context
-
-### User Preferences
-- Preferred naming: PascalCase
-- Preferred patterns: entity-form, validation-rules
-- Commonly used entities: Order, OrderItem
-
-### Project Context  
-- Project: E-Commerce Platform
-- Existing entities: Order, OrderItem
-- Project conventions: use-entity-table-for-lists
-```
-
-No retrieval needed — the relevant context is already there.
-
-## Real-World Analogy: Medical Records vs Search Engine
-
-**Vector DB approach** = Google Search:
-- Search: "heart problems"
-- Get: Millions of results about hearts
-- Problem: Too generic, not YOUR heart
-
-**Orbital Memory approach** = Your Medical Record:
-- Query: Patient ID 12345
-- Get: Complete history, medications, allergies, previous diagnoses
-- Advantage: Structured, accurate, personal
-
-When your doctor treats you, they don't Google "heart symptoms." They look at **your structured record**.
-
-## Comparison: RAG vs Orbital Memory
-
-| Aspect | RAG (Vector DB) | Orbital Memory |
-|--------|-----------------|----------------|
-| Storage | Text chunks + embeddings | Structured orbital schemas |
-| Query | Similarity search | Field-based queries |
-| Temporal | Timestamps only | State transitions |
-| Relationships | None explicit | Entity relations, foreign keys |
-| Reasoning | Surface similarity | Deep semantic + causal |
-| Updates | Re-embed documents | State machine transitions |
-| Explainability | "Similarity score: 0.87" | "Matched field: patterns" |
-
-## The Memory Orbital Schema
-
-Here's the actual memory structure:
+The `AgentMemory` entity captures structured fields rather than raw text chunks:
 
 ```json
 {
   "name": "AgentMemory",
-  "version": "1.0.0",
-  "orbitals": [
-    {
-      "name": "UserPreferenceMemory",
-      "entity": {
-        "name": "UserPreference",
-        "fields": [
-          { "name": "userId", "type": "string", "required": true },
-          { "name": "namingConvention", "type": "enum", "values": ["PascalCase", "camelCase", "snake_case"] },
-          { "name": "preferredPatterns", "type": "array", "items": { "type": "string" } },
-          { "name": "commonEntities", "type": "array", "items": { "type": "string" } },
-          { "name": "confidence", "type": "number", "default": 0.5 }
-        ]
-      }
-    },
-    {
-      "name": "GenerationHistoryMemory",
-      "entity": {
-        "name": "GenerationSession",
-        "fields": [
-          { "name": "threadId", "type": "string", "required": true },
-          { "name": "prompt", "type": "string", "required": true },
-          { "name": "skill", "type": "string", "required": true },
-          { "name": "patterns", "type": "array", "items": { "type": "string" } },
-          { "name": "entities", "type": "array", "items": { "type": "string" } },
-          { "name": "success", "type": "boolean" },
-          { "name": "createdAt", "type": "timestamp" }
-        ]
-      }
-    }
+  "fields": [
+    { "name": "sessionId", "type": "string", "required": true },
+    { "name": "prompt", "type": "string", "required": true },
+    { "name": "patterns", "type": "array", "items": { "type": "string" } },
+    { "name": "entities", "type": "array", "items": { "type": "string" } },
+    { "name": "success", "type": "boolean" },
+    { "name": "errorType", "type": "string" },
+    { "name": "confidence", "type": "number", "default": 0.5 },
+    { "name": "createdAt", "type": "timestamp" }
   ]
 }
 ```
 
-Memory IS an Almadar schema. It uses the same patterns as any other app.
+Each memory record is a typed row with queryable fields, not a vector embedding. You can ask "which patterns failed last week?" with a field filter instead of cosine similarity.
 
-## Try It: Build a Memory-Aware Agent
+## The Trait: Recording and Recalling
 
-```typescript
-// Internal: Almadar's AI agent uses structured memory
-// (This is how it works under the hood — not a public API)
+The `RecordTrait` manages the lifecycle of a memory entry through a state machine:
 
-const memoryManager = createMemoryManager(db);
-
-// The agent is created with memory access
-const agent = createAgent({
-  skill: 'kflow-orbitals',
-  workDir: '/workspace',
-  userId: 'user_123',
-  appId: 'app_456',
-});
-
-// The agent now has access to:
-// - User's preferred patterns
-// - Previously generated entities
-// - Project conventions
-// - Past successful/failed approaches
-
-const result = await agent.run({
-  input: 'Create a Product entity',
-});
-
-// After completion, session data is synced to memory automatically
-// Recording: what was generated, which patterns were used, success/failure
+```json
+{
+  "name": "RecordTrait",
+  "linkedEntity": "AgentMemory",
+  "stateMachine": {
+    "states": [
+      { "name": "idle", "isInitial": true },
+      { "name": "recording" },
+      { "name": "stored" },
+      { "name": "failed" }
+    ],
+    "transitions": [
+      {
+        "from": "idle",
+        "to": "recording",
+        "event": "SESSION_START",
+        "effects": [
+          ["set", "@entity.sessionId", "@payload.sessionId"],
+          ["set", "@entity.prompt", "@payload.prompt"]
+        ]
+      },
+      {
+        "from": "recording",
+        "to": "stored",
+        "event": "SESSION_COMPLETE",
+        "effects": [
+          ["set", "@entity.success", true],
+          ["set", "@entity.patterns", "@payload.patterns"],
+          ["persist", "create", "AgentMemory", "@entity"]
+        ]
+      },
+      {
+        "from": "recording",
+        "to": "failed",
+        "event": "SESSION_ERROR",
+        "effects": [
+          ["set", "@entity.success", false],
+          ["set", "@entity.errorType", "@payload.errorType"],
+          ["persist", "create", "AgentMemory", "@entity"]
+        ]
+      }
+    ]
+  }
+}
 ```
 
-## The Takeaway
+Every session moves through `idle` to `recording` to either `stored` or `failed`. The state machine enforces that you cannot mark a session complete without first starting it, and every outcome gets persisted.
 
-Vector databases are great for finding *similar text*. But AI agents need *structured understanding*:
+## The Recall Trait: Querying Memory
 
-- What patterns does this user prefer?
-- What entities exist in this project?
-- What worked before and what failed?
-- How did we fix previous errors?
+The `RecallTrait` handles retrieval. When the agent starts a new session, it queries past memories by structured fields:
 
-Orbital memory provides that structure. It's not a database — it's a **knowledge representation** that matches how Almadar thinks about applications.
+```json
+{
+  "name": "RecallTrait",
+  "linkedEntity": "AgentMemory",
+  "listens": [
+    { "event": "SESSION_START", "triggers": "LOAD_CONTEXT" }
+  ],
+  "stateMachine": {
+    "states": [
+      { "name": "waiting", "isInitial": true },
+      { "name": "loaded" }
+    ],
+    "transitions": [
+      {
+        "from": "waiting",
+        "to": "loaded",
+        "event": "LOAD_CONTEXT",
+        "effects": [
+          ["call-service", "queryMemory", {
+            "filter": { "success": true },
+            "sort": { "createdAt": "desc" },
+            "limit": 10
+          }]
+        ]
+      }
+    ]
+  }
+}
+```
 
-Because the best memory system isn't one that finds similar words. It's one that understands context.
+No embeddings, no similarity thresholds. The recall trait listens for `SESSION_START` (emitted by `RecordTrait`) and loads the 10 most recent successful sessions. The compiler validates that the `emits`/`listens` wiring is complete.
 
-Next up: [Agentic Search: Teaching an AI to Remember Like a Human](./agentic-search).
+## Why This Beats Vector Search
+
+Vector similarity finds text that looks alike. Structured .orb memory finds records by exact field queries: "all sessions where `success` is false and `patterns` contains `entity-table`." The difference matters when an agent needs to answer questions like "what errors did I hit when building list views?" A vector search would return documents about lists and errors. A field query returns the exact sessions.
+
+The state machine also gives you something vectors cannot: a transition history. You can trace the path from `idle` to `recording` to `failed`, see what error occurred, and correlate it with the patterns used. Temporal reasoning becomes a graph traversal instead of a prompt engineering exercise.
+
+## Composing Memory with Other Orbitals
+
+Because memory is an Orbital Unit, it composes with the rest of your application through events. The `RecordTrait` emits `SESSION_COMPLETE`. A `PreferenceTrait` on a separate `UserPreference` entity can listen for it and update the user's preferred patterns. A `ProjectContextTrait` can listen and add newly created entities to the project registry.
+
+Each unit stays independent. The compiler verifies all event wiring at compile time. No message goes unhandled, no listener references a nonexistent event.
+
+Memory in .orb is not a special subsystem. It follows the same entity-trait-page formula as every other part of your application.

@@ -1,8 +1,18 @@
+import { AvlOrbitalUnit, AvlStateMachine } from '@almadar/ui/illustrations';
+
 # Anatomy of a Complete Orbital
 
 > Every feature in Orb is an orbital. An orbital is not complete without all four parts.
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={3}
+  traits={[{ name: 'TaskLifecycle' }]}
+  pages={[{ name: 'TaskListPage' }]}
+  animated
+/>
+</div>
 
 ## The Four Parts of an Orbital
 
@@ -56,6 +66,20 @@ The state machine lives inside a trait. It describes what states the feature can
 ### States
 
 Every state machine needs at least one state marked `"isInitial": true`. States are **objects**, not strings:
+
+<div style={{margin: '2rem 0'}}>
+<AvlStateMachine
+  states={[
+    { name: 'Pending', isInitial: true },
+    { name: 'Done', isTerminal: true }
+  ]}
+  transitions={[
+    { from: 'Pending', to: 'Pending', event: 'INIT' },
+    { from: 'Pending', to: 'Done', event: 'COMPLETE' }
+  ]}
+  animated
+/>
+</div>
 
 ```json
 "states": [

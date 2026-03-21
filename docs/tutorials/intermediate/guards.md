@@ -1,10 +1,26 @@
+import { AvlStateMachine } from '@almadar/ui/illustrations';
+
 # Guards & Business Rules
 
 > Source: [`tests/schemas/03-guards.orb`](../../../../tests/schemas/03-guards.orb)
 
 Guards are conditions that must be true for a transition to fire. They act as the gatekeepers of your business rules — written once, enforced everywhere, for both the UI and the API.
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlStateMachine
+  states={[
+    { name: 'active', isInitial: true },
+    { name: 'frozen' }
+  ]}
+  transitions={[
+    { from: 'active', to: 'active', event: 'INIT' },
+    { from: 'active', to: 'active', event: 'WITHDRAW', guard: 'balance >= amount AND isVerified' },
+    { from: 'active', to: 'frozen', event: 'FREEZE' },
+    { from: 'frozen', to: 'active', event: 'UNFREEZE' }
+  ]}
+  animated
+/>
+</div>
 
 ---
 

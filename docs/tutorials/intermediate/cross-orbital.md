@@ -1,10 +1,28 @@
+import { AvlEmitListen } from '@almadar/ui/illustrations';
+
 # Cross-Orbital Communication
 
 > Source: [`tests/schemas/05-cross-orbital.orb`](../../../../tests/schemas/05-cross-orbital.orb)
 
 Orbitals are self-contained — but real applications need features to talk to each other. Orb connects orbitals through a typed event bus: one orbital emits, others listen.
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlEmitListen
+  eventName="ITEM_ADDED"
+  fromLabel="CartManager"
+  toLabel="NotificationManager"
+  animated
+/>
+</div>
+
+<div style={{margin: '2rem 0'}}>
+<AvlEmitListen
+  eventName="CART_CLEARED"
+  fromLabel="CartManager"
+  toLabel="NotificationManager"
+  animated
+/>
+</div>
 
 ---
 

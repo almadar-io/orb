@@ -1,70 +1,68 @@
 ---
 slug: guard-clauses-state-machines
-title: "Guard Clauses in State Machines: Permission Systems That Actually Work"
+title: "Guard Clauses in .orb State Machines"
 authors: [osamah]
 tags: [architecture, state-machines]
 image: /img/blog/guard-clauses-state-machines.png
 ---
+import { AvlStateMachine } from '@almadar/ui/illustrations';
 
-![Guard Clauses in State Machines: Permission Systems That Actually Work](/img/blog/guard-clauses-state-machines.png)
-
-Authorization logic scattered across your app? What if it was just... part of the state definition?
+Authorization logic is usually scattered across components, API routes, and middleware. In .orb, guards are part of the state machine definition. One declaration, enforced everywhere.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## Guards on the State Machine
 
-## The Authorization Mess
+A guard is a boolean s-expression attached to a transition. If it evaluates to false, the transition is blocked. The event is received, but nothing happens.
 
-Most apps handle permissions like this:
+Here is an approval workflow with guards controlling who can approve, reject, or escalate:
 
-```typescript
-// In the component
-function ApproveButton({ order }) {
-  const { user } = useAuth();
-  
-  const canApprove = 
-    user.roleLevel >= 5 && 
-    !order.isFlagged && 
-    order.amount > 0;
-  
-  return (
-    <button disabled={!canApprove} onClick={handleApprove}>
-      Approve
-    </button>
-  );
+<div style={{margin: '2rem 0'}}>
+<AvlStateMachine
+  states={[
+    {name: "draft", isInitial: true},
+    {name: "pending"},
+    {name: "approved", isTerminal: true},
+    {name: "rejected"},
+    {name: "escalated"}
+  ]}
+  transitions={[
+    {from: "draft", to: "pending", event: "SUBMIT"},
+    {from: "pending", to: "approved", event: "APPROVE (role>=5)"},
+    {from: "pending", to: "rejected", event: "REJECT (role>=5)"},
+    {from: "pending", to: "escalated", event: "ESCALATE (role>=5)"},
+    {from: "escalated", to: "approved", event: "APPROVE (role>=9)"},
+    {from: "rejected", to: "draft", event: "EDIT (owner)"}
+  ]}
+  animated
+/>
+</div>
+
+## Guard Syntax
+
+Guards use s-expression syntax with binding roots like `@entity`, `@user`, `@payload`, and `@now`:
+
+**Simple comparison** (only the owner can submit):
+```json
+{
+  "from": "draft",
+  "to": "pending",
+  "event": "SUBMIT",
+  "guard": ["=", "@entity.authorId", "@user.id"]
 }
-
-// In the API route
-app.post('/api/orders/:id/approve', async (req, res) => {
-  const { user } = req;
-  const order = await Order.findById(req.params.id);
-  
-  // Same logic, duplicated!
-  if (user.roleLevel < 5) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
-  }
-  if (order.isFlagged) {
-    return res.status(400).json({ error: 'Order is flagged' });
-  }
-  if (order.amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-  
-  // ... actual approval logic
-});
 ```
 
-**Problems:**
-- ❌ Logic duplicated in frontend and backend
-- ❌ Hard to keep in sync
-- ❌ Scattered across files
-- ❌ No single source of truth
+**Role-based** (admin level required):
+```json
+{
+  "from": "pending",
+  "to": "approved",
+  "event": "APPROVE",
+  "guard": [">=", "@user.roleLevel", 5]
+}
+```
 
-## Guards: Declarative Authorization
-
-In Almadar, guards are part of the state machine:
-
+**Multi-condition** (tiered approval limits):
 ```json
 {
   "from": "pending",
@@ -73,309 +71,105 @@ In Almadar, guards are part of the state machine:
   "guard": ["and",
     [">=", "@user.roleLevel", 5],
     ["not", "@entity.isFlagged"],
-    [">", "@entity.amount", 0]
-  ],
-  "effects": [
-    ["set", "@entity.status", "approved"],
-    ["set", "@entity.approvedAt", "@now"],
-    ["persist", "update", "Order", "@entity.id", "@entity"]
-  ]
-}
-```
-
-The guard is **declarative**, **serializable**, and **enforced everywhere**.
-
-## How Guards Work
-
-### 1. Define the Guard
-
-```json
-{
-  "guard": ["operator", "operand1", "operand2", ...]
-}
-```
-
-### 2. Evaluated at Transition Time
-
-When the `APPROVE` event is received:
-1. The guard expression is evaluated
-2. If `true`: transition executes
-3. If `false`: transition blocked, optional error message
-
-### 3. Applied Everywhere
-
-The same guard applies to:
-- ✅ UI (button disabled if guard fails)
-- ✅ State machine (transition blocked)
-- ✅ Generated API (request rejected)
-- ✅ Audit logs (authorization decision recorded)
-
-## Guard Examples
-
-### Simple Comparison
-
-```json
-{
-  "guard": ["=", "@entity.ownerId", "@user.id"]
-}
-// Only the owner can perform this action
-```
-
-### Role-Based
-
-```json
-{
-  "guard": [">=", "@user.roleLevel", 5]
-}
-// Admin level (5+) required
-```
-
-### Multi-Factor
-
-```json
-{
-  "guard": ["and",
     ["or",
-      [">=", "@user.roleLevel", 5],
-      ["=", "@user.department", "finance"]
-    ],
-    ["not", "@entity.isLocked"],
-    ["<", "@entity.amount", 10000]
+      ["<", "@entity.amount", 5000],
+      ["and",
+        [">=", "@user.roleLevel", 7],
+        ["<", "@entity.amount", 50000]
+      ]
+    ]
   ]
 }
-// (Admin OR Finance) AND Not Locked AND Amount < 10k
 ```
 
-### Time-Based
+This encodes: level 5+ can approve up to $5K, level 7+ up to $50K. Flagged orders cannot be approved at any level.
 
+**Time-based** (action allowed only within 24 hours):
 ```json
 {
-  "guard": ["<", 
-    ["-", "@now", "@entity.createdAt"], 
+  "guard": ["<",
+    ["-", "@now", "@entity.createdAt"],
     86400000
   ]
 }
-// Action only allowed within 24 hours of creation
 ```
 
-### Array Membership
+## A Complete Approval Workflow
 
 ```json
 {
-  "guard": ["contains", "@user.permissions", "orders:approve"]
-}
-// User must have explicit permission
-```
-
-## Complex Example: Approval Workflow
-
-```json
-{
-  "traits": [{
-    "name": "OrderApproval",
-    "linkedEntity": "Order",
-    "stateMachine": {
-      "states": [
-        { "name": "draft", "isInitial": true },
-        { "name": "pending_review" },
-        { "name": "approved" },
-        { "name": "rejected" },
-        { "name": "escalated" }
-      ],
-      "events": ["SUBMIT", "APPROVE", "REJECT", "ESCALATE", "RETURN"],
-      "transitions": [
-        {
-          "from": "draft",
-          "to": "pending_review",
-          "event": "SUBMIT",
-          "guard": ["and",
-            [">", "@entity.amount", 0],
-            ["not", ["is-empty", "@entity.description"]]
-          ]
-        },
-        {
-          "from": "pending_review",
-          "to": "approved",
-          "event": "APPROVE",
-          "guard": ["and",
-            [">=", "@user.roleLevel", 5],
-            ["not", "@entity.isFlagged"],
-            ["or",
-              ["<", "@entity.amount", 5000],
-              ["and",
-                [">=", "@user.roleLevel", 7],
-                ["<", "@entity.amount", 50000]
-              ]
-            ]
-          ]
-        },
-        {
-          "from": "pending_review",
-          "to": "escalated",
-          "event": "ESCALATE",
-          "guard": [">=", "@user.roleLevel", 5]
-        },
-        {
-          "from": "pending_review",
-          "to": "rejected",
-          "event": "REJECT",
-          "guard": [">=", "@user.roleLevel", 5]
-        },
-        {
-          "from": "escalated",
-          "to": "approved",
-          "event": "APPROVE",
-          "guard": [">=", "@user.roleLevel", 9]
-        }
-      ]
-    }
-  }]
-}
-```
-
-This encodes a complete approval matrix:
-- Anyone can submit (if valid)
-- Level 5+ can approve up to $5K
-- Level 7+ can approve up to $50K
-- Level 9+ can approve anything
-- Escalated orders need Level 9+
-
-## Real-World Analogy: Airport Security
-
-Airport security is a state machine with guards:
-
-```
-Check-in ──(has ticket?)──► Bag Drop ──(weight < 23kg?)──► Security
-                                                    
-Security ──(no liquids?)──► Scan ──(no weapons?)──► Gate
-                                              
-Gate ──(boarding pass valid?)──► Boarding ──(seat available?)──► Seated
-```
-
-Each transition has a guard. If you fail:
-- No ticket? → Can't check in
-- Overweight bag? → Pay extra or repack
-- Liquids in bag? → Throw them away
-
-The guards are **explicit**, **unambiguous**, and **applied consistently**.
-
-## Guards vs Traditional Auth
-
-| Aspect | Traditional | Almadar Guards |
-|--------|-------------|----------------|
-| Location | Scattered across files | Centralized in schema |
-| Frontend | Duplicated logic | Auto-generated checks |
-| Backend | Middleware + route handlers | Auto-generated validation |
-| Audit | Manual logging | Automatic decision recording |
-| Testing | Integration tests | Unit test the guard expression |
-| Documentation | Separate docs | Self-documenting schema |
-
-## Try It: Build a Permission System
-
-Create `approval-workflow.orb`:
-
-```json
-{
-  "name": "ApprovalWorkflow",
-  "orbitals": [{
-    "name": "DocumentApproval",
-    "entity": {
-      "name": "Document",
-      "fields": [
-        { "name": "title", "type": "string", "required": true },
-        { "name": "content", "type": "string", "required": true },
-        { "name": "status", "type": "enum", "values": ["draft", "pending", "approved", "rejected"] },
-        { "name": "authorId", "type": "string", "required": true },
-        { "name": "isConfidential", "type": "boolean", "default": false }
-      ]
-    },
-    "traits": [{
-      "name": "DocumentWorkflow",
-      "linkedEntity": "Document",
-      "stateMachine": {
-        "states": [
-          { "name": "draft", "isInitial": true },
-          { "name": "pending" },
-          { "name": "approved" },
-          { "name": "rejected" }
-        ],
-        "events": ["SUBMIT", "APPROVE", "REJECT", "EDIT"],
-        "transitions": [
-          {
-            "from": "draft",
-            "to": "pending",
-            "event": "SUBMIT",
-            "guard": ["=", "@entity.authorId", "@user.id"]
-          },
-          {
-            "from": "pending",
-            "to": "approved",
-            "event": "APPROVE",
-            "guard": ["and",
-              [">=", "@user.roleLevel", 5],
-              ["or",
-                ["not", "@entity.isConfidential"],
-                [">=", "@user.roleLevel", 7]
-              ]
-            ]
-          },
-          {
-            "from": "pending",
-            "to": "rejected",
-            "event": "REJECT",
-            "guard": [">=", "@user.roleLevel", 5]
-          },
-          {
-            "from": "rejected",
-            "to": "draft",
-            "event": "EDIT",
-            "guard": ["=", "@entity.authorId", "@user.id"]
-          }
+  "name": "OrderApproval",
+  "linkedEntity": "Order",
+  "stateMachine": {
+    "states": [
+      { "name": "draft", "isInitial": true },
+      { "name": "pending" },
+      { "name": "approved" },
+      { "name": "rejected" },
+      { "name": "escalated" }
+    ],
+    "transitions": [
+      {
+        "from": "draft",
+        "to": "pending",
+        "event": "SUBMIT",
+        "guard": ["and",
+          [">", "@entity.amount", 0],
+          ["not", ["is-empty", "@entity.description"]]
         ]
+      },
+      {
+        "from": "pending",
+        "to": "approved",
+        "event": "APPROVE",
+        "guard": ["and",
+          [">=", "@user.roleLevel", 5],
+          ["not", "@entity.isFlagged"],
+          ["<", "@entity.amount", 5000]
+        ],
+        "effects": [
+          ["set", "@entity.status", "approved"],
+          ["set", "@entity.approvedAt", "@now"],
+          ["persist", "update", "Order", "@entity.id", "@entity"]
+        ]
+      },
+      {
+        "from": "pending",
+        "to": "escalated",
+        "event": "ESCALATE",
+        "guard": [">=", "@user.roleLevel", 5]
+      },
+      {
+        "from": "escalated",
+        "to": "approved",
+        "event": "APPROVE",
+        "guard": [">=", "@user.roleLevel", 9]
+      },
+      {
+        "from": "pending",
+        "to": "rejected",
+        "event": "REJECT",
+        "guard": [">=", "@user.roleLevel", 5]
+      },
+      {
+        "from": "rejected",
+        "to": "draft",
+        "event": "EDIT",
+        "guard": ["=", "@entity.authorId", "@user.id"]
       }
-    }],
-    "pages": [{ "name": "DocumentsPage", "path": "/documents" }]
-  }]
+    ]
+  }
 }
 ```
 
-This creates:
-- Only authors can submit their documents
-- Level 5+ can approve/reject
-- Confidential documents need Level 7+
-- Authors can edit rejected documents
+The guard expressions encode the entire authorization matrix: who can do what, under which conditions, at each stage of the workflow. All in one place.
 
-## Advanced: Dynamic Guards
+## Why Guards Beat Scattered Auth Logic
 
-Guards can reference external data:
+In a traditional application, the approval check lives in the component (`canApprove` computed property), the API route (middleware check), and possibly a database trigger. Three locations, three chances for them to drift out of sync.
 
-```json
-{
-  "guard": ["and",
-    [">=", "@user.creditScore", 700],
-    ["<", "@entity.loanAmount", ["*", "@user.annualIncome", 0.3]],
-    ["not", ["contains", "@user.blacklist", "@entity.merchantId"]]
-  ]
-}
-```
+In .orb, the guard is declared once on the transition. The compiler generates both the frontend check (button disabled when guard fails) and the backend check (request rejected when guard fails) from the same source. The guard is the single source of truth.
 
-The guard references:
-- User's credit score
-- User's annual income (for loan limit)
-- User's blacklist
+The compiler also validates guard expressions at compile time. It catches unknown operators (`"equals"` instead of `"="`), wrong argument counts (`"and"` with a single argument), type mismatches (comparing a string to a number), and unknown field references (`@entity.staus` when the field is `status`).
 
-All resolved at evaluation time.
-
-## The Takeaway
-
-Guards bring **declarative authorization** to state machines:
-
-- ✅ Logic centralized in schema
-- ✅ Automatically applied frontend and backend
-- ✅ Self-documenting permission rules
-- ✅ Composable boolean expressions
-- ✅ Type-safe binding references
-
-Stop scattering authorization logic across your app. Define it once, enforce it everywhere.
-
-Learn more about [guards and effects](https://orb.almadar.io/docs/traits).
+Guards are composable boolean expressions evaluated at transition time. They turn authorization from scattered imperative code into a declarative property of the state machine.

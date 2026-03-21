@@ -1,10 +1,24 @@
+import { AvlSlotMap } from '@almadar/ui/illustrations';
+
 # UI Patterns & render-ui
 
 > Source: [`tests/schemas/08-patterns.orb`](../../../../tests/schemas/08-patterns.orb)
 
 Orb UI is driven entirely by `render-ui` effects inside state machine transitions. There is no JSX, no template files, no separate component tree — the state machine *is* the UI logic.
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlSlotMap
+  slots={[
+    { name: 'main', x: 10, y: 10, width: 60, height: 70 },
+    { name: 'sidebar', x: 75, y: 10, width: 20, height: 70 },
+    { name: 'modal', x: 20, y: 20, width: 40, height: 40 },
+    { name: 'drawer', x: 70, y: 10, width: 25, height: 70 },
+    { name: 'hud-top', x: 10, y: 0, width: 85, height: 8 },
+    { name: 'toast', x: 60, y: 80, width: 30, height: 10 }
+  ]}
+  animated
+/>
+</div>
 
 ---
 

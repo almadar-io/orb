@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit, AvlStateMachine } from '@almadar/ui/illustrations';
+
 # Build a Task Manager
 
 > Source: [`tests/schemas/09-full-app.orb`](../../../../tests/schemas/09-full-app.orb)
@@ -8,7 +10,15 @@ This tutorial builds a real task manager step by step. By the end you'll have a 
 - A **CRUD trait** (list, create, edit, delete)
 - Two pages wired to the traits
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={7}
+  traits={[{ name: 'TaskLifecycle' }, { name: 'TaskCRUD' }]}
+  pages={[{ name: 'TaskListPage' }]}
+  animated
+/>
+</div>
 
 ---
 
@@ -49,6 +59,26 @@ The `TaskManager` orbital has one entity (`Task`) and two traits: one for the ta
 ## Step 2 — The Lifecycle Trait
 
 The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inProgress → review → done`.
+
+<div style={{margin: '2rem 0'}}>
+<AvlStateMachine
+  states={[
+    { name: 'todo', isInitial: true },
+    { name: 'inProgress' },
+    { name: 'review' },
+    { name: 'done', isTerminal: true }
+  ]}
+  transitions={[
+    { from: 'todo', to: 'todo', event: 'INIT' },
+    { from: 'todo', to: 'inProgress', event: 'START' },
+    { from: 'inProgress', to: 'review', event: 'SUBMIT_FOR_REVIEW' },
+    { from: 'review', to: 'done', event: 'APPROVE' },
+    { from: 'review', to: 'inProgress', event: 'REJECT' },
+    { from: 'inProgress', to: 'done', event: 'COMPLETE' }
+  ]}
+  animated
+/>
+</div>
 
 ```json
 {

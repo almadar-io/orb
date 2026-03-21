@@ -1,10 +1,49 @@
+import { AvlOrbitalUnit, AvlEmitListen } from '@almadar/ui/illustrations';
+
 # Building a Full Multi-Orbital Application
 
 > Source: [`tests/schemas/09-full-app.orb`](../../../../tests/schemas/09-full-app.orb)
 
 This tutorial walks through the complete `full-app-test` schema — a real application with three connected orbitals. It combines everything from the previous tutorials: entities, state machines, render-ui, guards, and cross-orbital events.
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={7}
+  traits={[{ name: 'TaskLifecycle' }, { name: 'TaskCRUD' }]}
+  pages={[{ name: 'TaskListPage' }]}
+  animated
+/>
+</div>
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Project"
+  fields={5}
+  traits={[{ name: 'ProjectStats' }]}
+  pages={[{ name: 'ProjectListPage' }]}
+  animated
+/>
+</div>
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="User"
+  fields={4}
+  traits={[{ name: 'UserBrowser' }]}
+  pages={[{ name: 'UserListPage' }]}
+  animated
+/>
+</div>
+
+<div style={{margin: '2rem 0'}}>
+<AvlEmitListen
+  eventName="TASK_COMPLETED"
+  fromLabel="TaskManager"
+  toLabel="ProjectManager"
+  animated
+/>
+</div>
 
 ---
 

@@ -4,146 +4,77 @@ title: "JSON That Thinks: How We Built a Turing-Complete Language Inside JSON"
 authors: [osamah]
 tags: [language-design, architecture]
 ---
+import { AvlExprTree } from '@almadar/ui/illustrations';
 
-What if JSON could express logic, not just data? What if your configuration files could make decisions?
-
-We built a Turing-complete programming language that's a strict subset of JSON. No new syntax. No custom parser. Every Almadar program is valid JSON.
-
-Here's why — and how.
+Every configuration language eventually hits the same wall: you need logic, but your format only holds data. YAML leads to Helm chart nightmares. HCL and Dhall invent new syntax with new parsers. Jsonnet gets close but breaks JSON compatibility. Almadar took a different route: S-expressions encoded as JSON arrays, giving you a Turing-complete language that every JSON tool already understands.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## S-Expressions Are Already JSON
 
-## The Problem with Configuration Languages
-
-The industry has been circling this problem for decades:
-
-- **YAML** — Great for data, terrible for logic. Leads to templating nightmares (looking at you, Helm charts).
-- **HCL (Terraform)** — Invented a new syntax. Now you need a parser, an LSP, editor plugins, and training.
-- **Dhall** — Principled but niche. Few developers know it exists.
-- **Jsonnet/CUE** — JSON-like but not JSON. Close, but they break tooling compatibility.
-
-The pattern: every time someone needs logic in configuration, they invent a new language. New parser. New tooling. New learning curve.
-
-We asked: **what if we didn't?**
-
-## The Insight: S-Expressions Are Already JSON
-
-In 1958, John McCarthy invented S-expressions for Lisp:
-
-```lisp
-(+ 1 2)
-(if (> x 10) "big" "small")
-```
-
-S-expressions are just nested lists with a function in the first position.
-
-JSON arrays are... nested lists.
+In 1958, John McCarthy built Lisp on S-expressions: `(+ 1 2)`. An S-expression is a nested list with an operator in the first position. JSON arrays are nested lists. The mapping is direct:
 
 ```json
 ["+", 1, 2]
 ["if", [">", "x", 10], "big", "small"]
 ```
 
-**S-expressions *are* JSON arrays.** We didn't need to invent syntax. We needed to interpret what was already there.
+No new syntax. No custom parser. Just a convention for interpreting what JSON already provides.
 
-## How Almadar Works
+## Guards: Logic That Controls Transitions
 
-An Almadar program is a JSON object containing entities, state machines, and logic expressed as S-expressions:
+In .orb, S-expressions appear as guards on state machine transitions. A guard must evaluate to `true` for the transition to fire:
 
 ```json
 {
-  "name": "ApprovalWorkflow",
-  "orbitals": [{
-    "entity": {
-      "name": "Request",
-      "fields": [
-        { "name": "amount", "type": "number" },
-        { "name": "status", "type": "enum", "values": ["pending", "approved", "rejected"] }
-      ]
-    },
-    "traits": [{
-      "name": "ApprovalTrait",
-      "linkedEntity": "Request",
-      "stateMachine": {
-        "states": [
-          { "name": "Pending", "isInitial": true },
-          { "name": "Approved" },
-          { "name": "Rejected" }
-        ],
-        "transitions": [{
-          "from": "Pending",
-          "to": "Approved",
-          "event": "APPROVE",
-          "guard": ["and",
-            [">=", "@user.roleLevel", 3],
-            ["<", "@entity.amount", 10000]
-          ],
-          "effects": [
-            ["set", "@entity.status", "approved"],
-            ["set", "@entity.approvedAt", "@now"],
-            ["emit", "REQUEST_APPROVED"]
-          ]
-        }]
-      }
-    }]
-  }]
+  "from": "Pending",
+  "to": "Approved",
+  "event": "APPROVE",
+  "guard": ["and",
+    [">=", "@user.roleLevel", 3],
+    ["<", "@entity.amount", 10000]
+  ]
 }
 ```
 
-The logic (guard, effects) is pure S-expressions. The structure (entities, states, transitions) is pure JSON. Together, they form a complete program.
+The evaluator resolves bindings (`@user.roleLevel` becomes `5`, `@entity.amount` becomes `7500`), evaluates inner expressions, then evaluates the outer `and`. If the result is `false`, the transition does not exist. There is no "skip" button, no override path.
 
-## Why This Matters: Homoiconicity
+<div style={{margin: '2rem 0'}}>
+<AvlExprTree animated />
+</div>
 
-Homoiconicity means "code and data share the same representation." It's Lisp's superpower, and now it's JSON's.
+## Effects: Actions That Follow Transitions
 
-Because Almadar programs are JSON:
+Effects are also S-expressions. They run after a guard passes:
 
-**1. Every JSON tool works on Almadar programs.**
-
-```bash
-# Validate with any JSON validator
-cat app.orb | python -m json.tool
-
-# Query with jq
-jq '.orbitals[].traits[].stateMachine.states' app.orb
-
-# Diff two schemas
-diff <(jq -S . v1.orb) <(jq -S . v2.orb)
+```json
+"effects": [
+  ["set", "@entity.status", "approved"],
+  ["set", "@entity.approvedAt", "@now"],
+  ["emit", "REQUEST_APPROVED"]
+]
 ```
 
-**2. AI can generate and modify programs.**
+`set` writes to entity fields. `emit` sends cross-orbital events. `persist` saves to the database. `render-ui` renders a component. Each effect is a single array with an operator and operands.
 
-LLMs are excellent at generating structured JSON. They're terrible at generating correct syntax in novel languages. By staying in JSON, Almadar programs are trivially generated by any model that can produce valid JSON — which is all of them.
+## Arithmetic, Branching, Recursion
 
-**3. Programs are data you can transform.**
+S-expressions handle computed values inside effects:
 
-Want to add audit logging to every transition? Write a JSON transformation:
-
-```javascript
-schema.orbitals.forEach(orbital =>
-  orbital.traits.forEach(trait =>
-    trait.stateMachine.transitions.forEach(t => {
-      t.effects.push(["log", "info", `Transition: ${t.from} → ${t.to}`]);
-    })
-  )
-);
+```json
+["set", "@entity.total", ["+", "@entity.subtotal", ["*", "@entity.subtotal", 0.15]]]
 ```
 
-No AST parsing. No compiler plugins. Just data manipulation.
+Conditional logic works with `if`:
 
-## The Turing Completeness Argument
+```json
+["if", [">", "@entity.score", 100],
+  ["emit", "ACHIEVEMENT_UNLOCKED"],
+  ["emit", "KEEP_GOING"]
+]
+```
 
-A language is Turing-complete if it can simulate any computation. Almadar achieves this through:
-
-1. **State machines** — Arbitrary state, transitions, and memory (entity fields)
-2. **S-expression guards** — Boolean logic with arbitrary nesting (`and`, `or`, `not`, comparison operators)
-3. **S-expression effects** — Side effects including `set` (memory writes), `emit` (communication), and `if` (branching)
-4. **Cross-orbital events** — Inter-process communication (emit/listen)
-5. **Recursion via self-transitions** — A state can transition to itself with modified entity fields
-
-A self-loop with conditional effects and entity field updates is equivalent to a while loop with mutable state:
+Self-transitions with guards give you loops. This transition computes a running sum:
 
 ```json
 {
@@ -159,88 +90,38 @@ A self-loop with conditional effects and entity field updates is equivalent to a
 }
 ```
 
-This computes the sum of numbers from N to 0. The state machine is the loop. The entity is the memory. The guard is the termination condition.
+State machine as loop. Entity fields as memory. Guard as termination condition. That combination makes .orb Turing-complete.
 
-## Comparison: The Configuration Language Landscape
+## The Binding Context
 
-| Language | JSON Compatible | Logic Support | Turing Complete | Tooling |
-|----------|----------------|---------------|-----------------|---------|
-| JSON | Yes | No | No | Universal |
-| YAML | No | No | No | Wide |
-| Jsonnet | Partial | Yes | Yes | Limited |
-| Dhall | No | Yes | No (intentionally) | Minimal |
-| CUE | Partial | Yes | No (intentionally) | Growing |
-| HCL | No | Limited | No | Terraform |
-| **Almadar** | **Yes** | **Yes** | **Yes** | **Universal (JSON)** |
+S-expressions reference runtime data through prefixed bindings:
 
-Almadar is the only Turing-complete language that's a strict subset of JSON. This means every JSON tool, every JSON API, every JSON database, and every JSON-aware LLM works with Almadar programs out of the box.
+| Prefix | Resolves To |
+|--------|-------------|
+| `@entity.field` | Current entity field value |
+| `@payload.field` | Event payload data |
+| `@state` | Current state name |
+| `@now` | Current timestamp |
+| `@config.field` | Application config |
 
-## How S-Expressions Execute
+These bindings are validated at compile time. Reference a field that does not exist on the entity, and `orbital validate` catches it before any code runs.
 
-The Almadar compiler evaluates S-expressions recursively:
+## The Tradeoff: Verbosity for Universality
 
-```
-["and",
-  [">=", "@user.roleLevel", 3],
-  ["<", "@entity.amount", 10000]
-]
-```
+A hypothetical custom syntax: `guard: user.roleLevel >= 3 and entity.amount < 10000` (50 characters).
 
-**Evaluation steps:**
+The .orb version: `["and", [">=", "@user.roleLevel", 3], ["<", "@entity.amount", 10000]]` (75 characters).
 
-1. Resolve bindings: `@user.roleLevel` → `5`, `@entity.amount` → `7500`
-2. Evaluate inner expressions: `[">=", 5, 3]` → `true`, `["<", 7500, 10000]` → `true`
-3. Evaluate outer expression: `["and", true, true]` → `true`
+About 50% more characters. In exchange: no custom parser, no custom LSP, no new syntax to learn, every JSON tool works, and LLMs generate it correctly on the first try. Verbosity is a one-time cost. Tooling compatibility compounds forever.
 
-The compiler optimizes repeated guard evaluations internally — common in UIs where the same conditions are checked on every render — so evaluation is fast even for complex expressions.
+## Extending Without Breaking
 
-## Extending Without Versioning
-
-Adding new operators to Almadar requires no schema version bump:
+New operators are additive. Adding `geo-distance` to the evaluator does not require a schema version bump:
 
 ```json
 ["geo-distance", "@entity.location", "@payload.target"]
 ```
 
-If the evaluator knows `geo-distance`, it evaluates it. If not, it returns an error with a clear message. New operators are **additive** — they never break existing programs.
+If the evaluator knows the operator, it runs. If not, it returns a clear error. This extensibility model kept Lisp alive for 65 years.
 
-This is the same extensibility model that made Lisp survive for 65 years.
-
-## The Tradeoff: Verbosity
-
-Let's be honest. S-expressions in JSON are more verbose than a custom syntax would be:
-
-```
--- Hypothetical custom syntax
-guard: user.roleLevel >= 3 and entity.amount < 10000
-
--- Almadar (actual)
-"guard": ["and", [">=", "@user.roleLevel", 3], ["<", "@entity.amount", 10000]]
-```
-
-The custom syntax is 50 characters. The Almadar version is 75. That's ~50% more characters.
-
-We believe this tradeoff is worth it because:
-- You never need a custom parser
-- You never need a custom LSP
-- You never need to teach your team a new syntax
-- AI generates it correctly on the first try
-- Every JSON tool in existence works on your programs
-
-Verbosity is a one-time cost. Tooling compatibility is forever.
-
-## The Takeaway
-
-Every decade, someone invents a new configuration language to solve the "logic in config" problem. Each one adds a parser, a learning curve, and an ecosystem to maintain.
-
-Almadar takes a different path: **no new syntax**. Just JSON arrays interpreted as S-expressions, combined with state machines for control flow and entities for memory.
-
-The result is a Turing-complete language that:
-- Every JSON tool understands
-- Every LLM can generate
-- Every developer can read (it's just arrays)
-- Compiles to TypeScript, Rust, and Python
-
-Because the best syntax might be the one you already know.
-
-Explore the [S-expression standard library](https://orb.almadar.io/docs/stdlib) to see all available operators.
+Explore the full operator list in the [S-expression standard library](https://orb.almadar.io/docs/stdlib).

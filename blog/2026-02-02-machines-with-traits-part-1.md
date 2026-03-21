@@ -4,42 +4,18 @@ title: "Machines with Traits: How Almadar Will Transform Robotics"
 authors: [almadar]
 tags: [robotics, vision, automation, state-machines]
 ---
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
-# Machines with Traits: How Almadar Will Transform Robotics
-
-> **A Vision for the Future of Automation**
-
----
-
-## Introduction
-
-Imagine a world where you don't need to write thousands of lines of code to make a robot move intelligently. A world where you declare machine behavior the same way you describe planets moving in their orbits.
-
-This is the world of **Almadar**.
-
-In this series, we'll explore how the Almadar language can revolutionize robotics and industrial automation.
+Programming a robot today means writing thousands of lines of tangled imperative code where every new condition doubles the complexity, hidden state transitions breed bugs, and documentation drifts from reality within weeks. .orb takes a different approach: declare machine behavior as composable traits with explicit states, guarded transitions, and structured effects.
 
 <!-- truncate -->
 
-<OrbitalDiagram />
+## The Problem with Imperative Robot Code
 
----
-
-## The Problem: Why is Robot Programming Hard?
-
-### The Traditional Approach
-
-When engineers program a robot today, they face enormous challenges:
+A traditional robotic arm controller looks something like this:
 
 ```python
-# Traditional approach - tangled, complex code
 class RobotArm:
-    def __init__(self):
-        self.position = (0, 0, 0)
-        self.is_holding = False
-        self.speed = 0
-        self.error_state = None
-        
     def move_to(self, target):
         if self.error_state:
             self.handle_error()  # Where is this defined?
@@ -47,54 +23,40 @@ class RobotArm:
         if self.is_holding and self.weight > MAX_WEIGHT:
             self.emergency_stop()  # What happens after?
             return
-        # ... hundreds more lines
+        # ... hundreds more lines of nested conditions
 ```
 
-**The Problems:**
+Every new condition adds branches. Missing a state creates a hidden bug. Testing all paths becomes combinatorially expensive. The code says one thing, the documentation says another.
 
-1. **Increasing complexity** — Every new condition doubles the complexity
-2. **Hidden bugs** — What happens if we forget a certain state?
-3. **Testing difficulty** — How do we ensure all paths are covered?
-4. **Separate documentation** — The code says one thing, docs say another
+## A Robotic Arm in .orb
 
----
+The same arm, modeled with .orb, declares every state and transition explicitly:
 
-## The Solution: Traits as a Way of Thinking
-
-### The Physics of Software
-
-In physics, we describe object motion with simple laws:
-
-- An object is either **stationary** or **moving**
-- Transitioning between them requires a **force** (event)
-- Laws **govern** when transitions can occur
-
-**Almadar applies the same logic to software:**
-
-| Physics | Almadar |
-|---------|---------|
-| State (stationary/moving) | State machine states |
-| Force | Events |
-| Laws | Guards |
-| Reaction | Effects |
-
-### Example: Robotic Arm in Almadar
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Arm"
+  fields={4}
+  traits={[{name: "MovementTrait"}]}
+  pages={[{name: "/control"}]}
+  animated
+/>
+</div>
 
 ```json
 {
-  "name": "RoboticArm",
   "entity": {
     "name": "Arm",
     "persistence": "runtime",
     "fields": [
       { "name": "position", "type": "object" },
-      { "name": "speed", "type": "number" },
-      { "name": "isHolding", "type": "boolean" },
-      { "name": "weight", "type": "number" }
+      { "name": "speed", "type": "number", "default": 0 },
+      { "name": "isHolding", "type": "boolean", "default": false },
+      { "name": "weight", "type": "number", "default": 0 }
     ]
   },
   "traits": [{
     "name": "MovementTrait",
+    "linkedEntity": "Arm",
     "stateMachine": {
       "states": [
         { "name": "idle", "isInitial": true },
@@ -102,76 +64,56 @@ In physics, we describe object motion with simple laws:
         { "name": "holding" },
         { "name": "error" }
       ],
-      "events": [
-        { "key": "MOVE", "name": "Start movement" },
-        { "key": "STOP", "name": "Stop" },
-        { "key": "GRAB", "name": "Grab object" },
-        { "key": "RELEASE", "name": "Release object" },
-        { "key": "EMERGENCY", "name": "Emergency stop" }
-      ],
       "transitions": [
         {
-          "from": "idle",
-          "to": "moving",
-          "event": "MOVE",
+          "from": "idle", "to": "moving", "event": "MOVE",
           "guard": ["and",
             ["not", "@entity.isHolding"],
             ["<", "@payload.speed", 100]
           ],
           "effects": [
-            ["persist", "update", "Arm", { "speed": "@payload.speed" }],
+            ["set", "@entity.speed", "@payload.speed"],
             ["emit", "MOVEMENT_STARTED", { "target": "@payload.target" }]
           ]
         },
         {
-          "from": "moving",
-          "to": "idle",
-          "event": "STOP",
-          "effects": [
-            ["persist", "update", "Arm", { "speed": 0 }]
-          ]
+          "from": "moving", "to": "idle", "event": "STOP",
+          "effects": [["set", "@entity.speed", 0]]
         },
         {
-          "from": "idle",
-          "to": "holding",
-          "event": "GRAB",
+          "from": "idle", "to": "holding", "event": "GRAB",
           "guard": ["<", "@payload.weight", 50],
           "effects": [
-            ["persist", "update", "Arm", { 
-              "isHolding": true, 
-              "weight": "@payload.weight" 
-            }],
-            ["notify", "info", "Object grabbed"]
+            ["set", "@entity.isHolding", true],
+            ["set", "@entity.weight", "@payload.weight"]
           ]
         },
         {
-          "from": "idle",
-          "to": "error",
-          "event": "EMERGENCY",
+          "from": "holding", "to": "idle", "event": "RELEASE",
           "effects": [
-            ["persist", "update", "Arm", { "speed": 0 }],
-            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }],
-            ["notify", "error", "Emergency stop!"]
+            ["set", "@entity.isHolding", false],
+            ["set", "@entity.weight", 0]
           ]
         },
         {
-          "from": "moving",
-          "to": "error",
-          "event": "EMERGENCY",
+          "from": "idle", "to": "error", "event": "EMERGENCY",
           "effects": [
-            ["persist", "update", "Arm", { "speed": 0 }],
-            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }],
-            ["notify", "error", "Emergency stop!"]
+            ["set", "@entity.speed", 0],
+            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }]
           ]
         },
         {
-          "from": "holding",
-          "to": "error",
-          "event": "EMERGENCY",
+          "from": "moving", "to": "error", "event": "EMERGENCY",
           "effects": [
-            ["persist", "update", "Arm", { "speed": 0 }],
-            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }],
-            ["notify", "error", "Emergency stop!"]
+            ["set", "@entity.speed", 0],
+            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }]
+          ]
+        },
+        {
+          "from": "holding", "to": "error", "event": "EMERGENCY",
+          "effects": [
+            ["set", "@entity.speed", 0],
+            ["emit", "EMERGENCY_STOP", { "reason": "@payload.reason" }]
           ]
         }
       ]
@@ -180,28 +122,11 @@ In physics, we describe object motion with simple laws:
 }
 ```
 
-### What Does This Mean?
+Four states: idle, moving, holding, error. Every transition is defined. The MOVE guard prevents movement while holding an object and caps speed at 100. The GRAB guard prevents grabbing anything heavier than 50 units. Emergency transitions exist from every operational state to error.
 
-1. **All states are clear** — idle, moving, holding, error
-2. **All transitions are defined** — No surprises
-3. **Guards protect** — Cannot grab weight greater than 50
-4. **Any state to emergency** — One explicit transition per state ensures every state can reach `error`
+## Composing Traits for Complex Machines
 
----
-
-## The Opportunity
-
-### Why Almadar is Suitable
-
-| Need | Almadar Solution |
-|------|------------------|
-| Development speed | 60% faster than traditional |
-| Reliability | Guaranteed state machines |
-| Safety | Guards prevent wrong behavior |
-| Documentation | The schema IS the documentation |
-| Training | Declarative, readable syntax |
-
-### Example: Delivery Robot
+A delivery robot needs navigation, package handling, and customer notification. In .orb, these are separate orbitals that communicate through events:
 
 ```json
 {
@@ -209,71 +134,45 @@ In physics, we describe object motion with simple laws:
   "orbitals": [
     {
       "name": "Navigation",
-      "traits": [{ "ref": "GPSTrait" }, { "ref": "ObstacleAvoidanceTrait" }]
+      "entity": { "name": "NavState", "persistence": "runtime", "fields": [
+        { "name": "position", "type": "object" },
+        { "name": "destination", "type": "object" }
+      ]},
+      "traits": [{ "name": "GPSTrait", "linkedEntity": "NavState" },
+                 { "name": "ObstacleAvoidance", "linkedEntity": "NavState" }]
     },
     {
       "name": "Delivery",
-      "traits": [{ "ref": "PackageReceiveTrait" }, { "ref": "PackageDeliverTrait" }]
+      "entity": { "name": "Package", "persistence": "runtime", "fields": [
+        { "name": "status", "type": "enum", "values": ["loaded", "in_transit", "delivered"] }
+      ]},
+      "traits": [{ "name": "PackageHandling", "linkedEntity": "Package",
+                   "emits": [{ "event": "DELIVERY_COMPLETE", "scope": "external" }] }]
     },
     {
       "name": "Communication",
-      "traits": [{ "ref": "CustomerNotificationTrait" }],
-      "listens": [
-        { "event": "DELIVERY_COMPLETE", "triggers": "SEND_CONFIRMATION" }
-      ]
+      "entity": { "name": "Notification", "persistence": "runtime", "fields": [
+        { "name": "message", "type": "string" }
+      ]},
+      "traits": [{ "name": "CustomerNotification", "linkedEntity": "Notification",
+                   "listens": [{ "event": "DELIVERY_COMPLETE", "scope": "external" }] }]
     }
   ]
 }
 ```
 
-**Three Orbitals communicating automatically:**
+Three orbitals, each managing its own concern. When Delivery emits `DELIVERY_COMPLETE`, Communication listens and sends confirmation to the customer automatically. No orchestration code. No message bus configuration. Just `emits` and `listens` declarations.
 
-1. **Navigation** — Controls movement
-2. **Delivery** — Manages packages
-3. **Communication** — Notifies the customer
+## Why This Works for Robotics
 
-When Delivery emits `DELIVERY_COMPLETE`, Communication listens and sends confirmation to the customer automatically.
+| Need | How .orb addresses it |
+|------|----------------------|
+| Reliability | Every state and transition is explicit, no hidden paths |
+| Safety | Guards prevent impossible actions at the state machine level |
+| Documentation | The .orb file is the documentation, they cannot drift apart |
+| Composability | Flat trait composition, independently testable behaviors |
+| Validation | `orbital validate` catches unreachable states and unhandled events at compile time |
 
----
+The .orb program is the specification, the documentation, and the runtime behavior. One artifact, not three that drift apart over time.
 
-## Next Steps
-
-### For Developers
-
-1. **Download the compiler** — `npm install -g @almadar/cli`
-2. **Read the documentation** — [Getting Started Guide](https://orb.almadar.io/docs/getting-started/introduction)
-3. **Try the example** — Build your first robotic trait
-
-### For Companies
-
-1. **Contact us** — hello@almadar.io
-2. **Book a demo** — We'll show you Almadar on your project
-3. **Start small** — A pilot project to prove value
-
-### For Educational Institutions
-
-We offer:
-- **Guest lectures** — Introduction to Almadar
-- **Graduation projects** — Supervision and guidance
-- **Research partnerships** — Joint development
-
----
-
-## Conclusion
-
-> **"Machines no longer need thousands of lines. They need clear, defined traits."**
-
-Almadar is not just a programming language. It's a new way of thinking about machine behavior. A way that makes programming closer to physics, and development closer to design.
-
-**Are you ready?**
-
----
-
-## In the Next Part
-
-Part 2: Building an Industrial Robot Controller (coming soon) — We'll build a complete robotic arm together using the Almadar language, step by step.
-
----
-
-*Written by the Almadar Team*  
-*January 2025*
+Get started with the [Getting Started guide](https://orb.almadar.io/docs/getting-started/introduction).

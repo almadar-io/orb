@@ -1,3 +1,5 @@
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
 # Generating Schemas with an LLM
 
 Orb schemas are structured JSON, and that structure makes them ideal targets for LLM generation. You describe your application in plain language; the LLM outputs a valid `.orb` schema.
@@ -8,7 +10,15 @@ This tutorial covers:
 - Validating the output
 - Fixing the most common mistakes LLMs make
 
-<OrbitalDiagram />
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="EntityName"
+  fields={4}
+  traits={[{ name: 'TraitName' }]}
+  pages={[{ name: 'PageName' }]}
+  animated
+/>
+</div>
 
 ---
 
