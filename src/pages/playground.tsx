@@ -980,18 +980,12 @@ const PAGE_TABS: TabItem[] = [
   { id: "modules", label: "Modules" },
 ];
 
-export default function Playground(): ReactNode {
+function PlaygroundInner(): ReactNode {
   const urlParams = useUrlParams();
   const [activeTab, setActiveTab] = useState<PlaygroundTab>(urlParams.tab);
 
   return (
-    <Layout
-      title={translate({ id: "playground.meta.title", message: "Playground - Almadar" })}
-      description={translate({
-        id: "playground.meta.description",
-        message: "Live preview of Almadar standard behaviors and modules.",
-      })}
-    >
+    <>
       <Box className="py-12 pb-8 border-b border-[var(--color-border)]">
         <Box className="container">
           <Heading as="h1" className="text-[2rem] font-extrabold mb-2">
@@ -1024,6 +1018,26 @@ export default function Playground(): ReactNode {
           }
         </BrowserOnly>
       </Box>
+    </>
+  );
+}
+
+export default function Playground(): ReactNode {
+  return (
+    <Layout
+      title={translate({ id: "playground.meta.title", message: "Playground — Orb" })}
+      description={translate({
+        id: "playground.meta.description",
+        message: "Live preview of Orb standard behaviors and modules.",
+      })}
+    >
+      <BrowserOnly fallback={
+        <Box className="p-16 text-center">
+          <Typography color="muted">Loading playground...</Typography>
+        </Box>
+      }>
+        {() => <PlaygroundInner />}
+      </BrowserOnly>
     </Layout>
   );
 }
