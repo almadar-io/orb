@@ -17,6 +17,7 @@ import {
   Box,
   GradientDivider,
 } from "@almadar/ui/marketing";
+import { StandardLibrary } from "@almadar/ui/illustrations";
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 
 const EXAMPLE_CODE = `{
@@ -115,9 +116,12 @@ export default function OrbHome(): ReactNode {
         <SplitSection
           title={translate({ id: "orb.stdlib.title", message: "Standard Library" })}
           description={translate({ id: "orb.stdlib.subtitle", message: "93 production-quality behaviors across 18 domains. 50 atoms, 18 molecules, 25 organisms. Commerce, healthcare, education, gaming, DevOps, and more." })}
-          image={{ src: "/img/stdlib-domains.webp", alt: "Standard Library Domains" }}
           imagePosition="right"
-        />
+        >
+          <Box className="flex justify-center py-8">
+            <StandardLibrary className="w-full max-w-md" />
+          </Box>
+        </SplitSection>
         <Box className="container mt-6">
           <TagCloud tags={DOMAIN_TAGS} variant="primary" />
         </Box>
