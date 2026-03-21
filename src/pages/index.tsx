@@ -118,7 +118,7 @@ export default function OrbHome(): ReactNode {
           description={translate({ id: "orb.stdlib.subtitle", message: "93 production-quality behaviors across 18 domains. 50 atoms, 18 molecules, 25 organisms. Commerce, healthcare, education, gaming, DevOps, and more." })}
           imagePosition="right"
         >
-          <Box className="w-full"><StandardLibrary className="w-full" /></Box>
+          <Box className="w-full max-w-sm mx-auto"><StandardLibrary className="w-full" /></Box>
         </SplitSection>
         <Box className="container mt-6">
           <TagCloud tags={DOMAIN_TAGS} variant="primary" />
