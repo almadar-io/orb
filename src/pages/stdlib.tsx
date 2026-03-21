@@ -11,7 +11,9 @@ import {
   CTABanner,
   VStack,
   Typography,
+  Box,
 } from "@almadar/ui/marketing";
+import { AvlOrbitalUnit } from "@almadar/ui/illustrations";
 
 const DOMAINS = [
   { title: "Commerce", description: "8 behaviors" },
@@ -47,6 +49,14 @@ export default function StdLib(): ReactNode {
 
       <ContentSection>
         <VStack gap="lg" align="center" className="container">
+          <Box className="w-full max-w-md mx-auto">
+            <AvlOrbitalUnit
+              entityName="auth-login"
+              fields={4}
+              traits={[{ name: "credentials" }, { name: "session" }]}
+              pages={[{ name: "/login" }, { name: "/profile" }]}
+            />
+          </Box>
           <VStack gap="sm" align="center">
             <Typography variant="h2">
               <Translate id="stdlib.domains.title">18 Domains</Translate>

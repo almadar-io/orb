@@ -9,7 +9,9 @@ import {
   FeatureGrid,
   CTABanner,
   ContentSection,
+  Box,
 } from "@almadar/ui/marketing";
+import { AvlApplication, AvlOrbital, AvlEntity } from "@almadar/ui/illustrations";
 
 const EXTENSIONS = [
   {
@@ -40,6 +42,13 @@ export default function Downloads(): ReactNode {
       />
 
       <ContentSection>
+        <Box className="w-full max-w-lg mx-auto py-6">
+          <svg viewBox="0 0 500 300" fill="none" className="w-full">
+            <AvlApplication x={20} y={20} width={460} height={260} label="Application" />
+            <AvlOrbital cx={250} cy={150} r={80} label="Orbital" />
+            <AvlEntity x={250} y={150} r={25} fieldCount={5} label=".orb" />
+          </svg>
+        </Box>
         <SplitSection
           title={translate({ id: "downloads.cli.title", message: "Orbital CLI" })}
           description={translate({ id: "downloads.cli.desc", message: "The command-line compiler and development server. Validate, compile, and run .orb programs locally." })}
