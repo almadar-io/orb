@@ -19,7 +19,23 @@ This is a **broken circuit**.
 **Every UI interaction must complete a full circuit back to the state machine.**
 
 <div style={{margin: '2rem 0'}}>
-<AvlClosedCircuit animated />
+<AvlClosedCircuit
+  states={[
+    { name: "Event" },
+    { name: "Guard" },
+    { name: "Transition" },
+    { name: "Effects" },
+    { name: "UI Slot" },
+  ]}
+  transitions={[
+    { from: "Event", to: "Guard", event: "trigger" },
+    { from: "Guard", to: "Transition", event: "pass" },
+    { from: "Transition", to: "Effects", event: "execute" },
+    { from: "Effects", to: "UI Slot", event: "render" },
+    { from: "UI Slot", to: "Event", event: "emit" },
+  ]}
+  animated
+/>
 </div>
 
 ```
