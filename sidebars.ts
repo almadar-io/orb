@@ -25,6 +25,7 @@ const sidebars: SidebarsConfig = {
       ],
     },
     { type: "category", label: "Standard Behaviors", items: ["reference/behaviors", "reference/standard-library"] },
+    { type: "doc", id: "reference/avl", label: "AVL Visual Language" },
     {
       type: "category", label: "Tutorials",
       items: [

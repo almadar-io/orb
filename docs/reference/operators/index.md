@@ -39,3 +39,7 @@ These operators work without a module prefix:
 | `emit` | `["emit", "EVENT"]` | void |
 
 See [Core Concepts: Standard Library](/docs/en/core-concepts/standard-library) for the complete core operator list.
+
+:::tip AVL Operator Visualization
+The [Almadar Visual Language (AVL)](/docs/en/core-concepts/avl-reference) reference page includes color-coded diagrams for operators, showing how s-expressions compose into expression trees. Use `AvlExprTree` components to visualize operator nesting in your own documentation.
+:::

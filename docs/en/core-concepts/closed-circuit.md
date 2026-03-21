@@ -16,6 +16,12 @@ This is a **broken circuit**.
 
 **Every UI interaction must complete a full circuit back to the state machine.**
 
+import { AvlClosedCircuit } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlClosedCircuit animated />
+</div>
+
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                                                                            │

@@ -16,6 +16,19 @@ The Standard Library provides **93 reusable behaviors** for Orb applications, or
 
 Each behavior is a pure function that returns a complete `OrbitalDefinition` (entity + traits + pages). You call it with parameters (entity name, fields, page path) and get a ready-to-compile `.orb` structure.
 
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Product"
+  fields={5}
+  persistence="persistent"
+  traits={[{name: 'Browse'}, {name: 'Create'}, {name: 'Edit'}, {name: 'View'}]}
+  pages={[{name: 'ProductListPage'}]}
+  animated
+/>
+</div>
+
 ```typescript
 import { stdList } from '@almadar/std/behaviors/functions';
 

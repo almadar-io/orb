@@ -14,7 +14,18 @@ Orbital Unit = Entity + Traits + Pages
 
 Entities define the shape of data, while Traits define behavior (state machines) that operate on that data. The binding between them is explicit and type-safe.
 
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={6}
+  persistence="persistent"
+  traits={[{name: 'TaskManagement'}, {name: 'StatusTracking'}]}
+  pages={[{name: 'TaskListPage'}, {name: 'TaskDetailPage'}]}
+  animated
+/>
+</div>
 
 ## Entity Definition
 

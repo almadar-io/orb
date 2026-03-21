@@ -20,6 +20,19 @@ Schema (render-ui)  →  Pattern Registry  →  Component Mapping  →  Shell Co
                     Closed Circuit Validation
 ```
 
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={3}
+  persistence="persistent"
+  traits={[{name: 'TaskBrowser'}, {name: 'FormHandler'}]}
+  pages={[{name: 'TaskListPage'}]}
+  animated
+/>
+</div>
+
 ---
 
 ## Pattern Registry

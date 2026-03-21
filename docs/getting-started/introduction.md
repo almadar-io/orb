@@ -17,7 +17,18 @@ Orb is a **declarative programming language** for building full-stack applicatio
 
 The Orb compiler transforms this schema into a complete, production-ready application.
 
-<OrbitalDiagram />
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={4}
+  persistence="persistent"
+  traits={[{name: 'TaskLifecycle'}, {name: 'TaskBrowser'}]}
+  pages={[{name: 'TaskListPage'}]}
+  animated
+/>
+</div>
 
 ## The Problem Orb Solves
 

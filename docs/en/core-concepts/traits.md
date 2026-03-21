@@ -20,6 +20,27 @@ Orbital Unit = Entity + Traits + Pages
 
 While [Entities](./entities.md) define the shape of data, Traits define how that data changes over time through **states**, **transitions**, **guards**, and **effects**.
 
+import { AvlStateMachine } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlStateMachine
+  states={[
+    {name: 'idle', isInitial: true},
+    {name: 'loading'},
+    {name: 'active'},
+    {name: 'error', isTerminal: true}
+  ]}
+  transitions={[
+    {from: 'idle', to: 'loading', event: 'INIT'},
+    {from: 'loading', to: 'active', event: 'LOADED', effects: ['render-ui']},
+    {from: 'loading', to: 'error', event: 'ERROR'},
+    {from: 'active', to: 'loading', event: 'REFRESH'},
+    {from: 'error', to: 'loading', event: 'RETRY'}
+  ]}
+  animated
+/>
+</div>
+
 ---
 
 ## Trait Definition

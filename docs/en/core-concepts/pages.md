@@ -18,6 +18,19 @@ Orbital = Entity + Traits + Pages
 
 While [Entities](./entities.md) define data and [Traits](./traits.md) define behavior, Pages define **where** users interact with the system. Pages are **trait-driven** - they don't contain UI directly, but reference traits whose `render-ui` effects populate the page.
 
+import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+
+<div style={{margin: '2rem 0'}}>
+<AvlOrbitalUnit
+  entityName="Task"
+  fields={4}
+  persistence="persistent"
+  traits={[{name: 'TaskBrowser'}, {name: 'TaskViewer'}]}
+  pages={[{name: 'TaskListPage'}, {name: 'TaskDetailPage'}, {name: 'TaskCreatePage'}]}
+  animated
+/>
+</div>
+
 ---
 
 ## Page Definition
