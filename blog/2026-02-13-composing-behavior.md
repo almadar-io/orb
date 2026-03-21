@@ -16,9 +16,9 @@ Two Orbital Units that know nothing about each other can work together through e
 
 <div style={{margin: '2rem 0'}}>
 <AvlEmitListen
+  emitter={{name: "DefendOrbital", fields: 3}}
+  listener={{name: "MendOrbital", fields: 2}}
   eventName="SHIELD_DEPLETED"
-  fromLabel="DefendOrbital"
-  toLabel="MendOrbital"
   animated
 />
 </div>

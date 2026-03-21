@@ -40,7 +40,19 @@ In .orb, S-expressions appear as guards on state machine transitions. A guard mu
 The evaluator resolves bindings (`@user.roleLevel` becomes `5`, `@entity.amount` becomes `7500`), evaluates inner expressions, then evaluates the outer `and`. If the result is `false`, the transition does not exist. There is no "skip" button, no override path.
 
 <div style={{margin: '2rem 0'}}>
-<AvlExprTree animated />
+<AvlExprTree
+  expression={{label: "and", type: "operator", children: [
+    {label: "gte", type: "operator", children: [
+      {label: "@user.roleLevel", type: "binding"},
+      {label: "3", type: "literal"}
+    ]},
+    {label: "lt", type: "operator", children: [
+      {label: "@entity.amount", type: "binding"},
+      {label: "10000", type: "literal"}
+    ]}
+  ]}}
+  animated
+/>
 </div>
 
 ## Effects: Actions That Follow Transitions

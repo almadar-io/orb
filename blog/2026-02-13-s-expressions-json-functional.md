@@ -28,7 +28,13 @@ S-expressions give you the expressiveness of code with the safety of data.
 The format is simple: `["operator", operand1, operand2, ...]`. In .orb, S-expressions appear in two places: guards (conditional logic) and effects (actions).
 
 <div style={{margin: '2rem 0'}}>
-<AvlExprTree animated />
+<AvlExprTree
+  expression={{label: "gt", type: "operator", children: [
+    {label: "@entity.count", type: "binding"},
+    {label: "5", type: "literal"}
+  ]}}
+  animated
+/>
 </div>
 
 ### Guards

@@ -8,18 +8,18 @@ Orbitals are self-contained — but real applications need features to talk to e
 
 <div style={{margin: '2rem 0'}}>
 <AvlEmitListen
+  emitter={{name: "CartManager", fields: 4}}
+  listener={{name: "NotificationManager", fields: 2}}
   eventName="ITEM_ADDED"
-  fromLabel="CartManager"
-  toLabel="NotificationManager"
   animated
 />
 </div>
 
 <div style={{margin: '2rem 0'}}>
 <AvlEmitListen
+  emitter={{name: "CartManager", fields: 4}}
+  listener={{name: "NotificationManager", fields: 2}}
   eventName="CART_CLEARED"
-  fromLabel="CartManager"
-  toLabel="NotificationManager"
   animated
 />
 </div>

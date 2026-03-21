@@ -38,9 +38,9 @@ This tutorial walks through the complete `full-app-test` schema — a real appli
 
 <div style={{margin: '2rem 0'}}>
 <AvlEmitListen
+  emitter={{name: "TaskManager", fields: 7}}
+  listener={{name: "ProjectManager", fields: 5}}
   eventName="TASK_COMPLETED"
-  fromLabel="TaskManager"
-  toLabel="ProjectManager"
   animated
 />
 </div>
