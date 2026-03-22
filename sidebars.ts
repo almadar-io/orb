@@ -1,4 +1,5 @@
 import type { SidebarsConfig } from "@docusaurus/plugin-content-docs";
+import { behaviorSidebarItems } from "./sidebars-behaviors";
 
 const sidebars: SidebarsConfig = {
   docsSidebar: [
@@ -24,7 +25,7 @@ const sidebars: SidebarsConfig = {
         "reference/operators/format", "reference/operators/async", "reference/operators/prob",
       ],
     },
-    { type: "category", label: "Standard Behaviors", items: ["reference/behaviors", "reference/standard-library"] },
+    { type: "category", label: "Standard Behaviors", items: behaviorSidebarItems },
     { type: "doc", id: "reference/avl", label: "AVL Visual Language" },
     {
       type: "category", label: "Tutorials",

@@ -130,6 +130,12 @@ function BehaviorCard({ behavior }: { behavior: Behavior }) {
         <span>
           Initial: <strong>{behavior.initial}</strong>
         </span>
+        <a
+          href={`/docs/reference/behaviors/${behavior.name}`}
+          className={styles.viewDetails}
+        >
+          View Details →
+        </a>
       </div>
     </div>
   );

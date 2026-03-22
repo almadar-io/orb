@@ -22,213 +22,28 @@ import {
   Textarea,
 } from "@almadar/ui";
 import type { TabItem } from "@almadar/ui";
+import { OrbPreview } from "@almadar/ui/runtime";
 
 // Load all theme CSS so data-theme attributes resolve to actual variables
 import "@almadar/ui/themes/index.css";
 
-// ─── Runtime loader (shared) ──────────────────────────────────────────────────
+// ─── Runtime loader (for RuntimeDebugger only) ──────────────────────────────
 
-// Slot system architecture (confirmed from dist source):
-//
-// SlotsStateContext  (from SlotsProvider / @almadar/ui/runtime)
-//   - Written by: useTraitStateMachine via slotsActions.setSlotPatterns()
-//   - Shape: Record<slot, { patterns: SlotPatternEntry[], source? }>
-//   - SlotPatternEntry.pattern is a PatternConfig OBJECT: { type, ...props }
-//   - Read by: useSlots() from @almadar/ui/runtime
-//
-// UISlotContext  (from UISlotProvider / @almadar/ui/context)
-//   - Written by: useUISlots().render({ target, pattern: string, props })
-//   - Shape: Record<slot, SlotContent>  where SlotContent.pattern is a STRING
-//   - Read by: UISlotComponent (used inside UISlotRenderer) via useUISlots()
-//   - UISlotRenderer REQUIRES UISlotProvider — it calls useUISlots() directly
-//
-// SlotBridge: manually bridges the two.
-//   Reads SlotsStateContext via useSlots(), writes to UISlotContext via useUISlots().render().
-//   PatternConfig { type, ...props } → render({ pattern: type, props: { ...rest } })
-//   Children normalization: PatternConfig children are flat { type, ...props } but
-//   renderPatternChildren() in SlotContentRenderer expects { type, props: {...} }.
-//   So children must be recursively normalized before passing to render().
+// OrbPreview handles the full runtime stack (providers, slot bridge, schema
+// runner, trait initializer). We only load the runtime separately here to
+// access RuntimeDebugger, which sits outside the OrbPreview boundary.
 
-interface SlotPatternEntry { pattern: Record<string, unknown>; props: Record<string, unknown> }
-interface SlotState { patterns: SlotPatternEntry[]; source?: { trait?: string } }
-
-interface RuntimeComponents {
-  OrbitalProvider: React.ComponentType<{ children: ReactNode; initialData?: Record<string, unknown[]>; skipTheme?: boolean; verification?: boolean }>;
-  UISlotProvider: React.ComponentType<{ children: ReactNode }>;
-  SlotsProvider: React.ComponentType<{ children: ReactNode }>;
-  EntitySchemaProvider: React.ComponentType<{ entities: unknown[]; children: ReactNode }>;
-  VerificationProvider: React.ComponentType<{ children: ReactNode; enabled?: boolean }>;
-  UISlotRenderer: React.ComponentType<{ includeHud?: boolean; hudMode?: 'fixed' | 'inline'; includeFloating?: boolean }>;
+interface RuntimeDebuggerComponents {
   RuntimeDebugger: React.ComponentType<{ mode?: 'floating' | 'inline'; defaultCollapsed?: boolean; defaultTab?: string; schema?: Record<string, unknown>; className?: string }>;
-  useResolvedSchema: (schema: unknown) => { page: unknown; traits: unknown[]; allEntities: Map<string, unknown> };
-  useTraitStateMachine: (traits: unknown[], actions: unknown, opts?: unknown) => { sendEvent: (event: string, payload?: Record<string, unknown>) => void };
-  useSlotsActions: () => unknown;
-  useSlots: () => Record<string, SlotState>;
-  useUISlots: () => { render: (cfg: { target: string; pattern: string; props?: Record<string, unknown>; sourceTrait?: string }) => void; clear: (slot: string) => void };
 }
 
-let runtimeCache: RuntimeComponents | null = null;
+let debuggerCache: RuntimeDebuggerComponents | null = null;
 
-async function loadRuntime(): Promise<RuntimeComponents> {
-  if (runtimeCache) return runtimeCache;
-  const [providers, context, runtime, components] = await Promise.all([
-    import("@almadar/ui/providers"),
-    import("@almadar/ui/context"),
-    import("@almadar/ui/runtime"),
-    import("@almadar/ui/components"),
-  ]);
-  runtimeCache = {
-    OrbitalProvider: providers.OrbitalProvider,
-    UISlotProvider: context.UISlotProvider,
-    SlotsProvider: runtime.SlotsProvider,
-    EntitySchemaProvider: runtime.EntitySchemaProvider,
-    VerificationProvider: providers.VerificationProvider,
-    UISlotRenderer: components.UISlotRenderer,
-    RuntimeDebugger: components.RuntimeDebugger,
-    useResolvedSchema: runtime.useResolvedSchema,
-    useTraitStateMachine: runtime.useTraitStateMachine,
-    useSlotsActions: runtime.useSlotsActions,
-    useSlots: runtime.useSlots,
-    useUISlots: context.useUISlots,
-  };
-  return runtimeCache;
-}
-
-// ─── Orbital Runtime Preview (shared) ─────────────────────────────────────────
-
-// Normalize a PatternConfig child from flat { type, ...props } to { type, props: {...} }
-// because renderPatternChildren() inside SlotContentRenderer expects the latter format.
-function normalizeChild(child: Record<string, unknown>): Record<string, unknown> {
-  const { type, children, ...rest } = child;
-  const normalizedChildren = Array.isArray(children)
-    ? children.map((c) => normalizeChild(c as Record<string, unknown>))
-    : children;
-  return {
-    type,
-    props: { ...rest, ...(normalizedChildren !== undefined ? { children: normalizedChildren } : {}) },
-  };
-}
-
-// Bridges SlotsStateContext → UISlotContext.
-// useTraitStateMachine writes PatternConfig objects to SlotsStateContext.
-// UISlotComponent (inside UISlotRenderer) reads SlotContent from UISlotContext.
-// This component syncs between them after each slot state change.
-function SlotBridge({ rt }: { rt: RuntimeComponents }) {
-  const slots = rt.useSlots();
-  const { render, clear } = rt.useUISlots();
-
-  useEffect(() => {
-    for (const [slotName, slotState] of Object.entries(slots)) {
-      if (slotState.patterns.length === 0) {
-        clear(slotName);
-        continue;
-      }
-      // Use the last pattern (most recently set wins)
-      const entry = slotState.patterns[slotState.patterns.length - 1];
-      const { type: patternType, children, ...inlineProps } = entry.pattern;
-      // Normalize children from flat PatternConfig to { type, props } format
-      const normalizedChildren = Array.isArray(children)
-        ? children.map((c) => normalizeChild(c as Record<string, unknown>))
-        : children;
-      render({
-        target: slotName,
-        pattern: patternType as string,
-        props: {
-          ...inlineProps,
-          ...entry.props,
-          ...(normalizedChildren !== undefined ? { children: normalizedChildren } : {}),
-        },
-        sourceTrait: slotState.source?.trait,
-      });
-    }
-  }, [slots]);
-
-  return null;
-}
-
-// Fires INIT event after mount so render-ui effects on the INIT transition execute.
-// Must be inside SlotsProvider + EntitySchemaProvider.
-function TraitInitializer({ rt, traits }: { rt: RuntimeComponents; traits: unknown[] }) {
-  const slotsActions = rt.useSlotsActions();
-  const { sendEvent } = rt.useTraitStateMachine(traits, slotsActions, {});
-
-  useEffect(() => {
-    const t = setTimeout(() => sendEvent("INIT"), 50);
-    return () => clearTimeout(t);
-  }, [traits]);
-
-  return null;
-}
-
-function SchemaRunner({ rt, schema, mockData }: { rt: RuntimeComponents; schema: unknown; mockData: Record<string, unknown[]> }) {
-  const { traits, allEntities, ir } = rt.useResolvedSchema(schema) as {
-    traits: unknown[];
-    allEntities: Map<string, unknown>;
-    ir: { pages?: Map<string, { traits: unknown[] }> } | null;
-  };
-
-  // For multi-page schemas (organisms), collect traits from ALL pages
-  // so every page's INIT fires and populates the main content slot.
-  const allPageTraits = React.useMemo(() => {
-    if (!ir?.pages || ir.pages.size <= 1) return traits;
-    const combined: unknown[] = [];
-    const seen = new Set<string>();
-    for (const page of ir.pages.values()) {
-      for (const t of page.traits) {
-        // Trait bindings have .trait.name (the inner trait) and .name (binding name)
-        const binding = t as Record<string, unknown>;
-        const traitObj = binding.trait as Record<string, unknown> | undefined;
-        const name = (traitObj?.name ?? binding.name ?? '') as string;
-        if (name && !seen.has(name)) {
-          seen.add(name);
-          combined.push(t);
-        }
-      }
-    }
-    return combined.length > 0 ? combined : traits;
-  }, [ir, traits]);
-
-  return (
-    <rt.VerificationProvider enabled>
-      <rt.SlotsProvider>
-        <rt.EntitySchemaProvider entities={Array.from(allEntities.values())}>
-          <TraitInitializer rt={rt} traits={allPageTraits} />
-          <SlotBridge rt={rt} />
-          <Box className="min-h-full p-4">
-            <rt.UISlotRenderer includeHud hudMode="inline" includeFloating />
-          </Box>
-        </rt.EntitySchemaProvider>
-      </rt.SlotsProvider>
-    </rt.VerificationProvider>
-  );
-}
-
-function OrbitalPreview({ schema, mockData }: { schema: unknown; mockData: Record<string, unknown[]> }) {
-  const [rt, setRt] = useState<RuntimeComponents | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadRuntime().then(setRt).catch((e) => setError(String(e)));
-  }, []);
-
-  if (error) return (
-    <Box className="p-4">
-      <Typography as="pre" color="error" variant="small" className="font-mono whitespace-pre-wrap break-all m-0">{error}</Typography>
-    </Box>
-  );
-  if (!rt) return (
-    <Box className="flex items-center justify-center h-[200px]">
-      <Typography color="muted" size="sm">Loading runtime...</Typography>
-    </Box>
-  );
-
-  return (
-    <rt.OrbitalProvider initialData={mockData} skipTheme verification>
-      <rt.UISlotProvider>
-        <SchemaRunner rt={rt} schema={schema} mockData={mockData} />
-      </rt.UISlotProvider>
-    </rt.OrbitalProvider>
-  );
+async function loadDebuggerRuntime(): Promise<RuntimeDebuggerComponents> {
+  if (debuggerCache) return debuggerCache;
+  const components = await import("@almadar/ui/components");
+  debuggerCache = { RuntimeDebugger: components.RuntimeDebugger };
+  return debuggerCache;
 }
 
 // ─── Theme Options ───────────────────────────────────────────────────────────
@@ -631,11 +446,11 @@ function BehaviorsTab({ initialSelected }: { initialSelected?: string | null }) 
   const [selectedTheme, setSelectedTheme] = useState("wireframe");
   const [selectedMode, setSelectedMode] = useState<"light" | "dark">("light");
   const [useMockData, setUseMockData] = useState(true);
-  const [rt, setRt] = useState<RuntimeComponents | null>(null);
+  const [rt, setRt] = useState<RuntimeDebuggerComponents | null>(null);
 
   // Load runtime for RuntimeDebugger
   useEffect(() => {
-    loadRuntime().then(setRt).catch(() => { /* handled by OrbitalPreview */ });
+    loadDebuggerRuntime().then(setRt).catch(() => { /* handled by OrbPreview */ });
   }, []);
 
   const entry = BEHAVIOR_CATALOG[selected] ?? null;
@@ -726,7 +541,7 @@ function BehaviorsTab({ initialSelected }: { initialSelected?: string | null }) 
             data-theme={appliedTheme}
           />
           {adjustedSchema
-            ? <OrbitalPreview key={previewKey} schema={adjustedSchema} mockData={useMockData ? mockData : {}} />
+            ? <OrbPreview key={previewKey} schema={adjustedSchema} mockData={useMockData ? mockData : {}} height="100%" className="border-0 rounded-none" />
             : (
               <Box className="flex items-center justify-center h-[200px]">
                 <Typography color="muted" size="sm">Select a behavior</Typography>

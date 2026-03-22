@@ -56,8 +56,8 @@ const WHY_FEATURES = [
   },
   {
     icon: "shield-check",
-    title: translate({ id: "orb.why.correct.title", message: "Provably Correct" }),
-    description: translate({ id: "orb.why.correct.desc", message: "The compiler validates every state machine transition, every guard, every effect. If it compiles, it works." }),
+    title: translate({ id: "orb.why.correct.title", message: "Compiler-Verified" }),
+    description: translate({ id: "orb.why.correct.desc", message: "The compiler checks every possible screen your app can reach. If it compiles, users never hit a broken or missing page." }),
   },
   {
     icon: "bot",
