@@ -21,30 +21,47 @@ import { AvlOrbitalUnit } from "@almadar/ui/illustrations";
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 
 const EXAMPLE_CODE = `{
-  "entities": [{
-    "name": "Task",
-    "fields": [
-      { "name": "title", "type": "string" },
-      { "name": "status", "type": "string", "default": "pending" }
-    ]
-  }],
-  "traits": [{
-    "name": "TaskManager",
-    "entity": "Task",
-    "states": {
-      "viewing": {
-        "INIT": { "effects": [["fetch", "Task"]] },
-        "ADD": { "target": "adding" }
-      },
-      "adding": {
-        "render-ui": { "type": "form-section", "entity": "Task" },
-        "SAVE": {
-          "guards": [["validate/required", "@payload.title"]],
-          "effects": [["persist", "Task", "@payload"]],
-          "target": "viewing"
-        }
+  "name": "TaskApp",
+  "orbitals": [{
+    "name": "TaskOrbital",
+    "entity": {
+      "name": "Task",
+      "persistence": "persistent",
+      "collection": "tasks",
+      "fields": [
+        { "name": "id", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "status", "type": "string", "default": "pending" }
+      ]
+    },
+    "traits": [{
+      "name": "TaskManager",
+      "linkedEntity": "Task",
+      "category": "interaction",
+      "stateMachine": {
+        "states": [
+          { "name": "viewing", "isInitial": true },
+          { "name": "adding" }
+        ],
+        "events": [
+          { "key": "INIT", "name": "Initialize" },
+          { "key": "ADD", "name": "Add Task" },
+          { "key": "SAVE", "name": "Save" },
+          { "key": "CANCEL", "name": "Cancel" }
+        ],
+        "transitions": [
+          { "from": "viewing", "to": "viewing", "event": "INIT",
+            "effects": [["fetch", "Task"],
+              ["render-ui", "main", { "type": "entity-table", "entity": "Task" }]] },
+          { "from": "viewing", "to": "adding", "event": "ADD",
+            "effects": [["render-ui", "modal", { "type": "form", "entity": "Task" }]] },
+          { "from": "adding", "to": "viewing", "event": "SAVE",
+            "effects": [["persist", "create", "Task", "@payload"]] },
+          { "from": "adding", "to": "viewing", "event": "CANCEL" }
+        ]
       }
-    }
+    }],
+    "pages": [{ "name": "Tasks", "path": "/tasks" }]
   }]
 }`;
 
