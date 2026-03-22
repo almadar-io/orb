@@ -31,7 +31,7 @@ Entities define the shape of data, while Traits define behavior (state machines)
 
 An entity is defined in the `.orb` schema with the following structure:
 
-```json
+```orb
 {
   "name": "Task",
   "collection": "tasks",
@@ -76,7 +76,7 @@ Orb supports the following field types:
 
 ### Field Properties
 
-```json
+```orb
 {
   "name": "status",
   "type": "enum",
@@ -103,7 +103,7 @@ Orb supports the following field types:
 
 Relations link entities together:
 
-```json
+```orb
 {
   "name": "assigneeId",
   "type": "relation",
@@ -132,7 +132,7 @@ Entities have three persistence modes that fundamentally change their storage an
 **Collection:** Required - explicit naming
 **Default:** If `persistence` is not specified, it defaults to `persistent`
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",  // Optional - defaults to "persistent" if omitted
@@ -152,7 +152,7 @@ Entities have three persistence modes that fundamentally change their storage an
 **Lifetime:** Lost on restart/session end
 **Collection:** None
 
-```json
+```orb
 {
   "name": "Enemy",
   "persistence": "runtime",
@@ -172,7 +172,7 @@ Entities have three persistence modes that fundamentally change their storage an
 **Lifetime:** One instance per session
 **Collection:** None (single record)
 
-```json
+```orb
 {
   "name": "Player",
   "persistence": "singleton",
@@ -215,7 +215,7 @@ Entities have three persistence modes that fundamentally change their storage an
 
 Guards use bindings to check conditions before transitions:
 
-```json
+```orb
 {
   "from": "active",
   "to": "completed",
@@ -231,7 +231,7 @@ Guards use bindings to check conditions before transitions:
 
 Effects use bindings to read and modify data:
 
-```json
+```orb
 {
   "effects": [
     ["set", "@entity.id", "status", "@payload.newStatus"],
@@ -268,7 +268,7 @@ Traits are state machines that operate on entities. The binding between a trait 
 
 Every orbital has a **primary entity** - the entity defined in its `entity` property:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": {
@@ -286,7 +286,7 @@ Traits in this orbital automatically have access to `Task` via `@entity`.
 
 When referencing a trait, you can specify which entity it should operate on:
 
-```json
+```orb
 {
   "traits": [
     {
@@ -322,7 +322,7 @@ this.traitEntityMap.set(trait.name, linkedEntity);
 
 ### Example: Multi-Entity Orbital
 
-```json
+```orb
 {
   "name": "GameLevel",
   "entity": {

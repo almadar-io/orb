@@ -36,7 +36,7 @@ unzip almadar-orbitals.zip -d ~/.almadar/skills/
 
 المهارة ستولد:
 
-```json
+```orb
 {
   "name": "نظام_إدارة_المهام",
   "orbitals": [

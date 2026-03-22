@@ -24,7 +24,7 @@ Medtem ko [Entitete](./entities.md) definirajo podatke in [Lastnosti](./traits.m
 
 Stran je definirana v `.orb` programu z naslednjo strukturo:
 
-```json
+```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
@@ -64,7 +64,7 @@ Poti strani definirajo URL poti za vaso aplikacijo.
 
 Preproste poti brez dinamicnih segmentov:
 
-```json
+```orb
 { "path": "/tasks" }
 { "path": "/dashboard" }
 { "path": "/settings/profile" }
@@ -74,7 +74,7 @@ Preproste poti brez dinamicnih segmentov:
 
 Uporabite sintakso z dvopicjem za dinamicne parametre:
 
-```json
+```orb
 { "path": "/tasks/:id" }
 { "path": "/users/:userId/tasks/:taskId" }
 { "path": "/projects/:projectId/members/:memberId" }
@@ -124,7 +124,7 @@ Strani se sklicujejo na lastnosti, ki zagotavljajo njihovo obnasanje in UI.
 
 ### Reference na lastnosti
 
-```json
+```orb
 {
   "pages": [
     {
@@ -151,7 +151,7 @@ Strani se sklicujejo na lastnosti, ki zagotavljajo njihovo obnasanje in UI.
 
 Stran ima lahko vec lastnosti, od katerih vsaka prispeva UI v razlicne rezine:
 
-```json
+```orb
 {
   "name": "DashboardPage",
   "path": "/dashboard",
@@ -169,7 +169,7 @@ Ucinki `render-ui` vsake lastnosti ciljajo dolocene [rezine](#rezine-in-upodablj
 
 Lastnost `linkedEntity` veze lastnost na doloceno entiteto:
 
-```json
+```orb
 { "ref": "StatusManager", "linkedEntity": "Task" }
 ```
 
@@ -186,7 +186,7 @@ Glej [Vezava Lastnost-Entiteta](./traits.md#linkedentity-trait-entity-binding) z
 
 Lastnost `primaryEntity` oznacuje glavno entiteto, na kateri stran deluje:
 
-```json
+```orb
 {
   "name": "TaskDetailPage",
   "path": "/tasks/:id",
@@ -230,7 +230,7 @@ Lastnosti upodabljajo UI prek ucinkov `render-ui`, ki ciljajo **rezine** - poime
 
 Lastnosti zapolnijo rezine z ucinkom `render-ui`:
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -268,7 +268,7 @@ Lastnosti zapolnijo rezine z ucinkom `render-ui`:
 
 Ce vec lastnosti upodablja v isto rezino, se zlagajo (kasnejsi nadomesti ali doda, odvisno od tipa vzorca):
 
-```json
+```orb
 // Lastnost A
 ["render-ui", "main", { "type": "stats", ... }]
 
@@ -284,7 +284,7 @@ Navigacija med stranmi se izvaja prek ucinka `navigate` v lastnostih.
 
 ### Ucinek navigate
 
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
@@ -298,22 +298,22 @@ Navigacija med stranmi se izvaja prek ucinka `navigate` v lastnostih.
 ### Primeri navigacije
 
 **Preprosta navigacija:**
-```json
+```orb
 ["navigate", "/dashboard"]
 ```
 
 **Z ID-jem entitete:**
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **Z obremenitvijo:**
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
 **Gnezdena pot:**
-```json
+```orb
 ["navigate", "/users/:userId/tasks/:taskId", {
   "userId": "@entity.assigneeId",
   "taskId": "@entity.id"
@@ -324,7 +324,7 @@ Navigacija med stranmi se izvaja prek ucinka `navigate` v lastnostih.
 
 Navigacija se tipicno zgodi po spremembi stanja:
 
-```json
+```orb
 {
   "from": "editing",
   "to": "saved",
@@ -345,7 +345,7 @@ Glej [Ucinki](./traits.md#effects) za vec podrobnosti.
 
 Oznacite stran kot vstopno tocko z `isInitial`:
 
-```json
+```orb
 {
   "name": "HomePage",
   "path": "/",
@@ -390,7 +390,7 @@ Strani se preverjajo ob prevajanju s temi pravili:
 
 Celoten primer strani z vec lastnostmi:
 
-```json
+```orb
 {
   "orbitals": [
     {

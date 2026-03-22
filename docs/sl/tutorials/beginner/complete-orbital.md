@@ -27,7 +27,7 @@ Orbital enota = Entiteta + Lastnost(i) + Avtomat stanj + Strani
 
 Entiteta je vasa podatkovna struktura. Opisuje, kaj upravljate in kako se shranjuje.
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -57,7 +57,7 @@ Avtomat stanj zivi znotraj lastnosti. Opisuje, v katerih stanjih je lahko funkci
 
 Vsak avtomat stanj potrebuje vsaj eno stanje, oznaceno z `"isInitial": true`. Stanja so **objekti**, ne nizi:
 
-```json
+```orb
 "states": [
   { "name": "Pending", "isInitial": true },
   { "name": "Done", "isTerminal": true }
@@ -68,7 +68,7 @@ Vsak avtomat stanj potrebuje vsaj eno stanje, oznaceno z `"isInitial": true`. St
 
 Dogodki so sprozilci - uporabniska dejanja, sistemski dogodki ali zivljenjski kljuki:
 
-```json
+```orb
 "events": [
   { "key": "INIT", "name": "Initialize" },
   { "key": "COMPLETE", "name": "Complete Task" }
@@ -81,7 +81,7 @@ Dogodki so sprozilci - uporabniska dejanja, sistemski dogodki ali zivljenjski kl
 
 Prehodi povezejo stanja in dogodke skupaj. Lahko nosijo pogoje (izrazi) in ucinke (dejanja):
 
-```json
+```orb
 "transitions": [
   {
     "from": "Pending",
@@ -117,7 +117,7 @@ Prehodi povezejo stanja in dogodke skupaj. Lahko nosijo pogoje (izrazi) in ucink
 
 Ovijte avtomat stanj v lastnost z `name`, `linkedEntity` in `category`:
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -172,7 +172,7 @@ Ovijte avtomat stanj v lastnost z `name`, `linkedEntity` in `category`:
 
 Strani vezejo lastnosti na URL poti. To je del, ki najpogosteje manjka.
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -194,7 +194,7 @@ Strani vezejo lastnosti na URL poti. To je del, ki najpogosteje manjka.
 
 Vse skupaj - popolnoma delujoce Orbital enota `TaskManager`:
 
-```json
+```orb
 {
   "name": "TaskManager",
   "orbitals": [
@@ -274,7 +274,7 @@ Vse skupaj - popolnoma delujoce Orbital enota `TaskManager`:
 
 ### Manjkajoce `pages`
 
-```json
+```orb
 // ❌ Nepopolno - na nobeni poti se ne upodobi nic
 {
   "name": "Tasks",
@@ -295,7 +295,7 @@ Vse skupaj - popolnoma delujoce Orbital enota `TaskManager`:
 
 ### Stanja kot nizi (neveljavno)
 
-```json
+```orb
 // ❌ Napacna oblika
 "states": ["Pending", "Done"]
 
@@ -308,7 +308,7 @@ Vse skupaj - popolnoma delujoce Orbital enota `TaskManager`:
 
 ### Manjkajoci prehod INIT
 
-```json
+```orb
 // ❌ Stran se odpre, a je prazna - ni zacetnega render-ui
 "transitions": [
   { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }

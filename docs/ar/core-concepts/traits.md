@@ -26,7 +26,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تُعرَّف السمة (Trait) في برنامج `.orb` بالبنية التالية:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "category": "interaction",
@@ -102,7 +102,7 @@ Orbital Unit = Entity + Traits + Pages
 ### أمثلة الفئات
 
 **سمة التفاعل (Interaction Trait)** - تعالج أحداث الواجهة:
-```json
+```orb
 {
   "name": "FormInteraction",
   "category": "interaction",
@@ -119,7 +119,7 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 **سمة التكامل (Integration Trait)** - تعالج عمليات الخادم:
-```json
+```orb
 {
   "name": "DataPersistence",
   "category": "integration",
@@ -145,7 +145,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تمثل الحالات الأوضاع الممكنة للسمة:
 
-```json
+```orb
 {
   "states": [
     { "name": "idle", "isInitial": true, "description": "Waiting for input" },
@@ -167,7 +167,7 @@ Orbital Unit = Entity + Traits + Pages
 
 الأحداث تُحفِّز انتقالات الحالة:
 
-```json
+```orb
 {
   "events": [
     { "key": "INIT", "name": "Initialize" },
@@ -190,7 +190,7 @@ Orbital Unit = Entity + Traits + Pages
 
 الانتقالات تحدد كيف تتغير الحالات استجابةً للأحداث:
 
-```json
+```orb
 {
   "transitions": [
     {
@@ -221,7 +221,7 @@ Orbital Unit = Entity + Traits + Pages
 | `effects` | تأثيرات تُنفَّذ عند الانتقال (اختياري) |
 
 **انتقالات متعددة المصادر:** استخدم مصفوفة لـ `from` للتعامل مع نفس الحدث من حالات متعددة:
-```json
+```orb
 { "from": ["idle", "error"], "to": "loading", "event": "RETRY" }
 ```
 
@@ -242,7 +242,7 @@ Orbital Unit = Entity + Traits + Pages
 
 ### أمثلة الحراس
 
-```json
+```orb
 // مساواة بسيطة
 ["=", "@entity.status", "active"]
 
@@ -332,7 +332,7 @@ Orbital Unit = Entity + Traits + Pages
 ### أمثلة التأثيرات
 
 **render-ui** - عرض نمط واجهة المستخدم:
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -341,7 +341,7 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 **persist** - عمليات قاعدة البيانات:
-```json
+```orb
 // إنشاء
 ["persist", "create", "Task", "@payload"]
 
@@ -353,17 +353,17 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 **fetch** - استعلام البيانات:
-```json
+```orb
 ["fetch", "Task", { "status": "active", "assigneeId": "@user.id" }]
 ```
 
 **emit** - نشر حدث:
-```json
+```orb
 ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "completedBy": "@user.id" }]
 ```
 
 **set** - تعديل حقل:
-```json
+```orb
 ["set", "@entity.id", "status", "active"]
 ["set", "@entity.id", "updatedAt", "@now"]
 // الزيادة/النقصان باستخدام عوامل الرياضيات:
@@ -374,17 +374,17 @@ Orbital Unit = Entity + Traits + Pages
 **ملاحظة:** `increment` و `decrement` ليسا أنواع تأثيرات منفصلة. استخدم تأثير `set` مع عوامل الرياضيات في تعبيرات S-expression (`+`، `-`) لتعديل الحقول الرقمية.
 
 **navigate** - تغيير المسار:
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **notify** - عرض إشعار:
-```json
+```orb
 ["notify", "Task completed successfully", "success"]
 ```
 
 **call-service** - واجهة برمجية خارجية:
-```json
+```orb
 ["call-service", "email", "send", {
   "to": "@entity.email",
   "subject": "Task Assigned",
@@ -402,7 +402,7 @@ Orbital Unit = Entity + Traits + Pages
 
 كل وحدة مدارية لها كيان أساسي. السمات بدون `linkedEntity` تستخدم هذا الكيان:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task", "fields": [...] },
@@ -416,7 +416,7 @@ Orbital Unit = Entity + Traits + Pages
 
 حدد `linkedEntity` للعمل على كيان مختلف:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task" },
@@ -447,7 +447,7 @@ Orbital Unit = Entity + Traits + Pages
 
 أعلن الأحداث التي يمكن للسمة إرسالها:
 
-```json
+```orb
 {
   "name": "OrderFlow",
   "emits": [
@@ -465,7 +465,7 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 الإرسال في التأثيرات:
-```json
+```orb
 ["emit", "ORDER_CONFIRMED", { "orderId": "@entity.id", "items": "@entity.items" }]
 ```
 
@@ -473,7 +473,7 @@ Orbital Unit = Entity + Traits + Pages
 
 أعلن الأحداث التي تستمع إليها السمة:
 
-```json
+```orb
 {
   "name": "InventorySync",
   "listens": [
@@ -532,7 +532,7 @@ Orbital Unit = Entity + Traits + Pages
 
 ### تعريف النبضة
 
-```json
+```orb
 {
   "ticks": [
     {
@@ -570,7 +570,7 @@ Orbital Unit = Entity + Traits + Pages
 ### أنماط النبضات الشائعة
 
 **التنظيف:**
-```json
+```orb
 {
   "name": "cleanup",
   "interval": "300000",
@@ -579,7 +579,7 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 **المزامنة الدورية:**
-```json
+```orb
 {
   "name": "sync",
   "interval": "10000",
@@ -591,7 +591,7 @@ Orbital Unit = Entity + Traits + Pages
 ```
 
 **حلقة اللعبة:**
-```json
+```orb
 {
   "name": "game_tick",
   "interval": "16",
@@ -612,7 +612,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تعريف السمة مباشرة في الوحدة المدارية:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "traits": [
@@ -631,7 +631,7 @@ Orbital Unit = Entity + Traits + Pages
 
 الإشارة إلى سمة من المكتبة القياسية أو الاستيرادات:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "uses": [
@@ -671,7 +671,7 @@ Orbital Unit = Entity + Traits + Pages
 
 سمة كاملة توضح جميع الميزات:
 
-```json
+```orb
 {
   "name": "CheckoutFlow",
   "category": "integration",

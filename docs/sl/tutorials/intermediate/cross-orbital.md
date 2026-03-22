@@ -30,7 +30,7 @@ The key properties:
 
 The trait declares what events it can publish, including the payload contract:
 
-```json
+```orb
 {
   "name": "CartActions",
   "linkedEntity": "Cart",
@@ -66,7 +66,7 @@ The trait declares what events it can publish, including the payload contract:
 
 Inside a transition's `effects`, use `["emit", "EVENT_NAME", payload]`:
 
-```json
+```orb
 {
   "from": "empty",
   "event": "ADD_ITEM",
@@ -90,7 +90,7 @@ The payload is a JSON object where values can be bindings (`@entity.*`) or liter
 
 At the orbital level, list every event the orbital publishes:
 
-```json
+```orb
 {
   "name": "CartManager",
   "entity": { "...": "..." },
@@ -106,7 +106,7 @@ At the orbital level, list every event the orbital publishes:
 
 The receiving trait declares which external events it handles:
 
-```json
+```orb
 {
   "name": "NotificationHandler",
   "linkedEntity": "Notification",
@@ -121,7 +121,7 @@ The receiving trait declares which external events it handles:
 
 These events become valid event keys in the state machine — add them to `events` and write transitions for them:
 
-```json
+```orb
 "events": [
   { "key": "INIT", "name": "Initialize" },
   { "key": "ITEM_ADDED", "name": "Item Added" },
@@ -155,7 +155,7 @@ These events become valid event keys in the state machine — add them to `event
 
 At the receiving orbital level, declare which orbital the events come from:
 
-```json
+```orb
 {
   "name": "NotificationManager",
   "entity": { "...": "..." },
@@ -172,7 +172,7 @@ At the receiving orbital level, declare which orbital the events come from:
 
 ## Celoten program
 
-```json
+```orb
 {
   "name": "cross-orbital-test",
   "version": "1.0.0",

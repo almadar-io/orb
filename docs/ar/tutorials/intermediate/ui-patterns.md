@@ -10,7 +10,7 @@
 
 ## كيف يعمل render-ui
 
-```json
+```orb
 ["render-ui", "slot", { "type": "pattern", ...props }]
 ```
 
@@ -21,7 +21,7 @@
 | `...props` | إعدادات خاصة بالنمط |
 
 **لمسح فتحة:**
-```json
+```orb
 ["render-ui", "slot", null]
 ```
 
@@ -49,7 +49,7 @@
 
 **`entity-table`** - جدول بيانات مع أعمدة وترتيب وإجراءات على الصفوف.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Product",
@@ -64,7 +64,7 @@
 
 **`entity-detail`** - عرض تفاصيل للقراءة فقط لسجل واحد.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-detail",
   "entity": "Product",
@@ -74,7 +74,7 @@
 
 **`stats`** - بطاقات إحصائيات لوحة المعلومات (أعداد، إجماليات، ملخصات).
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "stats",
   "items": [
@@ -90,7 +90,7 @@
 
 **`form`** - نموذج مُولَّد تلقائياً لكيان. يعرض جميع الحقول أو مجموعة فرعية محددة.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "form",
   "entity": "Product",
@@ -106,7 +106,7 @@
 
 **`form-section`** - نموذج داخل نافذة منبثقة أو درج، مع إرسال/إلغاء مربوط بأحداث.
 
-```json
+```orb
 ["render-ui", "modal", {
   "type": "form-section",
   "entity": "Task",
@@ -124,7 +124,7 @@
 
 **`page-header`** - عنوان الصفحة مع أزرار إجراءات اختيارية.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "page-header",
   "title": "Products",
@@ -137,7 +137,7 @@
 
 **`breadcrumb`** - مسار التنقل.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "breadcrumb",
   "items": [
@@ -153,7 +153,7 @@
 
 **`empty-state`** - يُعرض عندما لا تحتوي القائمة على عناصر.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "empty-state",
   "title": "No products yet",
@@ -164,7 +164,7 @@
 
 **`loading-state`** - مؤشر تحميل أثناء جلب البيانات.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "loading-state",
   "title": "Loading products..."
@@ -214,7 +214,7 @@
 | `@now` | الطابع الزمني الحالي |
 
 مثال:
-```json
+```orb
 { "type": "stats", "title": "Cart Total: $@entity.total" }
 ```
 

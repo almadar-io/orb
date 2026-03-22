@@ -21,7 +21,7 @@ Orb UI is driven entirely by `render-ui` effects inside state machine transition
 
 ## How render-ui Works
 
-```json
+```orb
 ["render-ui", "slot", { "type": "pattern", ...props }]
 ```
 
@@ -32,7 +32,7 @@ Orb UI is driven entirely by `render-ui` effects inside state machine transition
 | `...props` | Pattern-specific configuration |
 
 **To clear a slot:**
-```json
+```orb
 ["render-ui", "slot", null]
 ```
 
@@ -60,7 +60,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`entity-table`** — Data table with columns, sorting, and row actions.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Product",
@@ -75,7 +75,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`entity-detail`** — Read-only detail view for a single record.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-detail",
   "entity": "Product",
@@ -85,7 +85,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`stats`** — Dashboard stat cards (counts, totals, summaries).
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "stats",
   "items": [
@@ -101,7 +101,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`form`** — Auto-generated form for an entity. Renders all fields or a specified subset.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "form",
   "entity": "Product",
@@ -117,7 +117,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`form-section`** — A form inside a modal or drawer, with submit/cancel wired to events.
 
-```json
+```orb
 ["render-ui", "modal", {
   "type": "form-section",
   "entity": "Task",
@@ -135,7 +135,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`page-header`** — Page title with optional action buttons.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "page-header",
   "title": "Products",
@@ -148,7 +148,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`breadcrumb`** — Navigation trail.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "breadcrumb",
   "items": [
@@ -164,7 +164,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`empty-state`** — Shown when a list has no items.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "empty-state",
   "title": "No products yet",
@@ -175,7 +175,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`loading-state`** — Spinner while data loads.
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "loading-state",
   "title": "Loading products..."
@@ -188,7 +188,7 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 The power of `render-ui` is that it changes based on state. Different states render different components into the same slot. Here's the full `ProductCRUD` trait from `08-patterns.orb`:
 
-```json
+```orb
 {
   "name": "ProductCRUD",
   "linkedEntity": "Product",
@@ -302,7 +302,7 @@ The power of `render-ui` is that it changes based on state. Different states ren
 
 With pages:
 
-```json
+```orb
 "pages": [
   {
     "name": "ProductListPage",
@@ -354,7 +354,7 @@ Pattern props accept bindings to read live data:
 | `@now` | Current timestamp |
 
 Example:
-```json
+```orb
 { "type": "stats", "title": "Cart Total: $@entity.total" }
 ```
 

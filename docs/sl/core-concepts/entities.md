@@ -20,7 +20,7 @@ Entitete definirajo obliko podatkov, medtem ko Lastnosti definirajo obnasanje (a
 
 Entiteta je definirana v `.orb` programu z naslednjo strukturo:
 
-```json
+```orb
 {
   "name": "Task",
   "collection": "tasks",
@@ -65,7 +65,7 @@ Orb podpira naslednje tipe polj:
 
 ### Lastnosti polj
 
-```json
+```orb
 {
   "name": "status",
   "type": "enum",
@@ -92,7 +92,7 @@ Orb podpira naslednje tipe polj:
 
 Relacije povezujejo entitete med seboj:
 
-```json
+```orb
 {
   "name": "assigneeId",
   "type": "relation",
@@ -121,7 +121,7 @@ Entitete imajo tri nacine trajnosti, ki bistveno spreminjajo njihovo shranjevanj
 **Zbirka:** Obvezna - eksplicitno poimenovanje
 **Privzeto:** Ce `persistence` ni dolocen, je privzeto `persistent`
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -141,7 +141,7 @@ Entitete imajo tri nacine trajnosti, ki bistveno spreminjajo njihovo shranjevanj
 **Zivljenjska doba:** Izgubljeno ob ponovnem zagonu/koncu seje
 **Zbirka:** Ni
 
-```json
+```orb
 {
   "name": "Enemy",
   "persistence": "runtime",
@@ -161,7 +161,7 @@ Entitete imajo tri nacine trajnosti, ki bistveno spreminjajo njihovo shranjevanj
 **Zivljenjska doba:** En primerek na sejo
 **Zbirka:** Ni (en zapis)
 
-```json
+```orb
 {
   "name": "Player",
   "persistence": "singleton",
@@ -204,7 +204,7 @@ Entitete imajo tri nacine trajnosti, ki bistveno spreminjajo njihovo shranjevanj
 
 Pogoji uporabljajo vezave za preverjanje pogojev pred prehodi:
 
-```json
+```orb
 {
   "from": "active",
   "to": "completed",
@@ -220,7 +220,7 @@ Pogoji uporabljajo vezave za preverjanje pogojev pred prehodi:
 
 Ucinki uporabljajo vezave za branje in spreminjanje podatkov:
 
-```json
+```orb
 {
   "effects": [
     ["set", "@entity.id", "status", "@payload.newStatus"],
@@ -257,7 +257,7 @@ Lastnosti so avtomati stanj, ki delujejo na entitetah. Vezava med lastnostjo in 
 
 Vsaka Orbital enota ima **primarno entiteto** - entiteto, definirano v njeni lastnosti `entity`:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": {
@@ -275,7 +275,7 @@ Lastnosti v tej Orbital enoti samodejno dostopajo do `Task` prek `@entity`.
 
 Ko se sklicujete na lastnost, lahko dolocite, na kateri entiteti naj deluje:
 
-```json
+```orb
 {
   "traits": [
     {
@@ -311,7 +311,7 @@ this.traitEntityMap.set(trait.name, linkedEntity);
 
 ### Primer: Orbital enota z vec entitetami
 
-```json
+```orb
 {
   "name": "GameLevel",
   "entity": {

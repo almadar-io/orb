@@ -27,7 +27,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 الكيان هو بنية بياناتك. يصف ما تديره وكيف يُحفظ.
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -57,7 +57,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 كل آلة حالة تحتاج حالة واحدة على الأقل محددة بـ `"isInitial": true`. الحالات هي **كائنات**، وليست نصوصاً:
 
-```json
+```orb
 "states": [
   { "name": "Pending", "isInitial": true },
   { "name": "Done", "isTerminal": true }
@@ -68,7 +68,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 الأحداث هي محفّزات - إجراءات المستخدم، أحداث النظام، أو خطافات دورة الحياة:
 
-```json
+```orb
 "events": [
   { "key": "INIT", "name": "Initialize" },
   { "key": "COMPLETE", "name": "Complete Task" }
@@ -81,7 +81,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 الانتقالات تربط الحالات والأحداث ببعضها. يمكن أن تحمل حراساً (Guards) (شروط) وتأثيرات (Effects) (إجراءات):
 
-```json
+```orb
 "transitions": [
   {
     "from": "Pending",
@@ -117,7 +117,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 غلّف آلة الحالة في سمة مع `name` و`linkedEntity` و`category`:
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -172,7 +172,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 الصفحات تربط السمات بمسارات URL. هذا هو الجزء الأكثر نسياناً.
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -194,7 +194,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 تجميع كل شيء معاً - وحدة مدارية `TaskManager` تعمل بالكامل:
 
-```json
+```orb
 {
   "name": "TaskManager",
   "orbitals": [
@@ -274,7 +274,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 ### صفحات مفقودة (`pages`)
 
-```json
+```orb
 // ❌ غير مكتمل - لا شيء يُعرض على أي مسار
 {
   "name": "Tasks",
@@ -295,7 +295,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 ### الحالات كنصوص (غير صالح)
 
-```json
+```orb
 // ❌ صيغة خاطئة
 "states": ["Pending", "Done"]
 
@@ -308,7 +308,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 ### انتقال INIT مفقود
 
-```json
+```orb
 // ❌ الصفحة تفتح لكنها فارغة - لا يوجد render-ui أولي
 "transitions": [
   { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }

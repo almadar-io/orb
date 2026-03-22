@@ -25,7 +25,7 @@ The `TaskManager` orbital has one entity (`Task`) and two traits: one for the ta
 
 ## Korak 1 — Entiteta Task
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -50,7 +50,7 @@ The `TaskManager` orbital has one entity (`Task`) and two traits: one for the ta
 
 The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inProgress → review → done`.
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -122,7 +122,7 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 
 The `TaskCRUD` trait handles the list management UI: viewing the list, creating, editing, and deleting tasks.
 
-```json
+```orb
 {
   "name": "TaskCRUD",
   "linkedEntity": "Task",
@@ -225,7 +225,7 @@ The `TaskCRUD` trait handles the list management UI: viewing the list, creating,
 
 ## Korak 4 — Dodajte strani
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -243,7 +243,7 @@ The lifecycle trait (`TaskLifecycle`) doesn't need its own page here — it's wi
 
 ## Celoten program
 
-```json
+```orb
 {
   "name": "TaskManager",
   "version": "1.0.0",

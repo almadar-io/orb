@@ -37,7 +37,7 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 The entity is your data structure. It describes what you're managing and how it persists.
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -81,7 +81,7 @@ Every state machine needs at least one state marked `"isInitial": true`. States 
 />
 </div>
 
-```json
+```orb
 "states": [
   { "name": "Pending", "isInitial": true },
   { "name": "Done", "isTerminal": true }
@@ -92,7 +92,7 @@ Every state machine needs at least one state marked `"isInitial": true`. States 
 
 Events are triggers — user actions, system events, or lifecycle hooks:
 
-```json
+```orb
 "events": [
   { "key": "INIT", "name": "Initialize" },
   { "key": "COMPLETE", "name": "Complete Task" }
@@ -105,7 +105,7 @@ Events are triggers — user actions, system events, or lifecycle hooks:
 
 Transitions wire states and events together. They can carry guards (conditions) and effects (actions):
 
-```json
+```orb
 "transitions": [
   {
     "from": "Pending",
@@ -141,7 +141,7 @@ Transitions wire states and events together. They can carry guards (conditions) 
 
 Wrap the state machine in a trait with `name`, `linkedEntity`, and `category`:
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -196,7 +196,7 @@ Wrap the state machine in a trait with `name`, `linkedEntity`, and `category`:
 
 Pages bind traits to URL routes. This is the part most often missing.
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -218,7 +218,7 @@ Pages bind traits to URL routes. This is the part most often missing.
 
 Putting it all together — a fully working `TaskManager` orbital:
 
-```json
+```orb
 {
   "name": "TaskManager",
   "orbitals": [
@@ -298,7 +298,7 @@ Putting it all together — a fully working `TaskManager` orbital:
 
 ### Missing `pages`
 
-```json
+```orb
 // ❌ Incomplete — nothing renders at any route
 {
   "name": "Tasks",
@@ -319,7 +319,7 @@ Putting it all together — a fully working `TaskManager` orbital:
 
 ### States as strings (invalid)
 
-```json
+```orb
 // ❌ Wrong format
 "states": ["Pending", "Done"]
 
@@ -332,7 +332,7 @@ Putting it all together — a fully working `TaskManager` orbital:
 
 ### Missing INIT transition
 
-```json
+```orb
 // ❌ Page opens but is blank — no initial render-ui
 "transitions": [
   { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }

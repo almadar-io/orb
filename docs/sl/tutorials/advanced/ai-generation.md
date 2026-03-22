@@ -90,7 +90,7 @@ A good generation prompt covers:
 
 For each orbital, the LLM should output all four required parts:
 
-```json
+```orb
 {
   "name": "AppName",
   "version": "1.0.0",
@@ -137,7 +137,7 @@ LLMs that don't have the Orb skill loaded will make predictable mistakes. Learn 
 
 The LLM generates entity + traits but forgets the pages array entirely.
 
-```json
+```orb
 // ❌ Incomplete — no pages
 {
   "name": "TaskManager",
@@ -168,7 +168,7 @@ The LLM generates entity + traits but forgets the pages array entirely.
 
 ### 2. States as strings instead of objects
 
-```json
+```orb
 // ❌ Wrong
 "states": ["Pending", "InProgress", "Done"]
 
@@ -188,7 +188,7 @@ The LLM generates entity + traits but forgets the pages array entirely.
 
 The page loads but renders nothing because there's no INIT self-loop with `render-ui`.
 
-```json
+```orb
 // ❌ No INIT — page is blank
 "transitions": [
   { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }
@@ -213,7 +213,7 @@ The page loads but renders nothing because there's no INIT self-loop with `rende
 
 ### 4. Using deprecated action props
 
-```json
+```orb
 // ❌ Deprecated — these will fail validation
 { "type": "form-section", "onSubmit": "SAVE", "onCancel": "CANCEL" }
 
@@ -221,7 +221,7 @@ The page loads but renders nothing because there's no INIT self-loop with `rende
 { "type": "form-section", "submitEvent": "SAVE", "cancelEvent": "CANCEL" }
 ```
 
-```json
+```orb
 // ❌ Deprecated
 { "type": "page-header", "headerActions": [...] }
 
@@ -233,7 +233,7 @@ The page loads but renders nothing because there's no INIT self-loop with `rende
 
 ### 5. Schema-level traits array (wrong structure)
 
-```json
+```orb
 // ❌ Wrong — traits at the root level (legacy format)
 {
   "name": "App",
@@ -257,7 +257,7 @@ The page loads but renders nothing because there's no INIT self-loop with `rende
 
 ### 6. Missing `linkedEntity` on trait
 
-```json
+```orb
 // ❌ Missing linkedEntity
 { "name": "TaskCRUD", "category": "interaction", "stateMachine": { ... } }
 

@@ -63,7 +63,7 @@ export const taskSchema = {
 
 ## Quick Example
 
-```json
+```orb
 {
   "name": "TaskManager",
   "orbitals": [{

@@ -27,7 +27,7 @@ Guards are conditions that must be true for a transition to fire. They act as th
 
 A guard is an S-expression on a transition. If it evaluates to `false`, the transition is blocked:
 
-```json
+```orb
 {
   "from": "active",
   "event": "WITHDRAW",
@@ -73,21 +73,21 @@ Arguments can be:
 
 Combine conditions with `and`, `or`, `not`:
 
-```json
+```orb
 ["and",
   [">=", "@entity.balance", "@payload.amount"],
   ["=", "@entity.isVerified", true]
 ]
 ```
 
-```json
+```orb
 ["or",
   ["=", "@entity.role", "admin"],
   ["=", "@entity.role", "manager"]
 ]
 ```
 
-```json
+```orb
 ["not", ["=", "@entity.status", "frozen"]]
 ```
 
@@ -100,7 +100,7 @@ This is the complete `AccountManager` from `03-guards.orb`. It demonstrates:
 - Using `@payload.amount` to check against user input
 - Simple state transitions (freeze/unfreeze) without guards
 
-```json
+```orb
 {
   "name": "AccountManager",
   "version": "1.0.0",
@@ -194,7 +194,7 @@ This is the complete `AccountManager` from `03-guards.orb`. It demonstrates:
 ```
 
 **Reading the WITHDRAW guard:**
-```json
+```orb
 ["and",
   [">=", "@entity.balance", "@payload.amount"],  // Account has enough funds
   ["=", "@entity.isVerified", true]              // Account is verified
@@ -209,7 +209,7 @@ Both conditions must be true. If the account is unverified, or the balance is to
 
 Guards can use arithmetic operators — the result of a nested expression is used as an argument:
 
-```json
+```orb
 // Only allow if balance after withdrawal stays above minimum
 [">=",
   ["-", "@entity.balance", "@payload.amount"],
@@ -217,7 +217,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 ]
 ```
 
-```json
+```orb
 // Only allow if item count is within limit
 ["<",
   ["+", "@entity.itemCount", 1],
@@ -231,7 +231,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 ### Role-based access
 
-```json
+```orb
 // Only admins can delete
 {
   "from": "listing",
@@ -244,7 +244,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 ### Ownership check
 
-```json
+```orb
 // Only the assignee can start the task
 {
   "from": "Pending",
@@ -257,7 +257,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 ### Field validation
 
-```json
+```orb
 // Score must be between 0 and 100
 {
   "guard": ["and",
@@ -269,7 +269,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 ### Status precondition
 
-```json
+```orb
 // Can only approve if currently in review
 {
   "guard": ["=", "@entity.status", "review"]
@@ -282,7 +282,7 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 Guards run **before** the transition. Effects run **after**. Never use effects to enforce business rules — that's what guards are for.
 
-```json
+```orb
 // ❌ Wrong: using effects to simulate a guard
 "effects": [
   ["if", ["<", "@entity.balance", 0], ["notify", "error", "Insufficient funds"]]

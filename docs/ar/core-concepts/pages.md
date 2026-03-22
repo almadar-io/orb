@@ -24,7 +24,7 @@ Orbital = Entity + Traits + Pages
 
 تُعرَّف الصفحة (Page) في برنامج `.orb` بالبنية التالية:
 
-```json
+```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
@@ -64,7 +64,7 @@ Orbital = Entity + Traits + Pages
 
 مسارات بسيطة بدون أجزاء ديناميكية:
 
-```json
+```orb
 { "path": "/tasks" }
 { "path": "/dashboard" }
 { "path": "/settings/profile" }
@@ -74,7 +74,7 @@ Orbital = Entity + Traits + Pages
 
 استخدم صيغة النقطتين للمعاملات الديناميكية:
 
-```json
+```orb
 { "path": "/tasks/:id" }
 { "path": "/users/:userId/tasks/:taskId" }
 { "path": "/projects/:projectId/members/:memberId" }
@@ -124,7 +124,7 @@ Orbital = Entity + Traits + Pages
 
 ### مراجع السمات
 
-```json
+```orb
 {
   "pages": [
     {
@@ -151,7 +151,7 @@ Orbital = Entity + Traits + Pages
 
 يمكن للصفحة أن تحتوي على سمات متعددة، كل منها تساهم بواجهة في فتحات مختلفة:
 
-```json
+```orb
 {
   "name": "DashboardPage",
   "path": "/dashboard",
@@ -169,7 +169,7 @@ Orbital = Entity + Traits + Pages
 
 خاصية `linkedEntity` تربط السمة بكيان محدد:
 
-```json
+```orb
 { "ref": "StatusManager", "linkedEntity": "Task" }
 ```
 
@@ -186,7 +186,7 @@ Orbital = Entity + Traits + Pages
 
 خاصية `primaryEntity` تشير إلى الكيان الرئيسي الذي تعمل عليه الصفحة:
 
-```json
+```orb
 {
   "name": "TaskDetailPage",
   "path": "/tasks/:id",
@@ -230,7 +230,7 @@ Orbital = Entity + Traits + Pages
 
 السمات تملأ الفتحات باستخدام تأثير `render-ui`:
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -268,7 +268,7 @@ Orbital = Entity + Traits + Pages
 
 إذا عرضت سمات متعددة في نفس الفتحة، تتراكم (الأحدث تستبدل أو تُضاف حسب نوع النمط):
 
-```json
+```orb
 // السمة A
 ["render-ui", "main", { "type": "stats", ... }]
 
@@ -284,7 +284,7 @@ Orbital = Entity + Traits + Pages
 
 ### تأثير navigate
 
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
@@ -298,22 +298,22 @@ Orbital = Entity + Traits + Pages
 ### أمثلة التنقل
 
 **تنقل بسيط:**
-```json
+```orb
 ["navigate", "/dashboard"]
 ```
 
 **مع معرِّف الكيان:**
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **مع الحمولة:**
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
 **مسار متداخل:**
-```json
+```orb
 ["navigate", "/users/:userId/tasks/:taskId", {
   "userId": "@entity.assigneeId",
   "taskId": "@entity.id"
@@ -324,7 +324,7 @@ Orbital = Entity + Traits + Pages
 
 التنقل عادة يحدث بعد تغييرات الحالة:
 
-```json
+```orb
 {
   "from": "editing",
   "to": "saved",
@@ -345,7 +345,7 @@ Orbital = Entity + Traits + Pages
 
 حدد صفحة كنقطة دخول باستخدام `isInitial`:
 
-```json
+```orb
 {
   "name": "HomePage",
   "path": "/",
@@ -390,7 +390,7 @@ Orbital = Entity + Traits + Pages
 
 مثال صفحة كاملة مع سمات متعددة:
 
-```json
+```orb
 {
   "orbitals": [
     {

@@ -30,7 +30,7 @@ CartManager orbital          NotificationManager orbital
 
 السمة تُعلن الأحداث التي يمكنها نشرها، بما في ذلك عقد الحمولة:
 
-```json
+```orb
 {
   "name": "CartActions",
   "linkedEntity": "Cart",
@@ -58,7 +58,7 @@ CartManager orbital          NotificationManager orbital
 
 داخل `effects` للانتقال، استخدم `["emit", "EVENT_NAME", payload]`:
 
-```json
+```orb
 {
   "from": "empty",
   "event": "ADD_ITEM",
@@ -80,7 +80,7 @@ CartManager orbital          NotificationManager orbital
 
 على مستوى الوحدة المدارية، اذكر كل حدث تنشره:
 
-```json
+```orb
 {
   "name": "CartManager",
   "entity": { "...": "..." },
@@ -96,7 +96,7 @@ CartManager orbital          NotificationManager orbital
 
 السمة المستقبلة تُعلن الأحداث الخارجية التي تعالجها:
 
-```json
+```orb
 {
   "name": "NotificationHandler",
   "linkedEntity": "Notification",
@@ -117,7 +117,7 @@ CartManager orbital          NotificationManager orbital
 
 على مستوى الوحدة المدارية المستقبلة، أعلن من أين تأتي الأحداث:
 
-```json
+```orb
 {
   "name": "NotificationManager",
   "entity": { "...": "..." },

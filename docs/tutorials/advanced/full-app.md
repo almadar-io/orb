@@ -73,7 +73,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 ### Entity
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -97,7 +97,7 @@ Manages the task's workflow status. Emits `TASK_COMPLETED` when a task is approv
 **States:** `todo → inProgress → review → done`
 
 Key transitions:
-```json
+```orb
 { "from": "review", "event": "APPROVE", "to": "done",
   "effects": [["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]]
 },
@@ -113,7 +113,7 @@ Manages the list UI. Emits `TASK_CREATED` when a new task is saved.
 **States:** `listing → creating | editing`
 
 Key transitions:
-```json
+```orb
 { "from": "creating", "event": "SAVE", "to": "listing",
   "effects": [
     ["persist", "update", "Task", "@entity"],
@@ -128,7 +128,7 @@ Key transitions:
 
 ### Pages
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -140,7 +140,7 @@ Key transitions:
 
 ### Orbital-level emits
 
-```json
+```orb
 "emits": ["TASK_COMPLETED", "TASK_CREATED"]
 ```
 
@@ -152,7 +152,7 @@ Key transitions:
 
 Tracks aggregate stats per project, updated reactively when tasks change:
 
-```json
+```orb
 {
   "name": "Project",
   "persistence": "persistent",
@@ -171,7 +171,7 @@ Tracks aggregate stats per project, updated reactively when tasks change:
 
 Listens to both `TASK_COMPLETED` and `TASK_CREATED` and increments counters:
 
-```json
+```orb
 {
   "name": "ProjectStats",
   "linkedEntity": "Project",
@@ -218,7 +218,7 @@ The `TASK_CREATED` and `TASK_COMPLETED` events are received from `TaskManager`. 
 
 ### Pages & orbital-level listens
 
-```json
+```orb
 "pages": [
   {
     "name": "ProjectListPage",
@@ -240,7 +240,7 @@ The simplest orbital — a read-only browser for users with a navigate-to-detail
 
 ### Entity
 
-```json
+```orb
 {
   "name": "User",
   "persistence": "persistent",
@@ -256,7 +256,7 @@ The simplest orbital — a read-only browser for users with a navigate-to-detail
 
 ### Trait: UserBrowser
 
-```json
+```orb
 {
   "name": "UserBrowser",
   "linkedEntity": "User",
@@ -293,7 +293,7 @@ The simplest orbital — a read-only browser for users with a navigate-to-detail
 
 ### Pages
 
-```json
+```orb
 "pages": [
   {
     "name": "UserListPage",

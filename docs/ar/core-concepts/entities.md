@@ -20,7 +20,7 @@ Orbital Unit = Entity + Traits + Pages
 
 يُعرَّف الكيان (Entity) في برنامج `.orb` بالبنية التالية:
 
-```json
+```orb
 {
   "name": "Task",
   "collection": "tasks",
@@ -65,7 +65,7 @@ Orbital Unit = Entity + Traits + Pages
 
 ### خصائص الحقل
 
-```json
+```orb
 {
   "name": "status",
   "type": "enum",
@@ -92,7 +92,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تربط العلاقات الكيانات ببعضها:
 
-```json
+```orb
 {
   "name": "assigneeId",
   "type": "relation",
@@ -121,7 +121,7 @@ Orbital Unit = Entity + Traits + Pages
 **المجموعة:** مطلوبة - تسمية صريحة
 **الافتراضي:** إذا لم يُحدد `persistence`، يكون الافتراضي `persistent`
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -141,7 +141,7 @@ Orbital Unit = Entity + Traits + Pages
 **مدة البقاء:** تُفقد عند إعادة التشغيل/انتهاء الجلسة
 **المجموعة:** لا توجد
 
-```json
+```orb
 {
   "name": "Enemy",
   "persistence": "runtime",
@@ -161,7 +161,7 @@ Orbital Unit = Entity + Traits + Pages
 **مدة البقاء:** نسخة واحدة لكل جلسة
 **المجموعة:** لا توجد (سجل واحد)
 
-```json
+```orb
 {
   "name": "Player",
   "persistence": "singleton",
@@ -203,7 +203,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تستخدم الحراس (Guards) الربط للتحقق من الشروط قبل الانتقالات (Transitions):
 
-```json
+```orb
 {
   "from": "active",
   "to": "completed",
@@ -219,7 +219,7 @@ Orbital Unit = Entity + Traits + Pages
 
 تستخدم التأثيرات (Effects) الربط لقراءة البيانات وتعديلها:
 
-```json
+```orb
 {
   "effects": [
     ["set", "@entity.id", "status", "@payload.newStatus"],
@@ -256,7 +256,7 @@ Orbital Unit = Entity + Traits + Pages
 
 كل وحدة مدارية لها **كيان أساسي** - الكيان المحدد في خاصية `entity`:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": {
@@ -274,7 +274,7 @@ Orbital Unit = Entity + Traits + Pages
 
 عند الإشارة إلى سمة، يمكنك تحديد الكيان الذي يجب أن تعمل عليه:
 
-```json
+```orb
 {
   "traits": [
     {
@@ -310,7 +310,7 @@ this.traitEntityMap.set(trait.name, linkedEntity);
 
 ### مثال: وحدة مدارية متعددة الكيانات
 
-```json
+```orb
 {
   "name": "GameLevel",
   "entity": {

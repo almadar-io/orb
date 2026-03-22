@@ -26,7 +26,7 @@ Medtem ko [Entitete](./entities.md) definirajo obliko podatkov, Lastnosti defini
 
 Lastnost je definirana v `.orb` programu z naslednjo strukturo:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "category": "interaction",
@@ -102,7 +102,7 @@ Lastnosti so kategorizirane po svojem primarnem namenu:
 ### Primeri kategorij
 
 **Lastnost za interakcijo** - upravlja dogodke UI:
-```json
+```orb
 {
   "name": "FormInteraction",
   "category": "interaction",
@@ -119,7 +119,7 @@ Lastnosti so kategorizirane po svojem primarnem namenu:
 ```
 
 **Lastnost za integracijo** - upravlja strezniski operacije:
-```json
+```orb
 {
   "name": "DataPersistence",
   "category": "integration",
@@ -145,7 +145,7 @@ Vsaka lastnost ima avtomat stanj, ki definira njeno obnasanje.
 
 Stanja predstavljajo mozne pogoje lastnosti:
 
-```json
+```orb
 {
   "states": [
     { "name": "idle", "isInitial": true, "description": "Waiting for input" },
@@ -167,7 +167,7 @@ Stanja predstavljajo mozne pogoje lastnosti:
 
 Dogodki sprozijo prehode stanj:
 
-```json
+```orb
 {
   "events": [
     { "key": "INIT", "name": "Initialize" },
@@ -190,7 +190,7 @@ Dogodki sprozijo prehode stanj:
 
 Prehodi definirajo, kako se stanja spreminjajo kot odziv na dogodke:
 
-```json
+```orb
 {
   "transitions": [
     {
@@ -221,7 +221,7 @@ Prehodi definirajo, kako se stanja spreminjajo kot odziv na dogodke:
 | `effects` | Ucinki za izvedbo ob prehodu (neobvezno) |
 
 **Prehodi z vec izvori:** Uporabite seznam za `from` za obdelavo istega dogodka iz vec stanj:
-```json
+```orb
 { "from": ["idle", "error"], "to": "loading", "event": "RETRY" }
 ```
 
@@ -242,7 +242,7 @@ Pogoji so izrazi, ki se morajo ovrednotiti na `true`, da se prehod izvede. Upora
 
 ### Primeri pogojev
 
-```json
+```orb
 // Preprosta enakost
 ["=", "@entity.status", "active"]
 
@@ -332,7 +332,7 @@ Lastnosti se izvajajo **hkrati na odjemalcu in strezniku**:
 ### Primeri ucinkov
 
 **render-ui** - Prikazi vzorec UI:
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -341,7 +341,7 @@ Lastnosti se izvajajo **hkrati na odjemalcu in strezniku**:
 ```
 
 **persist** - Operacije s podatkovno bazo:
-```json
+```orb
 // Ustvari
 ["persist", "create", "Task", "@payload"]
 
@@ -353,17 +353,17 @@ Lastnosti se izvajajo **hkrati na odjemalcu in strezniku**:
 ```
 
 **fetch** - Poizvedba podatkov:
-```json
+```orb
 ["fetch", "Task", { "status": "active", "assigneeId": "@user.id" }]
 ```
 
 **emit** - Objavi dogodek:
-```json
+```orb
 ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "completedBy": "@user.id" }]
 ```
 
 **set** - Spremeni polje:
-```json
+```orb
 ["set", "@entity.id", "status", "active"]
 ["set", "@entity.id", "updatedAt", "@now"]
 // Povecanje/zmanjsanje z matematicnimi operatorji:
@@ -374,17 +374,17 @@ Lastnosti se izvajajo **hkrati na odjemalcu in strezniku**:
 **Opomba:** `increment` in `decrement` nista locena tipa ucinkov. Uporabite ucinek `set` z matematicnimi operatorji S-izrazov (`+`, `-`) za spreminjanje numericnih polj.
 
 **navigate** - Sprememba poti:
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **notify** - Prikazi obvestilo:
-```json
+```orb
 ["notify", "Task completed successfully", "success"]
 ```
 
 **call-service** - Zunanji API:
-```json
+```orb
 ["call-service", "email", "send", {
   "to": "@entity.email",
   "subject": "Task Assigned",
@@ -402,7 +402,7 @@ Lastnost `linkedEntity` doloca, na kateri entiteti lastnost deluje.
 
 Vsaka Orbital enota ima primarno entiteto. Lastnosti brez `linkedEntity` uporabljajo to entiteto:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task", "fields": [...] },
@@ -416,7 +416,7 @@ Vsaka Orbital enota ima primarno entiteto. Lastnosti brez `linkedEntity` uporabl
 
 Dolocite `linkedEntity` za delovanje na drugi entiteti:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task" },
@@ -447,7 +447,7 @@ Lastnosti komunicirajo prek dogodkov, kar omogoca ohlapno sklopljenost med Orbit
 
 Deklarirajte dogodke, ki jih lastnost lahko oddaja:
 
-```json
+```orb
 {
   "name": "OrderFlow",
   "emits": [
@@ -465,7 +465,7 @@ Deklarirajte dogodke, ki jih lastnost lahko oddaja:
 ```
 
 Oddajanje v ucinkih:
-```json
+```orb
 ["emit", "ORDER_CONFIRMED", { "orderId": "@entity.id", "items": "@entity.items" }]
 ```
 
@@ -473,7 +473,7 @@ Oddajanje v ucinkih:
 
 Deklarirajte dogodke, ki jih lastnost poslusa:
 
-```json
+```orb
 {
   "name": "InventorySync",
   "listens": [
@@ -532,7 +532,7 @@ Cikli izvajajo ucinke periodicno, tudi brez interakcije uporabnika.
 
 ### Definicija cikla
 
-```json
+```orb
 {
   "ticks": [
     {
@@ -570,7 +570,7 @@ Cikli izvajajo ucinke periodicno, tudi brez interakcije uporabnika.
 ### Pogosti vzorci ciklov
 
 **Ciscenje:**
-```json
+```orb
 {
   "name": "cleanup",
   "interval": "300000",
@@ -579,7 +579,7 @@ Cikli izvajajo ucinke periodicno, tudi brez interakcije uporabnika.
 ```
 
 **Periodicna sinhronizacija:**
-```json
+```orb
 {
   "name": "sync",
   "interval": "10000",
@@ -591,7 +591,7 @@ Cikli izvajajo ucinke periodicno, tudi brez interakcije uporabnika.
 ```
 
 **Igralna zanka:**
-```json
+```orb
 {
   "name": "game_tick",
   "interval": "16",
@@ -612,7 +612,7 @@ Lastnosti se lahko definirajo vgrajeno ali se nanje sklicujemo iz zunanjih virov
 
 Definirajte lastnost neposredno v Orbital enoti:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "traits": [
@@ -631,7 +631,7 @@ Definirajte lastnost neposredno v Orbital enoti:
 
 Sklicevanje na lastnost iz standardne knjiznice ali uvozov:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "uses": [
@@ -671,7 +671,7 @@ Sklicevanje na lastnost iz standardne knjiznice ali uvozov:
 
 Celotna lastnost, ki prikazuje vse zmoznosti:
 
-```json
+```orb
 {
   "name": "CheckoutFlow",
   "category": "integration",

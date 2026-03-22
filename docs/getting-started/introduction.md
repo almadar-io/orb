@@ -82,7 +82,7 @@ Full-Stack Application
 
 Entities define what your application manages:
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -104,7 +104,7 @@ Entities define what your application manages:
 
 Traits define how your application behaves using state machines:
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -168,7 +168,7 @@ Traits define how your application behaves using state machines:
 
 Pages bind traits to URL routes. Every orbital needs at least one page:
 
-```json
+```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
@@ -180,7 +180,7 @@ Pages bind traits to URL routes. Every orbital needs at least one page:
 
 A complete orbital brings all three parts together:
 
-```json
+```orb
 {
   "name": "TaskManager",
   "entity": {
@@ -214,7 +214,7 @@ A complete orbital brings all three parts together:
 
 All logic is expressed as arrays:
 
-```json
+```orb
 // Guard: Check conditions
 ["and",
   ["=", "@entity.status", "pending"],

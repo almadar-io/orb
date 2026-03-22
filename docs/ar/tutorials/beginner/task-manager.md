@@ -25,7 +25,7 @@
 
 ## الخطوة 1 - كيان المهمة (Task Entity)
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -50,7 +50,7 @@
 
 سمة `TaskLifecycle` تتتبع موقع المهمة في سير العمل: `todo → inProgress → review → done`.
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -116,7 +116,7 @@
 
 سمة `TaskCRUD` تعالج واجهة إدارة القائمة: عرض القائمة، الإنشاء، التعديل، والحذف.
 
-```json
+```orb
 {
   "name": "TaskCRUD",
   "linkedEntity": "Task",
@@ -194,7 +194,7 @@
 
 ## الخطوة 4 - إضافة الصفحات (Pages)
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",

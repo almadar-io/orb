@@ -66,7 +66,7 @@ Celostezna aplikacija
 
 Entitete definirajo, kaj vasa aplikacija upravlja:
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -88,7 +88,7 @@ Entitete definirajo, kaj vasa aplikacija upravlja:
 
 Lastnosti definirajo, kako se vasa aplikacija obnasa, z avtomati stanj:
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -152,7 +152,7 @@ Lastnosti definirajo, kako se vasa aplikacija obnasa, z avtomati stanj:
 
 Strani vezejo lastnosti na URL poti. Vsaka Orbital enota potrebuje vsaj eno stran:
 
-```json
+```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
@@ -164,7 +164,7 @@ Strani vezejo lastnosti na URL poti. Vsaka Orbital enota potrebuje vsaj eno stra
 
 Celotna Orbital enota zdruzuje vse tri dele:
 
-```json
+```orb
 {
   "name": "TaskManager",
   "entity": {
@@ -198,7 +198,7 @@ Celotna Orbital enota zdruzuje vse tri dele:
 
 Vsa logika je izrazena kot seznami:
 
-```json
+```orb
 // Pogoj: preveri pogoje
 ["and",
   ["=", "@entity.status", "pending"],

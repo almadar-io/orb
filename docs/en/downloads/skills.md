@@ -36,7 +36,7 @@ Once installed, invoke the skill in your session:
 
 The skill will generate:
 
-```json
+```orb
 {
   "name": "TaskManagementSystem",
   "orbitals": [

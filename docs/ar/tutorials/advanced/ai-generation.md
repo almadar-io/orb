@@ -94,7 +94,7 @@ LLM يولّد entity + traits لكن ينسى مصفوفة pages بالكامل
 
 ### 2. الحالات كنصوص بدلاً من كائنات
 
-```json
+```orb
 // ❌ خطأ
 "states": ["Pending", "InProgress", "Done"]
 
@@ -114,7 +114,7 @@ LLM يولّد entity + traits لكن ينسى مصفوفة pages بالكامل
 
 ### 4. استخدام خصائص إجراءات مُهملة
 
-```json
+```orb
 // ❌ مُهمل
 { "type": "form-section", "onSubmit": "SAVE", "onCancel": "CANCEL" }
 
@@ -124,7 +124,7 @@ LLM يولّد entity + traits لكن ينسى مصفوفة pages بالكامل
 
 ### 5. مصفوفة traits على مستوى البرنامج (بنية خاطئة)
 
-```json
+```orb
 // ❌ خطأ - traits على المستوى الجذري (صيغة قديمة)
 {
   "name": "App",
@@ -146,7 +146,7 @@ LLM يولّد entity + traits لكن ينسى مصفوفة pages بالكامل
 
 ### 6. `linkedEntity` مفقود على السمة
 
-```json
+```orb
 // ❌ linkedEntity مفقود
 { "name": "TaskCRUD", "category": "interaction", "stateMachine": { ... } }
 

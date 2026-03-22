@@ -35,7 +35,7 @@ The `TaskManager` orbital has one entity (`Task`) and two traits: one for the ta
 
 ## Step 1 — The Task Entity
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -80,7 +80,7 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 />
 </div>
 
-```json
+```orb
 {
   "name": "TaskLifecycle",
   "linkedEntity": "Task",
@@ -152,7 +152,7 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 
 The `TaskCRUD` trait handles the list management UI: viewing the list, creating, editing, and deleting tasks.
 
-```json
+```orb
 {
   "name": "TaskCRUD",
   "linkedEntity": "Task",
@@ -255,7 +255,7 @@ The `TaskCRUD` trait handles the list management UI: viewing the list, creating,
 
 ## Step 4 — Add Pages
 
-```json
+```orb
 "pages": [
   {
     "name": "TaskListPage",
@@ -273,7 +273,7 @@ The lifecycle trait (`TaskLifecycle`) doesn't need its own page here — it's wi
 
 ## The Complete Schema
 
-```json
+```orb
 {
   "name": "TaskManager",
   "version": "1.0.0",

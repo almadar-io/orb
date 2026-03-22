@@ -69,7 +69,7 @@ class RobotArm:
 
 ### مثال: ذراع روبوتية بالمدار
 
-```json
+```orb
 {
   "name": "ذراع_روبوتية",
   "entity": {
@@ -181,7 +181,7 @@ class RobotArm:
 
 ### مثال: روبوت توصيل في NEOM
 
-```json
+```orb
 {
   "name": "روبوت_التوصيل",
   "orbitals": [

@@ -47,7 +47,7 @@ While [Entities](./entities.md) define the shape of data, Traits define how that
 
 A trait is defined in the `.orb` schema with the following structure:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "category": "interaction",
@@ -123,7 +123,7 @@ Traits are categorized by their primary purpose:
 ### Category Examples
 
 **Interaction Trait** - Handles UI events:
-```json
+```orb
 {
   "name": "FormInteraction",
   "category": "interaction",
@@ -140,7 +140,7 @@ Traits are categorized by their primary purpose:
 ```
 
 **Integration Trait** - Handles server operations:
-```json
+```orb
 {
   "name": "DataPersistence",
   "category": "integration",
@@ -166,7 +166,7 @@ Every trait has a state machine that defines its behavior.
 
 States represent the possible conditions of a trait:
 
-```json
+```orb
 {
   "states": [
     { "name": "idle", "isInitial": true, "description": "Waiting for input" },
@@ -188,7 +188,7 @@ States represent the possible conditions of a trait:
 
 Events trigger state transitions:
 
-```json
+```orb
 {
   "events": [
     { "key": "INIT", "name": "Initialize" },
@@ -211,7 +211,7 @@ Events trigger state transitions:
 
 Transitions define how states change in response to events:
 
-```json
+```orb
 {
   "transitions": [
     {
@@ -242,7 +242,7 @@ Transitions define how states change in response to events:
 | `effects` | Effects to execute on transition (optional) |
 
 **Multi-source transitions:** Use an array for `from` to handle the same event from multiple states:
-```json
+```orb
 { "from": ["idle", "error"], "to": "loading", "event": "RETRY" }
 ```
 
@@ -263,7 +263,7 @@ Guards are conditions that must evaluate to `true` for a transition to occur. Th
 
 ### Guard Examples
 
-```json
+```orb
 // Simple equality
 ["=", "@entity.status", "active"]
 
@@ -353,7 +353,7 @@ Traits execute on **both client and server** simultaneously:
 ### Effect Examples
 
 **render-ui** - Display a UI pattern:
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -362,7 +362,7 @@ Traits execute on **both client and server** simultaneously:
 ```
 
 **persist** - Database operations:
-```json
+```orb
 // Create
 ["persist", "create", "Task", "@payload"]
 
@@ -374,17 +374,17 @@ Traits execute on **both client and server** simultaneously:
 ```
 
 **fetch** - Query data:
-```json
+```orb
 ["fetch", "Task", { "status": "active", "assigneeId": "@user.id" }]
 ```
 
 **emit** - Publish event:
-```json
+```orb
 ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "completedBy": "@user.id" }]
 ```
 
 **set** - Modify field:
-```json
+```orb
 ["set", "@entity.id", "status", "active"]
 ["set", "@entity.id", "updatedAt", "@now"]
 // Increment/decrement using math operators:
@@ -395,17 +395,17 @@ Traits execute on **both client and server** simultaneously:
 **Note:** `increment` and `decrement` are not separate effect types. Use the `set` effect with S-expression math operators (`+`, `-`) to modify numeric fields.
 
 **navigate** - Route change:
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **notify** - Show notification:
-```json
+```orb
 ["notify", "Task completed successfully", "success"]
 ```
 
 **call-service** - External API:
-```json
+```orb
 ["call-service", "email", "send", {
   "to": "@entity.email",
   "subject": "Task Assigned",
@@ -423,7 +423,7 @@ The `linkedEntity` property specifies which entity a trait operates on.
 
 Every orbital has a primary entity. Traits without `linkedEntity` use this entity:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task", "fields": [...] },
@@ -437,7 +437,7 @@ Every orbital has a primary entity. Traits without `linkedEntity` use this entit
 
 Specify `linkedEntity` to operate on a different entity:
 
-```json
+```orb
 {
   "name": "TaskManagement",
   "entity": { "name": "Task" },
@@ -468,7 +468,7 @@ Traits communicate through events, enabling loose coupling between orbitals.
 
 Declare events a trait can emit:
 
-```json
+```orb
 {
   "name": "OrderFlow",
   "emits": [
@@ -486,7 +486,7 @@ Declare events a trait can emit:
 ```
 
 Emit in effects:
-```json
+```orb
 ["emit", "ORDER_CONFIRMED", { "orderId": "@entity.id", "items": "@entity.items" }]
 ```
 
@@ -494,7 +494,7 @@ Emit in effects:
 
 Declare events a trait listens for:
 
-```json
+```orb
 {
   "name": "InventorySync",
   "listens": [
@@ -553,7 +553,7 @@ Ticks run effects periodically, even without user interaction.
 
 ### Tick Definition
 
-```json
+```orb
 {
   "ticks": [
     {
@@ -591,7 +591,7 @@ Ticks run effects periodically, even without user interaction.
 ### Common Tick Patterns
 
 **Cleanup:**
-```json
+```orb
 {
   "name": "cleanup",
   "interval": "300000",
@@ -600,7 +600,7 @@ Ticks run effects periodically, even without user interaction.
 ```
 
 **Periodic Sync:**
-```json
+```orb
 {
   "name": "sync",
   "interval": "10000",
@@ -612,7 +612,7 @@ Ticks run effects periodically, even without user interaction.
 ```
 
 **Game Loop:**
-```json
+```orb
 {
   "name": "game_tick",
   "interval": "16",
@@ -633,7 +633,7 @@ Traits can be defined inline or referenced from external sources.
 
 Define the trait directly in the orbital:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "traits": [
@@ -652,7 +652,7 @@ Define the trait directly in the orbital:
 
 Reference a trait from the standard library or imports:
 
-```json
+```orb
 {
   "orbital": "TaskManagement",
   "uses": [
@@ -692,7 +692,7 @@ Reference a trait from the standard library or imports:
 
 A complete trait demonstrating all features:
 
-```json
+```orb
 {
   "name": "CheckoutFlow",
   "category": "integration",

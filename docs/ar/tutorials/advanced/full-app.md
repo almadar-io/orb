@@ -34,7 +34,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 ### الكيان (Entity)
 
-```json
+```orb
 {
   "name": "Task",
   "persistence": "persistent",
@@ -65,7 +65,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 ### Emits على مستوى الوحدة المدارية
 
-```json
+```orb
 "emits": ["TASK_COMPLETED", "TASK_CREATED"]
 ```
 
@@ -77,7 +77,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 يتتبع إحصائيات مجمّعة لكل مشروع، تُحدَّث تفاعلياً عند تغيير المهام:
 
-```json
+```orb
 {
   "name": "Project",
   "persistence": "persistent",
@@ -96,7 +96,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 تستمع لكل من `TASK_COMPLETED` و`TASK_CREATED` وتزيد العدادات:
 
-```json
+```orb
 {
   "name": "ProjectStats",
   "linkedEntity": "Project",
@@ -147,7 +147,7 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 أبسط وحدة مدارية - متصفح قراءة فقط للمستخدمين مع إجراء تنقل إلى التفاصيل.
 
-```json
+```orb
 {
   "name": "UserBrowser",
   "linkedEntity": "User",

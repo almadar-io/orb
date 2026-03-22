@@ -36,7 +36,7 @@ Ko je namescena, poklicite vescerino v svoji seji:
 
 Vescerini bo generirala:
 
-```json
+```orb
 {
   "name": "TaskManagementSystem",
   "orbitals": [

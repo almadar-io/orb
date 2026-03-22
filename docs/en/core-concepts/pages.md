@@ -37,7 +37,7 @@ While [Entities](./entities.md) define data and [Traits](./traits.md) define beh
 
 A page is defined in the `.orb` schema with the following structure:
 
-```json
+```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
@@ -77,7 +77,7 @@ Page paths define the URL routes for your application.
 
 Simple paths without dynamic segments:
 
-```json
+```orb
 { "path": "/tasks" }
 { "path": "/dashboard" }
 { "path": "/settings/profile" }
@@ -87,7 +87,7 @@ Simple paths without dynamic segments:
 
 Use colon syntax for dynamic parameters:
 
-```json
+```orb
 { "path": "/tasks/:id" }
 { "path": "/users/:userId/tasks/:taskId" }
 { "path": "/projects/:projectId/members/:memberId" }
@@ -137,7 +137,7 @@ Pages reference traits that provide their behavior and UI.
 
 ### Trait References
 
-```json
+```orb
 {
   "pages": [
     {
@@ -164,7 +164,7 @@ Pages reference traits that provide their behavior and UI.
 
 A page can have multiple traits, each contributing UI to different slots:
 
-```json
+```orb
 {
   "name": "DashboardPage",
   "path": "/dashboard",
@@ -182,7 +182,7 @@ Each trait's `render-ui` effects target specific [slots](#slots-and-ui-rendering
 
 The `linkedEntity` property binds a trait to a specific entity:
 
-```json
+```orb
 { "ref": "StatusManager", "linkedEntity": "Task" }
 ```
 
@@ -199,7 +199,7 @@ See [Trait-Entity Binding](./traits.md#linkedentity-trait-entity-binding) for de
 
 The `primaryEntity` property indicates the main entity a page operates on:
 
-```json
+```orb
 {
   "name": "TaskDetailPage",
   "path": "/tasks/:id",
@@ -243,7 +243,7 @@ Traits render UI through `render-ui` effects that target **slots** - named regio
 
 Traits populate slots using the `render-ui` effect:
 
-```json
+```orb
 ["render-ui", "main", {
   "type": "entity-table",
   "entity": "Task",
@@ -281,7 +281,7 @@ Traits populate slots using the `render-ui` effect:
 
 If multiple traits render to the same slot, they stack (later replaces or appends based on pattern type):
 
-```json
+```orb
 // Trait A
 ["render-ui", "main", { "type": "stats", ... }]
 
@@ -297,7 +297,7 @@ Navigation between pages is handled through the `navigate` effect in traits.
 
 ### navigate Effect
 
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
@@ -311,22 +311,22 @@ Navigation between pages is handled through the `navigate` effect in traits.
 ### Navigation Examples
 
 **Simple navigation:**
-```json
+```orb
 ["navigate", "/dashboard"]
 ```
 
 **With entity ID:**
-```json
+```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
 **With payload:**
-```json
+```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
 **Nested path:**
-```json
+```orb
 ["navigate", "/users/:userId/tasks/:taskId", {
   "userId": "@entity.assigneeId",
   "taskId": "@entity.id"
@@ -337,7 +337,7 @@ Navigation between pages is handled through the `navigate` effect in traits.
 
 Navigation typically occurs after state changes:
 
-```json
+```orb
 {
   "from": "editing",
   "to": "saved",
@@ -358,7 +358,7 @@ See [Effects](./traits.md#effects) for more details.
 
 Mark a page as the entry point with `isInitial`:
 
-```json
+```orb
 {
   "name": "HomePage",
   "path": "/",
@@ -403,7 +403,7 @@ Pages are validated at compile time with these rules:
 
 A complete page example with multiple traits:
 
-```json
+```orb
 {
   "orbitals": [
     {
