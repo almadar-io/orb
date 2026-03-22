@@ -6,6 +6,7 @@ description: "ConfirmActionOrbital behavior with 2 states, 5 events, and 5 trans
 ---
 
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import OrbCosmicZoom from '@shared/OrbCosmicZoom';
 
 # std-confirmation
 
@@ -503,6 +504,497 @@ import OrbPreviewBlock from '@shared/OrbPreviewBlock';
   ],
   "description": "Confirmation dialog behavior parameterized for any domain. Provides a two-step confirm/cancel flow before performing destructive actions. The caller handles the actual action via emits/listens. The state machine structure is fixed. The caller controls data and presentation."
 }`} height="450px" />
+
+## Orbital Visualization
+
+<OrbCosmicZoom schema={`{
+  "name": "ConfirmActionOrbital",
+  "orbitals": [
+    {
+      "name": "ConfirmActionOrbital",
+      "entity": {
+        "name": "ConfirmAction",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "pendingId",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ConfirmActionConfirmation",
+          "linkedEntity": "ConfirmAction",
+          "category": "interaction",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "confirming"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "REQUEST",
+                "name": "Request Confirmation",
+                "payload": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CONFIRM",
+                "name": "Confirm"
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "ConfirmAction"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "shield-check",
+                              "size": "lg"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "ConfirmActions",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "ConfirmAction",
+                          "emptyIcon": "inbox",
+                          "emptyTitle": "No confirmactions yet",
+                          "emptyDescription": "Items will appear here.",
+                          "itemActions": [
+                            {
+                              "label": "Confirm Action",
+                              "event": "REQUEST",
+                              "variant": "danger"
+                            }
+                          ],
+                          "renderItem": [
+                            "fn",
+                            "item",
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "h4",
+                                  "content": "@item.name"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "confirming",
+                "event": "REQUEST",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.pendingId",
+                    "@payload.id"
+                  ],
+                  [
+                    "fetch",
+                    "ConfirmAction",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "alert-triangle",
+                              "size": "md"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Confirm Action",
+                              "variant": "h3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "alert",
+                          "variant": "danger",
+                          "message": "Are you sure?"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "justify": "end",
+                          "children": [
+                            {
+                              "type": "button",
+                              "label": "Cancel",
+                              "event": "CANCEL",
+                              "variant": "ghost"
+                            },
+                            {
+                              "type": "button",
+                              "label": "Confirm",
+                              "event": "CONFIRM",
+                              "variant": "danger",
+                              "icon": "check"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CONFIRM",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "fetch",
+                    "ConfirmAction"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "shield-check",
+                              "size": "lg"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "ConfirmActions",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "ConfirmAction",
+                          "emptyIcon": "inbox",
+                          "emptyTitle": "No confirmactions yet",
+                          "emptyDescription": "Items will appear here.",
+                          "itemActions": [
+                            {
+                              "label": "Confirm Action",
+                              "event": "REQUEST",
+                              "variant": "danger"
+                            }
+                          ],
+                          "renderItem": [
+                            "fn",
+                            "item",
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "h4",
+                                  "content": "@item.name"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "fetch",
+                    "ConfirmAction"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "shield-check",
+                              "size": "lg"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "ConfirmActions",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "ConfirmAction",
+                          "emptyIcon": "inbox",
+                          "emptyTitle": "No confirmactions yet",
+                          "emptyDescription": "Items will appear here.",
+                          "itemActions": [
+                            {
+                              "label": "Confirm Action",
+                              "event": "REQUEST",
+                              "variant": "danger"
+                            }
+                          ],
+                          "renderItem": [
+                            "fn",
+                            "item",
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "h4",
+                                  "content": "@item.name"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "fetch",
+                    "ConfirmAction"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "shield-check",
+                              "size": "lg"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "ConfirmActions",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "ConfirmAction",
+                          "emptyIcon": "inbox",
+                          "emptyTitle": "No confirmactions yet",
+                          "emptyDescription": "Items will appear here.",
+                          "itemActions": [
+                            {
+                              "label": "Confirm Action",
+                              "event": "REQUEST",
+                              "variant": "danger"
+                            }
+                          ],
+                          "renderItem": [
+                            "fn",
+                            "item",
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "h4",
+                                  "content": "@item.name"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "ConfirmActionConfirmPage",
+          "path": "/confirmactions/confirm",
+          "traits": [
+            {
+              "ref": "ConfirmActionConfirmation"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "description": "Confirmation dialog behavior parameterized for any domain. Provides a two-step confirm/cancel flow before performing destructive actions. The caller handles the actual action via emits/listens. The state machine structure is fixed. The caller controls data and presentation."
+}`} height="400px" />
 
 ## Entity Fields
 

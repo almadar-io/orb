@@ -6,6 +6,7 @@ description: "UndoActionOrbital behavior with 1 states, 5 events, and 5 transiti
 ---
 
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import OrbCosmicZoom from '@shared/OrbCosmicZoom';
 
 # std-undo
 
@@ -840,6 +841,834 @@ import OrbPreviewBlock from '@shared/OrbPreviewBlock';
   ],
   "description": "Undo/Redo atom using array operators as a stack. - PUSH: appends to undoStack, clears redoStack - UNDO: pops from undoStack, pushes to redoStack - REDO: pops from redoStack, pushes to undoStack - CLEAR: empties both stacks Entity fields: undoStack (array), redoStack (array), current (string)"
 }`} height="450px" />
+
+## Orbital Visualization
+
+<OrbCosmicZoom schema={`{
+  "name": "UndoActionOrbital",
+  "orbitals": [
+    {
+      "name": "UndoActionOrbital",
+      "entity": {
+        "name": "UndoAction",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "undoStack",
+            "type": "array",
+            "default": []
+          },
+          {
+            "name": "redoStack",
+            "type": "array",
+            "default": []
+          },
+          {
+            "name": "current",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "UndoActionUndo",
+          "linkedEntity": "UndoAction",
+          "category": "interaction",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PUSH",
+                "name": "Push",
+                "payload": [
+                  {
+                    "name": "data",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "UNDO",
+                "name": "Undo"
+              },
+              {
+                "key": "REDO",
+                "name": "Redo"
+              },
+              {
+                "key": "CLEAR",
+                "name": "Clear"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "UndoAction"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "space-between",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "history",
+                                  "size": "lg"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "History",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "tooltip",
+                                  "content": "Undo the last action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Undo",
+                                      "event": "UNDO",
+                                      "variant": "ghost",
+                                      "icon": "undo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Redo the last undone action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Redo",
+                                      "event": "REDO",
+                                      "variant": "ghost",
+                                      "icon": "redo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "divider",
+                                  "orientation": "vertical"
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Clear all history",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Clear",
+                                      "event": "CLEAR",
+                                      "variant": "ghost",
+                                      "icon": "trash-2"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "color": "muted",
+                              "content": "Last action:"
+                            },
+                            {
+                              "type": "badge",
+                              "label": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@entity"
+                                ],
+                                "current"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "PUSH",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.undoStack",
+                    [
+                      "array/append",
+                      "@entity.undoStack",
+                      "@entity.current"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.data"
+                  ],
+                  [
+                    "set",
+                    "@entity.redoStack",
+                    []
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "space-between",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "history",
+                                  "size": "lg"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "History",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "tooltip",
+                                  "content": "Undo the last action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Undo",
+                                      "event": "UNDO",
+                                      "variant": "ghost",
+                                      "icon": "undo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Redo the last undone action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Redo",
+                                      "event": "REDO",
+                                      "variant": "ghost",
+                                      "icon": "redo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "divider",
+                                  "orientation": "vertical"
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Clear all history",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Clear",
+                                      "event": "CLEAR",
+                                      "variant": "ghost",
+                                      "icon": "trash-2"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "color": "muted",
+                              "content": "Last action:"
+                            },
+                            {
+                              "type": "badge",
+                              "label": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@entity"
+                                ],
+                                "current"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "UNDO",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.redoStack",
+                    [
+                      "array/append",
+                      "@entity.redoStack",
+                      "@entity.current"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.current",
+                    [
+                      "array/last",
+                      "@entity.undoStack"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.undoStack",
+                    [
+                      "array/slice",
+                      "@entity.undoStack",
+                      0,
+                      -1
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "space-between",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "history",
+                                  "size": "lg"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "History",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "tooltip",
+                                  "content": "Undo the last action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Undo",
+                                      "event": "UNDO",
+                                      "variant": "ghost",
+                                      "icon": "undo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Redo the last undone action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Redo",
+                                      "event": "REDO",
+                                      "variant": "ghost",
+                                      "icon": "redo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "divider",
+                                  "orientation": "vertical"
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Clear all history",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Clear",
+                                      "event": "CLEAR",
+                                      "variant": "ghost",
+                                      "icon": "trash-2"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "color": "muted",
+                              "content": "Last action:"
+                            },
+                            {
+                              "type": "badge",
+                              "label": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@entity"
+                                ],
+                                "current"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "REDO",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.undoStack",
+                    [
+                      "array/append",
+                      "@entity.undoStack",
+                      "@entity.current"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.current",
+                    [
+                      "array/last",
+                      "@entity.redoStack"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.redoStack",
+                    [
+                      "array/slice",
+                      "@entity.redoStack",
+                      0,
+                      -1
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "space-between",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "history",
+                                  "size": "lg"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "History",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "tooltip",
+                                  "content": "Undo the last action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Undo",
+                                      "event": "UNDO",
+                                      "variant": "ghost",
+                                      "icon": "undo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Redo the last undone action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Redo",
+                                      "event": "REDO",
+                                      "variant": "ghost",
+                                      "icon": "redo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "divider",
+                                  "orientation": "vertical"
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Clear all history",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Clear",
+                                      "event": "CLEAR",
+                                      "variant": "ghost",
+                                      "icon": "trash-2"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "color": "muted",
+                              "content": "Last action:"
+                            },
+                            {
+                              "type": "badge",
+                              "label": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@entity"
+                                ],
+                                "current"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "CLEAR",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.undoStack",
+                    []
+                  ],
+                  [
+                    "set",
+                    "@entity.redoStack",
+                    []
+                  ],
+                  [
+                    "set",
+                    "@entity.current",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "space-between",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "history",
+                                  "size": "lg"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "History",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "type": "tooltip",
+                                  "content": "Undo the last action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Undo",
+                                      "event": "UNDO",
+                                      "variant": "ghost",
+                                      "icon": "undo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Redo the last undone action",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Redo",
+                                      "event": "REDO",
+                                      "variant": "ghost",
+                                      "icon": "redo"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "divider",
+                                  "orientation": "vertical"
+                                },
+                                {
+                                  "type": "tooltip",
+                                  "content": "Clear all history",
+                                  "children": [
+                                    {
+                                      "type": "button",
+                                      "label": "Clear",
+                                      "event": "CLEAR",
+                                      "variant": "ghost",
+                                      "icon": "trash-2"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "color": "muted",
+                              "content": "Last action:"
+                            },
+                            {
+                              "type": "badge",
+                              "label": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@entity"
+                                ],
+                                "current"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "UndoActionUndoPage",
+          "path": "/undoactions/undo",
+          "traits": [
+            {
+              "ref": "UndoActionUndo"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "description": "Undo/Redo atom using array operators as a stack. - PUSH: appends to undoStack, clears redoStack - UNDO: pops from undoStack, pushes to redoStack - REDO: pops from redoStack, pushes to undoStack - CLEAR: empties both stacks Entity fields: undoStack (array), redoStack (array), current (string)"
+}`} height="400px" />
 
 ## Entity Fields
 
