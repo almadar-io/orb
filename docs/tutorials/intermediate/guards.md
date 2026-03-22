@@ -10,11 +10,12 @@ Guards are conditions that must be true for a transition to fire. They act as th
 <AvlStateMachine
   states={[
     { name: 'active', isInitial: true },
+    { name: 'reviewing' },
     { name: 'frozen' }
   ]}
   transitions={[
-    { from: 'active', to: 'active', event: 'INIT' },
-    { from: 'active', to: 'active', event: 'WITHDRAW', guard: 'balance >= amount AND isVerified' },
+    { from: 'active', to: 'reviewing', event: 'WITHDRAW', guard: 'balance >= amount' },
+    { from: 'reviewing', to: 'active', event: 'APPROVE' },
     { from: 'active', to: 'frozen', event: 'FREEZE' },
     { from: 'frozen', to: 'active', event: 'UNFREEZE' }
   ]}

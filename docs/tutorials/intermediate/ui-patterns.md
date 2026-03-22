@@ -9,12 +9,9 @@ Orb UI is driven entirely by `render-ui` effects inside state machine transition
 <div style={{margin: '2rem 0'}}>
 <AvlSlotMap
   slots={[
-    { name: 'main', x: 10, y: 10, width: 60, height: 70 },
-    { name: 'sidebar', x: 75, y: 10, width: 20, height: 70 },
-    { name: 'modal', x: 20, y: 20, width: 40, height: 40 },
-    { name: 'drawer', x: 70, y: 10, width: 25, height: 70 },
-    { name: 'hud-top', x: 10, y: 0, width: 85, height: 8 },
-    { name: 'toast', x: 60, y: 80, width: 30, height: 10 }
+    { name: 'header', x: 10, y: 5, width: 340, height: 35 },
+    { name: 'sidebar', x: 10, y: 50, width: 100, height: 190 },
+    { name: 'main', x: 120, y: 50, width: 230, height: 190 }
   ]}
   animated
 />

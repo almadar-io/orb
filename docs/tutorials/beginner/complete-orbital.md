@@ -71,11 +71,13 @@ Every state machine needs at least one state marked `"isInitial": true`. States 
 <AvlStateMachine
   states={[
     { name: 'Pending', isInitial: true },
+    { name: 'InProgress' },
     { name: 'Done', isTerminal: true }
   ]}
   transitions={[
-    { from: 'Pending', to: 'Pending', event: 'INIT' },
-    { from: 'Pending', to: 'Done', event: 'COMPLETE' }
+    { from: 'Pending', to: 'InProgress', event: 'START' },
+    { from: 'InProgress', to: 'Done', event: 'COMPLETE' },
+    { from: 'InProgress', to: 'Pending', event: 'RESET' }
   ]}
   animated
 />
