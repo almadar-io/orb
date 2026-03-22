@@ -112,7 +112,7 @@ export default function OrbHome(): ReactNode {
           image={{ src: "/img/hero-code-to-app.webp", alt: "Code to app compilation" }}
           imagePosition="left"
         >
-          <CodeBlock language="json" title="task-manager.orb">
+          <CodeBlock language="orb" title="task-manager.orb">
             {EXAMPLE_CODE}
           </CodeBlock>
         </SplitSection>
