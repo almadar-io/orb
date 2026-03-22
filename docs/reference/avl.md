@@ -41,15 +41,15 @@ The data nucleus. The stroke style tells you how data is stored:
 
 <div style={{display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap', margin: '1.5rem 0'}}>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 80 80" width="80" height="80"><AvlEntity x={40} y={40} r={20} fieldCount={4} persistence="persistent" /></svg>
+<svg viewBox="0 0 120 120" width="120" height="120"><AvlEntity x={60} y={60} r={24} fieldCount={4} persistence="persistent" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Persistent (solid)</div>
 </div>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 80 80" width="80" height="80"><AvlEntity x={40} y={40} r={20} fieldCount={3} persistence="runtime" /></svg>
+<svg viewBox="0 0 120 120" width="120" height="120"><AvlEntity x={60} y={60} r={24} fieldCount={3} persistence="runtime" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Runtime (dashed)</div>
 </div>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 80 80" width="80" height="80"><AvlEntity x={40} y={40} r={20} fieldCount={2} persistence="singleton" /></svg>
+<svg viewBox="0 0 120 120" width="120" height="120"><AvlEntity x={60} y={60} r={24} fieldCount={2} persistence="singleton" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Singleton (double)</div>
 </div>
 </div>
@@ -66,7 +66,7 @@ The data nucleus. The stroke style tells you how data is stored:
 <div style={{fontSize: 12, marginTop: 4}}>Trait (state machine)</div>
 </div>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 60 60" width="60" height="60"><AvlPage x={30} y={25} label="/route" /></svg>
+<svg viewBox="0 0 100 60" width="100" height="60"><AvlPage x={50} y={25} label="/route" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Page (route)</div>
 </div>
 </div>
@@ -116,9 +116,9 @@ Each transition can have:
 **14 Effect types**, each with a distinct icon:
 
 <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', margin: '1.5rem 0'}}>
-{['render-ui', 'set', 'persist', 'fetch', 'emit', 'navigate', 'notify', 'call-service', 'log'].map(type => (
+{['render-ui', 'set', 'persist', 'fetch', 'emit', 'navigate', 'notify', 'call-service', 'spawn', 'despawn', 'do', 'if', 'log'].map(type => (
 <div key={type} style={{textAlign: 'center', minWidth: 60}}>
-<svg viewBox="0 0 40 40" width="40" height="40"><AvlEffect x={20} y={15} effectType={type} size={16} label={type} /></svg>
+<svg viewBox="0 0 60 50" width="60" height="50"><AvlEffect x={30} y={18} effectType={type} size={16} label={type} /></svg>
 </div>
 ))}
 </div>
@@ -186,10 +186,10 @@ References to schema data: `@entity.field`, `@payload.value`, `@state`, `@now`.
 
 <div style={{display: 'flex', gap: '2rem', justifyContent: 'center', margin: '1.5rem 0'}}>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 100 50" width="100" height="50"><AvlBindingRef x={50} y={20} path="@entity.name" /></svg>
+<svg viewBox="0 0 100 50" width="100" height="50"><AvlBindingRef x={50} y={20} path="entity.name" /></svg>
 </div>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 100 50" width="100" height="50"><AvlBindingRef x={50} y={20} path="@payload.id" /></svg>
+<svg viewBox="0 0 100 50" width="100" height="50"><AvlBindingRef x={50} y={20} path="payload.id" /></svg>
 </div>
 </div>
 
