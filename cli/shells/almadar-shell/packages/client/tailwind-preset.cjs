@@ -2,8 +2,12 @@
  * @almadar/ui Tailwind Preset
  *
  * Provides the complete Almadar design token system as a Tailwind preset.
- * Includes a safelist of all CSS-variable-based arbitrary classes used by
- * @almadar/ui components so Tailwind generates them without scanning node_modules.
+ * Includes a safelist for CSS-variable-based arbitrary classes that use
+ * bracket notation (Tailwind can't extract these from source scanning).
+ *
+ * Note: @almadar/ui dist content scanning is handled by tailwind.config.js
+ * in the shell template, not here. The config resolves the dist path via
+ * require.resolve('@almadar/ui') which works regardless of hoisting.
  *
  * Usage in tailwind.config.js:
  *   presets: [require('@almadar/ui/tailwind-preset')]
