@@ -11,7 +11,8 @@ import {
   ContentSection,
   Box,
 } from "@almadar/ui/marketing";
-import { AvlApplication, AvlOrbital, AvlEntity } from "@almadar/ui/illustrations";
+import ThemedImage from '@theme/ThemedImage';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
 const EXTENSIONS = [
   {
@@ -42,12 +43,15 @@ export default function Downloads(): ReactNode {
       />
 
       <ContentSection>
-        <Box className="w-full max-w-lg mx-auto py-6">
-          <svg viewBox="0 0 500 300" fill="none" className="w-full">
-            <AvlApplication x={20} y={20} width={460} height={260} label="Application" />
-            <AvlOrbital cx={250} cy={150} r={80} label="Orbital" />
-            <AvlEntity x={250} y={150} r={25} fieldCount={5} label=".orb" />
-          </svg>
+        <Box className="w-full max-w-[380px] mx-auto py-6">
+          <ThemedImage
+            alt="Orb Entity Download"
+            sources={{
+              light: useBaseUrl('/img/illustrations/Entity-light.svg'),
+              dark: useBaseUrl('/img/illustrations/Entity-dark.svg'),
+            }}
+            className="w-full opacity-90 drop-shadow-2xl "
+          />
         </Box>
         <SplitSection
           title={translate({ id: "downloads.cli.title", message: "Orbital CLI" })}
