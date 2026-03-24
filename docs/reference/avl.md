@@ -58,11 +58,11 @@ The data nucleus. The stroke style tells you how data is stored:
 
 <div style={{display: 'flex', gap: '3rem', justifyContent: 'center', flexWrap: 'wrap', margin: '1.5rem 0', alignItems: 'center'}}>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 120 120" width="120" height="120"><AvlOrbital cx={60} cy={60} r={50} label="Module" /></svg>
+<svg viewBox="0 0 130 140" width="130" height="140"><AvlOrbital cx={65} cy={75} r={50} label="Module" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Orbital (boundary)</div>
 </div>
 <div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 140 80" width="140" height="80"><AvlTrait cx={70} cy={40} rx={60} ry={25} label="Behavior" /></svg>
+<svg viewBox="0 0 150 90" width="150" height="90"><AvlTrait cx={75} cy={50} rx={60} ry={25} label="Behavior" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Trait (state machine)</div>
 </div>
 <div style={{textAlign: 'center'}}>
@@ -118,7 +118,7 @@ Each transition can have:
 <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', margin: '1.5rem 0'}}>
 {['render-ui', 'set', 'persist', 'fetch', 'emit', 'navigate', 'notify', 'call-service', 'spawn', 'despawn', 'do', 'if', 'log'].map(type => (
 <div key={type} style={{textAlign: 'center', minWidth: 60}}>
-<svg viewBox="0 0 60 50" width="60" height="50"><AvlEffect x={30} y={18} effectType={type} size={16} label={type} /></svg>
+<svg viewBox="0 0 70 60" width="70" height="60"><AvlEffect x={35} y={18} effectType={type} size={14} label={type} /></svg>
 </div>
 ))}
 </div>
@@ -199,7 +199,7 @@ References to schema data: `@entity.field`, `@payload.value`, `@state`, `@now`.
 
 Logic in Orb is written as s-expressions: `["gt", "@entity.age", 18]`. AVL renders these as trees:
 
-<div style={{maxWidth: 400, margin: '2rem auto'}}>
+<div style={{maxWidth: 600, margin: '2rem auto'}}>
 <AvlExprTree
   expression={{
     label: "and",

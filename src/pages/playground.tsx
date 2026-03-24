@@ -20,6 +20,7 @@ export default function Playground(): ReactNode {
         id: "playground.meta.description",
         message: "Live preview of Orb standard behaviors and modules.",
       })}
+      noFooter
     >
       <BrowserOnly fallback={
         <div style={{ padding: "4rem", textAlign: "center", color: "#94a3b8" }}>

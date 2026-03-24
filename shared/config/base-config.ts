@@ -103,7 +103,7 @@ export function createConfig(opts: SiteConfig): Config {
       function almadarUIWebpackPlugin() {
         return {
           name: "almadar-ui-webpack-compat",
-          configureWebpack(config) {
+          configureWebpack(config, isServer) {
             return {
               resolve: {
                 alias: {
@@ -122,6 +122,13 @@ export function createConfig(opts: SiteConfig): Config {
                 },
               },
               plugins: [
+                // Ensure HMR plugin is present before compiler creation so
+                // module.hot evaluates to true during parsing. Without this,
+                // webpack dead-code-eliminates if(module.hot) to if(false).
+                // webpack-dev-server detects it and skips duplicate application.
+                ...(!isServer && process.env.NODE_ENV !== 'production'
+                  ? [new webpack.HotModuleReplacementPlugin()]
+                  : []),
                 new webpack.NormalModuleReplacementPlugin(
                   /^react-router(-dom)?$/,
                   function (resource: any) {
