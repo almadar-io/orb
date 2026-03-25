@@ -52,13 +52,20 @@ export default function Downloads(): ReactNode {
                 <Box className="font-mono text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 select-all">
                   curl -fsSL https://orb.almadar.io/install.sh | sh
                 </Box>
-                <SimpleGrid cols={3} gap="sm" className="mt-4">
-                  {["macOS", "Linux", "Windows (WSL)"].map((platform) => (
-                    <Card key={platform} className="p-4 text-center">
-                      <Typography variant="body2" color="muted">{platform}</Typography>
+                <HStack gap="md" className="mt-4">
+                  {[
+                    { name: "macOS", icon: "apple" },
+                    { name: "Linux", icon: "terminal" },
+                    { name: "Windows", icon: "monitor" },
+                  ].map((platform) => (
+                    <Card key={platform.name} className="p-4 flex-1">
+                      <VStack gap="xs" align="center">
+                        <Icon name={platform.icon} size={24} className="text-primary" />
+                        <Typography variant="body2">{platform.name}</Typography>
+                      </VStack>
                     </Card>
                   ))}
-                </SimpleGrid>
+                </HStack>
               </VStack>
             </Box>
             <Box className="flex-1 flex justify-center" style={{ maxWidth: 300 }}>
@@ -85,11 +92,8 @@ export default function Downloads(): ReactNode {
                   <Typography variant="h4">{ext.title}</Typography>
                   <Typography variant="body2" color="muted">{ext.description}</Typography>
                   <a href={ext.href} target="_blank" rel="noopener noreferrer">
-                    <Button variant="secondary" size="sm">
-                      <HStack gap="xs" align="center">
-                        <Icon name="external-link" size={14} />
-                        <Typography variant="body2">{ext.linkLabel}</Typography>
-                      </HStack>
+                    <Button variant="secondary" size="sm" leftIcon="external-link">
+                      {ext.linkLabel}
                     </Button>
                   </a>
                 </VStack>
@@ -100,11 +104,11 @@ export default function Downloads(): ReactNode {
       </Box>
 
       {/* CTA: Next Steps */}
-      <Box className="w-full bg-[var(--color-foreground)] text-[var(--color-background)]">
+      <Box className="w-full bg-[var(--color-surface)]">
         <Box className="site-container py-24">
           <VStack gap="lg" align="center">
-            <Typography variant="h2" className="text-[var(--color-background)]">{translate({ id: "downloads.next.title", message: "Next Steps" })}</Typography>
-            <Typography variant="body1" className="text-[var(--color-background)]/60">{translate({ id: "downloads.next.text", message: "Install the CLI, then follow the getting started guide to build your first .orb application." })}</Typography>
+            <Typography variant="h2">{translate({ id: "downloads.next.title", message: "Next Steps" })}</Typography>
+            <Typography variant="body1" color="muted">{translate({ id: "downloads.next.text", message: "Install the CLI, then follow the getting started guide to build your first .orb application." })}</Typography>
             <Link to="/docs/getting-started/introduction">
               <Button variant="primary" size="lg">{translate({ id: "downloads.next.cta", message: "Getting Started Guide" })}</Button>
             </Link>

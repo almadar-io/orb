@@ -102,11 +102,11 @@ export default function StdLib(): ReactNode {
       </Box>
 
       {/* CTA */}
-      <Box className="w-full bg-[var(--color-foreground)] text-[var(--color-background)]">
+      <Box className="w-full bg-[var(--color-surface)]">
         <Box className="site-container py-24">
           <VStack gap="lg" align="center">
-            <Typography variant="h2" className="text-[var(--color-background)]">{translate({ id: "stdlib.cta.title", message: "Get Started" })}</Typography>
-            <Typography variant="body1" className="text-[var(--color-background)]/60">{translate({ id: "stdlib.cta.text", message: "Install the CLI and start building with the standard library." })}</Typography>
+            <Typography variant="h2">{translate({ id: "stdlib.cta.title", message: "Get Started" })}</Typography>
+            <Typography variant="body1" color="muted">{translate({ id: "stdlib.cta.text", message: "Install the CLI and start building with the standard library." })}</Typography>
             <HStack gap="md">
               <Link to="/docs/getting-started/introduction">
                 <Button variant="primary" size="lg">{translate({ id: "stdlib.cta.docs", message: "Read the Docs" })}</Button>

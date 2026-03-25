@@ -199,30 +199,24 @@ export default function OrbHome(): ReactNode {
       </Box>
 
       {/* Open Source Community */}
-      <Box className="w-full bg-[var(--color-foreground)] text-[var(--color-background)]">
+      <Box className="w-full bg-[var(--color-surface)]">
         <Box className="site-container py-24">
           <VStack gap="lg" align="center" className="w-full">
-            <Typography variant="h2" className="text-[var(--color-background)]">
+            <Typography variant="h2">
               <Translate id="orb.community.title">Open Source Community</Translate>
             </Typography>
-            <Typography variant="body1" className="text-[var(--color-background)]/60">
+            <Typography variant="body1" color="muted">
               <Translate id="orb.community.subtitle">Orb and its compiler are open source. Contribute, report issues, or build something new.</Translate>
             </Typography>
             <HStack gap="md">
               <a href="https://github.com/almadar-io/orb" target="_blank" rel="noopener noreferrer">
-                <Button variant="secondary" size="lg">
-                  <HStack gap="sm" align="center">
-                    <Icon name="github" size={20} />
-                    <Typography variant="body2">GitHub</Typography>
-                  </HStack>
+                <Button variant="primary" size="lg" leftIcon="github">
+                  GitHub
                 </Button>
               </a>
               <a href="https://discord.gg/q83VjPJx" target="_blank" rel="noopener noreferrer">
-                <Button variant="secondary" size="lg">
-                  <HStack gap="sm" align="center">
-                    <Icon name="message-circle" size={20} />
-                    <Typography variant="body2">Discord</Typography>
-                  </HStack>
+                <Button variant="secondary" size="lg" leftIcon="message-circle">
+                  Discord
                 </Button>
               </a>
             </HStack>
