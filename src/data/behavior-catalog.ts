@@ -276,11 +276,18 @@ export function stdAsync(params: StdAsyncParams): OrbitalDefinition {
 }
 `,
   },
+  "std-autoregressive": {
+    name: "std-autoregressive",
+    description: "",
+    level: "atom",
+    schema: {"name":"AutoregressiveOrbital","orbitals":[{"name":"AutoregressiveOrbital","entity":{"name":"Autoregressive","persistence":"runtime","fields":[{"name":"id","type":"string","default":""},{"name":"generatedTokens","type":"string","default":""},{"name":"tokenCount","type":"number","default":0},{"name":"lastToken","type":"number","default":-1},{"name":"genStatus","type":"string","default":"idle"},{"name":"prompt","type":"string","default":""}]},"traits":[{"name":"AutoregressiveAutoregressive","linkedEntity":"Autoregressive","category":"interaction","emits":[{"event":"GENERATION_COMPLETE","scope":"external"}],"stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"generating"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"GENERATE","name":"Generate"},{"key":"TOKEN_READY","name":"Token Ready"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["set","@entity.genStatus","idle"],["set","@entity.generatedTokens",""],["set","@entity.tokenCount",0],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"message-square","size":"lg"},{"type":"typography","content":"Autoregressive Generator","variant":"h2"}]},{"type":"divider"},{"type":"badge","label":"@entity.genStatus"},{"type":"typography","variant":"body","color":"muted","content":"Vocab: undefined | Max length: undefined"},{"type":"typography","variant":"body","content":"@entity.generatedTokens"},{"type":"button","label":"Generate","event":"GENERATE","variant":"primary","icon":"play"}]}]]},{"from":"idle","to":"generating","event":"GENERATE","effects":[["set","@entity.genStatus","generating"],["set","@entity.generatedTokens",""],["set","@entity.tokenCount",0],["forward","primary",{"input":"@entity.generatedTokens","output-contract":{"type":"tensor","shape":[null],"dtype":"float32","activation":"softmax"},"on-complete":"TOKEN_READY"}],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"typography","content":"Generating","variant":"h3"},{"type":"progress-bar","value":"@entity.tokenCount"},{"type":"typography","variant":"body","content":"@entity.generatedTokens"},{"type":"typography","variant":"caption","content":"Tokens: @entity.tokenCount"},{"type":"spinner","size":"sm"}]}]]},{"from":"generating","to":"generating","event":"TOKEN_READY","guard":["not",["or",["eq","@payload.token",null],["gte","@entity.tokenCount",null]]],"effects":[["set","@entity.lastToken","@payload.token"],["set","@entity.generatedTokens",["string/concat","@entity.generatedTokens","@payload.decoded"]],["set","@entity.tokenCount",["math/add","@entity.tokenCount",1]],["forward","primary",{"input":"@entity.generatedTokens","output-contract":{"type":"tensor","shape":[null],"dtype":"float32","activation":"softmax"},"on-complete":"TOKEN_READY"}],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"typography","content":"Generating","variant":"h3"},{"type":"progress-bar","value":"@entity.tokenCount"},{"type":"typography","variant":"body","content":"@entity.generatedTokens"},{"type":"typography","variant":"caption","content":"Tokens: @entity.tokenCount"},{"type":"spinner","size":"sm"}]}]]},{"from":"generating","to":"idle","event":"TOKEN_READY","guard":["or",["eq","@payload.token",null],["gte","@entity.tokenCount",null]],"effects":[["set","@entity.genStatus","complete"],["set","@entity.tokenCount",["math/add","@entity.tokenCount",1]],["emit","GENERATION_COMPLETE"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Generation Complete","variant":"h3"},{"type":"typography","variant":"body","content":"@entity.generatedTokens"},{"type":"typography","variant":"caption","content":"Total tokens: @entity.tokenCount"},{"type":"button","label":"Generate Again","event":"GENERATE","variant":"outline","icon":"refresh-cw"}]}]]}]}}],"pages":[{"name":"AutoregressiveGeneratePage","path":"/autoregressives/generate","traits":[{"ref":"AutoregressiveAutoregressive"}]}]}]},
+    source: ``,
+  },
   "std-browse": {
     name: "std-browse",
     description: "Data grid browsing atom. Renders a list of entities with configurable item actions. The browsing view that molecules compose with modal/confirmation atoms.",
     level: "atom",
-    schema: {"name":"BrowseItemOrbital","orbitals":[{"name":"BrowseItemOrbital","entity":{"name":"BrowseItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"BrowseItemBrowse","linkedEntity":"BrowseItem","category":"interaction","stateMachine":{"states":[{"name":"browsing","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","BrowseItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"BrowseItems","variant":"h2"}]}]},{"type":"divider"},{"type":"data-grid","entity":"BrowseItem","emptyIcon":"inbox","emptyTitle":"No browseitems yet","emptyDescription":"Create your first browseitem to get started.","columns":[{"name":"name","label":"Name","variant":"h4","icon":"list"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"status","label":"Status","variant":"caption"}]},{"type":"floating-action-button","icon":"plus","event":"INIT","label":"Create","tooltip":"Create"}]}]]}]}}],"pages":[{"name":"BrowseItemPage","path":"/browseitems","traits":[{"ref":"BrowseItemBrowse"}]}]}],"description":"Data grid browsing atom. Renders a list of entities with configurable item actions. The browsing view that molecules compose with modal/confirmation atoms."},
+    schema: {"name":"BrowseItemOrbital","orbitals":[{"name":"BrowseItemOrbital","entity":{"name":"BrowseItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}],"instances":[{"id":"bi-1","name":"Terry Schultz","description":"Senior product designer with 8 years of experience","status":"active","createdAt":"2026-01-15"},{"id":"bi-2","name":"Dale Franey","description":"Full-stack developer specializing in React and Node.js","status":"active","createdAt":"2026-01-18"},{"id":"bi-3","name":"Lorena Mayer","description":"Data analyst focused on business intelligence","status":"pending","createdAt":"2026-01-20"},{"id":"bi-4","name":"Andrea Paucek","description":"Project manager with PMP certification","status":"active","createdAt":"2026-02-01"},{"id":"bi-5","name":"Geneva Durgan","description":"UX researcher conducting user interviews","status":"inactive","createdAt":"2026-02-05"},{"id":"bi-6","name":"Samantha Okuneva","description":"DevOps engineer managing cloud infrastructure","status":"active","createdAt":"2026-02-10"},{"id":"bi-7","name":"Nelson Halby","description":"Technical writer documenting APIs","status":"active","createdAt":"2026-02-15"},{"id":"bi-8","name":"Tanya Hand","description":"QA lead overseeing test automation","status":"pending","createdAt":"2026-02-20"},{"id":"bi-9","name":"Rosemary Lind","description":"Marketing analyst tracking campaign performance","status":"active","createdAt":"2026-03-01"},{"id":"bi-10","name":"Bernadette Anderson","description":"Security engineer conducting penetration tests","status":"active","createdAt":"2026-03-05"}]},"traits":[{"name":"BrowseItemBrowse","linkedEntity":"BrowseItem","category":"interaction","stateMachine":{"states":[{"name":"browsing","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","BrowseItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"BrowseItems","variant":"h2"}]}]},{"type":"divider"},{"type":"data-grid","entity":"BrowseItem","emptyIcon":"inbox","emptyTitle":"No browseitems yet","emptyDescription":"Create your first browseitem to get started.","columns":[{"name":"name","label":"Name","variant":"h4","icon":"list"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"status","label":"Status","variant":"caption"}]},{"type":"floating-action-button","icon":"plus","event":"INIT","label":"Create","tooltip":"Create"}]}]]}]}}],"pages":[{"name":"BrowseItemPage","path":"/browseitems","traits":[{"ref":"BrowseItemBrowse"}]}]}],"description":"Data grid browsing atom. Renders a list of entities with configurable item actions. The browsing view that molecules compose with modal/confirmation atoms."},
     source: `/**
  * std-browse
  *
@@ -434,7 +441,19 @@ function buildDisplayPattern(c: BrowseConfig, entityName: string, emptyTitle: st
 }
 
 function buildEntity(c: BrowseConfig): Entity {
-  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence, collection: c.collection });
+  const instances = [
+    { id: 'bi-1', name: 'Terry Schultz', description: 'Senior product designer with 8 years of experience', status: 'active', createdAt: '2026-01-15' },
+    { id: 'bi-2', name: 'Dale Franey', description: 'Full-stack developer specializing in React and Node.js', status: 'active', createdAt: '2026-01-18' },
+    { id: 'bi-3', name: 'Lorena Mayer', description: 'Data analyst focused on business intelligence', status: 'pending', createdAt: '2026-01-20' },
+    { id: 'bi-4', name: 'Andrea Paucek', description: 'Project manager with PMP certification', status: 'active', createdAt: '2026-02-01' },
+    { id: 'bi-5', name: 'Geneva Durgan', description: 'UX researcher conducting user interviews', status: 'inactive', createdAt: '2026-02-05' },
+    { id: 'bi-6', name: 'Samantha Okuneva', description: 'DevOps engineer managing cloud infrastructure', status: 'active', createdAt: '2026-02-10' },
+    { id: 'bi-7', name: 'Nelson Halby', description: 'Technical writer documenting APIs', status: 'active', createdAt: '2026-02-15' },
+    { id: 'bi-8', name: 'Tanya Hand', description: 'QA lead overseeing test automation', status: 'pending', createdAt: '2026-02-20' },
+    { id: 'bi-9', name: 'Rosemary Lind', description: 'Marketing analyst tracking campaign performance', status: 'active', createdAt: '2026-03-01' },
+    { id: 'bi-10', name: 'Bernadette Anderson', description: 'Security engineer conducting penetration tests', status: 'active', createdAt: '2026-03-05' },
+  ];
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence, collection: c.collection, instances });
 }
 
 function buildTrait(c: BrowseConfig): Trait {
@@ -1182,7 +1201,7 @@ export function stdCalendar(params: StdCalendarParams): OrbitalDefinition {
     name: "std-circuit-breaker",
     description: "Circuit breaker pattern behavior: closed, open, halfOpen. Protects services from cascading failures with automatic recovery. Pure function: params in, OrbitalDefinition out.",
     level: "atom",
-    schema: {"name":"ServiceNodeOrbital","orbitals":[{"name":"ServiceNodeOrbital","entity":{"name":"ServiceNode","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}]},"traits":[{"name":"ServiceNodeCircuitBreaker","linkedEntity":"ServiceNode","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","ServiceNode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]}]}}],"pages":[{"name":"ServiceNodePage","path":"/servicenodes","traits":[{"ref":"ServiceNodeCircuitBreaker"}]}]}],"description":"Circuit breaker pattern behavior: closed, open, halfOpen. Protects services from cascading failures with automatic recovery. Pure function: params in, OrbitalDefinition out."},
+    schema: {"name":"ServiceNodeOrbital","orbitals":[{"name":"ServiceNodeOrbital","entity":{"name":"ServiceNode","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}],"instances":[{"id":"sn-1","name":"ServiceNode","description":"Primary API gateway","status":"active","createdAt":"2026-01-10","failureCount":783,"successCount":603,"threshold":5}]},"traits":[{"name":"ServiceNodeCircuitBreaker","linkedEntity":"ServiceNode","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","ServiceNode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]]}]}}],"pages":[{"name":"ServiceNodePage","path":"/servicenodes","traits":[{"ref":"ServiceNodeCircuitBreaker"}]}]}],"description":"Circuit breaker pattern behavior: closed, open, halfOpen. Protects services from cascading failures with automatic recovery. Pure function: params in, OrbitalDefinition out."},
     source: `/**
  * std-circuit-breaker
  *
@@ -1274,7 +1293,10 @@ function buildEntity(c: CircuitBreakerConfig): Entity {
     { name: 'successCount', type: 'number' as const, default: 0 },
     { name: 'threshold', type: 'number' as const, default: 5 },
   ];
-  return makeEntity({ name: c.entityName, fields, persistence: c.persistence, collection: c.collection });
+  const instances = [
+    { id: 'sn-1', name: 'ServiceNode', description: 'Primary API gateway', status: 'active', createdAt: '2026-01-10', failureCount: 783, successCount: 603, threshold: 5 },
+  ];
+  return makeEntity({ name: c.entityName, fields, persistence: c.persistence, collection: c.collection, instances });
 }
 
 // Helper: read a field from the first entity in the collection
@@ -1735,7 +1757,7 @@ export function stdCollision(params: StdCollisionParams): OrbitalDefinition {
     name: "std-combat-log",
     description: "Scrollable combat event log atom using the `combat-log` pattern. Displays timestamped combat events with icons and colors. Supports appending new events and clearing the log.",
     level: "atom",
-    schema: {"name":"CombatLogOrbital","orbitals":[{"name":"CombatLogOrbital","entity":{"name":"CombatLog","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"CombatLogCombatLog","linkedEntity":"CombatLog","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOG_EVENT","name":"Log Event","payload":[{"name":"data","type":"object","required":true}]},{"key":"CLEAR","name":"Clear"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","CombatLog"],["render-ui","main",{"type":"combat-log","events":"@CombatLog","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]},{"from":"idle","to":"idle","event":"LOG_EVENT","effects":[["render-ui","main",{"type":"combat-log","events":"@CombatLog","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]},{"from":"idle","to":"idle","event":"CLEAR","effects":[["render-ui","main",{"type":"combat-log","events":"@CombatLog","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]}]}}],"pages":[{"name":"CombatLogLogPage","path":"/combatlogs","traits":[{"ref":"CombatLogCombatLog"}]}]}],"description":"Scrollable combat event log atom using the `combat-log` pattern. Displays timestamped combat events with icons and colors. Supports appending new events and clearing the log."},
+    schema: {"name":"CombatLogEntryOrbital","orbitals":[{"name":"CombatLogEntryOrbital","entity":{"name":"CombatLogEntry","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"type","type":"string","default":"attack","values":["attack","defend","heal","move","special","death","spawn"]},{"name":"message","type":"string"},{"name":"timestamp","type":"number","default":0},{"name":"actorName","type":"string"},{"name":"targetName","type":"string"},{"name":"value","type":"number","default":0},{"name":"turn","type":"number","default":1}],"instances":[{"id":"cl-1","name":"Attack log","description":"Warrior attacks Goblin","status":"active","createdAt":"2026-01-01","type":"attack","message":"Warrior strikes Goblin for 25 damage","timestamp":1000,"actorName":"Warrior","targetName":"Goblin","value":25,"turn":1},{"id":"cl-2","name":"Defend log","description":"Paladin raises shield","status":"active","createdAt":"2026-01-01","type":"defend","message":"Paladin raises shield, blocking 15 damage","timestamp":2000,"actorName":"Paladin","targetName":"Paladin","value":15,"turn":1},{"id":"cl-3","name":"Heal log","description":"Cleric heals Warrior","status":"active","createdAt":"2026-01-01","type":"heal","message":"Cleric heals Warrior for 30 HP","timestamp":3000,"actorName":"Cleric","targetName":"Warrior","value":30,"turn":2},{"id":"cl-4","name":"Special log","description":"Mage casts fireball","status":"active","createdAt":"2026-01-01","type":"special","message":"Mage casts Fireball dealing 40 AoE damage","timestamp":4000,"actorName":"Mage","targetName":"Goblin","value":40,"turn":2},{"id":"cl-5","name":"Move log","description":"Rogue moves to flank","status":"active","createdAt":"2026-01-01","type":"move","message":"Rogue moves to flanking position","timestamp":5000,"actorName":"Rogue","value":0,"turn":3}]},"traits":[{"name":"CombatLogEntryCombatLog","linkedEntity":"CombatLogEntry","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOG_EVENT","name":"Log Event","payload":[{"name":"data","type":"object","required":true}]},{"key":"CLEAR","name":"Clear"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","CombatLogEntry"],["render-ui","main",{"type":"combat-log","events":"@CombatLogEntry","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]},{"from":"idle","to":"idle","event":"LOG_EVENT","effects":[["render-ui","main",{"type":"combat-log","events":"@CombatLogEntry","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]},{"from":"idle","to":"idle","event":"CLEAR","effects":[["render-ui","main",{"type":"combat-log","events":"@CombatLogEntry","maxVisible":10,"autoScroll":true,"showTimestamps":true,"title":"Combat Log"}]]}]}}],"pages":[{"name":"CombatLogEntryLogPage","path":"/combatlogentrys","traits":[{"ref":"CombatLogEntryCombatLog"}]}]}],"description":"Scrollable combat event log atom using the `combat-log` pattern. Displays timestamped combat events with icons and colors. Supports appending new events and clearing the log."},
     source: `/**
  * std-combat-log
  *
@@ -1814,7 +1836,24 @@ function resolve(params: StdCombatLogParams): CombatLogConfig {
 // ============================================================================
 
 function buildEntity(c: CombatLogConfig): Entity {
-  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+  const fields = [
+    ...c.fields.filter(f => !['type', 'message', 'timestamp', 'actorName', 'targetName', 'value', 'turn'].includes(f.name)),
+    { name: 'type', type: 'string' as const, default: 'attack', values: ['attack', 'defend', 'heal', 'move', 'special', 'death', 'spawn'] },
+    { name: 'message', type: 'string' as const },
+    { name: 'timestamp', type: 'number' as const, default: 0 },
+    { name: 'actorName', type: 'string' as const },
+    { name: 'targetName', type: 'string' as const },
+    { name: 'value', type: 'number' as const, default: 0 },
+    { name: 'turn', type: 'number' as const, default: 1 },
+  ];
+  const instances = [
+    { id: 'cl-1', name: 'Attack log', description: 'Warrior attacks Goblin', status: 'active', createdAt: '2026-01-01', type: 'attack', message: 'Warrior strikes Goblin for 25 damage', timestamp: 1000, actorName: 'Warrior', targetName: 'Goblin', value: 25, turn: 1 },
+    { id: 'cl-2', name: 'Defend log', description: 'Paladin raises shield', status: 'active', createdAt: '2026-01-01', type: 'defend', message: 'Paladin raises shield, blocking 15 damage', timestamp: 2000, actorName: 'Paladin', targetName: 'Paladin', value: 15, turn: 1 },
+    { id: 'cl-3', name: 'Heal log', description: 'Cleric heals Warrior', status: 'active', createdAt: '2026-01-01', type: 'heal', message: 'Cleric heals Warrior for 30 HP', timestamp: 3000, actorName: 'Cleric', targetName: 'Warrior', value: 30, turn: 2 },
+    { id: 'cl-4', name: 'Special log', description: 'Mage casts fireball', status: 'active', createdAt: '2026-01-01', type: 'special', message: 'Mage casts Fireball dealing 40 AoE damage', timestamp: 4000, actorName: 'Mage', targetName: 'Goblin', value: 40, turn: 2 },
+    { id: 'cl-5', name: 'Move log', description: 'Rogue moves to flank', status: 'active', createdAt: '2026-01-01', type: 'move', message: 'Rogue moves to flanking position', timestamp: 5000, actorName: 'Rogue', value: 0, turn: 3 },
+  ];
+  return makeEntity({ name: c.entityName, fields, persistence: c.persistence, instances });
 }
 
 function buildTrait(c: CombatLogConfig): Trait {
@@ -2393,7 +2432,7 @@ export function stdConfirmation(params: StdConfirmationParams): OrbitalDefinitio
     name: "std-dialogue-box",
     description: "RPG dialogue atom using the `dialogue-box` pattern. Shows speaker, portrait, typewriter text, and choices.",
     level: "atom",
-    schema: {"name":"DialogueBoxOrbital","orbitals":[{"name":"DialogueBoxOrbital","entity":{"name":"DialogueBox","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"speaker","type":"string","default":"Narrator"},{"name":"text","type":"string","default":"Welcome, adventurer. Your journey begins here."}]},"traits":[{"name":"DialogueBoxDialogue","linkedEntity":"DialogueBox","category":"interaction","stateMachine":{"states":[{"name":"talking","isInitial":true},{"name":"idle"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ADVANCE","name":"Advance"},{"key":"CHOICE","name":"Choice","payload":[{"name":"choiceId","type":"string","required":true}]},{"key":"COMPLETE","name":"Complete"},{"key":"START_DIALOGUE","name":"Start Dialogue"}],"transitions":[{"from":"talking","to":"talking","event":"INIT","effects":[["fetch","DialogueBox"],["set","@entity.speaker","Narrator"],["set","@entity.text","Welcome, adventurer. Your journey begins here."],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"talking","event":"ADVANCE","effects":[["fetch","DialogueBox"],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"talking","event":"CHOICE","effects":[["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"idle","event":"COMPLETE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"typography","content":"Dialogue complete","variant":"caption"},{"type":"button","label":"New Dialogue","event":"START_DIALOGUE","variant":"primary","icon":"message-circle"}]}]]},{"from":"idle","to":"talking","event":"START_DIALOGUE","effects":[["fetch","DialogueBox"],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]}]}}],"pages":[{"name":"DialogueBoxDialoguePage","path":"/dialogueboxs","traits":[{"ref":"DialogueBoxDialogue"}]}]}],"description":"RPG dialogue atom using the `dialogue-box` pattern. Shows speaker, portrait, typewriter text, and choices."},
+    schema: {"name":"DialogueNodeOrbital","orbitals":[{"name":"DialogueNodeOrbital","entity":{"name":"DialogueNode","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"speaker","type":"string","default":"Narrator"},{"name":"text","type":"string","default":"Welcome, adventurer. Your journey begins here."}]},"traits":[{"name":"DialogueNodeDialogue","linkedEntity":"DialogueNode","category":"interaction","stateMachine":{"states":[{"name":"talking","isInitial":true},{"name":"idle"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ADVANCE","name":"Advance"},{"key":"CHOICE","name":"Choice","payload":[{"name":"choiceId","type":"string","required":true}]},{"key":"COMPLETE","name":"Complete"},{"key":"START_DIALOGUE","name":"Start Dialogue"}],"transitions":[{"from":"talking","to":"talking","event":"INIT","effects":[["fetch","DialogueNode"],["set","@entity.speaker","Narrator"],["set","@entity.text","Welcome, adventurer. Your journey begins here."],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"talking","event":"ADVANCE","effects":[["fetch","DialogueNode"],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"talking","event":"CHOICE","effects":[["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]},{"from":"talking","to":"idle","event":"COMPLETE","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"typography","content":"Dialogue complete","variant":"caption"},{"type":"button","label":"New Dialogue","event":"START_DIALOGUE","variant":"primary","icon":"message-circle"}]}]]},{"from":"idle","to":"talking","event":"START_DIALOGUE","effects":[["fetch","DialogueNode"],["render-ui","main",{"type":"dialogue-box","dialogue":{"speaker":"@entity.speaker","text":"@entity.text"},"typewriterSpeed":30,"position":"bottom"}]]}]}}],"pages":[{"name":"DialogueNodeDialoguePage","path":"/dialoguenodes","traits":[{"ref":"DialogueNodeDialogue"}]}]}],"description":"RPG dialogue atom using the `dialogue-box` pattern. Shows speaker, portrait, typewriter text, and choices."},
     source: `/**
  * std-dialogue-box
  *
@@ -3679,7 +3718,7 @@ export function stdGallery(params: StdGalleryParams): OrbitalDefinition {
     name: "std-game-audio",
     description: "Game audio provider atom using the `game-audio-provider` pattern. Wraps child content with an audio context, providing sound playback and mute toggling.",
     level: "atom",
-    schema: {"name":"GameAudioOrbital","orbitals":[{"name":"GameAudioOrbital","entity":{"name":"GameAudio","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"GameAudioGameAudio","linkedEntity":"GameAudio","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TOGGLE_MUTE","name":"Toggle Mute"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","GameAudio"],["render-ui","main",{"type":"game-audio-provider","manifest":{},"baseUrl":"","initialMuted":false,"children":[]}]]},{"from":"idle","to":"idle","event":"TOGGLE_MUTE","effects":[["render-ui","main",{"type":"game-audio-provider","manifest":{},"baseUrl":"","initialMuted":false,"children":[]}]]}]}}],"pages":[{"name":"GameAudioAudioPage","path":"/gameaudios","traits":[{"ref":"GameAudioGameAudio"}]}]}],"description":"Game audio provider atom using the `game-audio-provider` pattern. Wraps child content with an audio context, providing sound playback and mute toggling."},
+    schema: {"name":"AudioTrackOrbital","orbitals":[{"name":"AudioTrackOrbital","entity":{"name":"AudioTrack","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"AudioTrackGameAudio","linkedEntity":"AudioTrack","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TOGGLE_MUTE","name":"Toggle Mute"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","AudioTrack"],["render-ui","main",{"type":"game-audio-provider","manifest":{"click":"https://almadar-kflow-assets.web.app/shared/audio/sfx/close_001.ogg","confirm":"https://almadar-kflow-assets.web.app/shared/audio/sfx/confirmation_001.ogg","drop":"https://almadar-kflow-assets.web.app/shared/audio/sfx/drop_001.ogg"},"baseUrl":"https://almadar-kflow-assets.web.app/shared/audio","initialMuted":false,"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-md mx-auto","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"volume-2","size":"lg"},{"type":"typography","content":"Audio Controls","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Audio Active","variant":"h4"},{"type":"typography","content":"Toggle mute to control game audio playback.","variant":"body","color":"muted"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Toggle Mute","icon":"volume-2","event":"TOGGLE_MUTE","variant":"primary"}]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","content":"Sound Effects","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Play Click","icon":"play","variant":"outline"},{"type":"button","label":"Play Confirm","icon":"play","variant":"outline"},{"type":"button","label":"Play Drop","icon":"play","variant":"outline"}]}]}]}]}]}]]},{"from":"idle","to":"idle","event":"TOGGLE_MUTE","effects":[["render-ui","main",{"type":"game-audio-provider","manifest":{"click":"https://almadar-kflow-assets.web.app/shared/audio/sfx/close_001.ogg","confirm":"https://almadar-kflow-assets.web.app/shared/audio/sfx/confirmation_001.ogg","drop":"https://almadar-kflow-assets.web.app/shared/audio/sfx/drop_001.ogg"},"baseUrl":"https://almadar-kflow-assets.web.app/shared/audio","initialMuted":false,"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-md mx-auto","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"volume-2","size":"lg"},{"type":"typography","content":"Audio Controls","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Audio Active","variant":"h4"},{"type":"typography","content":"Toggle mute to control game audio playback.","variant":"body","color":"muted"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Toggle Mute","icon":"volume-2","event":"TOGGLE_MUTE","variant":"primary"}]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","content":"Sound Effects","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Play Click","icon":"play","variant":"outline"},{"type":"button","label":"Play Confirm","icon":"play","variant":"outline"},{"type":"button","label":"Play Drop","icon":"play","variant":"outline"}]}]}]}]}]}]]}]}}],"pages":[{"name":"AudioTrackAudioPage","path":"/audiotracks","traits":[{"ref":"AudioTrackGameAudio"}]}]}],"description":"Game audio provider atom using the `game-audio-provider` pattern. Wraps child content with an audio context, providing sound playback and mute toggling."},
     source: `/**
  * std-game-audio
  *
@@ -3752,12 +3791,73 @@ function buildEntity(c: GameAudioConfig): Entity {
 function buildTrait(c: GameAudioConfig): Trait {
   const { entityName, initialMuted } = c;
 
+  const audioControls = {
+    type: 'stack',
+    direction: 'vertical',
+    gap: 'lg',
+    className: 'max-w-md mx-auto',
+    children: [
+      {
+        type: 'stack',
+        direction: 'horizontal',
+        gap: 'sm',
+        align: 'center',
+        children: [
+          { type: 'icon', name: 'volume-2', size: 'lg' },
+          { type: 'typography', content: 'Audio Controls', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'card',
+        children: [
+          {
+            type: 'stack', direction: 'vertical', gap: 'md',
+            children: [
+              { type: 'typography', content: initialMuted ? 'Audio Muted' : 'Audio Active', variant: 'h4' },
+              { type: 'typography', content: 'Toggle mute to control game audio playback.', variant: 'body', color: 'muted' },
+              {
+                type: 'stack', direction: 'horizontal', gap: 'sm',
+                children: [
+                  { type: 'button', label: 'Toggle Mute', icon: initialMuted ? 'volume-x' : 'volume-2', event: 'TOGGLE_MUTE', variant: 'primary' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'card',
+        children: [
+          {
+            type: 'stack', direction: 'vertical', gap: 'sm',
+            children: [
+              { type: 'typography', content: 'Sound Effects', variant: 'h4' },
+              {
+                type: 'stack', direction: 'horizontal', gap: 'sm',
+                children: [
+                  { type: 'button', label: 'Play Click', icon: 'play', variant: 'outline' },
+                  { type: 'button', label: 'Play Confirm', icon: 'play', variant: 'outline' },
+                  { type: 'button', label: 'Play Drop', icon: 'play', variant: 'outline' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
   const audioView = {
     type: 'game-audio-provider',
-    manifest: {},
-    baseUrl: '',
+    manifest: {
+      click: 'https://almadar-kflow-assets.web.app/shared/audio/sfx/close_001.ogg',
+      confirm: 'https://almadar-kflow-assets.web.app/shared/audio/sfx/confirmation_001.ogg',
+      drop: 'https://almadar-kflow-assets.web.app/shared/audio/sfx/drop_001.ogg',
+    },
+    baseUrl: 'https://almadar-kflow-assets.web.app/shared/audio',
     initialMuted,
-    children: [],
+    children: [audioControls],
   };
 
   return {
@@ -3809,14 +3909,14 @@ export function stdGameAudio(params: StdGameAudioParams): OrbitalDefinition {
     name: "std-game-canvas3d",
     description: "",
     level: "atom",
-    schema: {"name":"GameCanvas3dOrbital","orbitals":[{"name":"GameCanvas3dOrbital","entity":{"name":"GameCanvas3d","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"GameCanvas3dGameCanvas3d","linkedEntity":"GameCanvas3d","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"active"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TILE_CLICK","name":"Tile Click","payload":[{"name":"tileId","type":"string","required":true}]},{"key":"UNIT_CLICK","name":"Unit Click","payload":[{"name":"unitId","type":"string","required":true}]},{"key":"CAMERA_CHANGE","name":"Camera Change"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","GameCanvas3d"],["render-ui","main",{"type":"game-canvas3-d","tiles":"@GameCanvas3d","units":"@GameCanvas3d","features":"@GameCanvas3d","orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"idle","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":"@GameCanvas3d","units":"@GameCanvas3d","features":"@GameCanvas3d","orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"idle","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":"@GameCanvas3d","units":"@GameCanvas3d","features":"@GameCanvas3d","orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":"@GameCanvas3d","units":"@GameCanvas3d","features":"@GameCanvas3d","orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":"@GameCanvas3d","units":"@GameCanvas3d","features":"@GameCanvas3d","orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"CAMERA_CHANGE","effects":[]},{"from":"idle","to":"idle","event":"CAMERA_CHANGE","effects":[]}]}}],"pages":[{"name":"GameCanvas3dCanvas3dPage","path":"/gamecanvas3ds","traits":[{"ref":"GameCanvas3dGameCanvas3d"}]}]}]},
+    schema: {"name":"Canvas3dSceneOrbital","orbitals":[{"name":"Canvas3dSceneOrbital","entity":{"name":"Canvas3dScene","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"tiles","type":"array","default":[]},{"name":"units","type":"array","default":[]},{"name":"features","type":"array","default":[]}],"instances":[{"id":"scene-1","name":"Battle Arena","description":"A 3D battle arena","status":"active","createdAt":"2026-01-01","tiles":[{"x":0,"y":0,"z":0,"type":"grass"},{"x":1,"y":0,"z":0,"type":"grass"},{"x":0,"y":0,"z":1,"type":"stone"},{"x":1,"y":0,"z":1,"type":"water"}],"units":[],"features":[]}]},"traits":[{"name":"Canvas3dSceneGameCanvas3d","linkedEntity":"Canvas3dScene","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"active"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TILE_CLICK","name":"Tile Click","payload":[{"name":"tileId","type":"string","required":true}]},{"key":"UNIT_CLICK","name":"Unit Click","payload":[{"name":"unitId","type":"string","required":true}]},{"key":"CAMERA_CHANGE","name":"Camera Change"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","Canvas3dScene"],["render-ui","main",{"type":"game-canvas3-d","tiles":["object/get",["array/first","@Canvas3dScene"],"tiles"],"units":["object/get",["array/first","@Canvas3dScene"],"units"],"features":["object/get",["array/first","@Canvas3dScene"],"features"],"orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"idle","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":["object/get",["array/first","@Canvas3dScene"],"tiles"],"units":["object/get",["array/first","@Canvas3dScene"],"units"],"features":["object/get",["array/first","@Canvas3dScene"],"features"],"orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"idle","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":["object/get",["array/first","@Canvas3dScene"],"tiles"],"units":["object/get",["array/first","@Canvas3dScene"],"units"],"features":["object/get",["array/first","@Canvas3dScene"],"features"],"orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":["object/get",["array/first","@Canvas3dScene"],"tiles"],"units":["object/get",["array/first","@Canvas3dScene"],"units"],"features":["object/get",["array/first","@Canvas3dScene"],"features"],"orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"game-canvas3-d","tiles":["object/get",["array/first","@Canvas3dScene"],"tiles"],"units":["object/get",["array/first","@Canvas3dScene"],"units"],"features":["object/get",["array/first","@Canvas3dScene"],"features"],"orientation":"isometric","cameraMode":"orbital","showGrid":true,"shadows":true,"backgroundColor":"#1a1a2e","tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK"}]]},{"from":"active","to":"active","event":"CAMERA_CHANGE","effects":[]},{"from":"idle","to":"idle","event":"CAMERA_CHANGE","effects":[]}]}}],"pages":[{"name":"Canvas3dSceneCanvas3dPage","path":"/canvas3dscenes","traits":[{"ref":"Canvas3dSceneGameCanvas3d"}]}]}]},
     source: ``,
   },
   "std-game-hud": {
     name: "std-game-hud",
     description: "Heads-up display atom. Renders the `game-hud` pattern showing health, score, lives, and other stats.",
     level: "atom",
-    schema: {"name":"GameHudOrbital","orbitals":[{"name":"GameHudOrbital","entity":{"name":"GameHud","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"GameHudHud","linkedEntity":"GameHud","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"REFRESH","name":"Refresh"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","GameHud"],["render-ui","main",{"type":"game-hud","position":"top-left","size":"md","transparent":false,"stats":[{"label":"Name","value":"@entity.name"},{"label":"Description","value":"@entity.description"},{"label":"Status","value":"@entity.status"},{"label":"CreatedAt","value":"@entity.createdAt"}]}]]},{"from":"idle","to":"idle","event":"REFRESH","effects":[["fetch","GameHud"],["render-ui","main",{"type":"game-hud","position":"top-left","size":"md","transparent":false,"stats":[{"label":"Name","value":"@entity.name"},{"label":"Description","value":"@entity.description"},{"label":"Status","value":"@entity.status"},{"label":"CreatedAt","value":"@entity.createdAt"}]}]]}]}}],"pages":[{"name":"GameHudHudPage","path":"/gamehuds","traits":[{"ref":"GameHudHud"}]}]}],"description":"Heads-up display atom. Renders the `game-hud` pattern showing health, score, lives, and other stats."},
+    schema: {"name":"HudStateOrbital","orbitals":[{"name":"HudStateOrbital","entity":{"name":"HudState","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"HudStateHud","linkedEntity":"HudState","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"REFRESH","name":"Refresh"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","HudState"],["render-ui","main",{"type":"game-hud","position":"top-left","size":"md","transparent":false,"stats":[{"label":"Name","value":"@entity.name"},{"label":"Description","value":"@entity.description"},{"label":"Status","value":"@entity.status"},{"label":"CreatedAt","value":"@entity.createdAt"}]}]]},{"from":"idle","to":"idle","event":"REFRESH","effects":[["fetch","HudState"],["render-ui","main",{"type":"game-hud","position":"top-left","size":"md","transparent":false,"stats":[{"label":"Name","value":"@entity.name"},{"label":"Description","value":"@entity.description"},{"label":"Status","value":"@entity.status"},{"label":"CreatedAt","value":"@entity.createdAt"}]}]]}]}}],"pages":[{"name":"HudStateHudPage","path":"/hudstates","traits":[{"ref":"HudStateHud"}]}]}],"description":"Heads-up display atom. Renders the `game-hud` pattern showing health, score, lives, and other stats."},
     source: `/**
  * std-game-hud
  *
@@ -3956,7 +4056,7 @@ export function stdGameHud(params: StdGameHudParams): OrbitalDefinition {
     name: "std-game-menu",
     description: "Game main menu atom using the `game-menu` pattern. Shows title, subtitle, and menu options (Start, Options, Credits, etc.).",
     level: "atom",
-    schema: {"name":"GameMenuOrbital","orbitals":[{"name":"GameMenuOrbital","entity":{"name":"GameMenu","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"GameMenuMenu","linkedEntity":"GameMenu","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"NAVIGATE","name":"Navigate"},{"key":"START","name":"Start Game"},{"key":"OPTIONS","name":"Options"},{"key":"CREDITS","name":"Credits"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["render-ui","main",{"type":"game-menu","title":"GameMenu","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"NAVIGATE","effects":[]},{"from":"idle","to":"idle","event":"START","effects":[["render-ui","main",{"type":"game-menu","title":"GameMenu","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"OPTIONS","effects":[["render-ui","main",{"type":"game-menu","title":"GameMenu","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"CREDITS","effects":[["render-ui","main",{"type":"game-menu","title":"GameMenu","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]}]}}],"pages":[{"name":"GameMenuMenuPage","path":"/gamemenus","traits":[{"ref":"GameMenuMenu"}]}]}],"description":"Game main menu atom using the `game-menu` pattern. Shows title, subtitle, and menu options (Start, Options, Credits, etc.)."},
+    schema: {"name":"MenuStateOrbital","orbitals":[{"name":"MenuStateOrbital","entity":{"name":"MenuState","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"MenuStateMenu","linkedEntity":"MenuState","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"NAVIGATE","name":"Navigate"},{"key":"START","name":"Start Game"},{"key":"OPTIONS","name":"Options"},{"key":"CREDITS","name":"Credits"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["render-ui","main",{"type":"game-menu","title":"MenuState","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"NAVIGATE","effects":[]},{"from":"idle","to":"idle","event":"START","effects":[["render-ui","main",{"type":"game-menu","title":"MenuState","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"OPTIONS","effects":[["render-ui","main",{"type":"game-menu","title":"MenuState","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]},{"from":"idle","to":"idle","event":"CREDITS","effects":[["render-ui","main",{"type":"game-menu","title":"MenuState","subtitle":"Press Start","menuItems":[{"label":"Start Game","action":"START"},{"label":"Options","action":"OPTIONS"},{"label":"Credits","action":"CREDITS"}]}]]}]}}],"pages":[{"name":"MenuStateMenuPage","path":"/menustates","traits":[{"ref":"MenuStateMenu"}]}]}],"description":"Game main menu atom using the `game-menu` pattern. Shows title, subtitle, and menu options (Start, Options, Credits, etc.)."},
     source: `/**
  * std-game-menu
  *
@@ -4101,7 +4201,7 @@ export function stdGameMenu(params: StdGameMenuParams): OrbitalDefinition {
     name: "std-game-over-screen",
     description: "Game over screen atom using the `game-over-screen` pattern. Shows final score, high score, and retry/quit actions.",
     level: "atom",
-    schema: {"name":"GameOverScreenOrbital","orbitals":[{"name":"GameOverScreenOrbital","entity":{"name":"GameOverScreen","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"currentScore","type":"number","default":0},{"name":"highScore","type":"number","default":0}]},"traits":[{"name":"GameOverScreenGameOver","linkedEntity":"GameOverScreen","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"NAVIGATE","name":"Navigate"},{"key":"RESTART","name":"Restart"},{"key":"RETRY","name":"Play Again"},{"key":"QUIT","name":"Main Menu"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","GameOverScreen"],["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]},{"from":"idle","to":"idle","event":"NAVIGATE","effects":[]},{"from":"idle","to":"idle","event":"RESTART","effects":[]},{"from":"idle","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]},{"from":"idle","to":"idle","event":"QUIT","effects":[["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]}]}}],"pages":[{"name":"GameOverScreenGameOverPage","path":"/gameoverscreens","traits":[{"ref":"GameOverScreenGameOver"}]}]}],"description":"Game over screen atom using the `game-over-screen` pattern. Shows final score, high score, and retry/quit actions."},
+    schema: {"name":"GameOverStateOrbital","orbitals":[{"name":"GameOverStateOrbital","entity":{"name":"GameOverState","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"currentScore","type":"number","default":0},{"name":"highScore","type":"number","default":0}]},"traits":[{"name":"GameOverStateGameOver","linkedEntity":"GameOverState","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"NAVIGATE","name":"Navigate"},{"key":"RESTART","name":"Restart"},{"key":"RETRY","name":"Play Again"},{"key":"QUIT","name":"Main Menu"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","GameOverState"],["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]},{"from":"idle","to":"idle","event":"NAVIGATE","effects":[]},{"from":"idle","to":"idle","event":"RESTART","effects":[]},{"from":"idle","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]},{"from":"idle","to":"idle","event":"QUIT","effects":[["render-ui","main",{"type":"game-over-screen","title":"Game Over","message":"Better luck next time!","currentScore":"@entity.currentScore","highScore":"@entity.highScore","menuItems":[{"label":"Play Again","action":"RETRY"},{"label":"Main Menu","action":"QUIT"}]}]]}]}}],"pages":[{"name":"GameOverStateGameOverPage","path":"/gameoverstates","traits":[{"ref":"GameOverStateGameOver"}]}]}],"description":"Game over screen atom using the `game-over-screen` pattern. Shows final score, high score, and retry/quit actions."},
     source: `/**
  * std-game-over-screen
  *
@@ -4794,7 +4894,7 @@ export function stdInput(params: StdInputParams): OrbitalDefinition {
     name: "std-inventory-panel",
     description: "Grid-based inventory atom using the `inventory-panel` pattern. Shows items in a grid with select, use, and drop actions.",
     level: "atom",
-    schema: {"name":"InventoryPanelOrbital","orbitals":[{"name":"InventoryPanelOrbital","entity":{"name":"InventoryPanel","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"items","type":"array"}],"instances":[{"id":"inventory","items":[{"id":"item-0","name":"Iron Sword","quantity":1,"rarity":"common"},{"id":"item-1","name":"Health Potion","quantity":3,"rarity":"common"},{"id":"item-2","name":"Shield","quantity":1,"rarity":"uncommon"},{"id":"item-3","name":"Magic Scroll","quantity":2,"rarity":"rare"},{"id":"item-4","name":"Gold Ring","quantity":1,"rarity":"epic"},{"id":"item-5","name":"Dragon Scale","quantity":1,"rarity":"epic"}]}]},"traits":[{"name":"InventoryPanelInventoryPanel","linkedEntity":"InventoryPanel","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SELECT_SLOT","name":"Select Slot","payload":[{"name":"slotId","type":"string","required":true}]},{"key":"USE_ITEM","name":"Use Item","payload":[{"name":"id","type":"string","required":true}]},{"key":"DROP_ITEM","name":"Drop Item","payload":[{"name":"id","type":"string","required":true}]}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","InventoryPanel"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"SELECT_SLOT","effects":[["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"USE_ITEM","effects":[["fetch","InventoryPanel"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"DROP_ITEM","effects":[["persist","delete","InventoryPanel","@payload.id"],["fetch","InventoryPanel"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}],["notify","InventoryPanel deleted successfully"]]}]}}],"pages":[{"name":"InventoryPanelInventoryPage","path":"/inventorypanels","traits":[{"ref":"InventoryPanelInventoryPanel"}]}]}],"description":"Grid-based inventory atom using the `inventory-panel` pattern. Shows items in a grid with select, use, and drop actions."},
+    schema: {"name":"InventorySlotOrbital","orbitals":[{"name":"InventorySlotOrbital","entity":{"name":"InventorySlot","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"items","type":"array"}],"instances":[{"id":"inventory","items":[{"id":"item-0","name":"Iron Sword","quantity":1,"rarity":"common"},{"id":"item-1","name":"Health Potion","quantity":3,"rarity":"common"},{"id":"item-2","name":"Shield","quantity":1,"rarity":"uncommon"},{"id":"item-3","name":"Magic Scroll","quantity":2,"rarity":"rare"},{"id":"item-4","name":"Gold Ring","quantity":1,"rarity":"epic"},{"id":"item-5","name":"Dragon Scale","quantity":1,"rarity":"epic"}]}]},"traits":[{"name":"InventorySlotInventoryPanel","linkedEntity":"InventorySlot","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SELECT_SLOT","name":"Select Slot","payload":[{"name":"slotId","type":"string","required":true}]},{"key":"USE_ITEM","name":"Use Item","payload":[{"name":"id","type":"string","required":true}]},{"key":"DROP_ITEM","name":"Drop Item","payload":[{"name":"id","type":"string","required":true}]}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","InventorySlot"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"SELECT_SLOT","effects":[["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"USE_ITEM","effects":[["fetch","InventorySlot"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}]]},{"from":"idle","to":"idle","event":"DROP_ITEM","effects":[["persist","delete","InventorySlot","@payload.id"],["fetch","InventorySlot"],["render-ui","main",{"type":"inventory-panel","items":"@entity.items","slots":16,"columns":4,"selectSlotEvent":"SELECT_SLOT","useItemEvent":"USE_ITEM","dropItemEvent":"DROP_ITEM","showTooltips":true}],["notify","InventorySlot deleted successfully"]]}]}}],"pages":[{"name":"InventorySlotInventoryPage","path":"/inventoryslots","traits":[{"ref":"InventorySlotInventoryPanel"}]}]}],"description":"Grid-based inventory atom using the `inventory-panel` pattern. Shows items in a grid with select, use, and drop actions."},
     source: `/**
  * std-inventory-panel
  *
@@ -4940,7 +5040,7 @@ export function stdInventoryPanel(params: StdInventoryPanelParams): OrbitalDefin
     name: "std-isometric-canvas",
     description: "Isometric game renderer atom using the `isometric-canvas` pattern. Renders tiles, units, and features on an isometric grid. Handles tile clicks, unit clicks, and hover events.",
     level: "atom",
-    schema: {"name":"IsometricCanvasOrbital","orbitals":[{"name":"IsometricCanvasOrbital","entity":{"name":"IsometricCanvas","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"tiles","type":"array"},{"name":"units","type":"array"},{"name":"features","type":"array"}],"instances":[{"id":"board","tiles":[{"x":0,"y":0,"terrain":"grass"},{"x":1,"y":0,"terrain":"dirt"},{"x":2,"y":0,"terrain":"stone"},{"x":3,"y":0,"terrain":"water"},{"x":4,"y":0,"terrain":"sand"},{"x":5,"y":0,"terrain":"grass"},{"x":6,"y":0,"terrain":"dirt"},{"x":7,"y":0,"terrain":"stone"},{"x":0,"y":1,"terrain":"dirt"},{"x":1,"y":1,"terrain":"stone"},{"x":2,"y":1,"terrain":"water"},{"x":3,"y":1,"terrain":"sand"},{"x":4,"y":1,"terrain":"grass"},{"x":5,"y":1,"terrain":"dirt"},{"x":6,"y":1,"terrain":"stone"},{"x":7,"y":1,"terrain":"water"},{"x":0,"y":2,"terrain":"stone"},{"x":1,"y":2,"terrain":"water"},{"x":2,"y":2,"terrain":"sand"},{"x":3,"y":2,"terrain":"grass"},{"x":4,"y":2,"terrain":"dirt"},{"x":5,"y":2,"terrain":"stone"},{"x":6,"y":2,"terrain":"water"},{"x":7,"y":2,"terrain":"sand"},{"x":0,"y":3,"terrain":"water"},{"x":1,"y":3,"terrain":"sand"},{"x":2,"y":3,"terrain":"grass"},{"x":3,"y":3,"terrain":"dirt"},{"x":4,"y":3,"terrain":"stone"},{"x":5,"y":3,"terrain":"water"},{"x":6,"y":3,"terrain":"sand"},{"x":7,"y":3,"terrain":"grass"},{"x":0,"y":4,"terrain":"sand"},{"x":1,"y":4,"terrain":"grass"},{"x":2,"y":4,"terrain":"dirt"},{"x":3,"y":4,"terrain":"stone"},{"x":4,"y":4,"terrain":"water"},{"x":5,"y":4,"terrain":"sand"},{"x":6,"y":4,"terrain":"grass"},{"x":7,"y":4,"terrain":"dirt"},{"x":0,"y":5,"terrain":"grass"},{"x":1,"y":5,"terrain":"dirt"},{"x":2,"y":5,"terrain":"stone"},{"x":3,"y":5,"terrain":"water"},{"x":4,"y":5,"terrain":"sand"},{"x":5,"y":5,"terrain":"grass"},{"x":6,"y":5,"terrain":"dirt"},{"x":7,"y":5,"terrain":"stone"},{"x":0,"y":6,"terrain":"dirt"},{"x":1,"y":6,"terrain":"stone"},{"x":2,"y":6,"terrain":"water"},{"x":3,"y":6,"terrain":"sand"},{"x":4,"y":6,"terrain":"grass"},{"x":5,"y":6,"terrain":"dirt"},{"x":6,"y":6,"terrain":"stone"},{"x":7,"y":6,"terrain":"water"},{"x":0,"y":7,"terrain":"stone"},{"x":1,"y":7,"terrain":"water"},{"x":2,"y":7,"terrain":"sand"},{"x":3,"y":7,"terrain":"grass"},{"x":4,"y":7,"terrain":"dirt"},{"x":5,"y":7,"terrain":"stone"},{"x":6,"y":7,"terrain":"water"},{"x":7,"y":7,"terrain":"sand"}],"units":[],"features":[]}]},"traits":[{"name":"IsometricCanvasIsometricCanvas","linkedEntity":"IsometricCanvas","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"active"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TILE_CLICK","name":"Tile Click","payload":[{"name":"tileId","type":"string","required":true}]},{"key":"UNIT_CLICK","name":"Unit Click","payload":[{"name":"unitId","type":"string","required":true}]},{"key":"TILE_HOVER","name":"Tile Hover"},{"key":"TILE_LEAVE","name":"Tile Leave"},{"key":"DESELECT","name":"Deselect"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","IsometricCanvas"],["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"idle","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"idle","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"TILE_HOVER","effects":[]},{"from":"idle","to":"idle","event":"TILE_HOVER","effects":[]},{"from":"active","to":"active","event":"TILE_LEAVE","effects":[]},{"from":"idle","to":"idle","event":"TILE_LEAVE","effects":[]},{"from":"active","to":"idle","event":"DESELECT","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]}]}}],"pages":[{"name":"IsometricCanvasCanvasPage","path":"/isometriccanvass","traits":[{"ref":"IsometricCanvasIsometricCanvas"}]}]}],"description":"Isometric game renderer atom using the `isometric-canvas` pattern. Renders tiles, units, and features on an isometric grid. Handles tile clicks, unit clicks, and hover events."},
+    schema: {"name":"IsometricWorldOrbital","orbitals":[{"name":"IsometricWorldOrbital","entity":{"name":"IsometricWorld","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"tiles","type":"array"},{"name":"units","type":"array"},{"name":"features","type":"array"}],"instances":[{"id":"board","tiles":[{"x":0,"y":0,"terrain":"grass"},{"x":1,"y":0,"terrain":"dirt"},{"x":2,"y":0,"terrain":"stone"},{"x":3,"y":0,"terrain":"water"},{"x":4,"y":0,"terrain":"sand"},{"x":5,"y":0,"terrain":"grass"},{"x":6,"y":0,"terrain":"dirt"},{"x":7,"y":0,"terrain":"stone"},{"x":0,"y":1,"terrain":"dirt"},{"x":1,"y":1,"terrain":"stone"},{"x":2,"y":1,"terrain":"water"},{"x":3,"y":1,"terrain":"sand"},{"x":4,"y":1,"terrain":"grass"},{"x":5,"y":1,"terrain":"dirt"},{"x":6,"y":1,"terrain":"stone"},{"x":7,"y":1,"terrain":"water"},{"x":0,"y":2,"terrain":"stone"},{"x":1,"y":2,"terrain":"water"},{"x":2,"y":2,"terrain":"sand"},{"x":3,"y":2,"terrain":"grass"},{"x":4,"y":2,"terrain":"dirt"},{"x":5,"y":2,"terrain":"stone"},{"x":6,"y":2,"terrain":"water"},{"x":7,"y":2,"terrain":"sand"},{"x":0,"y":3,"terrain":"water"},{"x":1,"y":3,"terrain":"sand"},{"x":2,"y":3,"terrain":"grass"},{"x":3,"y":3,"terrain":"dirt"},{"x":4,"y":3,"terrain":"stone"},{"x":5,"y":3,"terrain":"water"},{"x":6,"y":3,"terrain":"sand"},{"x":7,"y":3,"terrain":"grass"},{"x":0,"y":4,"terrain":"sand"},{"x":1,"y":4,"terrain":"grass"},{"x":2,"y":4,"terrain":"dirt"},{"x":3,"y":4,"terrain":"stone"},{"x":4,"y":4,"terrain":"water"},{"x":5,"y":4,"terrain":"sand"},{"x":6,"y":4,"terrain":"grass"},{"x":7,"y":4,"terrain":"dirt"},{"x":0,"y":5,"terrain":"grass"},{"x":1,"y":5,"terrain":"dirt"},{"x":2,"y":5,"terrain":"stone"},{"x":3,"y":5,"terrain":"water"},{"x":4,"y":5,"terrain":"sand"},{"x":5,"y":5,"terrain":"grass"},{"x":6,"y":5,"terrain":"dirt"},{"x":7,"y":5,"terrain":"stone"},{"x":0,"y":6,"terrain":"dirt"},{"x":1,"y":6,"terrain":"stone"},{"x":2,"y":6,"terrain":"water"},{"x":3,"y":6,"terrain":"sand"},{"x":4,"y":6,"terrain":"grass"},{"x":5,"y":6,"terrain":"dirt"},{"x":6,"y":6,"terrain":"stone"},{"x":7,"y":6,"terrain":"water"},{"x":0,"y":7,"terrain":"stone"},{"x":1,"y":7,"terrain":"water"},{"x":2,"y":7,"terrain":"sand"},{"x":3,"y":7,"terrain":"grass"},{"x":4,"y":7,"terrain":"dirt"},{"x":5,"y":7,"terrain":"stone"},{"x":6,"y":7,"terrain":"water"},{"x":7,"y":7,"terrain":"sand"}],"units":[],"features":[]}]},"traits":[{"name":"IsometricWorldIsometricCanvas","linkedEntity":"IsometricWorld","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"active"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"TILE_CLICK","name":"Tile Click","payload":[{"name":"tileId","type":"string","required":true}]},{"key":"UNIT_CLICK","name":"Unit Click","payload":[{"name":"unitId","type":"string","required":true}]},{"key":"TILE_HOVER","name":"Tile Hover"},{"key":"TILE_LEAVE","name":"Tile Leave"},{"key":"DESELECT","name":"Deselect"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","IsometricWorld"],["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"idle","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"idle","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"TILE_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"UNIT_CLICK","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]},{"from":"active","to":"active","event":"TILE_HOVER","effects":[]},{"from":"idle","to":"idle","event":"TILE_HOVER","effects":[]},{"from":"active","to":"active","event":"TILE_LEAVE","effects":[]},{"from":"idle","to":"idle","event":"TILE_LEAVE","effects":[]},{"from":"active","to":"idle","event":"DESELECT","effects":[["render-ui","main",{"type":"isometric-canvas","tiles":"@entity.tiles","boardWidth":8,"boardHeight":8,"scale":1,"unitScale":2,"debug":false,"showMinimap":false,"enableCamera":true,"tileClickEvent":"TILE_CLICK","unitClickEvent":"UNIT_CLICK","tileHoverEvent":"TILE_HOVER","tileLeaveEvent":"TILE_LEAVE"}]]}]}}],"pages":[{"name":"IsometricWorldCanvasPage","path":"/isometricworlds","traits":[{"ref":"IsometricWorldIsometricCanvas"}]}]}],"description":"Isometric game renderer atom using the `isometric-canvas` pattern. Renders tiles, units, and features on an isometric grid. Handles tile clicks, unit clicks, and hover events."},
     source: `/**
  * std-isometric-canvas
  *
@@ -7016,7 +7116,7 @@ export function stdPhysics2d(params: StdPhysics2dParams): OrbitalDefinition {
     name: "std-platformer-canvas",
     description: "Side-scrolling platformer atom using the `platformer-canvas` pattern. Renders player, platforms, and handles movement events.",
     level: "atom",
-    schema: {"name":"PlatformerCanvasOrbital","orbitals":[{"name":"PlatformerCanvasOrbital","entity":{"name":"PlatformerCanvas","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"platforms","type":"array"},{"name":"player","type":"object"}],"instances":[{"id":"level","platforms":[{"x":0,"y":350,"width":2400,"height":50},{"x":200,"y":250,"width":150,"height":20},{"x":500,"y":200,"width":120,"height":20},{"x":800,"y":280,"width":180,"height":20},{"x":1100,"y":180,"width":100,"height":20},{"x":1400,"y":230,"width":160,"height":20},{"x":1700,"y":150,"width":140,"height":20}],"player":{"x":50,"y":300,"width":30,"height":30,"vx":0,"vy":0}}]},"traits":[{"name":"PlatformerCanvasPlatformerCanvas","linkedEntity":"PlatformerCanvas","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"running"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LEFT","name":"Move Left"},{"key":"RIGHT","name":"Move Right"},{"key":"JUMP","name":"Jump"},{"key":"STOP","name":"Stop"},{"key":"START","name":"Start"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","PlatformerCanvas"],["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]},{"from":"idle","to":"running","event":"START","effects":[["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]},{"from":"running","to":"running","event":"LEFT","effects":[]},{"from":"running","to":"running","event":"RIGHT","effects":[]},{"from":"running","to":"running","event":"JUMP","effects":[]},{"from":"running","to":"idle","event":"STOP","effects":[["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]}]}}],"pages":[{"name":"PlatformerCanvasPlatformerPage","path":"/platformercanvass","traits":[{"ref":"PlatformerCanvasPlatformerCanvas"}]}]}],"description":"Side-scrolling platformer atom using the `platformer-canvas` pattern. Renders player, platforms, and handles movement events."},
+    schema: {"name":"PlatformerWorldOrbital","orbitals":[{"name":"PlatformerWorldOrbital","entity":{"name":"PlatformerWorld","persistence":"singleton","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"platforms","type":"array"},{"name":"player","type":"object"}],"instances":[{"id":"level","platforms":[{"x":0,"y":350,"width":2400,"height":50},{"x":200,"y":250,"width":150,"height":20},{"x":500,"y":200,"width":120,"height":20},{"x":800,"y":280,"width":180,"height":20},{"x":1100,"y":180,"width":100,"height":20},{"x":1400,"y":230,"width":160,"height":20},{"x":1700,"y":150,"width":140,"height":20}],"player":{"x":50,"y":300,"width":30,"height":30,"vx":0,"vy":0}}]},"traits":[{"name":"PlatformerWorldPlatformerCanvas","linkedEntity":"PlatformerWorld","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"running"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LEFT","name":"Move Left"},{"key":"RIGHT","name":"Move Right"},{"key":"JUMP","name":"Jump"},{"key":"STOP","name":"Stop"},{"key":"START","name":"Start"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","PlatformerWorld"],["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]},{"from":"idle","to":"running","event":"START","effects":[["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]},{"from":"running","to":"running","event":"LEFT","effects":[]},{"from":"running","to":"running","event":"RIGHT","effects":[]},{"from":"running","to":"running","event":"JUMP","effects":[]},{"from":"running","to":"idle","event":"STOP","effects":[["render-ui","main",{"type":"platformer-canvas","platforms":"@entity.platforms","player":"@entity.player","canvasWidth":800,"canvasHeight":400,"worldWidth":2400,"worldHeight":400,"followCamera":true,"bgColor":"#1a1a2e","leftEvent":"LEFT","rightEvent":"RIGHT","jumpEvent":"JUMP","stopEvent":"STOP"}]]}]}}],"pages":[{"name":"PlatformerWorldPlatformerPage","path":"/platformerworlds","traits":[{"ref":"PlatformerWorldPlatformerCanvas"}]}]}],"description":"Side-scrolling platformer atom using the `platformer-canvas` pattern. Renders player, platforms, and handles movement events."},
     source: `/**
  * std-platformer-canvas
  *
@@ -8024,7 +8124,7 @@ export function stdRating(params: StdRatingParams): OrbitalDefinition {
     name: "std-score-board",
     description: "Score display atom using the `score-board` pattern. Shows score, high score, combo, multiplier, level.",
     level: "atom",
-    schema: {"name":"ScoreBoardOrbital","orbitals":[{"name":"ScoreBoardOrbital","entity":{"name":"ScoreBoard","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"score","type":"number","default":0},{"name":"highScore","type":"number","default":0},{"name":"combo","type":"number","default":0},{"name":"multiplier","type":"number","default":1},{"name":"level","type":"number","default":1}]},"traits":[{"name":"ScoreBoardScoreBoard","linkedEntity":"ScoreBoard","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ADD_SCORE","name":"Add Score","payload":[{"name":"points","type":"number","required":true}]},{"key":"COMBO","name":"Combo","payload":[{"name":"multiplier","type":"number","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ScoreBoard"],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"ADD_SCORE","effects":[["set","@entity.score",["+","@entity.score","@payload.points"]],["set","@entity.combo",["+","@entity.combo",1]],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"COMBO","effects":[["set","@entity.multiplier","@payload.multiplier"],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"RESET","effects":[["set","@entity.score",0],["set","@entity.combo",0],["set","@entity.multiplier",1],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]}]}}],"pages":[{"name":"ScoreBoardScorePage","path":"/scoreboards","traits":[{"ref":"ScoreBoardScoreBoard"}]}]}],"description":"Score display atom using the `score-board` pattern. Shows score, high score, combo, multiplier, level."},
+    schema: {"name":"ScoreBoardEntryOrbital","orbitals":[{"name":"ScoreBoardEntryOrbital","entity":{"name":"ScoreBoardEntry","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"score","type":"number","default":0},{"name":"highScore","type":"number","default":0},{"name":"combo","type":"number","default":0},{"name":"multiplier","type":"number","default":1},{"name":"level","type":"number","default":1}]},"traits":[{"name":"ScoreBoardEntryScoreBoard","linkedEntity":"ScoreBoardEntry","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ADD_SCORE","name":"Add Score","payload":[{"name":"points","type":"number","required":true}]},{"key":"COMBO","name":"Combo","payload":[{"name":"multiplier","type":"number","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ScoreBoardEntry"],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"ADD_SCORE","effects":[["set","@entity.score",["+","@entity.score","@payload.points"]],["set","@entity.combo",["+","@entity.combo",1]],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"COMBO","effects":[["set","@entity.multiplier","@payload.multiplier"],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]},{"from":"idle","to":"idle","event":"RESET","effects":[["set","@entity.score",0],["set","@entity.combo",0],["set","@entity.multiplier",1],["render-ui","main",{"type":"score-board","score":"@entity.score","highScore":"@entity.highScore","combo":"@entity.combo","multiplier":"@entity.multiplier","level":"@entity.level"}]]}]}}],"pages":[{"name":"ScoreBoardEntryScorePage","path":"/scoreboardentrys","traits":[{"ref":"ScoreBoardEntryScoreBoard"}]}]}],"description":"Score display atom using the `score-board` pattern. Shows score, high score, combo, multiplier, level."},
     source: `/**
  * std-score-board
  *
@@ -8662,7 +8762,7 @@ export function stdSearch(params: StdSearchParams): OrbitalDefinition {
     name: "std-selection",
     description: "Selection behavior parameterized for any domain. Provides item selection from a list with confirm/deselect controls. Three states: idle, selecting, selected with transitions for the full lifecycle.",
     level: "atom",
-    schema: {"name":"SelectableItemOrbital","orbitals":[{"name":"SelectableItemOrbital","entity":{"name":"SelectableItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"SelectableItemSelection","linkedEntity":"SelectableItem","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"selecting"},{"name":"selected"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SELECT","name":"Select","payload":[{"name":"id","type":"string","required":true}]},{"key":"DESELECT","name":"Deselect"},{"key":"CLEAR","name":"Clear"},{"key":"CONFIRM_SELECTION","name":"Confirm Selection","payload":[{"name":"id","type":"string","required":true}]}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"idle","to":"selecting","event":"SELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"badge","label":"Selecting"},{"type":"button","label":"Clear","event":"CLEAR","variant":"ghost","icon":"x"}]}]},{"type":"divider"},{"type":"alert","variant":"info","message":["concat","Selected: ","@payload.id"]},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name","checked":["==","@item.id","@payload.id"]}]}]},{"type":"divider"},{"type":"button-group","variant":"outline","buttons":[{"label":"Select All","event":"SELECT","icon":"check-square"},{"label":"Deselect All","event":"DESELECT","icon":"square"},{"label":"Confirm","event":"CONFIRM_SELECTION","icon":"check"}]}]}]]},{"from":"selecting","to":"selecting","event":"SELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"badge","label":"Selecting"},{"type":"button","label":"Clear","event":"CLEAR","variant":"ghost","icon":"x"}]}]},{"type":"divider"},{"type":"alert","variant":"info","message":["concat","Selected: ","@payload.id"]},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name","checked":["==","@item.id","@payload.id"]}]}]},{"type":"divider"},{"type":"button-group","variant":"outline","buttons":[{"label":"Select All","event":"SELECT","icon":"check-square"},{"label":"Deselect All","event":"DESELECT","icon":"square"},{"label":"Confirm","event":"CONFIRM_SELECTION","icon":"check"}]}]}]]},{"from":"selecting","to":"idle","event":"DESELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"selecting","to":"idle","event":"CLEAR","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"selecting","to":"selected","event":"CONFIRM_SELECTION","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Selection Confirmed","variant":"h2"}]},{"type":"badge","label":"Confirmed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Selection confirmed successfully."},{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"typography","variant":"caption","content":"Selected ID:"},{"type":"typography","variant":"body","content":"@payload.id"}]},{"type":"button","label":"Clear Selection","event":"CLEAR","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"selected","to":"idle","event":"CLEAR","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]}]}}],"pages":[{"name":"SelectableItemSelectionPage","path":"/selectableitems/selection","traits":[{"ref":"SelectableItemSelection"}]}]}],"description":"Selection behavior parameterized for any domain. Provides item selection from a list with confirm/deselect controls. Three states: idle, selecting, selected with transitions for the full lifecycle."},
+    schema: {"name":"SelectableItemOrbital","orbitals":[{"name":"SelectableItemOrbital","entity":{"name":"SelectableItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"SelectableItemSelection","linkedEntity":"SelectableItem","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"selecting"},{"name":"selected"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SELECT","name":"Select","payload":[{"name":"id","type":"string","required":true}]},{"key":"DESELECT","name":"Deselect"},{"key":"CLEAR","name":"Clear"},{"key":"CONFIRM_SELECTION","name":"Confirm Selection","payload":[{"name":"id","type":"string","required":true}]}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"idle","to":"selecting","event":"SELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"badge","label":"Selecting"},{"type":"button","label":"Clear","event":"CLEAR","variant":"ghost","icon":"x"}]}]},{"type":"divider"},{"type":"alert","variant":"info","message":["concat","Selected: ","@payload.id"]},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name","checked":["==","@item.id","@payload.id"]}]}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Select All","action":"SELECT","icon":"check-square","variant":"secondary"},{"type":"button","label":"Deselect All","action":"DESELECT","icon":"square","variant":"secondary"},{"type":"button","label":"Confirm","action":"CONFIRM_SELECTION","icon":"check","variant":"primary"}]}]}]]},{"from":"selecting","to":"selecting","event":"SELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"badge","label":"Selecting"},{"type":"button","label":"Clear","event":"CLEAR","variant":"ghost","icon":"x"}]}]},{"type":"divider"},{"type":"alert","variant":"info","message":["concat","Selected: ","@payload.id"]},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name","checked":["==","@item.id","@payload.id"]}]}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Select All","action":"SELECT","icon":"check-square","variant":"secondary"},{"type":"button","label":"Deselect All","action":"DESELECT","icon":"square","variant":"secondary"},{"type":"button","label":"Confirm","action":"CONFIRM_SELECTION","icon":"check","variant":"primary"}]}]}]]},{"from":"selecting","to":"idle","event":"DESELECT","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"selecting","to":"idle","event":"CLEAR","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]},{"from":"selecting","to":"selected","event":"CONFIRM_SELECTION","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Selection Confirmed","variant":"h2"}]},{"type":"badge","label":"Confirmed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Selection confirmed successfully."},{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"typography","variant":"caption","content":"Selected ID:"},{"type":"typography","variant":"body","content":"@payload.id"}]},{"type":"button","label":"Clear Selection","event":"CLEAR","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"selected","to":"idle","event":"CLEAR","effects":[["fetch","SelectableItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-square","size":"lg"},{"type":"typography","content":"SelectableItems","variant":"h2"}]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Choose a selectableitem to continue."},{"type":"data-grid","entity":"SelectableItem","emptyIcon":"inbox","emptyTitle":"No selectableitems yet","emptyDescription":"Add selectableitems to see them here.","className":"transition-shadow hover:shadow-md cursor-pointer","itemActions":[{"label":"Select","event":"SELECT","icon":"check"}],"renderItem":["fn","item",{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"checkbox","label":"@item.name"}]}]}]}]]}]}}],"pages":[{"name":"SelectableItemSelectionPage","path":"/selectableitems/selection","traits":[{"ref":"SelectableItemSelection"}]}]}],"description":"Selection behavior parameterized for any domain. Provides item selection from a list with confirm/deselect controls. Three states: idle, selecting, selected with transitions for the full lifecycle."},
     source: `/**
  * std-selection as a Function
  *
@@ -8829,11 +8929,11 @@ function buildTrait(c: SelectionConfig): Trait {
       },
       { type: 'divider' },
       {
-        type: 'button-group', variant: 'outline',
-        buttons: [
-          { label: 'Select All', event: 'SELECT', icon: 'check-square' },
-          { label: 'Deselect All', event: 'DESELECT', icon: 'square' },
-          { label: 'Confirm', event: 'CONFIRM_SELECTION', icon: 'check' },
+        type: 'stack', direction: 'horizontal', gap: 'sm',
+        children: [
+          { type: 'button', label: 'Select All', action: 'SELECT', icon: 'check-square', variant: 'secondary' },
+          { type: 'button', label: 'Deselect All', action: 'DESELECT', icon: 'square', variant: 'secondary' },
+          { type: 'button', label: 'Confirm', action: 'CONFIRM_SELECTION', icon: 'check', variant: 'primary' },
         ],
       },
     ],
@@ -8981,11 +9081,4055 @@ export function stdSelection(params: StdSelectionParams): OrbitalDefinition {
 }
 `,
   },
+  "std-service-custom-bearer": {
+    name: "std-service-custom-bearer",
+    description: "Custom REST API behavior with Bearer token authentication. Tests the schema-level service declaration pattern with bearer auth. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceCustomBearerOrbital","services":[{"name":"custom-bearer-api","type":"rest","baseUrl":"https://api.example.com/v2","auth":{"type":"bearer","secretEnv":"CUSTOM_BEARER_TOKEN"}}],"orbitals":[{"name":"ServiceCustomBearerOrbital","entity":{"name":"ServiceCustomBearer","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceCustomBearerCustomBearer","linkedEntity":"ServiceCustomBearer","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_API","name":"Call API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceCustomBearer"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"idle","to":"calling","event":"CALL_API","effects":[["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustombearer endpoint..."}],["call-service","custom-bearer-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"badge","content":"@entity.statusCode","variant":"info"},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]}]}}],"pages":[{"name":"ServiceCustomBearerPage","path":"/servicecustombearers","traits":[{"ref":"ServiceCustomBearerCustomBearer"}]}]}],"description":"Custom REST API behavior with Bearer token authentication. Tests the schema-level service declaration pattern with bearer auth. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-custom-bearer
+ *
+ * Custom REST API behavior with Bearer token authentication.
+ * Tests the schema-level service declaration pattern with bearer auth.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceCustomBearerParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  standalone?: boolean;
+
+  /** The custom API base URL (required) */
+  baseUrl: string;
+
+  /** Environment variable holding the bearer token */
+  secretEnvVar?: string;
+
+  // Page
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface CustomBearerConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  standalone: boolean;
+  baseUrl: string;
+  secretEnvVar: string;
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceCustomBearerParams): CustomBearerConfig {
+  const entityName = params.entityName ?? 'ApiCall';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'endpoint', type: 'string' },
+    { name: 'method', type: 'string', default: 'GET' },
+    { name: 'requestBody', type: 'string' },
+    { name: 'responseData', type: 'string' },
+    { name: 'statusCode', type: 'number', default: 0 },
+    { name: 'callStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    standalone: params.standalone ?? true,
+    baseUrl: params.baseUrl,
+    secretEnvVar: params.secretEnvVar ?? 'CUSTOM_BEARER_TOKEN',
+    traitName: \`\${entityName}CustomBearer\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: CustomBearerConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: CustomBearerConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // idle: API tester form (only when standalone)
+  const idleChildren: unknown[] = [
+    { type: 'icon', name: 'shield', size: 'lg' },
+    { type: 'typography', content: 'Bearer API Tester', variant: 'h2' },
+    {
+      type: 'input',
+      field: 'endpoint',
+      placeholder: '/users',
+      bind: '@entity.endpoint',
+    },
+    {
+      type: 'select',
+      field: 'method',
+      bind: '@entity.method',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+      ],
+    },
+    {
+      type: 'textarea',
+      field: 'requestBody',
+      placeholder: 'JSON request body',
+      bind: '@entity.requestBody',
+    },
+    { type: 'button', label: 'Send Request', event: 'CALL_API', variant: 'primary', icon: 'send' },
+  ];
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: idleChildren,
+  };
+
+  // calling: loading state
+  const callingUI = {
+    type: 'loading-state', title: 'Calling API...', message: \`Sending request to \${entityName.toLowerCase()} endpoint...\`,
+  };
+
+  // complete: response viewer
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'typography', content: 'Response', variant: 'h2' },
+      { type: 'badge', content: '@entity.statusCode', variant: 'info' },
+      { type: 'code', content: '@entity.responseData', language: 'json' },
+      { type: 'button', label: 'New Request', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // error: error state
+  const errorUI = {
+    type: 'error-state', title: 'Request Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // CALL_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_API',
+      effects: [
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-bearer-api', 'execute', {
+          endpoint: '@entity.endpoint',
+          method: '@entity.method',
+          body: '@entity.requestBody',
+        }],
+      ],
+    },
+    // API_RESPONSE: calling -> complete
+    {
+      from: 'calling', to: 'complete', event: 'API_RESPONSE',
+      effects: [
+        ['set', '@entity.responseData', '@payload.data'],
+        ['set', '@entity.statusCode', '@payload.statusCode'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: calling -> error
+    {
+      from: 'calling', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'calling' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CALL_API', name: 'Call API' },
+        { key: 'API_RESPONSE', name: 'API Response', payload: [
+          { name: 'data', type: 'string', required: true },
+          { name: 'statusCode', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: CustomBearerConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceCustomBearerEntity(params: StdServiceCustomBearerParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceCustomBearerTrait(params: StdServiceCustomBearerParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceCustomBearerPage(params: StdServiceCustomBearerParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceCustomBearer(params: StdServiceCustomBearerParams): OrbitalDefinition {
+  const c = resolve(params);
+  const orbital = makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+  // Attach custom service declaration with bearer auth
+  return {
+    ...orbital,
+    services: [{
+      name: 'custom-bearer-api',
+      type: 'rest' as const,
+      baseUrl: c.baseUrl,
+      auth: {
+        type: 'bearer' as const,
+        secretEnv: c.secretEnvVar,
+      },
+    }],
+  };
+}
+`,
+  },
+  "std-service-custom-header": {
+    name: "std-service-custom-header",
+    description: "Custom REST API behavior with header-based API key authentication. Tests the schema-level service declaration pattern (no pre-built integration). Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceCustomHeaderOrbital","services":[{"name":"custom-header-api","type":"rest","baseUrl":"https://api.example.com/v1","auth":{"type":"api-key","keyName":"X-API-Key","location":"header","secretEnv":"CUSTOM_API_SECRET"}}],"orbitals":[{"name":"ServiceCustomHeaderOrbital","entity":{"name":"ServiceCustomHeader","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceCustomHeaderCustomHeader","linkedEntity":"ServiceCustomHeader","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_API","name":"Call API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceCustomHeader"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"idle","to":"calling","event":"CALL_API","effects":[["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomheader endpoint..."}],["call-service","custom-header-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"badge","content":"@entity.statusCode","variant":"info"},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]}]}}],"pages":[{"name":"ServiceCustomHeaderPage","path":"/servicecustomheaders","traits":[{"ref":"ServiceCustomHeaderCustomHeader"}]}]}],"description":"Custom REST API behavior with header-based API key authentication. Tests the schema-level service declaration pattern (no pre-built integration). Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-custom-header
+ *
+ * Custom REST API behavior with header-based API key authentication.
+ * Tests the schema-level service declaration pattern (no pre-built integration).
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceCustomHeaderParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  standalone?: boolean;
+
+  /** The custom API base URL (required) */
+  baseUrl: string;
+
+  /** Environment variable holding the API secret */
+  secretEnvVar?: string;
+
+  /** Header name for the API key */
+  headerKeyName?: string;
+
+  // Page
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface CustomHeaderConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  standalone: boolean;
+  baseUrl: string;
+  secretEnvVar: string;
+  headerKeyName: string;
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceCustomHeaderParams): CustomHeaderConfig {
+  const entityName = params.entityName ?? 'ApiCall';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'endpoint', type: 'string' },
+    { name: 'method', type: 'string', default: 'GET' },
+    { name: 'requestBody', type: 'string' },
+    { name: 'responseData', type: 'string' },
+    { name: 'statusCode', type: 'number', default: 0 },
+    { name: 'callStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    standalone: params.standalone ?? true,
+    baseUrl: params.baseUrl,
+    secretEnvVar: params.secretEnvVar ?? 'CUSTOM_API_SECRET',
+    headerKeyName: params.headerKeyName ?? 'X-API-Key',
+    traitName: \`\${entityName}CustomHeader\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: CustomHeaderConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: CustomHeaderConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // idle: API tester form (only when standalone)
+  const idleChildren: unknown[] = [
+    { type: 'icon', name: 'globe', size: 'lg' },
+    { type: 'typography', content: 'API Tester', variant: 'h2' },
+    {
+      type: 'input',
+      field: 'endpoint',
+      placeholder: '/users',
+      bind: '@entity.endpoint',
+    },
+    {
+      type: 'select',
+      field: 'method',
+      bind: '@entity.method',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+      ],
+    },
+    {
+      type: 'textarea',
+      field: 'requestBody',
+      placeholder: 'JSON request body',
+      bind: '@entity.requestBody',
+    },
+    { type: 'button', label: 'Send Request', event: 'CALL_API', variant: 'primary', icon: 'send' },
+  ];
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: idleChildren,
+  };
+
+  // calling: loading state
+  const callingUI = {
+    type: 'loading-state', title: 'Calling API...', message: \`Sending request to \${entityName.toLowerCase()} endpoint...\`,
+  };
+
+  // complete: response viewer
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'typography', content: 'Response', variant: 'h2' },
+      { type: 'badge', content: '@entity.statusCode', variant: 'info' },
+      { type: 'code', content: '@entity.responseData', language: 'json' },
+      { type: 'button', label: 'New Request', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // error: error state
+  const errorUI = {
+    type: 'error-state', title: 'Request Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // CALL_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_API',
+      effects: [
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-header-api', 'execute', {
+          endpoint: '@entity.endpoint',
+          method: '@entity.method',
+          body: '@entity.requestBody',
+        }],
+      ],
+    },
+    // API_RESPONSE: calling -> complete
+    {
+      from: 'calling', to: 'complete', event: 'API_RESPONSE',
+      effects: [
+        ['set', '@entity.responseData', '@payload.data'],
+        ['set', '@entity.statusCode', '@payload.statusCode'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: calling -> error
+    {
+      from: 'calling', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'calling' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CALL_API', name: 'Call API' },
+        { key: 'API_RESPONSE', name: 'API Response', payload: [
+          { name: 'data', type: 'string', required: true },
+          { name: 'statusCode', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: CustomHeaderConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceCustomHeaderEntity(params: StdServiceCustomHeaderParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceCustomHeaderTrait(params: StdServiceCustomHeaderParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceCustomHeaderPage(params: StdServiceCustomHeaderParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceCustomHeader(params: StdServiceCustomHeaderParams): OrbitalDefinition {
+  const c = resolve(params);
+  const orbital = makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+  // Attach custom service declaration
+  return {
+    ...orbital,
+    services: [{
+      name: 'custom-header-api',
+      type: 'rest' as const,
+      baseUrl: c.baseUrl,
+      auth: {
+        type: 'api-key' as const,
+        keyName: c.headerKeyName,
+        location: 'header' as const,
+        secretEnv: c.secretEnvVar,
+      },
+    }],
+  };
+}
+`,
+  },
+  "std-service-custom-noauth": {
+    name: "std-service-custom-noauth",
+    description: "Custom REST API behavior with no authentication. Tests the schema-level service declaration pattern for public APIs. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceCustomNoauthOrbital","services":[{"name":"custom-noauth-api","type":"rest","baseUrl":"https://api.example.com/v4"}],"orbitals":[{"name":"ServiceCustomNoauthOrbital","entity":{"name":"ServiceCustomNoauth","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceCustomNoauthCustomNoauth","linkedEntity":"ServiceCustomNoauth","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_API","name":"Call API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceCustomNoauth"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Public API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"idle","to":"calling","event":"CALL_API","effects":[["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomnoauth endpoint..."}],["call-service","custom-noauth-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"badge","content":"@entity.statusCode","variant":"info"},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Public API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Public API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Public API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]}]}}],"pages":[{"name":"ServiceCustomNoauthPage","path":"/servicecustomnoauths","traits":[{"ref":"ServiceCustomNoauthCustomNoauth"}]}]}],"description":"Custom REST API behavior with no authentication. Tests the schema-level service declaration pattern for public APIs. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-custom-noauth
+ *
+ * Custom REST API behavior with no authentication.
+ * Tests the schema-level service declaration pattern for public APIs.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceCustomNoauthParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  standalone?: boolean;
+
+  /** The custom API base URL (required) */
+  baseUrl: string;
+
+  // Page
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface CustomNoauthConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  standalone: boolean;
+  baseUrl: string;
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceCustomNoauthParams): CustomNoauthConfig {
+  const entityName = params.entityName ?? 'ApiCall';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'endpoint', type: 'string' },
+    { name: 'method', type: 'string', default: 'GET' },
+    { name: 'requestBody', type: 'string' },
+    { name: 'responseData', type: 'string' },
+    { name: 'statusCode', type: 'number', default: 0 },
+    { name: 'callStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    standalone: params.standalone ?? true,
+    baseUrl: params.baseUrl,
+    traitName: \`\${entityName}CustomNoauth\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: CustomNoauthConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: CustomNoauthConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // idle: API tester form (only when standalone)
+  const idleChildren: unknown[] = [
+    { type: 'icon', name: 'globe', size: 'lg' },
+    { type: 'typography', content: 'Public API Tester', variant: 'h2' },
+    {
+      type: 'input',
+      field: 'endpoint',
+      placeholder: '/users',
+      bind: '@entity.endpoint',
+    },
+    {
+      type: 'select',
+      field: 'method',
+      bind: '@entity.method',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+      ],
+    },
+    {
+      type: 'textarea',
+      field: 'requestBody',
+      placeholder: 'JSON request body',
+      bind: '@entity.requestBody',
+    },
+    { type: 'button', label: 'Send Request', event: 'CALL_API', variant: 'primary', icon: 'send' },
+  ];
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: idleChildren,
+  };
+
+  // calling: loading state
+  const callingUI = {
+    type: 'loading-state', title: 'Calling API...', message: \`Sending request to \${entityName.toLowerCase()} endpoint...\`,
+  };
+
+  // complete: response viewer
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'typography', content: 'Response', variant: 'h2' },
+      { type: 'badge', content: '@entity.statusCode', variant: 'info' },
+      { type: 'code', content: '@entity.responseData', language: 'json' },
+      { type: 'button', label: 'New Request', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // error: error state
+  const errorUI = {
+    type: 'error-state', title: 'Request Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // CALL_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_API',
+      effects: [
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-noauth-api', 'execute', {
+          endpoint: '@entity.endpoint',
+          method: '@entity.method',
+          body: '@entity.requestBody',
+        }],
+      ],
+    },
+    // API_RESPONSE: calling -> complete
+    {
+      from: 'calling', to: 'complete', event: 'API_RESPONSE',
+      effects: [
+        ['set', '@entity.responseData', '@payload.data'],
+        ['set', '@entity.statusCode', '@payload.statusCode'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: calling -> error
+    {
+      from: 'calling', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'calling' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CALL_API', name: 'Call API' },
+        { key: 'API_RESPONSE', name: 'API Response', payload: [
+          { name: 'data', type: 'string', required: true },
+          { name: 'statusCode', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: CustomNoauthConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceCustomNoauthEntity(params: StdServiceCustomNoauthParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceCustomNoauthTrait(params: StdServiceCustomNoauthParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceCustomNoauthPage(params: StdServiceCustomNoauthParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceCustomNoauth(params: StdServiceCustomNoauthParams): OrbitalDefinition {
+  const c = resolve(params);
+  const orbital = makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+  // Attach custom service declaration with no auth
+  return {
+    ...orbital,
+    services: [{
+      name: 'custom-noauth-api',
+      type: 'rest' as const,
+      baseUrl: c.baseUrl,
+    }],
+  };
+}
+`,
+  },
+  "std-service-custom-query": {
+    name: "std-service-custom-query",
+    description: "Custom REST API behavior with query-string API key authentication. Tests the schema-level service declaration pattern with query-based auth. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceCustomQueryOrbital","services":[{"name":"custom-query-api","type":"rest","baseUrl":"https://api.example.com/v3","auth":{"type":"api-key","keyName":"api_key","location":"query","secretEnv":"CUSTOM_QUERY_KEY"}}],"orbitals":[{"name":"ServiceCustomQueryOrbital","entity":{"name":"ServiceCustomQuery","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceCustomQueryCustomQuery","linkedEntity":"ServiceCustomQuery","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_API","name":"Call API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceCustomQuery"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Query Auth API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"idle","to":"calling","event":"CALL_API","effects":[["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomquery endpoint..."}],["call-service","custom-query-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"badge","content":"@entity.statusCode","variant":"info"},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Query Auth API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Query Auth API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Query Auth API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]]}]}}],"pages":[{"name":"ServiceCustomQueryPage","path":"/servicecustomquerys","traits":[{"ref":"ServiceCustomQueryCustomQuery"}]}]}],"description":"Custom REST API behavior with query-string API key authentication. Tests the schema-level service declaration pattern with query-based auth. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-custom-query
+ *
+ * Custom REST API behavior with query-string API key authentication.
+ * Tests the schema-level service declaration pattern with query-based auth.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceCustomQueryParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  standalone?: boolean;
+
+  /** The custom API base URL (required) */
+  baseUrl: string;
+
+  /** Environment variable holding the API key */
+  secretEnvVar?: string;
+
+  /** Query parameter name for the API key */
+  queryKeyName?: string;
+
+  // Page
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface CustomQueryConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  standalone: boolean;
+  baseUrl: string;
+  secretEnvVar: string;
+  queryKeyName: string;
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceCustomQueryParams): CustomQueryConfig {
+  const entityName = params.entityName ?? 'ApiCall';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'endpoint', type: 'string' },
+    { name: 'method', type: 'string', default: 'GET' },
+    { name: 'requestBody', type: 'string' },
+    { name: 'responseData', type: 'string' },
+    { name: 'statusCode', type: 'number', default: 0 },
+    { name: 'callStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    standalone: params.standalone ?? true,
+    baseUrl: params.baseUrl,
+    secretEnvVar: params.secretEnvVar ?? 'CUSTOM_QUERY_KEY',
+    queryKeyName: params.queryKeyName ?? 'api_key',
+    traitName: \`\${entityName}CustomQuery\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: CustomQueryConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: CustomQueryConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // idle: API tester form (only when standalone)
+  const idleChildren: unknown[] = [
+    { type: 'icon', name: 'search', size: 'lg' },
+    { type: 'typography', content: 'Query Auth API Tester', variant: 'h2' },
+    {
+      type: 'input',
+      field: 'endpoint',
+      placeholder: '/users',
+      bind: '@entity.endpoint',
+    },
+    {
+      type: 'select',
+      field: 'method',
+      bind: '@entity.method',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+      ],
+    },
+    {
+      type: 'textarea',
+      field: 'requestBody',
+      placeholder: 'JSON request body',
+      bind: '@entity.requestBody',
+    },
+    { type: 'button', label: 'Send Request', event: 'CALL_API', variant: 'primary', icon: 'send' },
+  ];
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: idleChildren,
+  };
+
+  // calling: loading state
+  const callingUI = {
+    type: 'loading-state', title: 'Calling API...', message: \`Sending request to \${entityName.toLowerCase()} endpoint...\`,
+  };
+
+  // complete: response viewer
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'typography', content: 'Response', variant: 'h2' },
+      { type: 'badge', content: '@entity.statusCode', variant: 'info' },
+      { type: 'code', content: '@entity.responseData', language: 'json' },
+      { type: 'button', label: 'New Request', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // error: error state
+  const errorUI = {
+    type: 'error-state', title: 'Request Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // CALL_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_API',
+      effects: [
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-query-api', 'execute', {
+          endpoint: '@entity.endpoint',
+          method: '@entity.method',
+          body: '@entity.requestBody',
+        }],
+      ],
+    },
+    // API_RESPONSE: calling -> complete
+    {
+      from: 'calling', to: 'complete', event: 'API_RESPONSE',
+      effects: [
+        ['set', '@entity.responseData', '@payload.data'],
+        ['set', '@entity.statusCode', '@payload.statusCode'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: calling -> error
+    {
+      from: 'calling', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'calling' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CALL_API', name: 'Call API' },
+        { key: 'API_RESPONSE', name: 'API Response', payload: [
+          { name: 'data', type: 'string', required: true },
+          { name: 'statusCode', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: CustomQueryConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceCustomQueryEntity(params: StdServiceCustomQueryParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceCustomQueryTrait(params: StdServiceCustomQueryParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceCustomQueryPage(params: StdServiceCustomQueryParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceCustomQuery(params: StdServiceCustomQueryParams): OrbitalDefinition {
+  const c = resolve(params);
+  const orbital = makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+  // Attach custom service declaration with query-string API key auth
+  return {
+    ...orbital,
+    services: [{
+      name: 'custom-query-api',
+      type: 'rest' as const,
+      baseUrl: c.baseUrl,
+      auth: {
+        type: 'api-key' as const,
+        keyName: c.queryKeyName,
+        location: 'query' as const,
+        secretEnv: c.secretEnvVar,
+      },
+    }],
+  };
+}
+`,
+  },
+  "std-service-email": {
+    name: "std-service-email",
+    description: "Email service integration behavior: compose, send, track delivery status. Wraps the `email` service with call-service for send operations. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceEmailOrbital","orbitals":[{"name":"ServiceEmailOrbital","entity":{"name":"ServiceEmail","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"to","type":"string"},{"name":"subject","type":"string"},{"name":"body","type":"string"},{"name":"from","type":"string"},{"name":"sendStatus","type":"string","default":"idle"},{"name":"messageId","type":"string"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceEmailEmail","linkedEntity":"ServiceEmail","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"sending"},{"name":"sent"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEND","name":"Send Email"},{"key":"SENT","name":"Email Sent","payload":[{"name":"messageId","type":"string","required":false}]},{"key":"FAILED","name":"Send Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceEmail"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"lg"},{"type":"typography","content":"ServiceEmail Email","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"recipient@example.com"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Email subject"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Write your message..."},{"type":"button","label":"Send","event":"SEND","variant":"primary","icon":"send"}]}]]},{"from":"idle","to":"sending","event":"SEND","effects":[["render-ui","main",{"type":"loading-state","title":"Sending email...","message":"Delivering serviceemail email..."}],["call-service","email","send",{"to":"@entity.to","subject":"@entity.subject","body":"@entity.body"}]]},{"from":"sending","to":"sent","event":"SENT","effects":[["set","@entity.sendStatus","sent"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Email sent successfully"},{"type":"button","label":"Send Another","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"sending","to":"error","event":"FAILED","effects":[["set","@entity.sendStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Send Failed","message":"Could not deliver the email.","onRetry":"RETRY"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Retry","event":"RETRY","variant":"primary","icon":"refresh-cw"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"lg"},{"type":"typography","content":"ServiceEmail Email","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"recipient@example.com"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Email subject"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Write your message..."},{"type":"button","label":"Send","event":"SEND","variant":"primary","icon":"send"}]}]]},{"from":"sent","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"lg"},{"type":"typography","content":"ServiceEmail Email","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"recipient@example.com"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Email subject"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Write your message..."},{"type":"button","label":"Send","event":"SEND","variant":"primary","icon":"send"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"lg"},{"type":"typography","content":"ServiceEmail Email","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"recipient@example.com"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Email subject"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Write your message..."},{"type":"button","label":"Send","event":"SEND","variant":"primary","icon":"send"}]}]]}]}}],"pages":[{"name":"ServiceEmailPage","path":"/serviceemails","traits":[{"ref":"ServiceEmailEmail"}]}]}],"description":"Email service integration behavior: compose, send, track delivery status. Wraps the `email` service with call-service for send operations. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-email
+ *
+ * Email service integration behavior: compose, send, track delivery status.
+ * Wraps the \`email\` service with call-service for send operations.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceEmailParams {
+  entityName: string;
+  fields: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  collection?: string;
+
+  // Page
+  standalone?: boolean;
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface EmailConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  collection?: string;
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceEmailParams): EmailConfig {
+  const { entityName } = params;
+
+  const requiredFields: EntityField[] = [
+    { name: 'to', type: 'string' },
+    { name: 'subject', type: 'string' },
+    { name: 'body', type: 'string' },
+    { name: 'from', type: 'string' },
+    { name: 'sendStatus', type: 'string', default: 'idle' },
+    { name: 'messageId', type: 'string' },
+    { name: 'error', type: 'string' },
+  ];
+  const existingNames = new Set(params.fields.map(f => f.name));
+  const mergedFields = [
+    ...params.fields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+  const p = plural(entityName);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    collection: params.collection,
+    traitName: \`\${entityName}Email\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: EmailConfig): Entity {
+  const emailFields: EntityField[] = [
+    ...c.fields,
+    { name: 'to', type: 'string', required: true },
+    { name: 'subject', type: 'string', required: true },
+    { name: 'body', type: 'string', required: true },
+    { name: 'from', type: 'string', required: false },
+    { name: 'sendStatus', type: 'string', default: 'idle' },
+    { name: 'messageId', type: 'string' },
+    { name: 'error', type: 'string' },
+  ];
+
+  // Deduplicate: user-supplied fields take precedence, but ensure email-specific
+  // fields exist. Filter out duplicates from emailFields that already exist in c.fields.
+  const userFieldNames = new Set(c.fields.map(f => f.name));
+  const merged = [
+    ...c.fields,
+    ...emailFields.filter(f => !userFieldNames.has(f.name)),
+  ];
+
+  return makeEntity({
+    name: c.entityName,
+    fields: merged,
+    persistence: c.persistence,
+    collection: c.collection,
+  });
+}
+
+function buildTrait(c: EmailConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // Idle: compose form (shown when standalone) or minimal prompt
+  const idleChildren: unknown[] = [
+    {
+      type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+      children: [
+        { type: 'icon', name: 'mail', size: 'lg' },
+        { type: 'typography', content: \`\${entityName} Email\`, variant: 'h2' },
+      ],
+    },
+    { type: 'divider' },
+  ];
+
+  if (standalone) {
+    idleChildren.push(
+      { type: 'input', label: 'To', bind: '@entity.to', placeholder: 'recipient@example.com' },
+      { type: 'input', label: 'Subject', bind: '@entity.subject', placeholder: 'Email subject' },
+      { type: 'textarea', label: 'Body', bind: '@entity.body', placeholder: 'Write your message...' },
+    );
+  }
+
+  idleChildren.push(
+    { type: 'button', label: 'Send', event: 'SEND', variant: 'primary', icon: 'send' },
+  );
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: idleChildren,
+  };
+
+  // Sending: loading state
+  const sendingUI = {
+    type: 'loading-state', title: 'Sending email...', message: \`Delivering \${entityName.toLowerCase()} email...\`,
+  };
+
+  // Sent: success confirmation
+  const sentUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Email sent successfully' },
+      { type: 'button', label: 'Send Another', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // Error: retry and reset
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Send Failed', message: 'Could not deliver the email.', onRetry: 'RETRY' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Retry', event: 'RETRY', variant: 'primary', icon: 'refresh-cw' },
+          { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+    ],
+  };
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch existing data + render compose form)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // SEND: idle -> sending (call email service + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND',
+      effects: [
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'email', 'send', { to: '@entity.to', subject: '@entity.subject', body: '@entity.body' }],
+      ],
+    },
+    // SENT: sending -> sent (delivery confirmed)
+    {
+      from: 'sending', to: 'sent', event: 'SENT',
+      effects: [
+        ['set', '@entity.sendStatus', 'sent'],
+        ['render-ui', 'main', sentUI],
+      ],
+    },
+    // FAILED: sending -> error (delivery failed)
+    {
+      from: 'sending', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.sendStatus', 'error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle (try again)
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET from sent: sent -> idle
+    {
+      from: 'sent', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET from error: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'sending' },
+        { name: 'sent' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEND', name: 'Send Email' },
+        { key: 'SENT', name: 'Email Sent', payload: [{ name: 'messageId', type: 'string', required: false }] },
+        { key: 'FAILED', name: 'Send Failed', payload: [{ name: 'error', type: 'string', required: true }] },
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: EmailConfig): Page | undefined {
+  if (!c.standalone) return undefined;
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceEmailEntity(params: StdServiceEmailParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceEmailTrait(params: StdServiceEmailParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceEmailPage(params: StdServiceEmailParams): Page | undefined {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceEmail(params: StdServiceEmailParams): OrbitalDefinition {
+  const c = resolve(params);
+  const pages: Page[] = [];
+  const page = buildPage(c);
+  if (page) pages.push(page);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    pages,
+  );
+}
+`,
+  },
+  "std-service-github": {
+    name: "std-service-github",
+    description: "GitHub service integration behavior: idle, creatingPR, prCreated, error. Wraps the `github` integration (listIssues, createPR) with a PR creation flow. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceGithubOrbital","orbitals":[{"name":"ServiceGithubOrbital","entity":{"name":"ServiceGithub","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"title","type":"string","default":""},{"name":"body","type":"string","default":""},{"name":"head","type":"string","default":""},{"name":"base","type":"string","default":"main"},{"name":"prUrl","type":"string","default":""},{"name":"prNumber","type":"number","default":0},{"name":"ghStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"ServiceGithubGithub","linkedEntity":"ServiceGithub","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"creatingPR"},{"name":"prCreated"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE_PR","name":"Create Pull Request"},{"key":"PR_CREATED","name":"PR Created","payload":[{"name":"url","type":"string","required":true},{"name":"number","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceGithub"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"Create Pull Request","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Title","field":"title","placeholder":"PR title"},{"type":"textarea","label":"Body","field":"body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","field":"head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","field":"base","placeholder":"main"}]},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]},{"from":"idle","to":"creatingPR","event":"CREATE_PR","effects":[["render-ui","main",{"type":"loading-state","title":"Creating pull request...","message":"Submitting your PR to GitHub."}],["call-service","github","createPR",{"title":"@entity.title","body":"@entity.body","head":"@entity.head","base":"@entity.base"}]]},{"from":"creatingPR","to":"prCreated","event":"PR_CREATED","effects":[["set","@entity.prUrl","@payload.url"],["set","@entity.prNumber","@payload.number"],["set","@entity.ghStatus","created"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Pull request created!"},{"type":"typography","variant":"body","color":"muted","content":"@entity.prUrl"},{"type":"button","label":"Create Another","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"creatingPR","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"PR Creation Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"Create Pull Request","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Title","field":"title","placeholder":"PR title"},{"type":"textarea","label":"Body","field":"body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","field":"head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","field":"base","placeholder":"main"}]},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]},{"from":"prCreated","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"Create Pull Request","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Title","field":"title","placeholder":"PR title"},{"type":"textarea","label":"Body","field":"body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","field":"head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","field":"base","placeholder":"main"}]},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"Create Pull Request","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Title","field":"title","placeholder":"PR title"},{"type":"textarea","label":"Body","field":"body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","field":"head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","field":"base","placeholder":"main"}]},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]}]}}],"pages":[{"name":"ServiceGithubPage","path":"/servicegithubs","traits":[{"ref":"ServiceGithubGithub"}]}]}],"description":"GitHub service integration behavior: idle, creatingPR, prCreated, error. Wraps the `github` integration (listIssues, createPR) with a PR creation flow. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-github
+ *
+ * GitHub service integration behavior: idle, creatingPR, prCreated, error.
+ * Wraps the \`github\` integration (listIssues, createPR) with a PR creation flow.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceGithubParams {
+  /** Entity name in PascalCase (default: "PullRequest") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, GitHub fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the PR form to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface GithubConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceGithubParams): GithubConfig {
+  const entityName = params.entityName ?? 'PullRequest';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'title', type: 'string' },
+    { name: 'body', type: 'string' },
+    { name: 'head', type: 'string' },
+    { name: 'base', type: 'string', default: 'main' },
+    { name: 'prUrl', type: 'string' },
+    { name: 'prNumber', type: 'number', default: 0 },
+    { name: 'ghStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Github\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: GithubConfig): Entity {
+  const githubFields: EntityField[] = [
+    { name: 'title', type: 'string' as const, default: '' },
+    { name: 'body', type: 'string' as const, default: '' },
+    { name: 'head', type: 'string' as const, default: '' },
+    { name: 'base', type: 'string' as const, default: 'main' },
+    { name: 'prUrl', type: 'string' as const, default: '' },
+    { name: 'prNumber', type: 'number' as const, default: 0 },
+    { name: 'ghStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  // Merge: GitHub fields first, then any extra user fields (skip duplicates)
+  const githubFieldNames = new Set(githubFields.map(f => f.name));
+  const extraFields = c.fields.filter(f => f.name !== 'id' && !githubFieldNames.has(f.name));
+  const allFields = ensureIdField([...githubFields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: GithubConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'git-pull-request', size: 'lg' },
+          { type: 'typography', content: 'Create Pull Request', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'stack', direction: 'vertical', gap: 'md',
+        children: [
+          { type: 'input', label: 'Title', field: 'title', placeholder: 'PR title' },
+          { type: 'textarea', label: 'Body', field: 'body', placeholder: 'Describe your changes...' },
+          { type: 'input', label: 'Head Branch', field: 'head', placeholder: 'feature-branch' },
+          { type: 'input', label: 'Base Branch', field: 'base', placeholder: 'main' },
+        ],
+      },
+      { type: 'button', label: 'Create PR', event: 'CREATE_PR', variant: 'primary', icon: 'git-pull-request' },
+    ],
+  };
+
+  const creatingUI = {
+    type: 'loading-state', title: 'Creating pull request...', message: 'Submitting your PR to GitHub.',
+  };
+
+  const prCreatedUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Pull request created!' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.prUrl' },
+      { type: 'button', label: 'Create Another', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'error-state', title: 'PR Creation Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render form if standalone)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ...(standalone ? [['fetch', entityName], ['render-ui', 'main', idleUI]] : [['fetch', entityName]]),
+      ],
+    },
+    // CREATE_PR: idle -> creatingPR (call github createPR + show loading)
+    {
+      from: 'idle', to: 'creatingPR', event: 'CREATE_PR',
+      effects: [
+        ['render-ui', 'main', creatingUI],
+        ['call-service', 'github', 'createPR', {
+          title: '@entity.title',
+          body: '@entity.body',
+          head: '@entity.head',
+          base: '@entity.base',
+        }],
+      ],
+    },
+    // PR_CREATED: creatingPR -> prCreated (persist PR data + show success)
+    {
+      from: 'creatingPR', to: 'prCreated', event: 'PR_CREATED',
+      effects: [
+        ['set', '@entity.prUrl', '@payload.url'],
+        ['set', '@entity.prNumber', '@payload.number'],
+        ['set', '@entity.ghStatus', 'created'],
+        ['render-ui', 'main', prCreatedUI],
+      ],
+    },
+    // FAILED: creatingPR -> error
+    {
+      from: 'creatingPR', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: prCreated -> idle
+    {
+      from: 'prCreated', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'creatingPR' },
+        { name: 'prCreated' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CREATE_PR', name: 'Create Pull Request' },
+        { key: 'PR_CREATED', name: 'PR Created', payload: [
+          { name: 'url', type: 'string', required: true },
+          { name: 'number', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: GithubConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceGithubEntity(params: StdServiceGithubParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceGithubTrait(params: StdServiceGithubParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceGithubPage(params: StdServiceGithubParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceGithub(params: StdServiceGithubParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-llm": {
+    name: "std-service-llm",
+    description: "LLM service integration behavior: generate, classify, summarize text. Wraps the `llm` integration with 4 actions via separate action events. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceLlmOrbital","orbitals":[{"name":"ServiceLlmOrbital","entity":{"name":"ServiceLlm","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"inputText","type":"string","default":""},{"name":"action","type":"string","default":"generate"},{"name":"result","type":"string","default":""},{"name":"llmStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"ServiceLlmLlm","linkedEntity":"ServiceLlm","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"processing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"GENERATE","name":"Generate"},{"key":"CLASSIFY","name":"Classify"},{"key":"SUMMARIZE","name":"Summarize"},{"key":"COMPLETE","name":"Complete","payload":[{"name":"content","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceLlm"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"brain","size":"lg"},{"type":"typography","content":"ServiceLlm LLM","variant":"h2"}]},{"type":"divider"},{"type":"textarea","label":"Input Text","bind":"@entity.inputText","placeholder":"Enter text for LLM processing..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Generate","event":"GENERATE","variant":"primary","icon":"sparkles"},{"type":"button","label":"Classify","event":"CLASSIFY","variant":"secondary","icon":"tag"},{"type":"button","label":"Summarize","event":"SUMMARIZE","variant":"secondary","icon":"align-left"}]}]}]]},{"from":"idle","to":"processing","event":"GENERATE","effects":[["set","@entity.action","generate"],["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Running servicellm LLM task..."}],["call-service","llm","generate",{"userPrompt":"@entity.inputText"}]]},{"from":"idle","to":"processing","event":"CLASSIFY","effects":[["set","@entity.action","classify"],["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Running servicellm LLM task..."}],["call-service","llm","classify",{"text":"@entity.inputText","categories":["positive","negative","neutral"]}]]},{"from":"idle","to":"processing","event":"SUMMARIZE","effects":[["set","@entity.action","summarize"],["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Running servicellm LLM task..."}],["call-service","llm","summarize",{"text":"@entity.inputText"}]]},{"from":"processing","to":"complete","event":"COMPLETE","effects":[["set","@entity.result","@payload.content"],["set","@entity.llmStatus","complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"LLM task complete"},{"type":"typography","variant":"body","content":"@entity.result"},{"type":"button","label":"Start Over","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"processing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.llmStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"LLM Failed","message":"@entity.error","onRetry":"RETRY"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Retry","event":"RETRY","variant":"primary","icon":"refresh-cw"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["set","@entity.llmStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"brain","size":"lg"},{"type":"typography","content":"ServiceLlm LLM","variant":"h2"}]},{"type":"divider"},{"type":"textarea","label":"Input Text","bind":"@entity.inputText","placeholder":"Enter text for LLM processing..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Generate","event":"GENERATE","variant":"primary","icon":"sparkles"},{"type":"button","label":"Classify","event":"CLASSIFY","variant":"secondary","icon":"tag"},{"type":"button","label":"Summarize","event":"SUMMARIZE","variant":"secondary","icon":"align-left"}]}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["set","@entity.llmStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"brain","size":"lg"},{"type":"typography","content":"ServiceLlm LLM","variant":"h2"}]},{"type":"divider"},{"type":"textarea","label":"Input Text","bind":"@entity.inputText","placeholder":"Enter text for LLM processing..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Generate","event":"GENERATE","variant":"primary","icon":"sparkles"},{"type":"button","label":"Classify","event":"CLASSIFY","variant":"secondary","icon":"tag"},{"type":"button","label":"Summarize","event":"SUMMARIZE","variant":"secondary","icon":"align-left"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.llmStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"brain","size":"lg"},{"type":"typography","content":"ServiceLlm LLM","variant":"h2"}]},{"type":"divider"},{"type":"textarea","label":"Input Text","bind":"@entity.inputText","placeholder":"Enter text for LLM processing..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Generate","event":"GENERATE","variant":"primary","icon":"sparkles"},{"type":"button","label":"Classify","event":"CLASSIFY","variant":"secondary","icon":"tag"},{"type":"button","label":"Summarize","event":"SUMMARIZE","variant":"secondary","icon":"align-left"}]}]}]]}]}}],"pages":[{"name":"ServiceLlmPage","path":"/servicellms","traits":[{"ref":"ServiceLlmLlm"}]}]}],"description":"LLM service integration behavior: generate, classify, summarize text. Wraps the `llm` integration with 4 actions via separate action events. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-llm
+ *
+ * LLM service integration behavior: generate, classify, summarize text.
+ * Wraps the \`llm\` integration with 4 actions via separate action events.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceLlmParams {
+  /** Entity name in PascalCase (default: "LlmTask") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, LLM fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the input form to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface LlmConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceLlmParams): LlmConfig {
+  const entityName = params.entityName ?? 'LlmTask';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'inputText', type: 'string' },
+    { name: 'action', type: 'string', default: 'generate' },
+    { name: 'result', type: 'string' },
+    { name: 'llmStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Llm\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: LlmConfig): Entity {
+  const llmFields: EntityField[] = [
+    { name: 'inputText', type: 'string' as const, default: '' },
+    { name: 'action', type: 'string' as const, default: 'generate' },
+    { name: 'result', type: 'string' as const, default: '' },
+    { name: 'llmStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  // Merge: LLM fields first, then any extra user fields (skip duplicates)
+  const llmFieldNames = new Set(llmFields.map(f => f.name));
+  const extraFields = c.fields.filter(f => f.name !== 'id' && !llmFieldNames.has(f.name));
+  const allFields = ensureIdField([...llmFields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: LlmConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleChildren: unknown[] = [
+    {
+      type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+      children: [
+        { type: 'icon', name: 'brain', size: 'lg' },
+        { type: 'typography', content: \`\${entityName} LLM\`, variant: 'h2' },
+      ],
+    },
+    { type: 'divider' },
+  ];
+
+  if (standalone) {
+    idleChildren.push(
+      { type: 'textarea', label: 'Input Text', bind: '@entity.inputText', placeholder: 'Enter text for LLM processing...' },
+    );
+  }
+
+  idleChildren.push(
+    {
+      type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+      children: [
+        { type: 'button', label: 'Generate', event: 'GENERATE', variant: 'primary', icon: 'sparkles' },
+        { type: 'button', label: 'Classify', event: 'CLASSIFY', variant: 'secondary', icon: 'tag' },
+        { type: 'button', label: 'Summarize', event: 'SUMMARIZE', variant: 'secondary', icon: 'align-left' },
+      ],
+    },
+  );
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: idleChildren,
+  };
+
+  const processingUI = {
+    type: 'loading-state', title: 'Processing...', message: \`Running \${entityName.toLowerCase()} LLM task...\`,
+  };
+
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'LLM task complete' },
+      { type: 'typography', variant: 'body', content: '@entity.result' },
+      { type: 'button', label: 'Start Over', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'LLM Failed', message: '@entity.error', onRetry: 'RETRY' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Retry', event: 'RETRY', variant: 'primary', icon: 'refresh-cw' },
+          { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render if standalone)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ...(standalone ? [['fetch', entityName], ['render-ui', 'main', idleUI]] : [['fetch', entityName]]),
+      ],
+    },
+    // GENERATE: idle -> processing (call llm generate + render loading)
+    {
+      from: 'idle', to: 'processing', event: 'GENERATE',
+      effects: [
+        ['set', '@entity.action', 'generate'],
+        ['render-ui', 'main', processingUI],
+        ['call-service', 'llm', 'generate', { userPrompt: '@entity.inputText' }],
+      ],
+    },
+    // CLASSIFY: idle -> processing (call llm classify + render loading)
+    {
+      from: 'idle', to: 'processing', event: 'CLASSIFY',
+      effects: [
+        ['set', '@entity.action', 'classify'],
+        ['render-ui', 'main', processingUI],
+        ['call-service', 'llm', 'classify', { text: '@entity.inputText', categories: ['positive', 'negative', 'neutral'] }],
+      ],
+    },
+    // SUMMARIZE: idle -> processing (call llm summarize + render loading)
+    {
+      from: 'idle', to: 'processing', event: 'SUMMARIZE',
+      effects: [
+        ['set', '@entity.action', 'summarize'],
+        ['render-ui', 'main', processingUI],
+        ['call-service', 'llm', 'summarize', { text: '@entity.inputText' }],
+      ],
+    },
+    // COMPLETE: processing -> complete (store result + render success)
+    {
+      from: 'processing', to: 'complete', event: 'COMPLETE',
+      effects: [
+        ['set', '@entity.result', '@payload.content'],
+        ['set', '@entity.llmStatus', 'complete'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: processing -> error (store error + render error)
+    {
+      from: 'processing', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.llmStatus', 'error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [
+        ['set', '@entity.llmStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.llmStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.llmStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'processing' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'GENERATE', name: 'Generate' },
+        { key: 'CLASSIFY', name: 'Classify' },
+        { key: 'SUMMARIZE', name: 'Summarize' },
+        { key: 'COMPLETE', name: 'Complete', payload: [
+          { name: 'content', type: 'string', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: LlmConfig): Page | undefined {
+  if (!c.standalone) return undefined;
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceLlmEntity(params: StdServiceLlmParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceLlmTrait(params: StdServiceLlmParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceLlmPage(params: StdServiceLlmParams = {}): Page | undefined {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceLlm(params: StdServiceLlmParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  const pages: Page[] = [];
+  const page = buildPage(c);
+  if (page) pages.push(page);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    pages,
+  );
+}
+`,
+  },
+  "std-service-oauth": {
+    name: "std-service-oauth",
+    description: "OAuth service integration behavior: authorize, token exchange, refresh. Wraps the `oauth` integration with a multi-step authorization flow. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceOauthOrbital","orbitals":[{"name":"ServiceOauthOrbital","entity":{"name":"ServiceOauth","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"provider","type":"string","default":"google"},{"name":"authUrl","type":"string","default":""},{"name":"accessToken","type":"string","default":""},{"name":"refreshToken","type":"string","default":""},{"name":"authStatus","type":"string","default":"unauthenticated"},{"name":"error","type":"string","default":""},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"ServiceOauthOauth","linkedEntity":"ServiceOauth","category":"interaction","stateMachine":{"states":[{"name":"unauthenticated","isInitial":true},{"name":"authorizing"},{"name":"authenticated"},{"name":"refreshing"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOGIN","name":"Login"},{"key":"AUTH_URL_RECEIVED","name":"Auth URL Received","payload":[{"name":"authUrl","type":"string","required":true}]},{"key":"CALLBACK","name":"Authorization Callback","payload":[{"name":"code","type":"string","required":true}]},{"key":"TOKEN_RECEIVED","name":"Token Received","payload":[{"name":"accessToken","type":"string","required":true},{"name":"refreshToken","type":"string","required":true}]},{"key":"REFRESH","name":"Refresh Token"},{"key":"TOKEN_REFRESHED","name":"Token Refreshed","payload":[{"name":"accessToken","type":"string","required":true}]},{"key":"LOGOUT","name":"Logout"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"}],"transitions":[{"from":"unauthenticated","to":"unauthenticated","event":"INIT","effects":[["fetch","ServiceOauth"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]]},{"from":"unauthenticated","to":"authorizing","event":"LOGIN","effects":[["render-ui","main",{"type":"loading-state","title":"Authorizing...","message":"Redirecting to provider for authorization."}],["call-service","oauth","authorize",{"provider":"@entity.provider","scopes":["openid","email"]}]]},{"from":"authorizing","to":"authorizing","event":"AUTH_URL_RECEIVED","effects":[["set","@entity.authUrl","@payload.authUrl"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"external-link","size":"lg"},{"type":"typography","content":"Authorization Required","variant":"h2"},{"type":"typography","content":"@entity.authUrl","variant":"body","color":"muted"},{"type":"input","label":"Authorization Code","field":"code","placeholder":"Paste authorization code here"},{"type":"button","label":"Submit","event":"CALLBACK","variant":"primary","icon":"check"}]}]]},{"from":"authorizing","to":"authenticated","event":"CALLBACK","effects":[["call-service","oauth","token",{"code":"@payload.code"}],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]]},{"from":"authenticated","to":"authenticated","event":"TOKEN_RECEIVED","effects":[["set","@entity.accessToken","@payload.accessToken"],["set","@entity.refreshToken","@payload.refreshToken"],["set","@entity.authStatus","authenticated"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]]},{"from":"authenticated","to":"refreshing","event":"REFRESH","effects":[["render-ui","main",{"type":"loading-state","title":"Refreshing token...","message":"Obtaining a new access token."}],["call-service","oauth","refresh",{"refreshToken":"@entity.refreshToken"}]]},{"from":"refreshing","to":"authenticated","event":"TOKEN_REFRESHED","effects":[["set","@entity.accessToken","@payload.accessToken"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]]},{"from":"authenticated","to":"unauthenticated","event":"LOGOUT","effects":[["set","@entity.authStatus","unauthenticated"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]]},{"from":"authorizing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Authentication Failed","message":"@entity.error","onRetry":"RETRY"},{"type":"button","label":"Try Again","event":"RETRY","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"refreshing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Authentication Failed","message":"@entity.error","onRetry":"RETRY"},{"type":"button","label":"Try Again","event":"RETRY","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"error","to":"unauthenticated","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]]}]}}],"pages":[{"name":"ServiceOauthPage","path":"/serviceoauths","traits":[{"ref":"ServiceOauthOauth"}]}]}],"description":"OAuth service integration behavior: authorize, token exchange, refresh. Wraps the `oauth` integration with a multi-step authorization flow. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-oauth
+ *
+ * OAuth service integration behavior: authorize, token exchange, refresh.
+ * Wraps the \`oauth\` integration with a multi-step authorization flow.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceOauthParams {
+  /** Entity name in PascalCase (default: "AuthSession") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, oauth fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the provider picker to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface OauthConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceOauthParams): OauthConfig {
+  const entityName = params.entityName ?? 'AuthSession';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'provider', type: 'string', default: 'google' },
+    { name: 'authUrl', type: 'string' },
+    { name: 'accessToken', type: 'string' },
+    { name: 'refreshToken', type: 'string' },
+    { name: 'authStatus', type: 'string', default: 'unauthenticated' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Oauth\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: OauthConfig): Entity {
+  const oauthFields: EntityField[] = [
+    { name: 'provider', type: 'string' as const, default: 'google' },
+    { name: 'authUrl', type: 'string' as const, default: '' },
+    { name: 'accessToken', type: 'string' as const, default: '' },
+    { name: 'refreshToken', type: 'string' as const, default: '' },
+    { name: 'authStatus', type: 'string' as const, default: 'unauthenticated' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  const oauthFieldNames = new Set(oauthFields.map(f => f.name));
+  const extraFields = c.fields.filter(f => f.name !== 'id' && !oauthFieldNames.has(f.name));
+  const allFields = ensureIdField([...oauthFields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: OauthConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  // unauthenticated: provider picker + login button
+  const unauthenticatedUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'lock', size: 'lg' },
+          { type: 'typography', content: 'Sign In', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'select', label: 'Provider', field: 'provider', bind: '@entity.provider',
+        options: [
+          { label: 'Google', value: 'google' },
+          { label: 'GitHub', value: 'github' },
+          { label: 'Microsoft', value: 'microsoft' },
+        ],
+      },
+      { type: 'button', label: 'Login', event: 'LOGIN', variant: 'primary', icon: 'log-in' },
+    ],
+  };
+
+  // authorizing: loading spinner
+  const authorizingUI = {
+    type: 'loading-state', title: 'Authorizing...', message: 'Redirecting to provider for authorization.',
+  };
+
+  // authorizing with auth URL: show URL + code input
+  const authUrlUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'external-link', size: 'lg' },
+      { type: 'typography', content: 'Authorization Required', variant: 'h2' },
+      { type: 'typography', content: '@entity.authUrl', variant: 'body', color: 'muted' },
+      { type: 'input', label: 'Authorization Code', field: 'code', placeholder: 'Paste authorization code here' },
+      { type: 'button', label: 'Submit', event: 'CALLBACK', variant: 'primary', icon: 'check' },
+    ],
+  };
+
+  // authenticated: success with refresh + logout
+  const authenticatedUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Authenticated successfully' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Refresh Token', event: 'REFRESH', variant: 'outline', icon: 'refresh-cw' },
+          { type: 'button', label: 'Logout', event: 'LOGOUT', variant: 'ghost', icon: 'log-out' },
+        ],
+      },
+    ],
+  };
+
+  // refreshing: loading spinner
+  const refreshingUI = {
+    type: 'loading-state', title: 'Refreshing token...', message: 'Obtaining a new access token.',
+  };
+
+  // error: error display with retry
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Authentication Failed', message: '@entity.error', onRetry: 'RETRY' },
+      { type: 'button', label: 'Try Again', event: 'RETRY', variant: 'primary', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', unauthenticatedUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: unauthenticated -> unauthenticated (render provider picker)
+    {
+      from: 'unauthenticated', to: 'unauthenticated', event: 'INIT',
+      effects: initEffects,
+    },
+    // LOGIN: unauthenticated -> authorizing (call oauth authorize)
+    {
+      from: 'unauthenticated', to: 'authorizing', event: 'LOGIN',
+      effects: [
+        ['render-ui', 'main', authorizingUI],
+        ['call-service', 'oauth', 'authorize', { provider: '@entity.provider', scopes: ['openid', 'email'] }],
+      ],
+    },
+    // AUTH_URL_RECEIVED: authorizing -> authorizing (show auth URL + code input)
+    {
+      from: 'authorizing', to: 'authorizing', event: 'AUTH_URL_RECEIVED',
+      effects: [
+        ['set', '@entity.authUrl', '@payload.authUrl'],
+        ['render-ui', 'main', authUrlUI],
+      ],
+    },
+    // CALLBACK: authorizing -> authenticated (exchange code for tokens)
+    {
+      from: 'authorizing', to: 'authenticated', event: 'CALLBACK',
+      effects: [
+        ['call-service', 'oauth', 'token', { code: '@payload.code' }],
+        ['render-ui', 'main', authenticatedUI],
+      ],
+    },
+    // TOKEN_RECEIVED: authenticated -> authenticated (set tokens)
+    {
+      from: 'authenticated', to: 'authenticated', event: 'TOKEN_RECEIVED',
+      effects: [
+        ['set', '@entity.accessToken', '@payload.accessToken'],
+        ['set', '@entity.refreshToken', '@payload.refreshToken'],
+        ['set', '@entity.authStatus', 'authenticated'],
+        ['render-ui', 'main', authenticatedUI],
+      ],
+    },
+    // REFRESH: authenticated -> refreshing (call oauth refresh)
+    {
+      from: 'authenticated', to: 'refreshing', event: 'REFRESH',
+      effects: [
+        ['render-ui', 'main', refreshingUI],
+        ['call-service', 'oauth', 'refresh', { refreshToken: '@entity.refreshToken' }],
+      ],
+    },
+    // TOKEN_REFRESHED: refreshing -> authenticated (update access token)
+    {
+      from: 'refreshing', to: 'authenticated', event: 'TOKEN_REFRESHED',
+      effects: [
+        ['set', '@entity.accessToken', '@payload.accessToken'],
+        ['render-ui', 'main', authenticatedUI],
+      ],
+    },
+    // LOGOUT: authenticated -> unauthenticated (clear session)
+    {
+      from: 'authenticated', to: 'unauthenticated', event: 'LOGOUT',
+      effects: [
+        ['set', '@entity.authStatus', 'unauthenticated'],
+        ['render-ui', 'main', unauthenticatedUI],
+      ],
+    },
+    // FAILED: authorizing -> error
+    {
+      from: 'authorizing', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // FAILED: refreshing -> error
+    {
+      from: 'refreshing', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> unauthenticated
+    {
+      from: 'error', to: 'unauthenticated', event: 'RETRY',
+      effects: [['render-ui', 'main', unauthenticatedUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'unauthenticated', isInitial: true },
+        { name: 'authorizing' },
+        { name: 'authenticated' },
+        { name: 'refreshing' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'LOGIN', name: 'Login' },
+        { key: 'AUTH_URL_RECEIVED', name: 'Auth URL Received', payload: [
+          { name: 'authUrl', type: 'string', required: true },
+        ]},
+        { key: 'CALLBACK', name: 'Authorization Callback', payload: [
+          { name: 'code', type: 'string', required: true },
+        ]},
+        { key: 'TOKEN_RECEIVED', name: 'Token Received', payload: [
+          { name: 'accessToken', type: 'string', required: true },
+          { name: 'refreshToken', type: 'string', required: true },
+        ]},
+        { key: 'REFRESH', name: 'Refresh Token' },
+        { key: 'TOKEN_REFRESHED', name: 'Token Refreshed', payload: [
+          { name: 'accessToken', type: 'string', required: true },
+        ]},
+        { key: 'LOGOUT', name: 'Logout' },
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: OauthConfig): Page | undefined {
+  if (!c.standalone) return undefined;
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceOauthEntity(params: StdServiceOauthParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceOauthTrait(params: StdServiceOauthParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceOauthPage(params: StdServiceOauthParams = {}): Page | undefined {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceOauth(params: StdServiceOauthParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  const pages: Page[] = [];
+  const page = buildPage(c);
+  if (page) pages.push(page);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    pages,
+  );
+}
+`,
+  },
+  "std-service-redis": {
+    name: "std-service-redis",
+    description: "Redis cache integration behavior: get, set, delete with TTL support. Wraps the `redis` service with separate events for each operation. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceRedisOrbital","orbitals":[{"name":"ServiceRedisOrbital","entity":{"name":"ServiceRedis","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"key","type":"string"},{"name":"value","type":"string"},{"name":"ttl","type":"number","default":3600},{"name":"result","type":"string"},{"name":"redisStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceRedisRedis","linkedEntity":"ServiceRedis","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"executing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"GET_KEY","name":"Get Key"},{"key":"SET_KEY","name":"Set Key"},{"key":"DELETE_KEY","name":"Delete Key"},{"key":"EXECUTED","name":"Executed","payload":[{"name":"data","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceRedis"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"idle","to":"executing","event":"GET_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}],["call-service","redis","get",{"key":"@entity.key"}]]},{"from":"idle","to":"executing","event":"SET_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}],["call-service","redis","set",{"key":"@entity.key","value":"@entity.value","ttl":"@entity.ttl"}]]},{"from":"idle","to":"executing","event":"DELETE_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}],["call-service","redis","delete",{"key":"@entity.key"}]]},{"from":"executing","to":"complete","event":"EXECUTED","effects":[["set","@entity.result","@payload.data"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Operation complete"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"executing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Redis Error","message":"@entity.error","onRetry":"RESET"}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]}]}}],"pages":[{"name":"ServiceRedisPage","path":"/servicerediss","traits":[{"ref":"ServiceRedisRedis"}]}]}],"description":"Redis cache integration behavior: get, set, delete with TTL support. Wraps the `redis` service with separate events for each operation. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-redis
+ *
+ * Redis cache integration behavior: get, set, delete with TTL support.
+ * Wraps the \`redis\` service with separate events for each operation.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceRedisParams {
+  /** Entity name in PascalCase (default: "CacheEntry") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, redis fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the cache form to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface RedisConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceRedisParams): RedisConfig {
+  const entityName = params.entityName ?? 'CacheEntry';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'key', type: 'string' },
+    { name: 'value', type: 'string' },
+    { name: 'ttl', type: 'number', default: 3600 },
+    { name: 'result', type: 'string' },
+    { name: 'redisStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Redis\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: RedisConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: RedisConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'database', size: 'lg' },
+          { type: 'typography', content: 'Redis Cache', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'stack', direction: 'vertical', gap: 'md',
+        children: [
+          { type: 'input', label: 'Key', bind: '@entity.key', placeholder: 'cache-key' },
+          { type: 'input', label: 'Value', bind: '@entity.value', placeholder: 'cache-value' },
+          { type: 'input', label: 'TTL (seconds)', bind: '@entity.ttl', inputType: 'number', placeholder: '3600' },
+        ],
+      },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Get', event: 'GET_KEY', variant: 'primary', icon: 'download' },
+          { type: 'button', label: 'Set', event: 'SET_KEY', variant: 'primary', icon: 'upload' },
+          { type: 'button', label: 'Delete', event: 'DELETE_KEY', variant: 'destructive', icon: 'trash-2' },
+        ],
+      },
+    ],
+  };
+
+  const executingUI = {
+    type: 'loading-state', title: 'Executing...', message: 'Running redis operation...',
+  };
+
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Operation complete' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.result' },
+      { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'error-state', title: 'Redis Error', message: '@entity.error', onRetry: 'RESET',
+  };
+
+  // ---- Transitions ----
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render if standalone)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // GET_KEY: idle -> executing (call redis get)
+    {
+      from: 'idle', to: 'executing', event: 'GET_KEY',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'redis', 'get', { key: '@entity.key' }],
+      ],
+    },
+    // SET_KEY: idle -> executing (call redis set)
+    {
+      from: 'idle', to: 'executing', event: 'SET_KEY',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'redis', 'set', { key: '@entity.key', value: '@entity.value', ttl: '@entity.ttl' }],
+      ],
+    },
+    // DELETE_KEY: idle -> executing (call redis delete)
+    {
+      from: 'idle', to: 'executing', event: 'DELETE_KEY',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'redis', 'delete', { key: '@entity.key' }],
+      ],
+    },
+    // EXECUTED: executing -> complete (store result)
+    {
+      from: 'executing', to: 'complete', event: 'EXECUTED',
+      effects: [
+        ['set', '@entity.result', '@payload.data'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: executing -> error
+    {
+      from: 'executing', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'executing' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'GET_KEY', name: 'Get Key' },
+        { key: 'SET_KEY', name: 'Set Key' },
+        { key: 'DELETE_KEY', name: 'Delete Key' },
+        { key: 'EXECUTED', name: 'Executed', payload: [
+          { name: 'data', type: 'string', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: RedisConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceRedisEntity(params: StdServiceRedisParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceRedisTrait(params: StdServiceRedisParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceRedisPage(params: StdServiceRedisParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceRedis(params: StdServiceRedisParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-storage": {
+    name: "std-service-storage",
+    description: "Storage service integration behavior: upload, download, list, delete files. Wraps the `storage` service with separate events for each operation. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceStorageOrbital","orbitals":[{"name":"ServiceStorageOrbital","entity":{"name":"ServiceStorage","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"bucket","type":"string","default":"uploads"},{"name":"fileKey","type":"string"},{"name":"prefix","type":"string"},{"name":"content","type":"string"},{"name":"storageStatus","type":"string","default":"idle"},{"name":"result","type":"string"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceStorageStorage","linkedEntity":"ServiceStorage","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"executing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"UPLOAD_FILE","name":"Upload File"},{"key":"DOWNLOAD_FILE","name":"Download File"},{"key":"LIST_FILES","name":"List Files"},{"key":"DELETE_FILE","name":"Delete File"},{"key":"EXECUTED","name":"Executed","payload":[{"name":"data","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceStorage"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"ServiceStorage Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"idle","to":"executing","event":"UPLOAD_FILE","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation on servicestorage..."}],["call-service","storage","upload",{"bucket":"@entity.bucket","key":"@entity.fileKey","content":"@entity.content"}]]},{"from":"idle","to":"executing","event":"DOWNLOAD_FILE","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation on servicestorage..."}],["call-service","storage","download",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"idle","to":"executing","event":"LIST_FILES","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation on servicestorage..."}],["call-service","storage","list",{"bucket":"@entity.bucket","prefix":"@entity.prefix"}]]},{"from":"idle","to":"executing","event":"DELETE_FILE","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation on servicestorage..."}],["call-service","storage","delete",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"executing","to":"complete","event":"EXECUTED","effects":[["set","@entity.result","@payload.data"],["set","@entity.storageStatus","complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Operation completed successfully"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Back","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"executing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.storageStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Operation Failed","message":"@entity.error"},{"type":"button","label":"Back","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["set","@entity.storageStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"ServiceStorage Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.storageStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"ServiceStorage Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]}]}}],"pages":[{"name":"ServiceStoragePage","path":"/servicestorages","traits":[{"ref":"ServiceStorageStorage"}]}]}],"description":"Storage service integration behavior: upload, download, list, delete files. Wraps the `storage` service with separate events for each operation. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-storage
+ *
+ * Storage service integration behavior: upload, download, list, delete files.
+ * Wraps the \`storage\` service with separate events for each operation.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceStorageParams {
+  /** Entity name in PascalCase (default: "StorageFile") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, storage fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the storage form to main. Default true. */
+  standalone?: boolean;
+  /** Default bucket name (default: "uploads") */
+  defaultBucket?: string;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface StorageConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  defaultBucket: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceStorageParams): StorageConfig {
+  const entityName = params.entityName ?? 'StorageFile';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'bucket', type: 'string', default: params.defaultBucket ?? 'uploads' },
+    { name: 'fileKey', type: 'string' },
+    { name: 'prefix', type: 'string' },
+    { name: 'content', type: 'string' },
+    { name: 'storageStatus', type: 'string', default: 'idle' },
+    { name: 'result', type: 'string' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Storage\`,
+    standalone: params.standalone ?? true,
+    defaultBucket: params.defaultBucket ?? 'uploads',
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: StorageConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: StorageConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleChildren: unknown[] = [
+    {
+      type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+      children: [
+        { type: 'icon', name: 'hard-drive', size: 'lg' },
+        { type: 'typography', content: \`\${entityName} Storage\`, variant: 'h2' },
+      ],
+    },
+    { type: 'divider' },
+  ];
+
+  if (standalone) {
+    idleChildren.push(
+      { type: 'input', label: 'Bucket', bind: '@entity.bucket', placeholder: 'bucket-name' },
+      { type: 'input', label: 'File Key', bind: '@entity.fileKey', placeholder: 'path/to/file.txt' },
+      { type: 'input', label: 'Prefix', bind: '@entity.prefix', placeholder: 'path/prefix/' },
+      { type: 'textarea', label: 'Content', bind: '@entity.content', placeholder: 'File content...' },
+    );
+  }
+
+  idleChildren.push(
+    {
+      type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+      children: [
+        { type: 'button', label: 'Upload', event: 'UPLOAD_FILE', variant: 'primary', icon: 'upload' },
+        { type: 'button', label: 'Download', event: 'DOWNLOAD_FILE', variant: 'secondary', icon: 'download' },
+        { type: 'button', label: 'List', event: 'LIST_FILES', variant: 'secondary', icon: 'list' },
+        { type: 'button', label: 'Delete', event: 'DELETE_FILE', variant: 'destructive', icon: 'trash-2' },
+      ],
+    },
+  );
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: idleChildren,
+  };
+
+  const executingUI = {
+    type: 'loading-state', title: 'Processing...', message: \`Executing storage operation on \${entityName.toLowerCase()}...\`,
+  };
+
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Operation completed successfully' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.result' },
+      { type: 'button', label: 'Back', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Operation Failed', message: '@entity.error' },
+      { type: 'button', label: 'Back', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const initEffects: unknown[] = [['fetch', entityName]];
+  if (standalone) {
+    initEffects.push(['render-ui', 'main', idleUI]);
+  }
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render form)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: initEffects,
+    },
+    // UPLOAD_FILE: idle -> executing
+    {
+      from: 'idle', to: 'executing', event: 'UPLOAD_FILE',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'storage', 'upload', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+          content: '@entity.content',
+        }],
+      ],
+    },
+    // DOWNLOAD_FILE: idle -> executing
+    {
+      from: 'idle', to: 'executing', event: 'DOWNLOAD_FILE',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'storage', 'download', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+        }],
+      ],
+    },
+    // LIST_FILES: idle -> executing
+    {
+      from: 'idle', to: 'executing', event: 'LIST_FILES',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'storage', 'list', {
+          bucket: '@entity.bucket',
+          prefix: '@entity.prefix',
+        }],
+      ],
+    },
+    // DELETE_FILE: idle -> executing
+    {
+      from: 'idle', to: 'executing', event: 'DELETE_FILE',
+      effects: [
+        ['render-ui', 'main', executingUI],
+        ['call-service', 'storage', 'delete', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+        }],
+      ],
+    },
+    // EXECUTED: executing -> complete (set result)
+    {
+      from: 'executing', to: 'complete', event: 'EXECUTED',
+      effects: [
+        ['set', '@entity.result', '@payload.data'],
+        ['set', '@entity.storageStatus', 'complete'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: executing -> error (set error)
+    {
+      from: 'executing', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.storageStatus', 'error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.storageStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.storageStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'executing' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'UPLOAD_FILE', name: 'Upload File' },
+        { key: 'DOWNLOAD_FILE', name: 'Download File' },
+        { key: 'LIST_FILES', name: 'List Files' },
+        { key: 'DELETE_FILE', name: 'Delete File' },
+        { key: 'EXECUTED', name: 'Executed', payload: [
+          { name: 'data', type: 'string', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: StorageConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceStorageEntity(params: StdServiceStorageParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceStorageTrait(params: StdServiceStorageParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceStoragePage(params: StdServiceStorageParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceStorage(params: StdServiceStorageParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-stripe": {
+    name: "std-service-stripe",
+    description: "Stripe payment integration behavior: idle, creating, confirming, succeeded, error. Wraps the `stripe` service integration with a multi-step payment flow. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceStripeOrbital","orbitals":[{"name":"ServiceStripeOrbital","entity":{"name":"ServiceStripe","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"amount","type":"number","default":0},{"name":"currency","type":"string","default":"usd"},{"name":"paymentIntentId","type":"string","default":""},{"name":"clientSecret","type":"string","default":""},{"name":"paymentStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"ServiceStripeStripe","linkedEntity":"ServiceStripe","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"creating"},{"name":"confirming"},{"name":"succeeded"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE_PAYMENT","name":"Create Payment"},{"key":"PAYMENT_CREATED","name":"Payment Created","payload":[{"name":"id","type":"string","required":true},{"name":"clientSecret","type":"string","required":true}]},{"key":"CONFIRM_PAYMENT","name":"Confirm Payment"},{"key":"PAYMENT_CONFIRMED","name":"Payment Confirmed"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceStripe"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"idle","to":"creating","event":"CREATE_PAYMENT","effects":[["render-ui","main",{"type":"loading-state","title":"Creating payment...","message":"Setting up your payment intent."}],["call-service","stripe","createPaymentIntent",{"amount":"@entity.amount","currency":"@entity.currency"}]]},{"from":"creating","to":"confirming","event":"PAYMENT_CREATED","effects":[["set","@entity.paymentIntentId","@payload.id"],["set","@entity.clientSecret","@payload.clientSecret"],["render-ui","main",{"type":"loading-state","title":"Confirming payment...","message":"Processing your payment."}],["call-service","stripe","confirmPayment",{"paymentIntentId":"@entity.paymentIntentId"}]]},{"from":"confirming","to":"succeeded","event":"PAYMENT_CONFIRMED","effects":[["set","@entity.paymentStatus","succeeded"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Payment successful!"},{"type":"typography","variant":"body","color":"muted","content":"@entity.paymentIntentId"},{"type":"button","label":"New Payment","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"creating","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"confirming","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"succeeded","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]}]}}],"pages":[{"name":"ServiceStripePage","path":"/servicestripes","traits":[{"ref":"ServiceStripeStripe"}]}]}],"description":"Stripe payment integration behavior: idle, creating, confirming, succeeded, error. Wraps the `stripe` service integration with a multi-step payment flow. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-stripe
+ *
+ * Stripe payment integration behavior: idle, creating, confirming, succeeded, error.
+ * Wraps the \`stripe\` service integration with a multi-step payment flow.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceStripeParams {
+  /** Entity name in PascalCase (default: "Payment") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, payment fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** Firestore collection name */
+  collection?: string;
+  /** When true, INIT renders the payment form to main. Default true. */
+  standalone?: boolean;
+  /** Default currency code (default: "usd") */
+  defaultCurrency?: string;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface StripeConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  collection?: string;
+  traitName: string;
+  standalone: boolean;
+  defaultCurrency: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceStripeParams): StripeConfig {
+  const entityName = params.entityName ?? 'Payment';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'amount', type: 'number' },
+    { name: 'currency', type: 'string', default: params.defaultCurrency ?? 'usd' },
+    { name: 'paymentIntentId', type: 'string' },
+    { name: 'clientSecret', type: 'string' },
+    { name: 'paymentStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields: ensureIdField(mergedFields),
+    persistence: params.persistence ?? 'runtime',
+    collection: params.collection,
+    traitName: \`\${entityName}Stripe\`,
+    standalone: params.standalone ?? true,
+    defaultCurrency: params.defaultCurrency ?? 'usd',
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: StripeConfig): Entity {
+  const paymentFields: EntityField[] = [
+    { name: 'amount', type: 'number' as const, default: 0 },
+    { name: 'currency', type: 'string' as const, default: c.defaultCurrency },
+    { name: 'paymentIntentId', type: 'string' as const, default: '' },
+    { name: 'clientSecret', type: 'string' as const, default: '' },
+    { name: 'paymentStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  // Merge: payment fields first, then any extra user fields (skip duplicates)
+  const paymentFieldNames = new Set(paymentFields.map(f => f.name));
+  const extraFields = c.fields.filter(f => f.name !== 'id' && !paymentFieldNames.has(f.name));
+  const allFields = ensureIdField([...paymentFields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence, collection: c.collection });
+}
+
+function buildTrait(c: StripeConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'credit-card', size: 'lg' },
+          { type: 'typography', content: 'Payment', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'stack', direction: 'vertical', gap: 'md',
+        children: [
+          { type: 'input', label: 'Amount', field: 'amount', inputType: 'number', placeholder: '0.00' },
+          {
+            type: 'select', label: 'Currency', field: 'currency',
+            options: [
+              { label: 'USD', value: 'usd' },
+              { label: 'EUR', value: 'eur' },
+              { label: 'GBP', value: 'gbp' },
+            ],
+          },
+        ],
+      },
+      { type: 'button', label: 'Pay', event: 'CREATE_PAYMENT', variant: 'primary', icon: 'credit-card' },
+    ],
+  };
+
+  const creatingUI = {
+    type: 'loading-state', title: 'Creating payment...', message: 'Setting up your payment intent.',
+  };
+
+  const confirmingUI = {
+    type: 'loading-state', title: 'Confirming payment...', message: 'Processing your payment.',
+  };
+
+  const succeededUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Payment successful!' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.paymentIntentId' },
+      { type: 'button', label: 'New Payment', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'error-state', title: 'Payment Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render if standalone)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ...(standalone ? [['fetch', entityName], ['render-ui', 'main', idleUI]] : [['fetch', entityName]]),
+      ],
+    },
+    // CREATE_PAYMENT: idle -> creating (render loading + call stripe createPaymentIntent)
+    {
+      from: 'idle', to: 'creating', event: 'CREATE_PAYMENT',
+      effects: [
+        ['render-ui', 'main', creatingUI],
+        ['call-service', 'stripe', 'createPaymentIntent', { amount: '@entity.amount', currency: '@entity.currency' }],
+      ],
+    },
+    // PAYMENT_CREATED: creating -> confirming (persist intent data + auto-confirm)
+    {
+      from: 'creating', to: 'confirming', event: 'PAYMENT_CREATED',
+      effects: [
+        ['set', '@entity.paymentIntentId', '@payload.id'],
+        ['set', '@entity.clientSecret', '@payload.clientSecret'],
+        ['render-ui', 'main', confirmingUI],
+        ['call-service', 'stripe', 'confirmPayment', { paymentIntentId: '@entity.paymentIntentId' }],
+      ],
+    },
+    // PAYMENT_CONFIRMED: confirming -> succeeded
+    {
+      from: 'confirming', to: 'succeeded', event: 'PAYMENT_CONFIRMED',
+      effects: [
+        ['set', '@entity.paymentStatus', 'succeeded'],
+        ['render-ui', 'main', succeededUI],
+      ],
+    },
+    // FAILED: creating -> error
+    {
+      from: 'creating', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // FAILED: confirming -> error
+    {
+      from: 'confirming', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: succeeded -> idle
+    {
+      from: 'succeeded', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'creating' },
+        { name: 'confirming' },
+        { name: 'succeeded' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CREATE_PAYMENT', name: 'Create Payment' },
+        { key: 'PAYMENT_CREATED', name: 'Payment Created', payload: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'clientSecret', type: 'string', required: true },
+        ]},
+        { key: 'CONFIRM_PAYMENT', name: 'Confirm Payment' },
+        { key: 'PAYMENT_CONFIRMED', name: 'Payment Confirmed' },
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: StripeConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceStripeEntity(params: StdServiceStripeParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceStripeTrait(params: StdServiceStripeParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceStripePage(params: StdServiceStripeParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceStripe(params: StdServiceStripeParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-twilio": {
+    name: "std-service-twilio",
+    description: "Twilio messaging integration behavior: compose, send SMS or WhatsApp, track delivery. Wraps the `twilio` service integration with sendSMS and sendWhatsApp operations. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceTwilioOrbital","orbitals":[{"name":"ServiceTwilioOrbital","entity":{"name":"ServiceTwilio","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"to","type":"string"},{"name":"messageBody","type":"string"},{"name":"channel","type":"string","default":"sms"},{"name":"messageSid","type":"string"},{"name":"sendStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceTwilioTwilio","linkedEntity":"ServiceTwilio","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"sending"},{"name":"sent"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEND_SMS","name":"Send SMS"},{"key":"SEND_WHATSAPP","name":"Send WhatsApp"},{"key":"SENT","name":"Message Sent","payload":[{"name":"messageSid","type":"string","required":false}]},{"key":"FAILED","name":"Send Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceTwilio"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"message-circle","size":"lg"},{"type":"typography","content":"ServiceTwilio Messaging","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"+1234567890"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Send SMS","event":"SEND_SMS","variant":"primary","icon":"message-circle"},{"type":"button","label":"Send WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"idle","to":"sending","event":"SEND_SMS","effects":[["render-ui","main",{"type":"loading-state","title":"Sending message...","message":"Delivering servicetwilio message..."}],["call-service","twilio","sendSMS",{"to":"@entity.to","body":"@entity.messageBody"}]]},{"from":"idle","to":"sending","event":"SEND_WHATSAPP","effects":[["render-ui","main",{"type":"loading-state","title":"Sending message...","message":"Delivering servicetwilio message..."}],["call-service","twilio","sendWhatsApp",{"to":"@entity.to","body":"@entity.messageBody"}]]},{"from":"sending","to":"sent","event":"SENT","effects":[["set","@entity.sendStatus","sent"],["set","@entity.messageSid","@payload.messageSid"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Message sent successfully"},{"type":"button","label":"Send Another","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"sending","to":"error","event":"FAILED","effects":[["set","@entity.sendStatus","error"],["set","@entity.error","@payload.error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Send Failed","message":"Could not deliver the message.","onRetry":"RETRY"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Retry","event":"RETRY","variant":"primary","icon":"refresh-cw"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"message-circle","size":"lg"},{"type":"typography","content":"ServiceTwilio Messaging","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"+1234567890"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Send SMS","event":"SEND_SMS","variant":"primary","icon":"message-circle"},{"type":"button","label":"Send WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"sent","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"message-circle","size":"lg"},{"type":"typography","content":"ServiceTwilio Messaging","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"+1234567890"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Send SMS","event":"SEND_SMS","variant":"primary","icon":"message-circle"},{"type":"button","label":"Send WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"message-circle","size":"lg"},{"type":"typography","content":"ServiceTwilio Messaging","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"To","bind":"@entity.to","placeholder":"+1234567890"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Send SMS","event":"SEND_SMS","variant":"primary","icon":"message-circle"},{"type":"button","label":"Send WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]}]}}],"pages":[{"name":"ServiceTwilioPage","path":"/servicetwilios","traits":[{"ref":"ServiceTwilioTwilio"}]}]}],"description":"Twilio messaging integration behavior: compose, send SMS or WhatsApp, track delivery. Wraps the `twilio` service integration with sendSMS and sendWhatsApp operations. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-twilio
+ *
+ * Twilio messaging integration behavior: compose, send SMS or WhatsApp, track delivery.
+ * Wraps the \`twilio\` service integration with sendSMS and sendWhatsApp operations.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceTwilioParams {
+  /** Entity name in PascalCase (default: "Message") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, messaging fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the compose form to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface TwilioConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceTwilioParams): TwilioConfig {
+  const entityName = params.entityName ?? 'Message';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'to', type: 'string' },
+    { name: 'messageBody', type: 'string' },
+    { name: 'channel', type: 'string', default: 'sms' },
+    { name: 'messageSid', type: 'string' },
+    { name: 'sendStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields: ensureIdField(mergedFields),
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Twilio\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: TwilioConfig): Entity {
+  const twilioFields: EntityField[] = [
+    { name: 'to', type: 'string' as const, default: '' },
+    { name: 'messageBody', type: 'string' as const, default: '' },
+    { name: 'channel', type: 'string' as const, default: 'sms' },
+    { name: 'messageSid', type: 'string' as const, default: '' },
+    { name: 'sendStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  // Merge: user-supplied fields take precedence, then twilio-specific fields
+  const userFieldNames = new Set(c.fields.map(f => f.name));
+  const extraFields = twilioFields.filter(f => !userFieldNames.has(f.name));
+  const allFields = ensureIdField([...c.fields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: TwilioConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const idleChildren: unknown[] = [
+    {
+      type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+      children: [
+        { type: 'icon', name: 'message-circle', size: 'lg' },
+        { type: 'typography', content: \`\${entityName} Messaging\`, variant: 'h2' },
+      ],
+    },
+    { type: 'divider' },
+  ];
+
+  if (standalone) {
+    idleChildren.push(
+      { type: 'input', label: 'To', bind: '@entity.to', placeholder: '+1234567890' },
+      { type: 'textarea', label: 'Message', bind: '@entity.messageBody', placeholder: 'Write your message...' },
+    );
+  }
+
+  idleChildren.push(
+    {
+      type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+      children: [
+        { type: 'button', label: 'Send SMS', event: 'SEND_SMS', variant: 'primary', icon: 'message-circle' },
+        { type: 'button', label: 'Send WhatsApp', event: 'SEND_WHATSAPP', variant: 'secondary', icon: 'phone' },
+      ],
+    },
+  );
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: idleChildren,
+  };
+
+  const sendingUI = {
+    type: 'loading-state', title: 'Sending message...', message: \`Delivering \${entityName.toLowerCase()} message...\`,
+  };
+
+  const sentUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Message sent successfully' },
+      { type: 'button', label: 'Send Another', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Send Failed', message: 'Could not deliver the message.', onRetry: 'RETRY' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Retry', event: 'RETRY', variant: 'primary', icon: 'refresh-cw' },
+          { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render compose form)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // SEND_SMS: idle -> sending (call twilio sendSMS + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND_SMS',
+      effects: [
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'twilio', 'sendSMS', { to: '@entity.to', body: '@entity.messageBody' }],
+      ],
+    },
+    // SEND_WHATSAPP: idle -> sending (call twilio sendWhatsApp + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND_WHATSAPP',
+      effects: [
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'twilio', 'sendWhatsApp', { to: '@entity.to', body: '@entity.messageBody' }],
+      ],
+    },
+    // SENT: sending -> sent (delivery confirmed)
+    {
+      from: 'sending', to: 'sent', event: 'SENT',
+      effects: [
+        ['set', '@entity.sendStatus', 'sent'],
+        ['set', '@entity.messageSid', '@payload.messageSid'],
+        ['render-ui', 'main', sentUI],
+      ],
+    },
+    // FAILED: sending -> error (delivery failed)
+    {
+      from: 'sending', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.sendStatus', 'error'],
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: sent -> idle
+    {
+      from: 'sent', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'sending' },
+        { name: 'sent' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEND_SMS', name: 'Send SMS' },
+        { key: 'SEND_WHATSAPP', name: 'Send WhatsApp' },
+        { key: 'SENT', name: 'Message Sent', payload: [
+          { name: 'messageSid', type: 'string', required: false },
+        ]},
+        { key: 'FAILED', name: 'Send Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: TwilioConfig): Page | undefined {
+  if (!c.standalone) return undefined;
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceTwilioEntity(params: StdServiceTwilioParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceTwilioTrait(params: StdServiceTwilioParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceTwilioPage(params: StdServiceTwilioParams = {}): Page | undefined {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceTwilio(params: StdServiceTwilioParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  const pages: Page[] = [];
+  const page = buildPage(c);
+  if (page) pages.push(page);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    pages,
+  );
+}
+`,
+  },
+  "std-service-youtube": {
+    name: "std-service-youtube",
+    description: "YouTube service integration behavior: search videos, view video details. Wraps the `youtube` service integration with search and getVideo operations. Pure function: params in, OrbitalDefinition out.",
+    level: "atom",
+    schema: {"name":"ServiceYoutubeOrbital","orbitals":[{"name":"ServiceYoutubeOrbital","entity":{"name":"ServiceYoutube","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"query","type":"string","default":""},{"name":"selectedVideoId","type":"string","default":""},{"name":"videoTitle","type":"string","default":""},{"name":"videoDescription","type":"string","default":""},{"name":"searchStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"ServiceYoutubeYoutube","linkedEntity":"ServiceYoutube","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"searching"},{"name":"results"},{"name":"viewingDetail"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEARCH","name":"Search Videos"},{"key":"SEARCH_COMPLETE","name":"Search Complete","payload":[{"name":"results","type":"string","required":true}]},{"key":"SELECT_VIDEO","name":"Select Video","payload":[{"name":"videoId","type":"string","required":true}]},{"key":"VIDEO_LOADED","name":"Video Loaded","payload":[{"name":"title","type":"string","required":true},{"name":"description","type":"string","required":true}]},{"key":"BACK","name":"Back to Results"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceYoutube"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"YouTube Search","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Search","bind":"@entity.query","placeholder":"Search YouTube videos..."},{"type":"button","label":"Search","event":"SEARCH","variant":"primary","icon":"search"}]}]]},{"from":"idle","to":"searching","event":"SEARCH","effects":[["render-ui","main",{"type":"loading-state","title":"Searching...","message":"Searching YouTube for videos..."}],["call-service","youtube","search",{"query":"@entity.query","maxResults":10,"type":"video"}]]},{"from":"results","to":"searching","event":"SEARCH","effects":[["render-ui","main",{"type":"loading-state","title":"Searching...","message":"Searching YouTube for videos..."}],["call-service","youtube","search",{"query":"@entity.query","maxResults":10,"type":"video"}]]},{"from":"searching","to":"results","event":"SEARCH_COMPLETE","effects":[["set","@entity.searchStatus","complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"Search Results","variant":"h2"}]},{"type":"divider"},{"type":"typography","content":"Select a video to view details.","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"},{"type":"button","label":"Search Again","event":"SEARCH","variant":"outline","icon":"search"}]}]}]]},{"from":"results","to":"viewingDetail","event":"SELECT_VIDEO","effects":[["set","@entity.selectedVideoId","@payload.videoId"],["render-ui","main",{"type":"loading-state","title":"Loading video...","message":"Fetching video details..."}],["call-service","youtube","getVideo",{"videoId":"@payload.videoId"}]]},{"from":"viewingDetail","to":"viewingDetail","event":"VIDEO_LOADED","effects":[["set","@entity.videoTitle","@payload.title"],["set","@entity.videoDescription","@payload.description"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"@entity.videoTitle","variant":"h2"}]},{"type":"divider"},{"type":"typography","content":"@entity.videoDescription","variant":"body"},{"type":"button","label":"Back to Results","event":"BACK","variant":"ghost","icon":"arrow-left"}]}]]},{"from":"viewingDetail","to":"results","event":"BACK","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"Search Results","variant":"h2"}]},{"type":"divider"},{"type":"typography","content":"Select a video to view details.","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"},{"type":"button","label":"Search Again","event":"SEARCH","variant":"outline","icon":"search"}]}]}]]},{"from":"searching","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.searchStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Search Failed","message":"@entity.error","onRetry":"SEARCH"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Retry","event":"SEARCH","variant":"primary","icon":"refresh-cw"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"results","to":"idle","event":"RESET","effects":[["set","@entity.searchStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"YouTube Search","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Search","bind":"@entity.query","placeholder":"Search YouTube videos..."},{"type":"button","label":"Search","event":"SEARCH","variant":"primary","icon":"search"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.searchStatus","idle"],["set","@entity.error",""],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"YouTube Search","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Search","bind":"@entity.query","placeholder":"Search YouTube videos..."},{"type":"button","label":"Search","event":"SEARCH","variant":"primary","icon":"search"}]}]]}]}}],"pages":[{"name":"ServiceYoutubePage","path":"/serviceyoutubes","traits":[{"ref":"ServiceYoutubeYoutube"}]}]}],"description":"YouTube service integration behavior: search videos, view video details. Wraps the `youtube` service integration with search and getVideo operations. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-youtube
+ *
+ * YouTube service integration behavior: search videos, view video details.
+ * Wraps the \`youtube\` service integration with search and getVideo operations.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level atom
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceYoutubeParams {
+  /** Entity name in PascalCase (default: "VideoSearch") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, youtube fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** When true, INIT renders the search form to main. Default true. */
+  standalone?: boolean;
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface YoutubeConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  standalone: boolean;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceYoutubeParams): YoutubeConfig {
+  const entityName = params.entityName ?? 'VideoSearch';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'query', type: 'string' },
+    { name: 'selectedVideoId', type: 'string' },
+    { name: 'videoTitle', type: 'string' },
+    { name: 'videoDescription', type: 'string' },
+    { name: 'searchStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields: ensureIdField(mergedFields),
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Youtube\`,
+    standalone: params.standalone ?? true,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: YoutubeConfig): Entity {
+  const youtubeFields: EntityField[] = [
+    { name: 'query', type: 'string' as const, default: '' },
+    { name: 'selectedVideoId', type: 'string' as const, default: '' },
+    { name: 'videoTitle', type: 'string' as const, default: '' },
+    { name: 'videoDescription', type: 'string' as const, default: '' },
+    { name: 'searchStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  // Merge: youtube fields first, then any extra user fields (skip duplicates)
+  const youtubeFieldNames = new Set(youtubeFields.map(f => f.name));
+  const extraFields = c.fields.filter(f => f.name !== 'id' && !youtubeFieldNames.has(f.name));
+  const allFields = ensureIdField([...youtubeFields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: YoutubeConfig): Trait {
+  const { entityName, standalone } = c;
+
+  // ---- UI definitions ----
+
+  const searchFormChildren: unknown[] = [
+    {
+      type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+      children: [
+        { type: 'icon', name: 'video', size: 'lg' },
+        { type: 'typography', content: 'YouTube Search', variant: 'h2' },
+      ],
+    },
+    { type: 'divider' },
+  ];
+
+  if (standalone) {
+    searchFormChildren.push(
+      { type: 'input', label: 'Search', bind: '@entity.query', placeholder: 'Search YouTube videos...' },
+    );
+  }
+
+  searchFormChildren.push(
+    { type: 'button', label: 'Search', event: 'SEARCH', variant: 'primary', icon: 'search' },
+  );
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: searchFormChildren,
+  };
+
+  const searchingUI = {
+    type: 'loading-state', title: 'Searching...', message: 'Searching YouTube for videos...',
+  };
+
+  const resultsUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'video', size: 'lg' },
+          { type: 'typography', content: 'Search Results', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'typography', content: 'Select a video to view details.', variant: 'body' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'New Search', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+          { type: 'button', label: 'Search Again', event: 'SEARCH', variant: 'outline', icon: 'search' },
+        ],
+      },
+    ],
+  };
+
+  const detailLoadingUI = {
+    type: 'loading-state', title: 'Loading video...', message: 'Fetching video details...',
+  };
+
+  const detailUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'video', size: 'lg' },
+          { type: 'typography', content: '@entity.videoTitle', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'typography', content: '@entity.videoDescription', variant: 'body' },
+      { type: 'button', label: 'Back to Results', event: 'BACK', variant: 'ghost', icon: 'arrow-left' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Search Failed', message: '@entity.error', onRetry: 'SEARCH' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Retry', event: 'SEARCH', variant: 'primary', icon: 'refresh-cw' },
+          { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch existing data + render search form)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ...(standalone ? [['fetch', entityName], ['render-ui', 'main', idleUI]] : [['fetch', entityName]]),
+      ],
+    },
+    // SEARCH: idle -> searching (call youtube search + show loading)
+    {
+      from: 'idle', to: 'searching', event: 'SEARCH',
+      effects: [
+        ['render-ui', 'main', searchingUI],
+        ['call-service', 'youtube', 'search', { query: '@entity.query', maxResults: 10, type: 'video' }],
+      ],
+    },
+    // SEARCH: results -> searching (re-search from results)
+    {
+      from: 'results', to: 'searching', event: 'SEARCH',
+      effects: [
+        ['render-ui', 'main', searchingUI],
+        ['call-service', 'youtube', 'search', { query: '@entity.query', maxResults: 10, type: 'video' }],
+      ],
+    },
+    // SEARCH_COMPLETE: searching -> results (display results)
+    {
+      from: 'searching', to: 'results', event: 'SEARCH_COMPLETE',
+      effects: [
+        ['set', '@entity.searchStatus', 'complete'],
+        ['render-ui', 'main', resultsUI],
+      ],
+    },
+    // SELECT_VIDEO: results -> viewingDetail (call youtube getVideo + show loading)
+    {
+      from: 'results', to: 'viewingDetail', event: 'SELECT_VIDEO',
+      effects: [
+        ['set', '@entity.selectedVideoId', '@payload.videoId'],
+        ['render-ui', 'main', detailLoadingUI],
+        ['call-service', 'youtube', 'getVideo', { videoId: '@payload.videoId' }],
+      ],
+    },
+    // VIDEO_LOADED: viewingDetail -> viewingDetail (set title/description + render detail)
+    {
+      from: 'viewingDetail', to: 'viewingDetail', event: 'VIDEO_LOADED',
+      effects: [
+        ['set', '@entity.videoTitle', '@payload.title'],
+        ['set', '@entity.videoDescription', '@payload.description'],
+        ['render-ui', 'main', detailUI],
+      ],
+    },
+    // BACK: viewingDetail -> results (return to results list)
+    {
+      from: 'viewingDetail', to: 'results', event: 'BACK',
+      effects: [['render-ui', 'main', resultsUI]],
+    },
+    // FAILED: searching -> error (search failed)
+    {
+      from: 'searching', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.searchStatus', 'error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RESET: results -> idle
+    {
+      from: 'results', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.searchStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.searchStatus', 'idle'],
+        ['set', '@entity.error', ''],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'searching' },
+        { name: 'results' },
+        { name: 'viewingDetail' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEARCH', name: 'Search Videos' },
+        { key: 'SEARCH_COMPLETE', name: 'Search Complete', payload: [
+          { name: 'results', type: 'string', required: true },
+        ]},
+        { key: 'SELECT_VIDEO', name: 'Select Video', payload: [
+          { name: 'videoId', type: 'string', required: true },
+        ]},
+        { key: 'VIDEO_LOADED', name: 'Video Loaded', payload: [
+          { name: 'title', type: 'string', required: true },
+          { name: 'description', type: 'string', required: true },
+        ]},
+        { key: 'BACK', name: 'Back to Results' },
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: YoutubeConfig): Page | undefined {
+  if (!c.standalone) return undefined;
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceYoutubeEntity(params: StdServiceYoutubeParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceYoutubeTrait(params: StdServiceYoutubeParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceYoutubePage(params: StdServiceYoutubeParams = {}): Page | undefined {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceYoutube(params: StdServiceYoutubeParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  const pages: Page[] = [];
+  const page = buildPage(c);
+  if (page) pages.push(page);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    pages,
+  );
+}
+`,
+  },
   "std-simulation-canvas": {
     name: "std-simulation-canvas",
     description: "2D physics simulation renderer atom using the `simulation-canvas` pattern. Runs built-in Euler integration for educational presets (pendulum, spring, etc.). Supports start, stop, and reset controls.",
     level: "atom",
-    schema: {"name":"SimulationCanvasOrbital","orbitals":[{"name":"SimulationCanvasOrbital","entity":{"name":"SimulationCanvas","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"SimulationCanvasSimulationCanvas","linkedEntity":"SimulationCanvas","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"running"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"START","name":"Start"},{"key":"STOP","name":"Stop"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","SimulationCanvas"],["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]},{"from":"idle","to":"running","event":"START","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":true,"speed":1}]]},{"from":"running","to":"idle","event":"STOP","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]},{"from":"running","to":"running","event":"RESET","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":true,"speed":1}]]},{"from":"idle","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]}]}}],"pages":[{"name":"SimulationCanvasSimulationPage","path":"/simulationcanvass","traits":[{"ref":"SimulationCanvasSimulationCanvas"}]}]}],"description":"2D physics simulation renderer atom using the `simulation-canvas` pattern. Runs built-in Euler integration for educational presets (pendulum, spring, etc.). Supports start, stop, and reset controls."},
+    schema: {"name":"SimulationWorldOrbital","orbitals":[{"name":"SimulationWorldOrbital","entity":{"name":"SimulationWorld","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"}]},"traits":[{"name":"SimulationWorldSimulationCanvas","linkedEntity":"SimulationWorld","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"running"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"START","name":"Start"},{"key":"STOP","name":"Stop"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","SimulationWorld"],["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]},{"from":"idle","to":"running","event":"START","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":true,"speed":1}]]},{"from":"running","to":"idle","event":"STOP","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]},{"from":"running","to":"running","event":"RESET","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":true,"speed":1}]]},{"from":"idle","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"simulation-canvas","preset":"pendulum","width":800,"height":400,"running":false,"speed":1}]]}]}}],"pages":[{"name":"SimulationWorldSimulationPage","path":"/simulationworlds","traits":[{"ref":"SimulationWorldSimulationCanvas"}]}]}],"description":"2D physics simulation renderer atom using the `simulation-canvas` pattern. Runs built-in Euler integration for educational presets (pendulum, spring, etc.). Supports start, stop, and reset controls."},
     source: `/**
  * std-simulation-canvas
  *
@@ -9356,7 +13500,7 @@ export function stdSort(params: StdSortParams): OrbitalDefinition {
     name: "std-sprite",
     description: "Sprite renderer atom using the `sprite` pattern. Renders a single frame from a spritesheet with position and scale. Handles frame changes and click events.",
     level: "atom",
-    schema: {"name":"SpriteOrbital","orbitals":[{"name":"SpriteOrbital","entity":{"name":"Sprite","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"x","type":"number","default":0},{"name":"y","type":"number","default":0},{"name":"frame","type":"number","default":0},{"name":"spritesheet","type":"string","default":""}]},"traits":[{"name":"SpriteSprite","linkedEntity":"Sprite","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SET_FRAME","name":"Set Frame","payload":[{"name":"frame","type":"number","required":true}]},{"key":"CLICK","name":"Click"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","Sprite"],["render-ui","main",{"type":"sprite","spritesheet":"@Sprite.spritesheet","frameWidth":64,"frameHeight":64,"frame":"@Sprite.frame","x":"@Sprite.x","y":"@Sprite.y","scale":1}]]},{"from":"idle","to":"idle","event":"SET_FRAME","effects":[["render-ui","main",{"type":"sprite","spritesheet":"@Sprite.spritesheet","frameWidth":64,"frameHeight":64,"frame":"@Sprite.frame","x":"@Sprite.x","y":"@Sprite.y","scale":1}]]},{"from":"idle","to":"idle","event":"CLICK","effects":[]}]}}],"pages":[{"name":"SpriteSpritePage","path":"/sprites","traits":[{"ref":"SpriteSprite"}]}]}],"description":"Sprite renderer atom using the `sprite` pattern. Renders a single frame from a spritesheet with position and scale. Handles frame changes and click events."},
+    schema: {"name":"SpriteEntityOrbital","orbitals":[{"name":"SpriteEntityOrbital","entity":{"name":"SpriteEntity","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"x","type":"number","default":0},{"name":"y","type":"number","default":0},{"name":"frame","type":"number","default":0},{"name":"spritesheet","type":"string","default":"https://almadar-kflow-assets.web.app/shared/sprite-sheets/amir-sprite-sheet-se.png"}]},"traits":[{"name":"SpriteEntitySprite","linkedEntity":"SpriteEntity","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SET_FRAME","name":"Set Frame","payload":[{"name":"frame","type":"number","required":true}]},{"key":"CLICK","name":"Click"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","SpriteEntity"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"image","size":"lg"},{"type":"typography","content":"SpriteEntity Sprite","variant":"h2"}]},{"type":"divider"},{"type":"box","className":"relative bg-gray-900 rounded-lg overflow-hidden","style":{"width":"256px","height":"256px","margin":"0 auto"},"children":[{"type":"sprite","spritesheet":"@SpriteEntity.spritesheet","frameWidth":64,"frameHeight":64,"frame":"@SpriteEntity.frame","x":64,"y":64,"scale":1}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"center","children":[{"type":"typography","content":"Frame: ","variant":"caption","color":"muted"},{"type":"badge","content":"@SpriteEntity.frame","variant":"default"},{"type":"typography","content":"Position: ","variant":"caption","color":"muted"},{"type":"badge","content":["concat","@SpriteEntity.x",",","@SpriteEntity.y"],"variant":"default"}]}]}]]},{"from":"idle","to":"idle","event":"SET_FRAME","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"image","size":"lg"},{"type":"typography","content":"SpriteEntity Sprite","variant":"h2"}]},{"type":"divider"},{"type":"box","className":"relative bg-gray-900 rounded-lg overflow-hidden","style":{"width":"256px","height":"256px","margin":"0 auto"},"children":[{"type":"sprite","spritesheet":"@SpriteEntity.spritesheet","frameWidth":64,"frameHeight":64,"frame":"@SpriteEntity.frame","x":64,"y":64,"scale":1}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"center","children":[{"type":"typography","content":"Frame: ","variant":"caption","color":"muted"},{"type":"badge","content":"@SpriteEntity.frame","variant":"default"},{"type":"typography","content":"Position: ","variant":"caption","color":"muted"},{"type":"badge","content":["concat","@SpriteEntity.x",",","@SpriteEntity.y"],"variant":"default"}]}]}]]},{"from":"idle","to":"idle","event":"CLICK","effects":[]}]}}],"pages":[{"name":"SpriteEntitySpritePage","path":"/spriteentitys","traits":[{"ref":"SpriteEntitySprite"}]}]}],"description":"Sprite renderer atom using the `sprite` pattern. Renders a single frame from a spritesheet with position and scale. Handles frame changes and click events."},
     source: `/**
  * std-sprite
  *
@@ -9418,7 +13562,7 @@ function resolve(params: StdSpriteParams): SpriteConfig {
     { name: 'x', type: 'number', default: 0 },
     { name: 'y', type: 'number', default: 0 },
     { name: 'frame', type: 'number', default: 0 },
-    { name: 'spritesheet', type: 'string', default: '' },
+    { name: 'spritesheet', type: 'string', default: 'https://almadar-kflow-assets.web.app/shared/sprite-sheets/amir-sprite-sheet-se.png' },
   ];
   const userFieldNames = new Set(baseFields.map(f => f.name));
   const fields = [...baseFields, ...domainFields.filter(f => !userFieldNames.has(f.name))];
@@ -9448,14 +13592,51 @@ function buildTrait(c: SpriteConfig): Trait {
   const { entityName, frameWidth, frameHeight, scale } = c;
 
   const spriteView = {
-    type: 'sprite',
-    spritesheet: \`@\${entityName}.spritesheet\`,
-    frameWidth,
-    frameHeight,
-    frame: \`@\${entityName}.frame\`,
-    x: \`@\${entityName}.x\`,
-    y: \`@\${entityName}.y\`,
-    scale,
+    type: 'stack',
+    direction: 'vertical',
+    gap: 'md',
+    children: [
+      {
+        type: 'stack',
+        direction: 'horizontal',
+        gap: 'sm',
+        align: 'center',
+        children: [
+          { type: 'icon', name: 'image', size: 'lg' },
+          { type: 'typography', content: \`\${entityName} Sprite\`, variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'box',
+        className: 'relative bg-gray-900 rounded-lg overflow-hidden',
+        style: { width: \`\${frameWidth * scale * 4}px\`, height: \`\${frameHeight * scale * 4}px\`, margin: '0 auto' },
+        children: [
+          {
+            type: 'sprite',
+            spritesheet: \`@\${entityName}.spritesheet\`,
+            frameWidth,
+            frameHeight,
+            frame: \`@\${entityName}.frame\`,
+            x: frameWidth * scale,
+            y: frameHeight * scale,
+            scale,
+          },
+        ],
+      },
+      {
+        type: 'stack',
+        direction: 'horizontal',
+        gap: 'md',
+        justify: 'center',
+        children: [
+          { type: 'typography', content: \`Frame: \`, variant: 'caption', color: 'muted' },
+          { type: 'badge', content: \`@\${entityName}.frame\`, variant: 'default' },
+          { type: 'typography', content: \`Position: \`, variant: 'caption', color: 'muted' },
+          { type: 'badge', content: ['concat', \`@\${entityName}.x\`, ',', \`@\${entityName}.y\`], variant: 'default' },
+        ],
+      },
+    ],
   };
 
   return {
@@ -10818,6 +14999,338 @@ export function stdUpload(params: StdUploadParams): OrbitalDefinition {
   const c = resolve(params);
   return makeOrbital(\`\${c.entityName}Orbital\`, buildEntity(c), [buildTrait(c)], [buildPage(c)]);
 }
+`,
+  },
+  "std-validate-on-save": {
+    name: "std-validate-on-save",
+    description: "OS trigger that watches .orb files and validates them on save. Shows a status dashboard with validation results. Emits AGENT_INTERRUPT with validation results to interrupt autonomous agents with ground truth.",
+    level: "atom",
+    schema: {"name":"ValidateOnSave","orbitals":[{"name":"ValidateOnSave","entity":{"name":"ValidateOnSave","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"path","type":"string"},{"name":"valid","type":"boolean","default":false},{"name":"errors","type":"array","default":[]},{"name":"warnings","type":"array","default":[]},{"name":"timestamp","type":"number","default":0},{"name":"status","type":"string","default":"idle"}]},"traits":[{"name":"OrbFileWatcher","linkedEntity":"ValidateOnSave","category":"interaction","listens":[{"event":"OS_FILE_MODIFIED","scope":"external","guard":["str/endsWith","@payload.path",".orb"]}],"emits":[{"event":"AGENT_INTERRUPT","scope":"external","payload":[{"name":"type","type":"string"},{"name":"status","type":"string"},{"name":"path","type":"string"},{"name":"errors","type":"array"},{"name":"blocking","type":"boolean"}]}],"stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"validating"},{"name":"valid"},{"name":"invalid"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"OS_FILE_MODIFIED","name":"File Modified","payload":[{"name":"path","type":"string"},{"name":"name","type":"string"},{"name":"dir","type":"string"},{"name":"ext","type":"string"},{"name":"timestamp","type":"number"}]},{"key":"REFRESH","name":"Validate Now"},{"key":"VALIDATION_PASSED","name":"Validation Passed","payload":[{"name":"warnings","type":"array"}]},{"key":"VALIDATION_FAILED","name":"Validation Failed","payload":[{"name":"errors","type":"array"},{"name":"warnings","type":"array"}]},{"key":"NAVIGATE","name":"NAVIGATE"}],"transitions":[{"from":"idle","event":"INIT","to":"idle","effects":[["os/watch-files","**/*.orb"],["os/debounce",500,"OS_FILE_MODIFIED"],["set","@entity.status","idle"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Watching **/*.orb for changes"}],["render-ui","center",{"type":"empty-state","title":"Waiting for file changes","description":"Watching **/*.orb. Save an .orb file to trigger validation."}]]},{"from":"idle","event":"OS_FILE_MODIFIED","to":"validating","effects":[["set","@entity.path","@payload.path"],["set","@entity.timestamp","@now"],["set","@entity.status","validating"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Validating..."}],["render-ui","center",{"type":"loading-state","title":"Running orbital validate..."}],["call-service","orbital-cli","validate",{"path":"@payload.path","onSuccess":"VALIDATION_PASSED","onError":"VALIDATION_FAILED"}]]},{"from":"validating","event":"VALIDATION_PASSED","to":"valid","effects":[["set","@entity.valid",true],["set","@entity.errors",[]],["set","@entity.warnings","@payload.warnings"],["set","@entity.status","valid"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Validation passed","actions":[{"event":"REFRESH","label":"Validate Now","variant":"primary"}]}],["render-ui","center",{"type":"entity-detail","entity":"ValidateOnSave","fields":["path","valid","status","timestamp"]}],["notify","success","Schema is valid"],["emit","AGENT_INTERRUPT",{"type":"validation","status":"passed","path":"@entity.path","blocking":false}]]},{"from":"validating","event":"VALIDATION_FAILED","to":"invalid","effects":[["set","@entity.valid",false],["set","@entity.errors","@payload.errors"],["set","@entity.warnings","@payload.warnings"],["set","@entity.status","invalid"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Validation failed","actions":[{"event":"REFRESH","label":"Validate Now","variant":"primary"}]}],["render-ui","center",{"type":"entity-detail","entity":"ValidateOnSave","fields":["path","valid","errors","warnings","status"]}],["notify","error","Schema has errors"],["emit","AGENT_INTERRUPT",{"type":"validation","status":"failed","path":"@entity.path","errors":"@payload.errors","blocking":true}]]},{"from":"valid","event":"OS_FILE_MODIFIED","to":"validating","effects":[["set","@entity.path","@payload.path"],["set","@entity.timestamp","@now"],["set","@entity.status","validating"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Re-validating..."}],["render-ui","center",{"type":"loading-state","title":"Running orbital validate..."}],["call-service","orbital-cli","validate",{"path":"@payload.path","onSuccess":"VALIDATION_PASSED","onError":"VALIDATION_FAILED"}]]},{"from":"invalid","event":"OS_FILE_MODIFIED","to":"validating","effects":[["set","@entity.path","@payload.path"],["set","@entity.timestamp","@now"],["set","@entity.status","validating"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Re-validating..."}],["render-ui","center",{"type":"loading-state","title":"Running orbital validate..."}],["call-service","orbital-cli","validate",{"path":"@payload.path","onSuccess":"VALIDATION_PASSED","onError":"VALIDATION_FAILED"}]]},{"from":"valid","event":"REFRESH","to":"validating","effects":[["set","@entity.status","validating"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Re-validating..."}],["render-ui","center",{"type":"loading-state","title":"Running orbital validate..."}],["call-service","orbital-cli","validate",{"path":"@entity.path","onSuccess":"VALIDATION_PASSED","onError":"VALIDATION_FAILED"}]]},{"from":"invalid","event":"REFRESH","to":"validating","effects":[["set","@entity.status","validating"],["render-ui","main",{"type":"page-header","title":"Orb File Validator","subtitle":"Re-validating..."}],["render-ui","center",{"type":"loading-state","title":"Running orbital validate..."}],["call-service","orbital-cli","validate",{"path":"@entity.path","onSuccess":"VALIDATION_PASSED","onError":"VALIDATION_FAILED"}]]},{"from":"idle","to":"idle","event":"NAVIGATE","effects":[]},{"from":"validating","to":"validating","event":"NAVIGATE","effects":[]},{"from":"valid","to":"valid","event":"NAVIGATE","effects":[]},{"from":"invalid","to":"invalid","event":"NAVIGATE","effects":[]}]}}],"pages":[{"name":"ValidatorPage","path":"/validator","traits":[{"ref":"OrbFileWatcher"}]}]}],"description":"OS trigger that watches .orb files and validates them on save. Shows a status dashboard with validation results. Emits AGENT_INTERRUPT with validation results to interrupt autonomous agents with ground truth."},
+    source: `/**
+ * std-validate-on-save
+ *
+ * OS trigger that watches .orb files and validates them on save.
+ * Shows a status dashboard with validation results.
+ * Emits AGENT_INTERRUPT with validation results to interrupt
+ * autonomous agents with ground truth.
+ *
+ * @level atom
+ * @family os-trigger
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdValidateOnSaveParams {
+  entityName?: string;
+  fields?: EntityField[];
+  glob?: string;
+  debounceMs?: number;
+  blocking?: boolean;
+  pageName?: string;
+  pagePath?: string;
+}
+
+// ============================================================================
+// Builder
+// ============================================================================
+
+export function stdValidateOnSave(params: StdValidateOnSaveParams = {}): OrbitalDefinition {
+  const {
+    entityName = 'ValidationResult',
+    glob = '**/*.orb',
+    debounceMs = 500,
+    blocking = true,
+    pageName = 'ValidatorPage',
+    pagePath = '/validator',
+  } = params;
+
+  // Entity
+  const fields: EntityField[] = ensureIdField([
+    { name: 'path', type: 'string' as const },
+    { name: 'valid', type: 'boolean' as const, default: false },
+    { name: 'errors', type: 'array' as const, default: [] },
+    { name: 'warnings', type: 'array' as const, default: [] },
+    { name: 'timestamp', type: 'number' as const, default: 0 },
+    { name: 'status', type: 'string' as const, default: 'idle' },
+  ]);
+
+  const entity: Entity = makeEntity({
+    name: entityName,
+    persistence: 'runtime',
+    fields,
+  });
+
+  // Header with refresh button (for valid/invalid states)
+  const headerWithRefresh = (subtitle: string) => ['render-ui', 'main', {
+    type: 'page-header',
+    title: 'Orb File Validator',
+    subtitle,
+    actions: [
+      { event: 'REFRESH', label: 'Validate Now', variant: 'primary' },
+    ],
+  }];
+
+  // Header without refresh (for idle/validating states)
+  const headerPlain = (subtitle: string) => ['render-ui', 'main', {
+    type: 'page-header',
+    title: 'Orb File Validator',
+    subtitle,
+  }];
+
+  // Trait
+  const trait: Trait = {
+    name: 'OrbFileWatcher',
+    linkedEntity: entityName,
+    category: 'interaction' as const,
+    listens: [
+      {
+        event: 'OS_FILE_MODIFIED',
+        scope: 'external',
+        guard: ['str/endsWith', '@payload.path', '.orb'],
+      },
+    ],
+    emits: [
+      {
+        event: 'AGENT_INTERRUPT',
+        scope: 'external',
+        payload: [
+          { name: 'type', type: 'string' },
+          { name: 'status', type: 'string' },
+          { name: 'path', type: 'string' },
+          { name: 'errors', type: 'array' },
+          { name: 'blocking', type: 'boolean' },
+        ],
+      },
+    ],
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'validating' },
+        { name: 'valid' },
+        { name: 'invalid' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        {
+          key: 'OS_FILE_MODIFIED',
+          name: 'File Modified',
+          payload: [
+            { name: 'path', type: 'string' },
+            { name: 'name', type: 'string' },
+            { name: 'dir', type: 'string' },
+            { name: 'ext', type: 'string' },
+            { name: 'timestamp', type: 'number' },
+          ],
+        },
+        { key: 'REFRESH', name: 'Validate Now' },
+        {
+          key: 'VALIDATION_PASSED',
+          name: 'Validation Passed',
+          payload: [
+            { name: 'warnings', type: 'array' },
+          ],
+        },
+        {
+          key: 'VALIDATION_FAILED',
+          name: 'Validation Failed',
+          payload: [
+            { name: 'errors', type: 'array' },
+            { name: 'warnings', type: 'array' },
+          ],
+        },
+      ],
+      transitions: [
+        // INIT: register file watcher + show idle UI
+        {
+          from: 'idle',
+          event: 'INIT',
+          to: 'idle',
+          effects: [
+            ['os/watch-files', glob],
+            ['os/debounce', debounceMs, 'OS_FILE_MODIFIED'],
+            ['set', '@entity.status', 'idle'],
+            headerPlain(\`Watching \${glob} for changes\`),
+            ['render-ui', 'center', {
+              type: 'empty-state',
+              title: 'Waiting for file changes',
+              description: \`Watching \${glob}. Save an .orb file to trigger validation.\`,
+            }],
+          ],
+        },
+        // File modified from idle: start validation
+        {
+          from: 'idle',
+          event: 'OS_FILE_MODIFIED',
+          to: 'validating',
+          effects: [
+            ['set', '@entity.path', '@payload.path'],
+            ['set', '@entity.timestamp', '@now'],
+            ['set', '@entity.status', 'validating'],
+            headerPlain('Validating...'),
+            ['render-ui', 'center', {
+              type: 'loading-state',
+              title: 'Running orbital validate...',
+            }],
+            ['call-service', 'orbital-cli', 'validate', {
+              path: '@payload.path',
+              onSuccess: 'VALIDATION_PASSED',
+              onError: 'VALIDATION_FAILED',
+            }],
+          ],
+        },
+        // Validation passed: show success
+        {
+          from: 'validating',
+          event: 'VALIDATION_PASSED',
+          to: 'valid',
+          effects: [
+            ['set', '@entity.valid', true],
+            ['set', '@entity.errors', []],
+            ['set', '@entity.warnings', '@payload.warnings'],
+            ['set', '@entity.status', 'valid'],
+            headerWithRefresh('Validation passed'),
+            ['render-ui', 'center', {
+              type: 'entity-detail',
+              entity: entityName,
+              fields: ['path', 'valid', 'status', 'timestamp'],
+            }],
+            ['notify', 'success', 'Schema is valid'],
+            ['emit', 'AGENT_INTERRUPT', {
+              type: 'validation',
+              status: 'passed',
+              path: '@entity.path',
+              blocking: false,
+            }],
+          ],
+        },
+        // Validation failed: show errors
+        {
+          from: 'validating',
+          event: 'VALIDATION_FAILED',
+          to: 'invalid',
+          effects: [
+            ['set', '@entity.valid', false],
+            ['set', '@entity.errors', '@payload.errors'],
+            ['set', '@entity.warnings', '@payload.warnings'],
+            ['set', '@entity.status', 'invalid'],
+            headerWithRefresh('Validation failed'),
+            ['render-ui', 'center', {
+              type: 'entity-detail',
+              entity: entityName,
+              fields: ['path', 'valid', 'errors', 'warnings', 'status'],
+            }],
+            ['notify', 'error', 'Schema has errors'],
+            ['emit', 'AGENT_INTERRUPT', {
+              type: 'validation',
+              status: 'failed',
+              path: '@entity.path',
+              errors: '@payload.errors',
+              blocking,
+            }],
+          ],
+        },
+        // Re-validate from valid state
+        {
+          from: 'valid',
+          event: 'OS_FILE_MODIFIED',
+          to: 'validating',
+          effects: [
+            ['set', '@entity.path', '@payload.path'],
+            ['set', '@entity.timestamp', '@now'],
+            ['set', '@entity.status', 'validating'],
+            headerPlain('Re-validating...'),
+            ['render-ui', 'center', {
+              type: 'loading-state',
+              title: 'Running orbital validate...',
+            }],
+            ['call-service', 'orbital-cli', 'validate', {
+              path: '@payload.path',
+              onSuccess: 'VALIDATION_PASSED',
+              onError: 'VALIDATION_FAILED',
+            }],
+          ],
+        },
+        // Re-validate from invalid state
+        {
+          from: 'invalid',
+          event: 'OS_FILE_MODIFIED',
+          to: 'validating',
+          effects: [
+            ['set', '@entity.path', '@payload.path'],
+            ['set', '@entity.timestamp', '@now'],
+            ['set', '@entity.status', 'validating'],
+            headerPlain('Re-validating...'),
+            ['render-ui', 'center', {
+              type: 'loading-state',
+              title: 'Running orbital validate...',
+            }],
+            ['call-service', 'orbital-cli', 'validate', {
+              path: '@payload.path',
+              onSuccess: 'VALIDATION_PASSED',
+              onError: 'VALIDATION_FAILED',
+            }],
+          ],
+        },
+        // Manual refresh from any state that has data
+        {
+          from: 'valid',
+          event: 'REFRESH',
+          to: 'validating',
+          effects: [
+            ['set', '@entity.status', 'validating'],
+            headerPlain('Re-validating...'),
+            ['render-ui', 'center', {
+              type: 'loading-state',
+              title: 'Running orbital validate...',
+            }],
+            ['call-service', 'orbital-cli', 'validate', {
+              path: '@entity.path',
+              onSuccess: 'VALIDATION_PASSED',
+              onError: 'VALIDATION_FAILED',
+            }],
+          ],
+        },
+        {
+          from: 'invalid',
+          event: 'REFRESH',
+          to: 'validating',
+          effects: [
+            ['set', '@entity.status', 'validating'],
+            headerPlain('Re-validating...'),
+            ['render-ui', 'center', {
+              type: 'loading-state',
+              title: 'Running orbital validate...',
+            }],
+            ['call-service', 'orbital-cli', 'validate', {
+              path: '@entity.path',
+              onSuccess: 'VALIDATION_PASSED',
+              onError: 'VALIDATION_FAILED',
+            }],
+          ],
+        },
+      ],
+    },
+  } as unknown as Trait;
+
+  // Page: status dashboard
+  const pages: Page[] = [
+    makePage({
+      name: pageName,
+      path: pagePath,
+      traitName: 'OrbFileWatcher',
+    }),
+  ];
+
+  return makeOrbital('ValidateOnSave', entity, [trait], pages);
+}
+
+export default stdValidateOnSave;
 `,
   },
   "std-wizard": {
@@ -14807,7 +19320,7 @@ export function stdPuzzleGame(params: StdPuzzleGameParams): OrbitalDefinition {
     name: "std-quiz",
     description: "Quiz molecule composing flip-card atom with question/answer flow. Absorbs: quiz-block.",
     level: "molecule",
-    schema: {"name":"QuizItemOrbital","orbitals":[{"name":"QuizItemOrbital","entity":{"name":"QuizItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"question","type":"string","default":""},{"name":"answer","type":"string","default":""},{"name":"optionA","type":"string","default":""},{"name":"optionB","type":"string","default":""},{"name":"optionC","type":"string","default":""},{"name":"optionD","type":"string","default":""},{"name":"difficulty","type":"string","default":"medium"},{"name":"currentIndex","type":"number","default":0},{"name":"totalQuestions","type":"number","default":3}],"instances":[{"id":"q-1","name":"What planet is closest to the Sun?","description":"Mercury","status":"active","createdAt":"2026-01-01","question":"What planet is closest to the Sun?","answer":"Mercury","optionA":"Mercury","optionB":"Venus","optionC":"Mars","optionD":"Earth","difficulty":"easy","currentIndex":0,"totalQuestions":3},{"id":"q-2","name":"What is the chemical symbol for gold?","description":"Au","status":"active","createdAt":"2026-01-02","question":"What is the chemical symbol for gold?","answer":"Au","optionA":"Ag","optionB":"Au","optionC":"Fe","optionD":"Cu","difficulty":"medium","currentIndex":0,"totalQuestions":3},{"id":"q-3","name":"Who painted the Mona Lisa?","description":"Leonardo da Vinci","status":"active","createdAt":"2026-01-03","question":"Who painted the Mona Lisa?","answer":"Leonardo da Vinci","optionA":"Michelangelo","optionB":"Raphael","optionC":"Leonardo da Vinci","optionD":"Donatello","difficulty":"easy","currentIndex":0,"totalQuestions":3}]},"traits":[{"name":"QuizItemQuiz","linkedEntity":"QuizItem","category":"interaction","stateMachine":{"states":[{"name":"question","isInitial":true},{"name":"answer-revealed"},{"name":"complete"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ANSWER","name":"Answer","payload":[{"name":"answer","type":"string","required":true}]},{"key":"NEXT","name":"Next Question"},{"key":"RESTART","name":"Restart"}],"transitions":[{"from":"question","to":"question","event":"INIT","effects":[["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["object/get",["array/first","@entity"],"currentIndex"],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["object/get",["array/first","@entity"],"totalQuestions"]}]}]}]}]]},{"from":"question","to":"answer-revealed","event":"ANSWER","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Answer Revealed","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"body","content":["object/get",["array/first","@entity"],"name"]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Answer"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"description"]}]}]},{"type":"alert","variant":"info","message":"Review the answer above."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Next Question","event":"NEXT","variant":"primary","icon":"arrow-right"}]}]}]]},{"from":"answer-revealed","to":"question","event":"NEXT","effects":[["set","@entity.currentIndex",["+","@entity.currentIndex",1]],["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["object/get",["array/first","@entity"],"currentIndex"],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["object/get",["array/first","@entity"],"totalQuestions"]}]}]}]}]]},{"from":"answer-revealed","to":"complete","event":"RESTART","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Quiz Complete!","variant":"h2"},{"type":"alert","variant":"success","message":"You have completed all questions."},{"type":"button","label":"Restart","event":"RESTART","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"complete","to":"question","event":"RESTART","effects":[["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["object/get",["array/first","@entity"],"currentIndex"],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["object/get",["array/first","@entity"],"totalQuestions"]}]}]}]}]]}]}}],"pages":[{"name":"QuizItemQuizPage","path":"/quizitems/quiz","traits":[{"ref":"QuizItemQuiz"}]}]}],"description":"Quiz molecule composing flip-card atom with question/answer flow. Absorbs: quiz-block."},
+    schema: {"name":"QuizItemOrbital","orbitals":[{"name":"QuizItemOrbital","entity":{"name":"QuizItem","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"question","type":"string","default":""},{"name":"answer","type":"string","default":""},{"name":"optionA","type":"string","default":""},{"name":"optionB","type":"string","default":""},{"name":"optionC","type":"string","default":""},{"name":"optionD","type":"string","default":""},{"name":"difficulty","type":"string","default":"medium"},{"name":"currentIndex","type":"number","default":0},{"name":"totalQuestions","type":"number","default":3}],"instances":[{"id":"q-1","name":"What planet is closest to the Sun?","description":"Mercury","status":"active","createdAt":"2026-01-01","question":"What planet is closest to the Sun?","answer":"Mercury","optionA":"Mercury","optionB":"Venus","optionC":"Mars","optionD":"Earth","difficulty":"easy","currentIndex":0,"totalQuestions":3},{"id":"q-2","name":"What is the chemical symbol for gold?","description":"Au","status":"active","createdAt":"2026-01-02","question":"What is the chemical symbol for gold?","answer":"Au","optionA":"Ag","optionB":"Au","optionC":"Fe","optionD":"Cu","difficulty":"medium","currentIndex":0,"totalQuestions":3},{"id":"q-3","name":"Who painted the Mona Lisa?","description":"Leonardo da Vinci","status":"active","createdAt":"2026-01-03","question":"Who painted the Mona Lisa?","answer":"Leonardo da Vinci","optionA":"Michelangelo","optionB":"Raphael","optionC":"Leonardo da Vinci","optionD":"Donatello","difficulty":"easy","currentIndex":0,"totalQuestions":3}]},"traits":[{"name":"QuizItemQuiz","linkedEntity":"QuizItem","category":"interaction","stateMachine":{"states":[{"name":"question","isInitial":true},{"name":"answer-revealed"},{"name":"complete"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"ANSWER","name":"Answer","payload":[{"name":"answer","type":"string","required":true}]},{"key":"NEXT","name":"Next Question"},{"key":"RESTART","name":"Restart"}],"transitions":[{"from":"question","to":"question","event":"INIT","effects":[["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["or",["object/get",["array/first","@entity"],"currentIndex"],0],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["or",["object/get",["array/first","@entity"],"totalQuestions"],0]}]}]}]}]]},{"from":"question","to":"answer-revealed","event":"ANSWER","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Answer Revealed","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"body","content":["object/get",["array/first","@entity"],"name"]},{"type":"divider"},{"type":"typography","variant":"caption","color":"muted","content":"Answer"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"description"]}]}]},{"type":"alert","variant":"info","message":"Review the answer above."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Next Question","event":"NEXT","variant":"primary","icon":"arrow-right"}]}]}]]},{"from":"answer-revealed","to":"question","event":"NEXT","effects":[["set","@entity.currentIndex",["+","@entity.currentIndex",1]],["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["or",["object/get",["array/first","@entity"],"currentIndex"],0],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["or",["object/get",["array/first","@entity"],"totalQuestions"],0]}]}]}]}]]},{"from":"answer-revealed","to":"complete","event":"RESTART","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Quiz Complete!","variant":"h2"},{"type":"alert","variant":"success","message":"You have completed all questions."},{"type":"button","label":"Restart","event":"RESTART","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"complete","to":"question","event":"RESTART","effects":[["fetch","QuizItem"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","content":"Quiz","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"help-circle","size":"lg"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"simple-grid","columns":2,"children":[{"type":"button","label":["object/get",["array/first","@entity"],"optionA"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"A"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionB"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"B"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionC"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"C"}},{"type":"button","label":["object/get",["array/first","@entity"],"optionD"],"event":"ANSWER","variant":"secondary","actionPayload":{"answer":"D"}}]},{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"signal","size":"sm"},{"type":"typography","variant":"caption","color":"muted","content":"Difficulty:"},{"type":"badge","label":["object/get",["array/first","@entity"],"difficulty"]}]},{"type":"stack","direction":"horizontal","gap":"xs","align":"center","children":[{"type":"typography","variant":"caption","color":"muted","content":"Question"},{"type":"typography","variant":"caption","content":["+",["or",["object/get",["array/first","@entity"],"currentIndex"],0],1]},{"type":"typography","variant":"caption","color":"muted","content":"of"},{"type":"typography","variant":"caption","content":["or",["object/get",["array/first","@entity"],"totalQuestions"],0]}]}]}]}]]}]}}],"pages":[{"name":"QuizItemQuizPage","path":"/quizitems/quiz","traits":[{"ref":"QuizItemQuiz"}]}]}],"description":"Quiz molecule composing flip-card atom with question/answer flow. Absorbs: quiz-block."},
     source: `/**
  * std-quiz
  *
@@ -14953,9 +19466,9 @@ function buildTrait(c: QuizConfig): Trait {
             type: 'stack', direction: 'horizontal', gap: 'xs', align: 'center',
             children: [
               { type: 'typography', variant: 'caption', color: 'muted', content: 'Question' },
-              { type: 'typography', variant: 'caption', content: ['+', ef('currentIndex'), 1] },
+              { type: 'typography', variant: 'caption', content: ['+', ['or', ef('currentIndex'), 0], 1] },
               { type: 'typography', variant: 'caption', color: 'muted', content: 'of' },
-              { type: 'typography', variant: 'caption', content: ef('totalQuestions') },
+              { type: 'typography', variant: 'caption', content: ['or', ef('totalQuestions'), 0] },
             ],
           },
         ],
@@ -15259,6 +19772,2073 @@ export function stdSequencerGame(params: StdSequencerGameParams): OrbitalDefinit
     \`\${c.entityName}Orbital\`,
     buildEntity(c),
     [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-content-pipeline": {
+    name: "std-service-content-pipeline",
+    description: "Content research pipeline molecule. Composes youtube search + llm summarization into a sequential pipeline: search -> select -> summarize. Single trait with six states (idle, searching, results, summarizing, complete, error) that orchestrates call-service effects for youtube and llm services.",
+    level: "molecule",
+    schema: {"name":"ServiceContentPipelineOrbital","orbitals":[{"name":"ServiceContentPipelineOrbital","entity":{"name":"ServiceContentPipeline","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"query","type":"string","default":""},{"name":"videoTitle","type":"string","default":""},{"name":"videoDescription","type":"string","default":""},{"name":"summary","type":"string","default":""},{"name":"pipelineStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""}]},"traits":[{"name":"ServiceContentPipelinePipeline","linkedEntity":"ServiceContentPipeline","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"searching"},{"name":"results"},{"name":"summarizing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEARCH","name":"Search"},{"key":"SEARCH_COMPLETE","name":"Search Complete","payload":[{"name":"results","type":"array","required":true}]},{"key":"SELECT_AND_SUMMARIZE","name":"Select and Summarize","payload":[{"name":"videoId","type":"string","required":true}]},{"key":"VIDEO_FETCHED","name":"Video Fetched","payload":[{"name":"title","type":"string","required":true},{"name":"description","type":"string","required":true}]},{"key":"SUMMARY_COMPLETE","name":"Summary Complete","payload":[{"name":"content","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"ServiceContentPipeline","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]]},{"from":"idle","to":"searching","event":"SEARCH","effects":[["set","@entity.pipelineStatus","searching"],["call-service","youtube","search",{"query":"@entity.query","maxResults":5,"type":"video"}],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Searching YouTube...","variant":"h3"},{"type":"spinner","size":"lg"},{"type":"typography","content":"@entity.query","variant":"caption"}]}]]},{"from":"searching","to":"results","event":"SEARCH_COMPLETE","effects":[["set","@entity.pipelineStatus","results"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"Search Results","variant":"h2"}]},{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]},{"type":"divider"},{"type":"data-grid","entity":"ServiceContentPipeline","emptyIcon":"inbox","emptyTitle":"No results found","emptyDescription":"Try a different search query.","itemActions":[{"label":"Summarize","event":"SELECT_AND_SUMMARIZE","variant":"primary","size":"sm"}],"columns":[{"name":"videoTitle","label":"Title","variant":"h4","icon":"video"},{"name":"videoDescription","label":"Description","variant":"caption"}]}]}]]},{"from":"results","to":"summarizing","event":"SELECT_AND_SUMMARIZE","effects":[["set","@entity.pipelineStatus","summarizing"],["call-service","youtube","getVideo",{"videoId":"@payload.videoId"}],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Fetching & summarizing...","variant":"h3"},{"type":"spinner","size":"lg"},{"type":"typography","content":"@entity.videoTitle","variant":"caption"}]}]]},{"from":"summarizing","to":"summarizing","event":"VIDEO_FETCHED","effects":[["set","@entity.videoTitle","@payload.title"],["set","@entity.videoDescription","@payload.description"],["call-service","llm","summarize",{"text":"@entity.videoDescription"}]]},{"from":"summarizing","to":"complete","event":"SUMMARY_COMPLETE","effects":[["set","@entity.summary","@payload.content"],["set","@entity.pipelineStatus","complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Research Complete","variant":"h2"}]},{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"video","size":"sm"},{"type":"typography","content":"@entity.videoTitle","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Summary","variant":"caption"},{"type":"typography","content":"@entity.summary","variant":"body"}]}]}]}]]},{"from":"searching","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.pipelineStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Pipeline Error","variant":"h2"},{"type":"alert","variant":"error","message":"@entity.error"},{"type":"button","label":"Try Again","event":"RESET","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"summarizing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.pipelineStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Pipeline Error","variant":"h2"},{"type":"alert","variant":"error","message":"@entity.error"},{"type":"button","label":"Try Again","event":"RESET","variant":"primary","icon":"rotate-ccw"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["set","@entity.error",""],["set","@entity.summary",""],["set","@entity.videoTitle",""],["set","@entity.videoDescription",""],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"ServiceContentPipeline","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]]},{"from":"results","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"ServiceContentPipeline","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["set","@entity.error",""],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"ServiceContentPipeline","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]]}]}}],"pages":[{"name":"ServiceContentPipelinePage","path":"/servicecontentpipelines","traits":[{"ref":"ServiceContentPipelinePipeline"}]}]}],"description":"Content research pipeline molecule. Composes youtube search + llm summarization into a sequential pipeline: search -> select -> summarize. Single trait with six states (idle, searching, results, summarizing, complete, error) that orchestrates call-service effects for youtube and llm services."},
+    source: `/**
+ * std-service-content-pipeline
+ *
+ * Content research pipeline molecule. Composes youtube search + llm summarization
+ * into a sequential pipeline: search -> select -> summarize.
+ *
+ * Single trait with six states (idle, searching, results, summarizing, complete, error)
+ * that orchestrates call-service effects for youtube and llm services.
+ *
+ * @level molecule
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceContentPipelineParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface PipelineConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  pluralName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceContentPipelineParams): PipelineConfig {
+  const entityName = params.entityName ?? 'Research';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'query', type: 'string', default: '' },
+    { name: 'videoTitle', type: 'string', default: '' },
+    { name: 'videoDescription', type: 'string', default: '' },
+    { name: 'summary', type: 'string', default: '' },
+    { name: 'pipelineStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string', default: '' },
+  ];
+
+  const baseFields = ensureIdField(params.fields ?? []);
+  const userFieldNames = new Set(baseFields.map(f => f.name));
+  const fields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !userFieldNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}Pipeline\`,
+    pluralName: p,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// UI Content Builders
+// ============================================================================
+
+function searchFormView(entityName: string): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center',
+        children: [
+          { type: 'icon', name: 'search', size: 'lg' },
+          { type: 'typography', content: 'Content Research', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'card',
+        children: [{
+          type: 'stack', direction: 'vertical', gap: 'md',
+          children: [
+            { type: 'typography', content: 'Search YouTube for content to summarize', variant: 'body' },
+            { type: 'form-section', entity: entityName, mode: 'edit', submitEvent: 'SEARCH', fields: ['query'] },
+          ],
+        }],
+      },
+    ],
+  };
+}
+
+function searchingView(): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'search', size: 'lg' },
+      { type: 'typography', content: 'Searching YouTube...', variant: 'h3' },
+      { type: 'spinner', size: 'lg' },
+      { type: 'typography', content: \`@entity.query\`, variant: 'caption' },
+    ],
+  };
+}
+
+function resultsView(entityName: string): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center', justify: 'space-between',
+        children: [
+          {
+            type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center',
+            children: [
+              { type: 'icon', name: 'video', size: 'lg' },
+              { type: 'typography', content: 'Search Results', variant: 'h2' },
+            ],
+          },
+          { type: 'button', label: 'New Search', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'data-grid', entity: entityName,
+        emptyIcon: 'inbox',
+        emptyTitle: 'No results found',
+        emptyDescription: 'Try a different search query.',
+        itemActions: [{ label: 'Summarize', event: 'SELECT_AND_SUMMARIZE', variant: 'primary', size: 'sm' }],
+        columns: [
+          { name: 'videoTitle', label: 'Title', variant: 'h4', icon: 'video' },
+          { name: 'videoDescription', label: 'Description', variant: 'caption' },
+        ],
+      },
+    ],
+  };
+}
+
+function summarizingView(): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'cpu', size: 'lg' },
+      { type: 'typography', content: 'Fetching & summarizing...', variant: 'h3' },
+      { type: 'spinner', size: 'lg' },
+      { type: 'typography', content: \`@entity.videoTitle\`, variant: 'caption' },
+    ],
+  };
+}
+
+function completeView(): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center', justify: 'space-between',
+        children: [
+          {
+            type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center',
+            children: [
+              { type: 'icon', name: 'check-circle', size: 'lg' },
+              { type: 'typography', content: 'Research Complete', variant: 'h2' },
+            ],
+          },
+          { type: 'button', label: 'New Search', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'card',
+        children: [{
+          type: 'stack', direction: 'vertical', gap: 'md',
+          children: [
+            {
+              type: 'stack', direction: 'horizontal', gap: 'sm', align: 'center',
+              children: [
+                { type: 'icon', name: 'video', size: 'sm' },
+                { type: 'typography', content: \`@entity.videoTitle\`, variant: 'h3' },
+              ],
+            },
+            { type: 'divider' },
+            { type: 'typography', content: 'Summary', variant: 'caption' },
+            { type: 'typography', content: \`@entity.summary\`, variant: 'body' },
+          ],
+        }],
+      },
+    ],
+  };
+}
+
+function errorView(): unknown {
+  return {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'alert-triangle', size: 'lg' },
+      { type: 'typography', content: 'Pipeline Error', variant: 'h2' },
+      { type: 'alert', variant: 'error', message: \`@entity.error\` },
+      { type: 'button', label: 'Try Again', event: 'RESET', variant: 'primary', icon: 'rotate-ccw' },
+    ],
+  };
+}
+
+// ============================================================================
+// Trait Builder
+// ============================================================================
+
+function buildTrait(c: PipelineConfig): Trait {
+  const { entityName } = c;
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'searching' },
+        { name: 'results' },
+        { name: 'summarizing' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEARCH', name: 'Search' },
+        {
+          key: 'SEARCH_COMPLETE', name: 'Search Complete',
+          payload: [{ name: 'results', type: 'array', required: true }],
+        },
+        {
+          key: 'SELECT_AND_SUMMARIZE', name: 'Select and Summarize',
+          payload: [{ name: 'videoId', type: 'string', required: true }],
+        },
+        {
+          key: 'VIDEO_FETCHED', name: 'Video Fetched',
+          payload: [
+            { name: 'title', type: 'string', required: true },
+            { name: 'description', type: 'string', required: true },
+          ],
+        },
+        {
+          key: 'SUMMARY_COMPLETE', name: 'Summary Complete',
+          payload: [{ name: 'content', type: 'string', required: true }],
+        },
+        {
+          key: 'FAILED', name: 'Failed',
+          payload: [{ name: 'error', type: 'string', required: true }],
+        },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions: [
+        // INIT: idle -> idle (render search form)
+        {
+          from: 'idle', to: 'idle', event: 'INIT',
+          effects: [
+            ['render-ui', 'main', searchFormView(entityName)],
+          ],
+        },
+        // SEARCH: idle -> searching (call youtube search service)
+        {
+          from: 'idle', to: 'searching', event: 'SEARCH',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'searching'],
+            ['call-service', 'youtube', 'search', { query: '@entity.query', maxResults: 5, type: 'video' }],
+            ['render-ui', 'main', searchingView()],
+          ],
+        },
+        // SEARCH_COMPLETE: searching -> results
+        {
+          from: 'searching', to: 'results', event: 'SEARCH_COMPLETE',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'results'],
+            ['render-ui', 'main', resultsView(entityName)],
+          ],
+        },
+        // SELECT_AND_SUMMARIZE: results -> summarizing (fetch video details)
+        {
+          from: 'results', to: 'summarizing', event: 'SELECT_AND_SUMMARIZE',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'summarizing'],
+            ['call-service', 'youtube', 'getVideo', { videoId: '@payload.videoId' }],
+            ['render-ui', 'main', summarizingView()],
+          ],
+        },
+        // VIDEO_FETCHED: summarizing -> summarizing (set video info, call llm summarize)
+        {
+          from: 'summarizing', to: 'summarizing', event: 'VIDEO_FETCHED',
+          effects: [
+            ['set', '@entity.videoTitle', '@payload.title'],
+            ['set', '@entity.videoDescription', '@payload.description'],
+            ['call-service', 'llm', 'summarize', { text: '@entity.videoDescription' }],
+          ],
+        },
+        // SUMMARY_COMPLETE: summarizing -> complete
+        {
+          from: 'summarizing', to: 'complete', event: 'SUMMARY_COMPLETE',
+          effects: [
+            ['set', '@entity.summary', '@payload.content'],
+            ['set', '@entity.pipelineStatus', 'complete'],
+            ['render-ui', 'main', completeView()],
+          ],
+        },
+        // FAILED: searching -> error
+        {
+          from: 'searching', to: 'error', event: 'FAILED',
+          effects: [
+            ['set', '@entity.error', '@payload.error'],
+            ['set', '@entity.pipelineStatus', 'error'],
+            ['render-ui', 'main', errorView()],
+          ],
+        },
+        // FAILED: summarizing -> error
+        {
+          from: 'summarizing', to: 'error', event: 'FAILED',
+          effects: [
+            ['set', '@entity.error', '@payload.error'],
+            ['set', '@entity.pipelineStatus', 'error'],
+            ['render-ui', 'main', errorView()],
+          ],
+        },
+        // RESET: complete -> idle
+        {
+          from: 'complete', to: 'idle', event: 'RESET',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'idle'],
+            ['set', '@entity.error', ''],
+            ['set', '@entity.summary', ''],
+            ['set', '@entity.videoTitle', ''],
+            ['set', '@entity.videoDescription', ''],
+            ['render-ui', 'main', searchFormView(entityName)],
+          ],
+        },
+        // RESET: results -> idle
+        {
+          from: 'results', to: 'idle', event: 'RESET',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'idle'],
+            ['render-ui', 'main', searchFormView(entityName)],
+          ],
+        },
+        // RESET: error -> idle
+        {
+          from: 'error', to: 'idle', event: 'RESET',
+          effects: [
+            ['set', '@entity.pipelineStatus', 'idle'],
+            ['set', '@entity.error', ''],
+            ['render-ui', 'main', searchFormView(entityName)],
+          ],
+        },
+      ],
+    },
+  } as Trait;
+}
+
+// ============================================================================
+// Projections
+// ============================================================================
+
+function buildEntity(c: PipelineConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildPage(c: PipelineConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+export function stdServiceContentPipelineEntity(params: StdServiceContentPipelineParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceContentPipelineTrait(params: StdServiceContentPipelineParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceContentPipelinePage(params: StdServiceContentPipelineParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceContentPipeline(params: StdServiceContentPipelineParams): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(\`\${c.entityName}Orbital\`, buildEntity(c), [buildTrait(c)], [buildPage(c)]);
+}
+`,
+  },
+  "std-service-custom-api-tester": {
+    name: "std-service-custom-api-tester",
+    description: "Unified API tester molecule that exercises all 4 custom REST auth patterns (header API key, bearer token, query param API key, no auth) with a tab selector. Single entity, single trait, 4 call events. Pure function: params in, OrbitalDefinition out.",
+    level: "molecule",
+    schema: {"name":"ServiceCustomApiTesterOrbital","services":[{"name":"custom-header-api","type":"rest","baseUrl":"https://api.example.com/v1","auth":{"type":"api-key","keyName":"X-API-Key","location":"header","secretEnv":"CUSTOM_API_SECRET"}},{"name":"custom-bearer-api","type":"rest","baseUrl":"https://api.example.com/v2","auth":{"type":"bearer","secretEnv":"CUSTOM_BEARER_TOKEN"}},{"name":"custom-query-api","type":"rest","baseUrl":"https://api.example.com/v3","auth":{"type":"api-key","keyName":"api_key","location":"query","secretEnv":"CUSTOM_QUERY_KEY"}},{"name":"custom-noauth-api","type":"rest","baseUrl":"https://api.example.com/v4"}],"orbitals":[{"name":"ServiceCustomApiTesterOrbital","entity":{"name":"ServiceCustomApiTester","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"authType","type":"string","default":"header"},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceCustomApiTesterApiTester","linkedEntity":"ServiceCustomApiTester","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_HEADER_API","name":"Call Header API"},{"key":"CALL_BEARER_API","name":"Call Bearer API"},{"key":"CALL_QUERY_API","name":"Call Query API"},{"key":"CALL_NOAUTH_API","name":"Call No-Auth API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceCustomApiTester"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Unified API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"Request body (JSON)","bind":"@entity.requestBody"},{"type":"divider"},{"type":"typography","content":"Select Auth Type","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Header API Key","event":"CALL_HEADER_API","variant":"primary","icon":"key"},{"type":"button","label":"Bearer Token","event":"CALL_BEARER_API","variant":"primary","icon":"shield"},{"type":"button","label":"Query Param","event":"CALL_QUERY_API","variant":"primary","icon":"search"},{"type":"button","label":"No Auth","event":"CALL_NOAUTH_API","variant":"primary","icon":"unlock"}]}]}]]},{"from":"idle","to":"calling","event":"CALL_HEADER_API","effects":[["set","@entity.authType","header"],["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomapitester endpoint..."}],["call-service","custom-header-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"idle","to":"calling","event":"CALL_BEARER_API","effects":[["set","@entity.authType","bearer"],["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomapitester endpoint..."}],["call-service","custom-bearer-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"idle","to":"calling","event":"CALL_QUERY_API","effects":[["set","@entity.authType","query"],["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomapitester endpoint..."}],["call-service","custom-query-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"idle","to":"calling","event":"CALL_NOAUTH_API","effects":[["set","@entity.authType","noauth"],["render-ui","main",{"type":"loading-state","title":"Calling API...","message":"Sending request to servicecustomapitester endpoint..."}],["call-service","custom-noauth-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"badge","content":"@entity.authType","variant":"info"},{"type":"badge","content":"@entity.statusCode","variant":"info"}]},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Unified API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"Request body (JSON)","bind":"@entity.requestBody"},{"type":"divider"},{"type":"typography","content":"Select Auth Type","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Header API Key","event":"CALL_HEADER_API","variant":"primary","icon":"key"},{"type":"button","label":"Bearer Token","event":"CALL_BEARER_API","variant":"primary","icon":"shield"},{"type":"button","label":"Query Param","event":"CALL_QUERY_API","variant":"primary","icon":"search"},{"type":"button","label":"No Auth","event":"CALL_NOAUTH_API","variant":"primary","icon":"unlock"}]}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Unified API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"Request body (JSON)","bind":"@entity.requestBody"},{"type":"divider"},{"type":"typography","content":"Select Auth Type","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Header API Key","event":"CALL_HEADER_API","variant":"primary","icon":"key"},{"type":"button","label":"Bearer Token","event":"CALL_BEARER_API","variant":"primary","icon":"shield"},{"type":"button","label":"Query Param","event":"CALL_QUERY_API","variant":"primary","icon":"search"},{"type":"button","label":"No Auth","event":"CALL_NOAUTH_API","variant":"primary","icon":"unlock"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"globe","size":"lg"},{"type":"typography","content":"Unified API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"Request body (JSON)","bind":"@entity.requestBody"},{"type":"divider"},{"type":"typography","content":"Select Auth Type","variant":"h4"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Header API Key","event":"CALL_HEADER_API","variant":"primary","icon":"key"},{"type":"button","label":"Bearer Token","event":"CALL_BEARER_API","variant":"primary","icon":"shield"},{"type":"button","label":"Query Param","event":"CALL_QUERY_API","variant":"primary","icon":"search"},{"type":"button","label":"No Auth","event":"CALL_NOAUTH_API","variant":"primary","icon":"unlock"}]}]}]]}]}}],"pages":[{"name":"ServiceCustomApiTesterPage","path":"/servicecustomapitesters","traits":[{"ref":"ServiceCustomApiTesterApiTester"}]}]}],"description":"Unified API tester molecule that exercises all 4 custom REST auth patterns (header API key, bearer token, query param API key, no auth) with a tab selector. Single entity, single trait, 4 call events. Pure function: params in, OrbitalDefinition out."},
+    source: `/**
+ * std-service-custom-api-tester
+ *
+ * Unified API tester molecule that exercises all 4 custom REST auth patterns
+ * (header API key, bearer token, query param API key, no auth) with a tab
+ * selector. Single entity, single trait, 4 call events.
+ * Pure function: params in, OrbitalDefinition out.
+ *
+ * @level molecule
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceCustomApiTesterParams {
+  entityName?: string;
+  fields?: EntityField[];
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+
+  // Page
+  pageName?: string;
+  pagePath?: string;
+  isInitial?: boolean;
+
+  /** Base URL for header-based API key service */
+  headerBaseUrl?: string;
+  /** Base URL for bearer token service */
+  bearerBaseUrl?: string;
+  /** Base URL for query-param API key service */
+  queryBaseUrl?: string;
+  /** Base URL for no-auth service */
+  noauthBaseUrl?: string;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface ApiTesterConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  headerBaseUrl: string;
+  bearerBaseUrl: string;
+  queryBaseUrl: string;
+  noauthBaseUrl: string;
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceCustomApiTesterParams): ApiTesterConfig {
+  const entityName = params.entityName ?? 'ApiTest';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'endpoint', type: 'string' },
+    { name: 'method', type: 'string', default: 'GET' },
+    { name: 'requestBody', type: 'string' },
+    { name: 'responseData', type: 'string' },
+    { name: 'statusCode', type: 'number', default: 0 },
+    { name: 'authType', type: 'string', default: 'header' },
+    { name: 'callStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    headerBaseUrl: params.headerBaseUrl ?? 'https://api.example.com/v1',
+    bearerBaseUrl: params.bearerBaseUrl ?? 'https://api.example.com/v2',
+    queryBaseUrl: params.queryBaseUrl ?? 'https://api.example.com/v3',
+    noauthBaseUrl: params.noauthBaseUrl ?? 'https://api.example.com/v4',
+    traitName: \`\${entityName}ApiTester\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: ApiTesterConfig): Entity {
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+function buildTrait(c: ApiTesterConfig): Trait {
+  const { entityName } = c;
+
+  // Shared form elements for all auth types
+  const formChildren: unknown[] = [
+    { type: 'icon', name: 'globe', size: 'lg' },
+    { type: 'typography', content: 'Unified API Tester', variant: 'h2' },
+    {
+      type: 'input',
+      field: 'endpoint',
+      placeholder: '/users',
+      bind: '@entity.endpoint',
+    },
+    {
+      type: 'select',
+      field: 'method',
+      bind: '@entity.method',
+      options: [
+        { label: 'GET', value: 'GET' },
+        { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
+      ],
+    },
+    {
+      type: 'textarea',
+      field: 'requestBody',
+      placeholder: 'Request body (JSON)',
+      bind: '@entity.requestBody',
+    },
+    { type: 'divider' },
+    { type: 'typography', content: 'Select Auth Type', variant: 'h4' },
+    {
+      type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+      children: [
+        { type: 'button', label: 'Header API Key', event: 'CALL_HEADER_API', variant: 'primary', icon: 'key' },
+        { type: 'button', label: 'Bearer Token', event: 'CALL_BEARER_API', variant: 'primary', icon: 'shield' },
+        { type: 'button', label: 'Query Param', event: 'CALL_QUERY_API', variant: 'primary', icon: 'search' },
+        { type: 'button', label: 'No Auth', event: 'CALL_NOAUTH_API', variant: 'primary', icon: 'unlock' },
+      ],
+    },
+  ];
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: formChildren,
+  };
+
+  // calling: loading state
+  const callingUI = {
+    type: 'loading-state', title: 'Calling API...', message: \`Sending request to \${entityName.toLowerCase()} endpoint...\`,
+  };
+
+  // complete: response viewer showing which auth type was used
+  const completeUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'typography', content: 'Response', variant: 'h2' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'badge', content: '@entity.authType', variant: 'info' },
+          { type: 'badge', content: '@entity.statusCode', variant: 'info' },
+        ],
+      },
+      { type: 'code', content: '@entity.responseData', language: 'json' },
+      { type: 'button', label: 'New Request', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  // error: error state
+  const errorUI = {
+    type: 'error-state', title: 'Request Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const callServiceArgs = {
+    endpoint: '@entity.endpoint',
+    method: '@entity.method',
+    body: '@entity.requestBody',
+  };
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // CALL_HEADER_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_HEADER_API',
+      effects: [
+        ['set', '@entity.authType', 'header'],
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-header-api', 'execute', callServiceArgs],
+      ],
+    },
+    // CALL_BEARER_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_BEARER_API',
+      effects: [
+        ['set', '@entity.authType', 'bearer'],
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-bearer-api', 'execute', callServiceArgs],
+      ],
+    },
+    // CALL_QUERY_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_QUERY_API',
+      effects: [
+        ['set', '@entity.authType', 'query'],
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-query-api', 'execute', callServiceArgs],
+      ],
+    },
+    // CALL_NOAUTH_API: idle -> calling
+    {
+      from: 'idle', to: 'calling', event: 'CALL_NOAUTH_API',
+      effects: [
+        ['set', '@entity.authType', 'noauth'],
+        ['render-ui', 'main', callingUI],
+        ['call-service', 'custom-noauth-api', 'execute', callServiceArgs],
+      ],
+    },
+    // API_RESPONSE: calling -> complete
+    {
+      from: 'calling', to: 'complete', event: 'API_RESPONSE',
+      effects: [
+        ['set', '@entity.responseData', '@payload.data'],
+        ['set', '@entity.statusCode', '@payload.statusCode'],
+        ['render-ui', 'main', completeUI],
+      ],
+    },
+    // FAILED: calling -> error
+    {
+      from: 'calling', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: complete -> idle
+    {
+      from: 'complete', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'calling' },
+        { name: 'complete' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CALL_HEADER_API', name: 'Call Header API' },
+        { key: 'CALL_BEARER_API', name: 'Call Bearer API' },
+        { key: 'CALL_QUERY_API', name: 'Call Query API' },
+        { key: 'CALL_NOAUTH_API', name: 'Call No-Auth API' },
+        { key: 'API_RESPONSE', name: 'API Response', payload: [
+          { name: 'data', type: 'string', required: true },
+          { name: 'statusCode', type: 'number', required: true },
+        ]},
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: ApiTesterConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceCustomApiTesterEntity(params: StdServiceCustomApiTesterParams): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceCustomApiTesterTrait(params: StdServiceCustomApiTesterParams): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceCustomApiTesterPage(params: StdServiceCustomApiTesterParams): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceCustomApiTester(params: StdServiceCustomApiTesterParams): OrbitalDefinition {
+  const c = resolve(params);
+  const orbital = makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+  return {
+    ...orbital,
+    services: [
+      {
+        name: 'custom-header-api',
+        type: 'rest' as const,
+        baseUrl: c.headerBaseUrl,
+        auth: {
+          type: 'api-key' as const,
+          keyName: 'X-API-Key',
+          location: 'header' as const,
+          secretEnv: 'CUSTOM_API_SECRET',
+        },
+      },
+      {
+        name: 'custom-bearer-api',
+        type: 'rest' as const,
+        baseUrl: c.bearerBaseUrl,
+        auth: {
+          type: 'bearer' as const,
+          secretEnv: 'CUSTOM_BEARER_TOKEN',
+        },
+      },
+      {
+        name: 'custom-query-api',
+        type: 'rest' as const,
+        baseUrl: c.queryBaseUrl,
+        auth: {
+          type: 'api-key' as const,
+          keyName: 'api_key',
+          location: 'query' as const,
+          secretEnv: 'CUSTOM_QUERY_KEY',
+        },
+      },
+      {
+        name: 'custom-noauth-api',
+        type: 'rest' as const,
+        baseUrl: c.noauthBaseUrl,
+      },
+    ],
+  } as OrbitalDefinition;
+}
+`,
+  },
+  "std-service-devops-toolkit": {
+    name: "std-service-devops-toolkit",
+    description: "DevOps toolkit molecule. Three independent traits on a single page sharing one entity via the event bus: - GitHubTrait: PR creation flow (ghIdle -> creatingPR -> prCreated / ghError) - RedisTrait: cache get/set/delete (redisIdle -> redisExecuting -> redisComplete / redisError) - StorageTrait: file upload/download/list/delete (storageIdle -> storageExecuting -> storageComplete / storageError) Each trait renders its own UI section. No cross-trait events needed (independent flows).",
+    level: "molecule",
+    schema: {"name":"ServiceDevopsToolkitOrbital","orbitals":[{"name":"ServiceDevopsToolkitOrbital","entity":{"name":"ServiceDevopsToolkit","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"title","type":"string","default":""},{"name":"body","type":"string","default":""},{"name":"head","type":"string","default":""},{"name":"base","type":"string","default":"main"},{"name":"prUrl","type":"string","default":""},{"name":"cacheKey","type":"string","default":""},{"name":"cacheValue","type":"string","default":""},{"name":"bucket","type":"string","default":"uploads"},{"name":"fileKey","type":"string","default":""},{"name":"result","type":"string","default":""},{"name":"toolStatus","type":"string","default":"idle"},{"name":"activeTab","type":"string","default":"github"},{"name":"error","type":"string","default":""}]},"traits":[{"name":"ServiceDevopsToolkitGithub","linkedEntity":"ServiceDevopsToolkit","category":"interaction","stateMachine":{"states":[{"name":"ghIdle","isInitial":true},{"name":"creatingPR"},{"name":"prCreated"},{"name":"ghError"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE_PR","name":"Create Pull Request"},{"key":"PR_CREATED","name":"PR Created","payload":[{"name":"url","type":"string","required":true}]},{"key":"GH_FAILED","name":"GitHub Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"GH_RETRY","name":"GitHub Retry"},{"key":"GH_RESET","name":"GitHub Reset"}],"transitions":[{"from":"ghIdle","to":"ghIdle","event":"INIT","effects":[["fetch","ServiceDevopsToolkit"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"GitHub: Create PR","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Title","bind":"@entity.title","placeholder":"PR title"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","bind":"@entity.head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","bind":"@entity.base","placeholder":"main"},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]},{"from":"ghIdle","to":"creatingPR","event":"CREATE_PR","effects":[["render-ui","main",{"type":"loading-state","title":"Creating pull request...","message":"Submitting your PR to GitHub."}],["call-service","github","createPR",{"title":"@entity.title","body":"@entity.body","head":"@entity.head","base":"@entity.base"}]]},{"from":"creatingPR","to":"prCreated","event":"PR_CREATED","effects":[["set","@entity.prUrl","@payload.url"],["set","@entity.toolStatus","pr-created"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Pull request created!"},{"type":"typography","variant":"body","color":"muted","content":"@entity.prUrl"},{"type":"button","label":"Create Another","event":"GH_RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"creatingPR","to":"ghError","event":"GH_FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.toolStatus","error"],["render-ui","main",{"type":"error-state","title":"PR Creation Failed","message":"@entity.error","onRetry":"GH_RETRY"}]]},{"from":"ghError","to":"ghIdle","event":"GH_RETRY","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"GitHub: Create PR","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Title","bind":"@entity.title","placeholder":"PR title"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","bind":"@entity.head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","bind":"@entity.base","placeholder":"main"},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]},{"from":"prCreated","to":"ghIdle","event":"GH_RESET","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"git-pull-request","size":"lg"},{"type":"typography","content":"GitHub: Create PR","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Title","bind":"@entity.title","placeholder":"PR title"},{"type":"textarea","label":"Body","bind":"@entity.body","placeholder":"Describe your changes..."},{"type":"input","label":"Head Branch","bind":"@entity.head","placeholder":"feature-branch"},{"type":"input","label":"Base Branch","bind":"@entity.base","placeholder":"main"},{"type":"button","label":"Create PR","event":"CREATE_PR","variant":"primary","icon":"git-pull-request"}]}]]}]}},{"name":"ServiceDevopsToolkitRedis","linkedEntity":"ServiceDevopsToolkit","category":"interaction","stateMachine":{"states":[{"name":"redisIdle","isInitial":true},{"name":"redisExecuting"},{"name":"redisComplete"},{"name":"redisError"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"GET_KEY","name":"Get Key"},{"key":"SET_KEY","name":"Set Key"},{"key":"DELETE_KEY","name":"Delete Key"},{"key":"REDIS_DONE","name":"Redis Done","payload":[{"name":"data","type":"string","required":true}]},{"key":"REDIS_FAILED","name":"Redis Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"REDIS_RESET","name":"Redis Reset"},{"key":"REDIS_RETRY","name":"Redis Retry"}],"transitions":[{"from":"redisIdle","to":"redisIdle","event":"INIT","effects":[["fetch","ServiceDevopsToolkit"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Key","bind":"@entity.cacheKey","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.cacheValue","placeholder":"cache-value"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"redisIdle","to":"redisExecuting","event":"GET_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running Redis operation..."}],["call-service","redis","get",{"key":"@entity.cacheKey"}]]},{"from":"redisIdle","to":"redisExecuting","event":"SET_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running Redis operation..."}],["call-service","redis","set",{"key":"@entity.cacheKey","value":"@entity.cacheValue"}]]},{"from":"redisIdle","to":"redisExecuting","event":"DELETE_KEY","effects":[["render-ui","main",{"type":"loading-state","title":"Executing...","message":"Running Redis operation..."}],["call-service","redis","delete",{"key":"@entity.cacheKey"}]]},{"from":"redisExecuting","to":"redisComplete","event":"REDIS_DONE","effects":[["set","@entity.result","@payload.data"],["set","@entity.toolStatus","redis-complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Redis operation complete"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Reset","event":"REDIS_RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"redisExecuting","to":"redisError","event":"REDIS_FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.toolStatus","error"],["render-ui","main",{"type":"error-state","title":"Redis Error","message":"@entity.error","onRetry":"REDIS_RETRY"}]]},{"from":"redisComplete","to":"redisIdle","event":"REDIS_RESET","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Key","bind":"@entity.cacheKey","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.cacheValue","placeholder":"cache-value"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"redisError","to":"redisIdle","event":"REDIS_RETRY","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Key","bind":"@entity.cacheKey","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.cacheValue","placeholder":"cache-value"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]]}]}},{"name":"ServiceDevopsToolkitStorage","linkedEntity":"ServiceDevopsToolkit","category":"interaction","stateMachine":{"states":[{"name":"storageIdle","isInitial":true},{"name":"storageExecuting"},{"name":"storageComplete"},{"name":"storageError"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"UPLOAD","name":"Upload File"},{"key":"DOWNLOAD","name":"Download File"},{"key":"LIST","name":"List Files"},{"key":"DELETE_FILE","name":"Delete File"},{"key":"STORAGE_DONE","name":"Storage Done","payload":[{"name":"data","type":"string","required":true}]},{"key":"STORAGE_FAILED","name":"Storage Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"STORAGE_RESET","name":"Storage Reset"},{"key":"STORAGE_RETRY","name":"Storage Retry"}],"transitions":[{"from":"storageIdle","to":"storageIdle","event":"INIT","effects":[["fetch","ServiceDevopsToolkit"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Storage Files","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"storageIdle","to":"storageExecuting","event":"UPLOAD","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation..."}],["call-service","storage","upload",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"storageIdle","to":"storageExecuting","event":"DOWNLOAD","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation..."}],["call-service","storage","download",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"storageIdle","to":"storageExecuting","event":"LIST","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation..."}],["call-service","storage","list",{"bucket":"@entity.bucket"}]]},{"from":"storageIdle","to":"storageExecuting","event":"DELETE_FILE","effects":[["render-ui","main",{"type":"loading-state","title":"Processing...","message":"Executing storage operation..."}],["call-service","storage","delete",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"storageExecuting","to":"storageComplete","event":"STORAGE_DONE","effects":[["set","@entity.result","@payload.data"],["set","@entity.toolStatus","storage-complete"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Storage operation complete"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Back","event":"STORAGE_RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"storageExecuting","to":"storageError","event":"STORAGE_FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.toolStatus","error"],["render-ui","main",{"type":"error-state","title":"Storage Error","message":"@entity.error","onRetry":"STORAGE_RETRY"}]]},{"from":"storageComplete","to":"storageIdle","event":"STORAGE_RESET","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Storage Files","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]},{"from":"storageError","to":"storageIdle","event":"STORAGE_RETRY","effects":[["set","@entity.toolStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Storage Files","variant":"h3"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]]}]}}],"pages":[{"name":"ServiceDevopsToolkitPage","path":"/servicedevopstoolkits","traits":[{"ref":"ServiceDevopsToolkitGithub"},{"ref":"ServiceDevopsToolkitRedis"},{"ref":"ServiceDevopsToolkitStorage"}]}]}],"description":"DevOps toolkit molecule. Three independent traits on a single page sharing one entity via the event bus: - GitHubTrait: PR creation flow (ghIdle -> creatingPR -> prCreated / ghError) - RedisTrait: cache get/set/delete (redisIdle -> redisExecuting -> redisComplete / redisError) - StorageTrait: file upload/download/list/delete (storageIdle -> storageExecuting -> storageComplete / storageError) Each trait renders its own UI section. No cross-trait events needed (independent flows)."},
+    source: `/**
+ * std-service-devops-toolkit
+ *
+ * DevOps toolkit molecule. Three independent traits on a single page
+ * sharing one entity via the event bus:
+ * - GitHubTrait: PR creation flow (ghIdle -> creatingPR -> prCreated / ghError)
+ * - RedisTrait: cache get/set/delete (redisIdle -> redisExecuting -> redisComplete / redisError)
+ * - StorageTrait: file upload/download/list/delete (storageIdle -> storageExecuting -> storageComplete / storageError)
+ *
+ * Each trait renders its own UI section. No cross-trait events needed (independent flows).
+ *
+ * @level molecule
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceDevopsToolkitParams {
+  /** Entity name in PascalCase (default: "DevopsTool") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, required fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface DevopsToolkitConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceDevopsToolkitParams): DevopsToolkitConfig {
+  const entityName = params.entityName ?? 'DevopsTool';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    // GitHub PR fields
+    { name: 'title', type: 'string', default: '' },
+    { name: 'body', type: 'string', default: '' },
+    { name: 'head', type: 'string', default: '' },
+    { name: 'base', type: 'string', default: 'main' },
+    { name: 'prUrl', type: 'string', default: '' },
+    // Redis cache fields
+    { name: 'cacheKey', type: 'string', default: '' },
+    { name: 'cacheValue', type: 'string', default: '' },
+    // Storage fields
+    { name: 'bucket', type: 'string', default: 'uploads' },
+    { name: 'fileKey', type: 'string', default: '' },
+    // Shared fields
+    { name: 'result', type: 'string', default: '' },
+    { name: 'toolStatus', type: 'string', default: 'idle' },
+    { name: 'activeTab', type: 'string', default: 'github' },
+    { name: 'error', type: 'string', default: '' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+  const fields = ensureIdField(mergedFields);
+
+  return {
+    entityName,
+    fields,
+    persistence: params.persistence ?? 'runtime',
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Trait builders
+// ============================================================================
+
+function buildGithubTrait(c: DevopsToolkitConfig): Trait {
+  const { entityName } = c;
+
+  const ghIdleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'git-pull-request', size: 'lg' },
+          { type: 'typography', content: 'GitHub: Create PR', variant: 'h3' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'input', label: 'Title', bind: '@entity.title', placeholder: 'PR title' },
+      { type: 'textarea', label: 'Body', bind: '@entity.body', placeholder: 'Describe your changes...' },
+      { type: 'input', label: 'Head Branch', bind: '@entity.head', placeholder: 'feature-branch' },
+      { type: 'input', label: 'Base Branch', bind: '@entity.base', placeholder: 'main' },
+      { type: 'button', label: 'Create PR', event: 'CREATE_PR', variant: 'primary', icon: 'git-pull-request' },
+    ],
+  };
+
+  const creatingPRUI = {
+    type: 'loading-state', title: 'Creating pull request...', message: 'Submitting your PR to GitHub.',
+  };
+
+  const prCreatedUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Pull request created!' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.prUrl' },
+      { type: 'button', label: 'Create Another', event: 'GH_RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const ghErrorUI = {
+    type: 'error-state', title: 'PR Creation Failed', message: '@entity.error', onRetry: 'GH_RETRY',
+  };
+
+  const transitions: unknown[] = [
+    {
+      from: 'ghIdle', to: 'ghIdle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', ghIdleUI],
+      ],
+    },
+    {
+      from: 'ghIdle', to: 'creatingPR', event: 'CREATE_PR',
+      effects: [
+        ['render-ui', 'main', creatingPRUI],
+        ['call-service', 'github', 'createPR', {
+          title: '@entity.title',
+          body: '@entity.body',
+          head: '@entity.head',
+          base: '@entity.base',
+        }],
+      ],
+    },
+    {
+      from: 'creatingPR', to: 'prCreated', event: 'PR_CREATED',
+      effects: [
+        ['set', '@entity.prUrl', '@payload.url'],
+        ['set', '@entity.toolStatus', 'pr-created'],
+        ['render-ui', 'main', prCreatedUI],
+      ],
+    },
+    {
+      from: 'creatingPR', to: 'ghError', event: 'GH_FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.toolStatus', 'error'],
+        ['render-ui', 'main', ghErrorUI],
+      ],
+    },
+    {
+      from: 'ghError', to: 'ghIdle', event: 'GH_RETRY',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', ghIdleUI],
+      ],
+    },
+    {
+      from: 'prCreated', to: 'ghIdle', event: 'GH_RESET',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', ghIdleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: \`\${entityName}Github\`,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'ghIdle', isInitial: true },
+        { name: 'creatingPR' },
+        { name: 'prCreated' },
+        { name: 'ghError' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CREATE_PR', name: 'Create Pull Request' },
+        { key: 'PR_CREATED', name: 'PR Created', payload: [
+          { name: 'url', type: 'string', required: true },
+        ] },
+        { key: 'GH_FAILED', name: 'GitHub Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ] },
+        { key: 'GH_RETRY', name: 'GitHub Retry' },
+        { key: 'GH_RESET', name: 'GitHub Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildRedisTrait(c: DevopsToolkitConfig): Trait {
+  const { entityName } = c;
+
+  const redisIdleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'database', size: 'lg' },
+          { type: 'typography', content: 'Redis Cache', variant: 'h3' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'input', label: 'Key', bind: '@entity.cacheKey', placeholder: 'cache-key' },
+      { type: 'input', label: 'Value', bind: '@entity.cacheValue', placeholder: 'cache-value' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Get', event: 'GET_KEY', variant: 'primary', icon: 'download' },
+          { type: 'button', label: 'Set', event: 'SET_KEY', variant: 'primary', icon: 'upload' },
+          { type: 'button', label: 'Delete', event: 'DELETE_KEY', variant: 'destructive', icon: 'trash-2' },
+        ],
+      },
+    ],
+  };
+
+  const redisExecutingUI = {
+    type: 'loading-state', title: 'Executing...', message: 'Running Redis operation...',
+  };
+
+  const redisCompleteUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Redis operation complete' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.result' },
+      { type: 'button', label: 'Reset', event: 'REDIS_RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const redisErrorUI = {
+    type: 'error-state', title: 'Redis Error', message: '@entity.error', onRetry: 'REDIS_RETRY',
+  };
+
+  const transitions: unknown[] = [
+    {
+      from: 'redisIdle', to: 'redisIdle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', redisIdleUI],
+      ],
+    },
+    {
+      from: 'redisIdle', to: 'redisExecuting', event: 'GET_KEY',
+      effects: [
+        ['render-ui', 'main', redisExecutingUI],
+        ['call-service', 'redis', 'get', { key: '@entity.cacheKey' }],
+      ],
+    },
+    {
+      from: 'redisIdle', to: 'redisExecuting', event: 'SET_KEY',
+      effects: [
+        ['render-ui', 'main', redisExecutingUI],
+        ['call-service', 'redis', 'set', { key: '@entity.cacheKey', value: '@entity.cacheValue' }],
+      ],
+    },
+    {
+      from: 'redisIdle', to: 'redisExecuting', event: 'DELETE_KEY',
+      effects: [
+        ['render-ui', 'main', redisExecutingUI],
+        ['call-service', 'redis', 'delete', { key: '@entity.cacheKey' }],
+      ],
+    },
+    {
+      from: 'redisExecuting', to: 'redisComplete', event: 'REDIS_DONE',
+      effects: [
+        ['set', '@entity.result', '@payload.data'],
+        ['set', '@entity.toolStatus', 'redis-complete'],
+        ['render-ui', 'main', redisCompleteUI],
+      ],
+    },
+    {
+      from: 'redisExecuting', to: 'redisError', event: 'REDIS_FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.toolStatus', 'error'],
+        ['render-ui', 'main', redisErrorUI],
+      ],
+    },
+    {
+      from: 'redisComplete', to: 'redisIdle', event: 'REDIS_RESET',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', redisIdleUI],
+      ],
+    },
+    {
+      from: 'redisError', to: 'redisIdle', event: 'REDIS_RETRY',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', redisIdleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: \`\${entityName}Redis\`,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'redisIdle', isInitial: true },
+        { name: 'redisExecuting' },
+        { name: 'redisComplete' },
+        { name: 'redisError' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'GET_KEY', name: 'Get Key' },
+        { key: 'SET_KEY', name: 'Set Key' },
+        { key: 'DELETE_KEY', name: 'Delete Key' },
+        { key: 'REDIS_DONE', name: 'Redis Done', payload: [
+          { name: 'data', type: 'string', required: true },
+        ] },
+        { key: 'REDIS_FAILED', name: 'Redis Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ] },
+        { key: 'REDIS_RESET', name: 'Redis Reset' },
+        { key: 'REDIS_RETRY', name: 'Redis Retry' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildStorageTrait(c: DevopsToolkitConfig): Trait {
+  const { entityName } = c;
+
+  const storageIdleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'hard-drive', size: 'lg' },
+          { type: 'typography', content: 'Storage Files', variant: 'h3' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'input', label: 'Bucket', bind: '@entity.bucket', placeholder: 'bucket-name' },
+      { type: 'input', label: 'File Key', bind: '@entity.fileKey', placeholder: 'path/to/file.txt' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Upload', event: 'UPLOAD', variant: 'primary', icon: 'upload' },
+          { type: 'button', label: 'Download', event: 'DOWNLOAD', variant: 'secondary', icon: 'download' },
+          { type: 'button', label: 'List', event: 'LIST', variant: 'secondary', icon: 'list' },
+          { type: 'button', label: 'Delete', event: 'DELETE_FILE', variant: 'destructive', icon: 'trash-2' },
+        ],
+      },
+    ],
+  };
+
+  const storageExecutingUI = {
+    type: 'loading-state', title: 'Processing...', message: 'Executing storage operation...',
+  };
+
+  const storageCompleteUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Storage operation complete' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.result' },
+      { type: 'button', label: 'Back', event: 'STORAGE_RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const storageErrorUI = {
+    type: 'error-state', title: 'Storage Error', message: '@entity.error', onRetry: 'STORAGE_RETRY',
+  };
+
+  const transitions: unknown[] = [
+    {
+      from: 'storageIdle', to: 'storageIdle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', storageIdleUI],
+      ],
+    },
+    {
+      from: 'storageIdle', to: 'storageExecuting', event: 'UPLOAD',
+      effects: [
+        ['render-ui', 'main', storageExecutingUI],
+        ['call-service', 'storage', 'upload', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+        }],
+      ],
+    },
+    {
+      from: 'storageIdle', to: 'storageExecuting', event: 'DOWNLOAD',
+      effects: [
+        ['render-ui', 'main', storageExecutingUI],
+        ['call-service', 'storage', 'download', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+        }],
+      ],
+    },
+    {
+      from: 'storageIdle', to: 'storageExecuting', event: 'LIST',
+      effects: [
+        ['render-ui', 'main', storageExecutingUI],
+        ['call-service', 'storage', 'list', {
+          bucket: '@entity.bucket',
+        }],
+      ],
+    },
+    {
+      from: 'storageIdle', to: 'storageExecuting', event: 'DELETE_FILE',
+      effects: [
+        ['render-ui', 'main', storageExecutingUI],
+        ['call-service', 'storage', 'delete', {
+          bucket: '@entity.bucket',
+          key: '@entity.fileKey',
+        }],
+      ],
+    },
+    {
+      from: 'storageExecuting', to: 'storageComplete', event: 'STORAGE_DONE',
+      effects: [
+        ['set', '@entity.result', '@payload.data'],
+        ['set', '@entity.toolStatus', 'storage-complete'],
+        ['render-ui', 'main', storageCompleteUI],
+      ],
+    },
+    {
+      from: 'storageExecuting', to: 'storageError', event: 'STORAGE_FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['set', '@entity.toolStatus', 'error'],
+        ['render-ui', 'main', storageErrorUI],
+      ],
+    },
+    {
+      from: 'storageComplete', to: 'storageIdle', event: 'STORAGE_RESET',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', storageIdleUI],
+      ],
+    },
+    {
+      from: 'storageError', to: 'storageIdle', event: 'STORAGE_RETRY',
+      effects: [
+        ['set', '@entity.toolStatus', 'idle'],
+        ['render-ui', 'main', storageIdleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: \`\${entityName}Storage\`,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'storageIdle', isInitial: true },
+        { name: 'storageExecuting' },
+        { name: 'storageComplete' },
+        { name: 'storageError' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'UPLOAD', name: 'Upload File' },
+        { key: 'DOWNLOAD', name: 'Download File' },
+        { key: 'LIST', name: 'List Files' },
+        { key: 'DELETE_FILE', name: 'Delete File' },
+        { key: 'STORAGE_DONE', name: 'Storage Done', payload: [
+          { name: 'data', type: 'string', required: true },
+        ] },
+        { key: 'STORAGE_FAILED', name: 'Storage Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ] },
+        { key: 'STORAGE_RESET', name: 'Storage Reset' },
+        { key: 'STORAGE_RETRY', name: 'Storage Retry' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceDevopsToolkitEntity(params: StdServiceDevopsToolkitParams = {}): Entity {
+  const c = resolve(params);
+  return makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+}
+
+export function stdServiceDevopsToolkitPage(params: StdServiceDevopsToolkitParams = {}): Page {
+  const c = resolve(params);
+  return {
+    name: c.pageName, path: c.pagePath,
+    ...(c.isInitial ? { isInitial: true } : {}),
+    traits: [
+      { ref: \`\${c.entityName}Github\` },
+      { ref: \`\${c.entityName}Redis\` },
+      { ref: \`\${c.entityName}Storage\` },
+    ],
+  } as Page;
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceDevopsToolkit(params: StdServiceDevopsToolkitParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+
+  const githubTrait = buildGithubTrait(c);
+  const redisTrait = buildRedisTrait(c);
+  const storageTrait = buildStorageTrait(c);
+
+  const entity = makeEntity({ name: c.entityName, fields: c.fields, persistence: c.persistence });
+
+  const page: Page = {
+    name: c.pageName, path: c.pagePath,
+    ...(c.isInitial ? { isInitial: true } : {}),
+    traits: [
+      { ref: githubTrait.name },
+      { ref: redisTrait.name },
+      { ref: storageTrait.name },
+    ],
+  } as Page;
+
+  return {
+    name: \`\${c.entityName}Orbital\`,
+    entity,
+    traits: [githubTrait, redisTrait, storageTrait],
+    pages: [page],
+  } as OrbitalDefinition;
+}
+`,
+  },
+  "std-service-notification-hub": {
+    name: "std-service-notification-hub",
+    description: "Unified notification sender molecule. Composes email and twilio into a single trait with channel selection (Email, SMS, WhatsApp). A single state machine routes to the appropriate call-service based on the chosen channel. States: idle -> sending -> sent | error Channels: email (call-service email/send), sms (call-service twilio/sendSMS),           whatsapp (call-service twilio/sendWhatsApp)",
+    level: "molecule",
+    schema: {"name":"ServiceNotificationHubOrbital","orbitals":[{"name":"ServiceNotificationHubOrbital","entity":{"name":"ServiceNotificationHub","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"recipient","type":"string"},{"name":"subject","type":"string"},{"name":"messageBody","type":"string"},{"name":"channel","type":"string","default":"email"},{"name":"sendStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServiceNotificationHubNotificationHub","linkedEntity":"ServiceNotificationHub","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"sending"},{"name":"sent"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEND_EMAIL","name":"Send Email"},{"key":"SEND_SMS","name":"Send SMS"},{"key":"SEND_WHATSAPP","name":"Send WhatsApp"},{"key":"SENT","name":"Notification Sent"},{"key":"FAILED","name":"Send Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServiceNotificationHub"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"ServiceNotificationHub Notification Hub","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Recipient","bind":"@entity.recipient","placeholder":"Email or phone number"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Notification subject"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Email","event":"SEND_EMAIL","variant":"primary","icon":"mail"},{"type":"button","label":"SMS","event":"SEND_SMS","variant":"secondary","icon":"message-circle"},{"type":"button","label":"WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"idle","to":"sending","event":"SEND_EMAIL","effects":[["set","@entity.channel","email"],["render-ui","main",{"type":"loading-state","title":"Sending notification...","message":"Delivering servicenotificationhub notification..."}],["call-service","email","send",{"to":"@entity.recipient","subject":"@entity.subject","body":"@entity.messageBody"}]]},{"from":"idle","to":"sending","event":"SEND_SMS","effects":[["set","@entity.channel","sms"],["render-ui","main",{"type":"loading-state","title":"Sending notification...","message":"Delivering servicenotificationhub notification..."}],["call-service","twilio","sendSMS",{"to":"@entity.recipient","body":"@entity.messageBody"}]]},{"from":"idle","to":"sending","event":"SEND_WHATSAPP","effects":[["set","@entity.channel","whatsapp"],["render-ui","main",{"type":"loading-state","title":"Sending notification...","message":"Delivering servicenotificationhub notification..."}],["call-service","twilio","sendWhatsApp",{"to":"@entity.recipient","body":"@entity.messageBody"}]]},{"from":"sending","to":"sent","event":"SENT","effects":[["set","@entity.sendStatus","sent"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Notification sent successfully"},{"type":"button","label":"Send Another","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"sending","to":"error","event":"FAILED","effects":[["set","@entity.sendStatus","error"],["set","@entity.error","@payload.error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Send Failed","message":"Could not deliver the notification.","onRetry":"RETRY"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Retry","event":"RETRY","variant":"primary","icon":"refresh-cw"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"ServiceNotificationHub Notification Hub","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Recipient","bind":"@entity.recipient","placeholder":"Email or phone number"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Notification subject"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Email","event":"SEND_EMAIL","variant":"primary","icon":"mail"},{"type":"button","label":"SMS","event":"SEND_SMS","variant":"secondary","icon":"message-circle"},{"type":"button","label":"WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"sent","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"ServiceNotificationHub Notification Hub","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Recipient","bind":"@entity.recipient","placeholder":"Email or phone number"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Notification subject"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Email","event":"SEND_EMAIL","variant":"primary","icon":"mail"},{"type":"button","label":"SMS","event":"SEND_SMS","variant":"secondary","icon":"message-circle"},{"type":"button","label":"WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.sendStatus","idle"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"ServiceNotificationHub Notification Hub","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Recipient","bind":"@entity.recipient","placeholder":"Email or phone number"},{"type":"input","label":"Subject","bind":"@entity.subject","placeholder":"Notification subject"},{"type":"textarea","label":"Message","bind":"@entity.messageBody","placeholder":"Write your message..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Email","event":"SEND_EMAIL","variant":"primary","icon":"mail"},{"type":"button","label":"SMS","event":"SEND_SMS","variant":"secondary","icon":"message-circle"},{"type":"button","label":"WhatsApp","event":"SEND_WHATSAPP","variant":"secondary","icon":"phone"}]}]}]]}]}}],"pages":[{"name":"ServiceNotificationHubPage","path":"/servicenotificationhubs","traits":[{"ref":"ServiceNotificationHubNotificationHub"}]}]}],"description":"Unified notification sender molecule. Composes email and twilio into a single trait with channel selection (Email, SMS, WhatsApp). A single state machine routes to the appropriate call-service based on the chosen channel. States: idle -> sending -> sent | error Channels: email (call-service email/send), sms (call-service twilio/sendSMS),           whatsapp (call-service twilio/sendWhatsApp)"},
+    source: `/**
+ * std-service-notification-hub
+ *
+ * Unified notification sender molecule. Composes email and twilio into a single
+ * trait with channel selection (Email, SMS, WhatsApp). A single state machine
+ * routes to the appropriate call-service based on the chosen channel.
+ *
+ * States: idle -> sending -> sent | error
+ * Channels: email (call-service email/send), sms (call-service twilio/sendSMS),
+ *           whatsapp (call-service twilio/sendWhatsApp)
+ *
+ * @level molecule
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceNotificationHubParams {
+  /** Entity name in PascalCase (default: "Notification") */
+  entityName?: string;
+  /** Extra entity fields (id is auto-added, notification fields are always included) */
+  fields?: EntityField[];
+  /** Persistence mode */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface NotificationHubConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  traitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+}
+
+function resolve(params: StdServiceNotificationHubParams): NotificationHubConfig {
+  const entityName = params.entityName ?? 'Notification';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    { name: 'recipient', type: 'string' },
+    { name: 'subject', type: 'string' },
+    { name: 'messageBody', type: 'string' },
+    { name: 'channel', type: 'string', default: 'email' },
+    { name: 'sendStatus', type: 'string', default: 'idle' },
+    { name: 'error', type: 'string' },
+  ];
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields: ensureIdField(mergedFields),
+    persistence: params.persistence ?? 'runtime',
+    traitName: \`\${entityName}NotificationHub\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+  };
+}
+
+// ============================================================================
+// Projections (internal)
+// ============================================================================
+
+function buildEntity(c: NotificationHubConfig): Entity {
+  const notificationFields: EntityField[] = [
+    { name: 'recipient', type: 'string' as const, default: '' },
+    { name: 'subject', type: 'string' as const, default: '' },
+    { name: 'messageBody', type: 'string' as const, default: '' },
+    { name: 'channel', type: 'string' as const, default: 'email' },
+    { name: 'sendStatus', type: 'string' as const, default: 'idle' },
+    { name: 'error', type: 'string' as const, default: '' },
+  ];
+
+  const userFieldNames = new Set(c.fields.map(f => f.name));
+  const extraFields = notificationFields.filter(f => !userFieldNames.has(f.name));
+  const allFields = ensureIdField([...c.fields, ...extraFields]);
+
+  return makeEntity({ name: c.entityName, fields: allFields, persistence: c.persistence });
+}
+
+function buildTrait(c: NotificationHubConfig): Trait {
+  const { entityName } = c;
+
+  // ---- UI definitions ----
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'stretch',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'bell', size: 'lg' },
+          { type: 'typography', content: \`\${entityName} Notification Hub\`, variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      { type: 'input', label: 'Recipient', bind: '@entity.recipient', placeholder: 'Email or phone number' },
+      { type: 'input', label: 'Subject', bind: '@entity.subject', placeholder: 'Notification subject' },
+      { type: 'textarea', label: 'Message', bind: '@entity.messageBody', placeholder: 'Write your message...' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Email', event: 'SEND_EMAIL', variant: 'primary', icon: 'mail' },
+          { type: 'button', label: 'SMS', event: 'SEND_SMS', variant: 'secondary', icon: 'message-circle' },
+          { type: 'button', label: 'WhatsApp', event: 'SEND_WHATSAPP', variant: 'secondary', icon: 'phone' },
+        ],
+      },
+    ],
+  };
+
+  const sendingUI = {
+    type: 'loading-state', title: 'Sending notification...', message: \`Delivering \${entityName.toLowerCase()} notification...\`,
+  };
+
+  const sentUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Notification sent successfully' },
+      { type: 'button', label: 'Send Another', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Send Failed', message: 'Could not deliver the notification.', onRetry: 'RETRY' },
+      {
+        type: 'stack', direction: 'horizontal', gap: 'sm', justify: 'center',
+        children: [
+          { type: 'button', label: 'Retry', event: 'RETRY', variant: 'primary', icon: 'refresh-cw' },
+          { type: 'button', label: 'Reset', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+        ],
+      },
+    ],
+  };
+
+  // ---- Transitions ----
+
+  const transitions: unknown[] = [
+    // INIT: idle -> idle (fetch + render compose form)
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // SEND_EMAIL: idle -> sending (call email service + set channel + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND_EMAIL',
+      effects: [
+        ['set', '@entity.channel', 'email'],
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'email', 'send', { to: '@entity.recipient', subject: '@entity.subject', body: '@entity.messageBody' }],
+      ],
+    },
+    // SEND_SMS: idle -> sending (call twilio sendSMS + set channel + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND_SMS',
+      effects: [
+        ['set', '@entity.channel', 'sms'],
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'twilio', 'sendSMS', { to: '@entity.recipient', body: '@entity.messageBody' }],
+      ],
+    },
+    // SEND_WHATSAPP: idle -> sending (call twilio sendWhatsApp + set channel + show loading)
+    {
+      from: 'idle', to: 'sending', event: 'SEND_WHATSAPP',
+      effects: [
+        ['set', '@entity.channel', 'whatsapp'],
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'twilio', 'sendWhatsApp', { to: '@entity.recipient', body: '@entity.messageBody' }],
+      ],
+    },
+    // SENT: sending -> sent (delivery confirmed)
+    {
+      from: 'sending', to: 'sent', event: 'SENT',
+      effects: [
+        ['set', '@entity.sendStatus', 'sent'],
+        ['render-ui', 'main', sentUI],
+      ],
+    },
+    // FAILED: sending -> error (delivery failed)
+    {
+      from: 'sending', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.sendStatus', 'error'],
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    // RETRY: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    // RESET: sent -> idle
+    {
+      from: 'sent', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    // RESET: error -> idle
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [
+        ['set', '@entity.sendStatus', 'idle'],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+  ];
+
+  return {
+    name: c.traitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'sending' },
+        { name: 'sent' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEND_EMAIL', name: 'Send Email' },
+        { key: 'SEND_SMS', name: 'Send SMS' },
+        { key: 'SEND_WHATSAPP', name: 'Send WhatsApp' },
+        { key: 'SENT', name: 'Notification Sent' },
+        { key: 'FAILED', name: 'Send Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+function buildPage(c: NotificationHubConfig): Page {
+  return makePage({ name: c.pageName, path: c.pagePath, traitName: c.traitName, isInitial: c.isInitial });
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServiceNotificationHubEntity(params: StdServiceNotificationHubParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServiceNotificationHubTrait(params: StdServiceNotificationHubParams = {}): Trait {
+  return buildTrait(resolve(params));
+}
+
+export function stdServiceNotificationHubPage(params: StdServiceNotificationHubParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServiceNotificationHub(params: StdServiceNotificationHubParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildTrait(c)],
+    [buildPage(c)],
+  );
+}
+`,
+  },
+  "std-service-payment-flow": {
+    name: "std-service-payment-flow",
+    description: "Payment flow molecule. Composes stripe payment and email receipt into a single orchestrated flow: pay, then auto-send receipt email. Two inline traits share one entity and one page: - Payment trait: idle -> creating -> confirming -> succeeded -> error   Emits SEND_RECEIPT when payment is confirmed. - Receipt trait: waiting -> sending -> sent -> receiptError   Listens for SEND_RECEIPT and calls the email service. Traits on the same page share the event bus automatically.",
+    level: "molecule",
+    schema: {"name":"ServicePaymentFlowOrbital","orbitals":[{"name":"ServicePaymentFlowOrbital","entity":{"name":"ServicePaymentFlow","persistence":"runtime","fields":[{"name":"id","type":"string"},{"name":"name","type":"string"},{"name":"description","type":"string"},{"name":"status","type":"string","default":"active","values":["active","inactive","pending"]},{"name":"createdAt","type":"string"},{"name":"amount","type":"number"},{"name":"currency","type":"string","default":"usd"},{"name":"paymentIntentId","type":"string"},{"name":"clientSecret","type":"string"},{"name":"paymentStatus","type":"string","default":"idle"},{"name":"to","type":"string"},{"name":"subject","type":"string","default":"Payment Receipt"},{"name":"body","type":"string"},{"name":"sendStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"ServicePaymentFlowPayment","linkedEntity":"ServicePaymentFlow","category":"interaction","emits":[{"event":"SEND_RECEIPT"}],"stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"creating"},{"name":"confirming"},{"name":"succeeded"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE_PAYMENT","name":"Create Payment"},{"key":"PAYMENT_CREATED","name":"Payment Created","payload":[{"name":"id","type":"string","required":true},{"name":"clientSecret","type":"string","required":true}]},{"key":"PAYMENT_CONFIRMED","name":"Payment Confirmed"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","ServicePaymentFlow"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"idle","to":"creating","event":"CREATE_PAYMENT","effects":[["render-ui","main",{"type":"loading-state","title":"Creating payment...","message":"Setting up your payment intent."}],["call-service","stripe","createPaymentIntent",{"amount":"@entity.amount","currency":"@entity.currency"}]]},{"from":"creating","to":"confirming","event":"PAYMENT_CREATED","effects":[["set","@entity.paymentIntentId","@payload.id"],["set","@entity.clientSecret","@payload.clientSecret"],["render-ui","main",{"type":"loading-state","title":"Confirming payment...","message":"Processing your payment."}],["call-service","stripe","confirmPayment",{"paymentIntentId":"@entity.paymentIntentId"}]]},{"from":"confirming","to":"succeeded","event":"PAYMENT_CONFIRMED","effects":[["set","@entity.paymentStatus","succeeded"],["emit","SEND_RECEIPT"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Payment successful! Sending receipt..."},{"type":"typography","variant":"body","color":"muted","content":"@entity.paymentIntentId"},{"type":"button","label":"New Payment","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]]},{"from":"creating","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"confirming","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"succeeded","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]]}]}},{"name":"ServicePaymentFlowReceipt","linkedEntity":"ServicePaymentFlow","category":"interaction","listens":[{"event":"SEND_RECEIPT","triggers":"SEND_RECEIPT"}],"stateMachine":{"states":[{"name":"waiting","isInitial":true},{"name":"sending"},{"name":"sent","isTerminal":true},{"name":"receiptError"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEND_RECEIPT","name":"Send Receipt"},{"key":"SENT","name":"Receipt Sent"},{"key":"FAILED","name":"Send Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY_RECEIPT","name":"Retry Receipt"}],"transitions":[{"from":"waiting","to":"waiting","event":"INIT","effects":[["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"md"},{"type":"typography","content":"Receipt will be sent after payment.","variant":"body","color":"muted"}]}]]},{"from":"waiting","to":"sending","event":"SEND_RECEIPT","effects":[["render-ui","main",{"type":"loading-state","title":"Sending receipt...","message":"Delivering your payment receipt."}],["call-service","email","send",{"to":"@entity.to","subject":"@entity.subject","body":"@entity.body"}]]},{"from":"sending","to":"sent","event":"SENT","effects":[["set","@entity.sendStatus","sent"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"check-circle","size":"md"},{"type":"alert","variant":"success","message":"Receipt sent successfully"}]}]]},{"from":"sending","to":"receiptError","event":"FAILED","effects":[["set","@entity.sendStatus","error"],["render-ui","main",{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"error-state","title":"Receipt Failed","message":"Could not send receipt email.","onRetry":"RETRY_RECEIPT"},{"type":"button","label":"Retry","event":"RETRY_RECEIPT","variant":"primary","icon":"refresh-cw"}]}]]},{"from":"receiptError","to":"sending","event":"RETRY_RECEIPT","effects":[["render-ui","main",{"type":"loading-state","title":"Sending receipt...","message":"Delivering your payment receipt."}],["call-service","email","send",{"to":"@entity.to","subject":"@entity.subject","body":"@entity.body"}]]}]}}],"pages":[{"name":"ServicePaymentFlowPage","path":"/servicepaymentflows","traits":[{"ref":"ServicePaymentFlowPayment"},{"ref":"ServicePaymentFlowReceipt"}]}]}],"description":"Payment flow molecule. Composes stripe payment and email receipt into a single orchestrated flow: pay, then auto-send receipt email. Two inline traits share one entity and one page: - Payment trait: idle -> creating -> confirming -> succeeded -> error   Emits SEND_RECEIPT when payment is confirmed. - Receipt trait: waiting -> sending -> sent -> receiptError   Listens for SEND_RECEIPT and calls the email service. Traits on the same page share the event bus automatically."},
+    source: `/**
+ * std-service-payment-flow
+ *
+ * Payment flow molecule. Composes stripe payment and email receipt into a
+ * single orchestrated flow: pay, then auto-send receipt email.
+ *
+ * Two inline traits share one entity and one page:
+ * - Payment trait: idle -> creating -> confirming -> succeeded -> error
+ *   Emits SEND_RECEIPT when payment is confirmed.
+ * - Receipt trait: waiting -> sending -> sent -> receiptError
+ *   Listens for SEND_RECEIPT and calls the email service.
+ *
+ * Traits on the same page share the event bus automatically.
+ *
+ * @level molecule
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalDefinition, Entity, Page, Trait, EntityField } from '@almadar/core/types';
+import { makeEntity, makePage, makeOrbital, ensureIdField, plural } from '@almadar/core/builders';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServicePaymentFlowParams {
+  /** Entity name in PascalCase (default: "OrderPayment") */
+  entityName?: string;
+  /** Extra entity fields beyond the required payment + email fields */
+  fields?: EntityField[];
+  /** Persistence mode (default: "runtime") */
+  persistence?: 'persistent' | 'runtime' | 'singleton';
+  /** Page name override */
+  pageName?: string;
+  /** Page path override */
+  pagePath?: string;
+  /** Whether this page is the initial route */
+  isInitial?: boolean;
+  /** Default recipient email address for receipts */
+  recipientEmail?: string;
+}
+
+// ============================================================================
+// Resolve
+// ============================================================================
+
+interface PaymentFlowConfig {
+  entityName: string;
+  fields: EntityField[];
+  persistence: 'persistent' | 'runtime' | 'singleton';
+  paymentTraitName: string;
+  receiptTraitName: string;
+  pageName: string;
+  pagePath: string;
+  isInitial: boolean;
+  recipientEmail: string;
+}
+
+function resolve(params: StdServicePaymentFlowParams): PaymentFlowConfig {
+  const entityName = params.entityName ?? 'OrderPayment';
+  const p = plural(entityName);
+
+  const requiredFields: EntityField[] = [
+    // Stripe payment fields
+    { name: 'amount', type: 'number' },
+    { name: 'currency', type: 'string', default: 'usd' },
+    { name: 'paymentIntentId', type: 'string' },
+    { name: 'clientSecret', type: 'string' },
+    { name: 'paymentStatus', type: 'string', default: 'idle' },
+    // Email receipt fields
+    { name: 'to', type: 'string' },
+    { name: 'subject', type: 'string', default: 'Payment Receipt' },
+    { name: 'body', type: 'string' },
+    { name: 'sendStatus', type: 'string', default: 'idle' },
+    // Shared error field
+    { name: 'error', type: 'string' },
+  ];
+
+  const baseFields = params.fields ?? [];
+  const existingNames = new Set(baseFields.map(f => f.name));
+  const mergedFields = [
+    ...baseFields,
+    ...requiredFields.filter(f => !existingNames.has(f.name)),
+  ];
+
+  return {
+    entityName,
+    fields: ensureIdField(mergedFields),
+    persistence: params.persistence ?? 'runtime',
+    paymentTraitName: \`\${entityName}Payment\`,
+    receiptTraitName: \`\${entityName}Receipt\`,
+    pageName: params.pageName ?? \`\${entityName}Page\`,
+    pagePath: params.pagePath ?? \`/\${p.toLowerCase()}\`,
+    isInitial: params.isInitial ?? false,
+    recipientEmail: params.recipientEmail ?? '',
+  };
+}
+
+// ============================================================================
+// Entity builder
+// ============================================================================
+
+function buildEntity(c: PaymentFlowConfig): Entity {
+  return makeEntity({
+    name: c.entityName,
+    fields: c.fields,
+    persistence: c.persistence,
+  });
+}
+
+// ============================================================================
+// Payment trait builder
+// ============================================================================
+
+function buildPaymentTrait(c: PaymentFlowConfig): Trait {
+  const { entityName } = c;
+
+  const idleUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      {
+        type: 'stack', direction: 'horizontal', gap: 'md', align: 'center',
+        children: [
+          { type: 'icon', name: 'credit-card', size: 'lg' },
+          { type: 'typography', content: 'Payment', variant: 'h2' },
+        ],
+      },
+      { type: 'divider' },
+      {
+        type: 'stack', direction: 'vertical', gap: 'md',
+        children: [
+          { type: 'input', label: 'Amount', field: 'amount', inputType: 'number', placeholder: '0.00' },
+          {
+            type: 'select', label: 'Currency', field: 'currency',
+            options: [
+              { label: 'USD', value: 'usd' },
+              { label: 'EUR', value: 'eur' },
+              { label: 'GBP', value: 'gbp' },
+            ],
+          },
+        ],
+      },
+      { type: 'button', label: 'Pay', event: 'CREATE_PAYMENT', variant: 'primary', icon: 'credit-card' },
+    ],
+  };
+
+  const creatingUI = {
+    type: 'loading-state', title: 'Creating payment...', message: 'Setting up your payment intent.',
+  };
+
+  const confirmingUI = {
+    type: 'loading-state', title: 'Confirming payment...', message: 'Processing your payment.',
+  };
+
+  const succeededUI = {
+    type: 'stack', direction: 'vertical', gap: 'lg', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'lg' },
+      { type: 'alert', variant: 'success', message: 'Payment successful! Sending receipt...' },
+      { type: 'typography', variant: 'body', color: 'muted', content: '@entity.paymentIntentId' },
+      { type: 'button', label: 'New Payment', event: 'RESET', variant: 'ghost', icon: 'rotate-ccw' },
+    ],
+  };
+
+  const errorUI = {
+    type: 'error-state', title: 'Payment Failed', message: '@entity.error', onRetry: 'RETRY',
+  };
+
+  const transitions: unknown[] = [
+    {
+      from: 'idle', to: 'idle', event: 'INIT',
+      effects: [
+        ['fetch', entityName],
+        ['render-ui', 'main', idleUI],
+      ],
+    },
+    {
+      from: 'idle', to: 'creating', event: 'CREATE_PAYMENT',
+      effects: [
+        ['render-ui', 'main', creatingUI],
+        ['call-service', 'stripe', 'createPaymentIntent', { amount: '@entity.amount', currency: '@entity.currency' }],
+      ],
+    },
+    {
+      from: 'creating', to: 'confirming', event: 'PAYMENT_CREATED',
+      effects: [
+        ['set', '@entity.paymentIntentId', '@payload.id'],
+        ['set', '@entity.clientSecret', '@payload.clientSecret'],
+        ['render-ui', 'main', confirmingUI],
+        ['call-service', 'stripe', 'confirmPayment', { paymentIntentId: '@entity.paymentIntentId' }],
+      ],
+    },
+    {
+      from: 'confirming', to: 'succeeded', event: 'PAYMENT_CONFIRMED',
+      effects: [
+        ['set', '@entity.paymentStatus', 'succeeded'],
+        ['emit', 'SEND_RECEIPT'],
+        ['render-ui', 'main', succeededUI],
+      ],
+    },
+    {
+      from: 'creating', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    {
+      from: 'confirming', to: 'error', event: 'FAILED',
+      effects: [
+        ['set', '@entity.error', '@payload.error'],
+        ['render-ui', 'main', errorUI],
+      ],
+    },
+    {
+      from: 'error', to: 'idle', event: 'RETRY',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    {
+      from: 'succeeded', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+    {
+      from: 'error', to: 'idle', event: 'RESET',
+      effects: [['render-ui', 'main', idleUI]],
+    },
+  ];
+
+  return {
+    name: c.paymentTraitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    emits: [{ event: 'SEND_RECEIPT' }],
+    stateMachine: {
+      states: [
+        { name: 'idle', isInitial: true },
+        { name: 'creating' },
+        { name: 'confirming' },
+        { name: 'succeeded' },
+        { name: 'error' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'CREATE_PAYMENT', name: 'Create Payment' },
+        { key: 'PAYMENT_CREATED', name: 'Payment Created', payload: [
+          { name: 'id', type: 'string', required: true },
+          { name: 'clientSecret', type: 'string', required: true },
+        ]},
+        { key: 'PAYMENT_CONFIRMED', name: 'Payment Confirmed' },
+        { key: 'FAILED', name: 'Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY', name: 'Retry' },
+        { key: 'RESET', name: 'Reset' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+// ============================================================================
+// Receipt trait builder
+// ============================================================================
+
+function buildReceiptTrait(c: PaymentFlowConfig): Trait {
+  const { entityName } = c;
+
+  const waitingUI = {
+    type: 'stack', direction: 'vertical', gap: 'md', align: 'center',
+    children: [
+      { type: 'icon', name: 'mail', size: 'md' },
+      { type: 'typography', content: 'Receipt will be sent after payment.', variant: 'body', color: 'muted' },
+    ],
+  };
+
+  const sendingUI = {
+    type: 'loading-state', title: 'Sending receipt...', message: 'Delivering your payment receipt.',
+  };
+
+  const sentUI = {
+    type: 'stack', direction: 'vertical', gap: 'md', align: 'center',
+    children: [
+      { type: 'icon', name: 'check-circle', size: 'md' },
+      { type: 'alert', variant: 'success', message: 'Receipt sent successfully' },
+    ],
+  };
+
+  const receiptErrorUI = {
+    type: 'stack', direction: 'vertical', gap: 'md', align: 'center',
+    children: [
+      { type: 'error-state', title: 'Receipt Failed', message: 'Could not send receipt email.', onRetry: 'RETRY_RECEIPT' },
+      { type: 'button', label: 'Retry', event: 'RETRY_RECEIPT', variant: 'primary', icon: 'refresh-cw' },
+    ],
+  };
+
+  const transitions: unknown[] = [
+    {
+      from: 'waiting', to: 'waiting', event: 'INIT',
+      effects: [
+        ['render-ui', 'main', waitingUI],
+      ],
+    },
+    {
+      from: 'waiting', to: 'sending', event: 'SEND_RECEIPT',
+      effects: [
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'email', 'send', { to: '@entity.to', subject: '@entity.subject', body: '@entity.body' }],
+      ],
+    },
+    {
+      from: 'sending', to: 'sent', event: 'SENT',
+      effects: [
+        ['set', '@entity.sendStatus', 'sent'],
+        ['render-ui', 'main', sentUI],
+      ],
+    },
+    {
+      from: 'sending', to: 'receiptError', event: 'FAILED',
+      effects: [
+        ['set', '@entity.sendStatus', 'error'],
+        ['render-ui', 'main', receiptErrorUI],
+      ],
+    },
+    {
+      from: 'receiptError', to: 'sending', event: 'RETRY_RECEIPT',
+      effects: [
+        ['render-ui', 'main', sendingUI],
+        ['call-service', 'email', 'send', { to: '@entity.to', subject: '@entity.subject', body: '@entity.body' }],
+      ],
+    },
+  ];
+
+  return {
+    name: c.receiptTraitName,
+    linkedEntity: entityName,
+    category: 'interaction',
+    listens: [{ event: 'SEND_RECEIPT', triggers: 'SEND_RECEIPT' }],
+    stateMachine: {
+      states: [
+        { name: 'waiting', isInitial: true },
+        { name: 'sending' },
+        { name: 'sent', isTerminal: true },
+        { name: 'receiptError' },
+      ],
+      events: [
+        { key: 'INIT', name: 'Initialize' },
+        { key: 'SEND_RECEIPT', name: 'Send Receipt' },
+        { key: 'SENT', name: 'Receipt Sent' },
+        { key: 'FAILED', name: 'Send Failed', payload: [
+          { name: 'error', type: 'string', required: true },
+        ]},
+        { key: 'RETRY_RECEIPT', name: 'Retry Receipt' },
+      ],
+      transitions,
+    },
+  } as Trait;
+}
+
+// ============================================================================
+// Page builder
+// ============================================================================
+
+function buildPage(c: PaymentFlowConfig): Page {
+  return {
+    name: c.pageName,
+    path: c.pagePath,
+    ...(c.isInitial ? { isInitial: true } : {}),
+    traits: [
+      { ref: c.paymentTraitName },
+      { ref: c.receiptTraitName },
+    ],
+  } as Page;
+}
+
+// ============================================================================
+// Projections (public API)
+// ============================================================================
+
+export function stdServicePaymentFlowEntity(params: StdServicePaymentFlowParams = {}): Entity {
+  return buildEntity(resolve(params));
+}
+
+export function stdServicePaymentFlowPage(params: StdServicePaymentFlowParams = {}): Page {
+  return buildPage(resolve(params));
+}
+
+// ============================================================================
+// Composed Orbital
+// ============================================================================
+
+export function stdServicePaymentFlow(params: StdServicePaymentFlowParams = {}): OrbitalDefinition {
+  const c = resolve(params);
+  return makeOrbital(
+    \`\${c.entityName}Orbital\`,
+    buildEntity(c),
+    [buildPaymentTrait(c), buildReceiptTrait(c)],
     [buildPage(c)],
   );
 }
@@ -15839,7 +22419,7 @@ export function stdTurnBasedBattle(params: StdTurnBasedBattleParams): OrbitalDef
     name: "std-api-gateway",
     description: "API gateway management organism. Composes: stdList(Route) + stdCircuitBreaker(Backend) + stdDisplay(Analytics) Pages: /routes (initial), /backends, /analytics",
     level: "organism",
-    schema: {"name":"API Gateway","version":"1.0.0","orbitals":[{"name":"RouteOrbital","entity":{"name":"Route","persistence":"persistent","collection":"routes","fields":[{"name":"id","type":"string","required":true},{"name":"path","type":"string","required":true},{"name":"method","type":"string","required":true,"values":["GET","POST","PUT","DELETE","PATCH"]},{"name":"backend","type":"string","required":true},{"name":"rateLimit","type":"number"}]},"traits":[{"name":"RouteBrowse","linkedEntity":"Route","category":"interaction","listens":[{"event":"ROUTE_CREATED","triggers":"ROUTE_CREATED"},{"event":"ROUTE_UPDATED","triggers":"ROUTE_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"ROUTE_CREATED","name":"ROUTE_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"ROUTE_UPDATED","name":"ROUTE_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]},{"from":"browsing","to":"browsing","event":"ROUTE_CREATED","effects":[["fetch","Route"]]},{"from":"browsing","to":"browsing","event":"ROUTE_UPDATED","effects":[["fetch","Route"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Route","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this route?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Route","@entity.id"],["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}],["notify","Route deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]}]}},{"name":"RouteCreate","linkedEntity":"Route","category":"interaction","emits":[{"event":"ROUTE_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Route"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Route","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Route","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["path","method","backend","rateLimit"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Route","@payload.data"],["fetch","Route"],["render-ui","modal",null],["emit","ROUTE_CREATED"],["notify","Route created successfully"]]}]}},{"name":"RouteEdit","linkedEntity":"Route","category":"interaction","emits":[{"event":"ROUTE_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Route","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Route","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["path","method","backend","rateLimit"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Route","@payload.data"],["fetch","Route"],["render-ui","modal",null],["emit","ROUTE_UPDATED"],["notify","Route updated successfully"]]}]}},{"name":"RouteView","linkedEntity":"Route","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.path"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Path"},{"type":"typography","variant":"body","content":"@entity.path"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Method"},{"type":"typography","variant":"body","content":"@entity.method"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Backend"},{"type":"typography","variant":"body","content":"@entity.backend"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Rate Limit"},{"type":"typography","variant":"body","content":"@entity.rateLimit"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"RoutesPage","path":"/routes","isInitial":true,"traits":[{"ref":"RouteBrowse"},{"ref":"RouteCreate"},{"ref":"RouteEdit"},{"ref":"RouteView"}]}]},{"name":"BackendOrbital","entity":{"name":"Backend","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"url","type":"string","required":true},{"name":"status","type":"string"},{"name":"latency","type":"number"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}]},"traits":[{"name":"BackendCircuitBreaker","linkedEntity":"Backend","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Backend"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"BackendsPage","path":"/backends","traits":[{"ref":"BackendCircuitBreaker"}]}]},{"name":"AnalyticsOrbital","entity":{"name":"Analytics","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"totalRequests","type":"number","required":true},{"name":"errorRate","type":"number","required":true},{"name":"avgLatency","type":"number"},{"name":"uptime","type":"string"}]},"traits":[{"name":"AnalyticsDisplay","linkedEntity":"Analytics","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"AnalyticsPage","path":"/analytics","traits":[{"ref":"AnalyticsDisplay"}]}]}],"description":"API gateway management organism. Composes: stdList(Route) + stdCircuitBreaker(Backend) + stdDisplay(Analytics) Pages: /routes (initial), /backends, /analytics"},
+    schema: {"name":"API Gateway","version":"1.0.0","orbitals":[{"name":"RouteOrbital","entity":{"name":"Route","persistence":"persistent","collection":"routes","fields":[{"name":"id","type":"string","required":true},{"name":"path","type":"string","required":true},{"name":"method","type":"string","required":true,"values":["GET","POST","PUT","DELETE","PATCH"]},{"name":"backend","type":"string","required":true},{"name":"rateLimit","type":"number"}]},"traits":[{"name":"RouteBrowse","linkedEntity":"Route","category":"interaction","listens":[{"event":"ROUTE_CREATED","triggers":"ROUTE_CREATED"},{"event":"ROUTE_UPDATED","triggers":"ROUTE_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"ROUTE_CREATED","name":"ROUTE_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"ROUTE_UPDATED","name":"ROUTE_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]},{"from":"browsing","to":"browsing","event":"ROUTE_CREATED","effects":[["fetch","Route"]]},{"from":"browsing","to":"browsing","event":"ROUTE_UPDATED","effects":[["fetch","Route"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Route","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this route?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Route","@entity.id"],["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}],["notify","Route deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Route"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"git-branch","size":"lg"},{"type":"typography","content":"Routes","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Route","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"Route","emptyIcon":"inbox","emptyTitle":"No routes configured","emptyDescription":"Add API routes to your gateway.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"method","variant":"badge"},{"name":"path","variant":"h3","icon":"git-branch"},{"name":"backend","variant":"body"},{"name":"rateLimit","label":"Rate Limit","variant":"caption","format":"number"}],"variant":"card","gap":"sm"}]}]}]]}]}},{"name":"RouteCreate","linkedEntity":"Route","category":"interaction","emits":[{"event":"ROUTE_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Route"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Route","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Route","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["path","method","backend","rateLimit"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Route","@payload.data"],["fetch","Route"],["render-ui","modal",null],["emit","ROUTE_CREATED"],["notify","Route created successfully"]]}]}},{"name":"RouteEdit","linkedEntity":"Route","category":"interaction","emits":[{"event":"ROUTE_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Route","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Route","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["path","method","backend","rateLimit"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Route","@payload.data"],["fetch","Route"],["render-ui","modal",null],["emit","ROUTE_UPDATED"],["notify","Route updated successfully"]]}]}},{"name":"RouteView","linkedEntity":"Route","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Route"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Route","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.path"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Path"},{"type":"typography","variant":"body","content":"@entity.path"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Method"},{"type":"typography","variant":"body","content":"@entity.method"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Backend"},{"type":"typography","variant":"body","content":"@entity.backend"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Rate Limit"},{"type":"typography","variant":"body","content":"@entity.rateLimit"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"RoutesPage","path":"/routes","isInitial":true,"traits":[{"ref":"RouteBrowse"},{"ref":"RouteCreate"},{"ref":"RouteEdit"},{"ref":"RouteView"}]}]},{"name":"BackendOrbital","entity":{"name":"Backend","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"url","type":"string","required":true},{"name":"status","type":"string"},{"name":"latency","type":"number"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}],"instances":[{"id":"sn-1","name":"ServiceNode","description":"Primary API gateway","status":"active","createdAt":"2026-01-10","failureCount":783,"successCount":603,"threshold":5}]},"traits":[{"name":"BackendCircuitBreaker","linkedEntity":"Backend","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Backend"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"Backend","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"BackendsPage","path":"/backends","traits":[{"ref":"BackendCircuitBreaker"}]}]},{"name":"AnalyticsOrbital","entity":{"name":"Analytics","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"totalRequests","type":"number","required":true},{"name":"errorRate","type":"number","required":true},{"name":"avgLatency","type":"number"},{"name":"uptime","type":"string"}]},"traits":[{"name":"AnalyticsDisplay","linkedEntity":"Analytics","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","Analytics"],["render-ui","main",{"type":"dashboard-layout","appName":"API Gateway","navItems":[{"label":"Routes","href":"/routes","icon":"git-branch"},{"label":"Backends","href":"/backends","icon":"server"},{"label":"Analytics","href":"/analytics","icon":"bar-chart-2"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Analytics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"bar-chart-2","size":"lg"},{"type":"typography","content":"Analytics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"stat-display","label":"TotalRequests","value":["object/get",["array/first","@entity"],"totalRequests"]},{"type":"stat-display","label":"ErrorRate","value":["object/get",["array/first","@entity"],"errorRate"]},{"type":"stat-display","label":"AvgLatency","value":["object/get",["array/first","@entity"],"avgLatency"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Uptime"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"uptime"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"AnalyticsPage","path":"/analytics","traits":[{"ref":"AnalyticsDisplay"}]}]}],"description":"API gateway management organism. Composes: stdList(Route) + stdCircuitBreaker(Backend) + stdDisplay(Analytics) Pages: /routes (initial), /backends, /analytics"},
     source: `/**
  * std-api-gateway
  *
@@ -16818,7 +23398,7 @@ export function stdCrm(params: StdCrmParams): OrbitalSchema {
     name: "std-devops-dashboard",
     description: "DevOps monitoring organism. Composes: stdCircuitBreaker(ServiceNode) + stdDisplay(AlertMetric)         + stdList(LogEntry) + stdDisplay(SystemMetric) Pages: /services (initial), /alerts, /logs, /metrics",
     level: "organism",
-    schema: {"name":"DevOps Dashboard","version":"1.0.0","orbitals":[{"name":"ServiceNodeOrbital","entity":{"name":"ServiceNode","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"status","type":"string","required":true,"values":["healthy","degraded","down"]},{"name":"url","type":"string"},{"name":"lastChecked","type":"date"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}]},"traits":[{"name":"ServiceNodeCircuitBreaker","linkedEntity":"ServiceNode","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","ServiceNode"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"ServicesPage","path":"/services","isInitial":true,"traits":[{"ref":"ServiceNodeCircuitBreaker"}]}]},{"name":"AlertMetricOrbital","entity":{"name":"AlertMetric","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"severity","type":"string","required":true},{"name":"message","type":"string","required":true},{"name":"timestamp","type":"string"},{"name":"source","type":"string"}]},"traits":[{"name":"AlertMetricDisplay","linkedEntity":"AlertMetric","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"AlertsPage","path":"/alerts","traits":[{"ref":"AlertMetricDisplay"}]}]},{"name":"LogEntryOrbital","entity":{"name":"LogEntry","persistence":"persistent","collection":"logentrys","fields":[{"name":"id","type":"string","required":true},{"name":"level","type":"string","required":true,"values":["debug","info","warn","error","fatal"]},{"name":"message","type":"string","required":true},{"name":"timestamp","type":"date"},{"name":"service","type":"string"}]},"traits":[{"name":"LogEntryBrowse","linkedEntity":"LogEntry","category":"interaction","listens":[{"event":"LOG_ENTRY_CREATED","triggers":"LOG_ENTRY_CREATED"},{"event":"LOG_ENTRY_UPDATED","triggers":"LOG_ENTRY_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"LOG_ENTRY_CREATED","name":"LOG_ENTRY_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"LOG_ENTRY_UPDATED","name":"LOG_ENTRY_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]},{"from":"browsing","to":"browsing","event":"LOG_ENTRY_CREATED","effects":[["fetch","LogEntry"]]},{"from":"browsing","to":"browsing","event":"LOG_ENTRY_UPDATED","effects":[["fetch","LogEntry"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this logentry?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","LogEntry","@entity.id"],["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}],["notify","LogEntry deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]}]}},{"name":"LogEntryCreate","linkedEntity":"LogEntry","category":"interaction","emits":[{"event":"LOG_ENTRY_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","LogEntry"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"LogEntry","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["level","message","timestamp","service"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","LogEntry","@payload.data"],["fetch","LogEntry"],["render-ui","modal",null],["emit","LOG_ENTRY_CREATED"],["notify","LogEntry created successfully"]]}]}},{"name":"LogEntryEdit","linkedEntity":"LogEntry","category":"interaction","emits":[{"event":"LOG_ENTRY_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"LogEntry","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["level","message","timestamp","service"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","LogEntry","@payload.data"],["fetch","LogEntry"],["render-ui","modal",null],["emit","LOG_ENTRY_UPDATED"],["notify","LogEntry updated successfully"]]}]}},{"name":"LogEntryView","linkedEntity":"LogEntry","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.level"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Level"},{"type":"typography","variant":"body","content":"@entity.level"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"body","content":"@entity.message"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"body","content":"@entity.timestamp"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Service"},{"type":"typography","variant":"body","content":"@entity.service"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"LogsPage","path":"/logs","traits":[{"ref":"LogEntryBrowse"},{"ref":"LogEntryCreate"},{"ref":"LogEntryEdit"},{"ref":"LogEntryView"}]}]},{"name":"SystemMetricOrbital","entity":{"name":"SystemMetric","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"value","type":"number","required":true},{"name":"unit","type":"string"},{"name":"trend","type":"string"}]},"traits":[{"name":"SystemMetricDisplay","linkedEntity":"SystemMetric","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"MetricsPage","path":"/metrics","traits":[{"ref":"SystemMetricDisplay"}]}]}],"description":"DevOps monitoring organism. Composes: stdCircuitBreaker(ServiceNode) + stdDisplay(AlertMetric)         + stdList(LogEntry) + stdDisplay(SystemMetric) Pages: /services (initial), /alerts, /logs, /metrics"},
+    schema: {"name":"DevOps Dashboard","version":"1.0.0","orbitals":[{"name":"ServiceNodeOrbital","entity":{"name":"ServiceNode","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"status","type":"string","required":true,"values":["healthy","degraded","down"]},{"name":"url","type":"string"},{"name":"lastChecked","type":"date"},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}],"instances":[{"id":"sn-1","name":"ServiceNode","description":"Primary API gateway","status":"active","createdAt":"2026-01-10","failureCount":783,"successCount":603,"threshold":5}]},"traits":[{"name":"ServiceNodeCircuitBreaker","linkedEntity":"ServiceNode","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","ServiceNode"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"server","size":"lg"},{"type":"typography","content":"ServiceNode","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"ServicesPage","path":"/services","isInitial":true,"traits":[{"ref":"ServiceNodeCircuitBreaker"}]}]},{"name":"AlertMetricOrbital","entity":{"name":"AlertMetric","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"severity","type":"string","required":true},{"name":"message","type":"string","required":true},{"name":"timestamp","type":"string"},{"name":"source","type":"string"}]},"traits":[{"name":"AlertMetricDisplay","linkedEntity":"AlertMetric","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","AlertMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Alerts"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Alerts","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Severity"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"severity"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"message"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Source"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"source"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"AlertsPage","path":"/alerts","traits":[{"ref":"AlertMetricDisplay"}]}]},{"name":"LogEntryOrbital","entity":{"name":"LogEntry","persistence":"persistent","collection":"logentrys","fields":[{"name":"id","type":"string","required":true},{"name":"level","type":"string","required":true,"values":["debug","info","warn","error","fatal"]},{"name":"message","type":"string","required":true},{"name":"timestamp","type":"date"},{"name":"service","type":"string"}]},"traits":[{"name":"LogEntryBrowse","linkedEntity":"LogEntry","category":"interaction","listens":[{"event":"LOG_ENTRY_CREATED","triggers":"LOG_ENTRY_CREATED"},{"event":"LOG_ENTRY_UPDATED","triggers":"LOG_ENTRY_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"LOG_ENTRY_CREATED","name":"LOG_ENTRY_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"LOG_ENTRY_UPDATED","name":"LOG_ENTRY_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]},{"from":"browsing","to":"browsing","event":"LOG_ENTRY_CREATED","effects":[["fetch","LogEntry"]]},{"from":"browsing","to":"browsing","event":"LOG_ENTRY_UPDATED","effects":[["fetch","LogEntry"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this logentry?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","LogEntry","@entity.id"],["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}],["notify","LogEntry deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","LogEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"file-text","size":"lg"},{"type":"typography","content":"Logs","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create LogEntry","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-list","entity":"LogEntry","emptyIcon":"inbox","emptyTitle":"No log entries","emptyDescription":"Logs will appear here when services report activity.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"message","variant":"h4","icon":"file-text"},{"name":"level","variant":"badge"},{"name":"service","variant":"body"},{"name":"timestamp","variant":"caption","format":"date"}],"variant":"compact","gap":"sm"}]}]}]]}]}},{"name":"LogEntryCreate","linkedEntity":"LogEntry","category":"interaction","emits":[{"event":"LOG_ENTRY_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","LogEntry"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"LogEntry","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["level","message","timestamp","service"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","LogEntry","@payload.data"],["fetch","LogEntry"],["render-ui","modal",null],["emit","LOG_ENTRY_CREATED"],["notify","LogEntry created successfully"]]}]}},{"name":"LogEntryEdit","linkedEntity":"LogEntry","category":"interaction","emits":[{"event":"LOG_ENTRY_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit LogEntry","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"LogEntry","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["level","message","timestamp","service"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","LogEntry","@payload.data"],["fetch","LogEntry"],["render-ui","modal",null],["emit","LOG_ENTRY_UPDATED"],["notify","LogEntry updated successfully"]]}]}},{"name":"LogEntryView","linkedEntity":"LogEntry","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","LogEntry"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","LogEntry","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.level"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Level"},{"type":"typography","variant":"body","content":"@entity.level"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Message"},{"type":"typography","variant":"body","content":"@entity.message"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"body","content":"@entity.timestamp"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Service"},{"type":"typography","variant":"body","content":"@entity.service"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"LogsPage","path":"/logs","traits":[{"ref":"LogEntryBrowse"},{"ref":"LogEntryCreate"},{"ref":"LogEntryEdit"},{"ref":"LogEntryView"}]}]},{"name":"SystemMetricOrbital","entity":{"name":"SystemMetric","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"value","type":"number","required":true},{"name":"unit","type":"string"},{"name":"trend","type":"string"}]},"traits":[{"name":"SystemMetricDisplay","linkedEntity":"SystemMetric","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","SystemMetric"],["render-ui","main",{"type":"dashboard-layout","appName":"DevOps Dashboard","navItems":[{"label":"Services","href":"/services","icon":"server"},{"label":"Alerts","href":"/alerts","icon":"bell"},{"label":"Logs","href":"/logs","icon":"terminal"},{"label":"Metrics","href":"/metrics","icon":"layout-list"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Metrics"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"Metrics","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"name"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Trend"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"trend"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"MetricsPage","path":"/metrics","traits":[{"ref":"SystemMetricDisplay"}]}]}],"description":"DevOps monitoring organism. Composes: stdCircuitBreaker(ServiceNode) + stdDisplay(AlertMetric)         + stdList(LogEntry) + stdDisplay(SystemMetric) Pages: /services (initial), /alerts, /logs, /metrics"},
     source: `/**
  * std-devops-dashboard
  *
@@ -17762,7 +24342,7 @@ export function stdHrPortal(params: StdHrPortalParams): OrbitalSchema {
     name: "std-iot-dashboard",
     description: "IoT dashboard organism. Composes: stdDisplay(SensorReading) + stdList(Device) + stdCircuitBreaker(DeviceAlert) Pages: /sensors (initial), /devices, /alerts",
     level: "organism",
-    schema: {"name":"IoT Dashboard","version":"1.0.0","orbitals":[{"name":"SensorReadingOrbital","entity":{"name":"SensorReading","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"sensorId","type":"string","required":true},{"name":"value","type":"number","required":true},{"name":"unit","type":"string"},{"name":"timestamp","type":"string"}]},"traits":[{"name":"SensorReadingDisplay","linkedEntity":"SensorReading","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"SensorsPage","path":"/sensors","isInitial":true,"traits":[{"ref":"SensorReadingDisplay"}]}]},{"name":"DeviceOrbital","entity":{"name":"Device","persistence":"persistent","collection":"devices","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"type","type":"string","required":true},{"name":"status","type":"string","default":"offline","values":["online","offline","maintenance"]},{"name":"lastSeen","type":"date"}]},"traits":[{"name":"DeviceBrowse","linkedEntity":"Device","category":"interaction","listens":[{"event":"DEVICE_CREATED","triggers":"DEVICE_CREATED"},{"event":"DEVICE_UPDATED","triggers":"DEVICE_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"DEVICE_CREATED","name":"DEVICE_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"DEVICE_UPDATED","name":"DEVICE_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]},{"from":"browsing","to":"browsing","event":"DEVICE_CREATED","effects":[["fetch","Device"]]},{"from":"browsing","to":"browsing","event":"DEVICE_UPDATED","effects":[["fetch","Device"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Device","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this device?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Device","@entity.id"],["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}],["notify","Device deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]}]}},{"name":"DeviceCreate","linkedEntity":"Device","category":"interaction","emits":[{"event":"DEVICE_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Device"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Device","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Device","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","type","status","lastSeen"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Device","@payload.data"],["fetch","Device"],["render-ui","modal",null],["emit","DEVICE_CREATED"],["notify","Device created successfully"]]}]}},{"name":"DeviceEdit","linkedEntity":"Device","category":"interaction","emits":[{"event":"DEVICE_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Device","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Device","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","type","status","lastSeen"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Device","@payload.data"],["fetch","Device"],["render-ui","modal",null],["emit","DEVICE_UPDATED"],["notify","Device updated successfully"]]}]}},{"name":"DeviceView","linkedEntity":"Device","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.name"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"body","content":"@entity.name"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Type"},{"type":"typography","variant":"body","content":"@entity.type"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Status"},{"type":"typography","variant":"body","content":"@entity.status"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Last Seen"},{"type":"typography","variant":"body","content":"@entity.lastSeen"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"DevicesPage","path":"/devices","traits":[{"ref":"DeviceBrowse"},{"ref":"DeviceCreate"},{"ref":"DeviceEdit"},{"ref":"DeviceView"}]}]},{"name":"DeviceAlertOrbital","entity":{"name":"DeviceAlert","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"deviceId","type":"string","required":true},{"name":"severity","type":"string","required":true},{"name":"message","type":"string"},{"name":"acknowledged","type":"boolean","default":false},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}]},"traits":[{"name":"DeviceAlertCircuitBreaker","linkedEntity":"DeviceAlert","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","DeviceAlert"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"AlertsPage","path":"/alerts","traits":[{"ref":"DeviceAlertCircuitBreaker"}]}]}],"description":"IoT dashboard organism. Composes: stdDisplay(SensorReading) + stdList(Device) + stdCircuitBreaker(DeviceAlert) Pages: /sensors (initial), /devices, /alerts"},
+    schema: {"name":"IoT Dashboard","version":"1.0.0","orbitals":[{"name":"SensorReadingOrbital","entity":{"name":"SensorReading","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"sensorId","type":"string","required":true},{"name":"value","type":"number","required":true},{"name":"unit","type":"string"},{"name":"timestamp","type":"string"}]},"traits":[{"name":"SensorReadingDisplay","linkedEntity":"SensorReading","category":"interaction","stateMachine":{"states":[{"name":"loading","isInitial":true},{"name":"displaying"},{"name":"refreshing"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOADED","name":"Loaded"},{"key":"REFRESH","name":"Refresh"},{"key":"REFRESHED","name":"Refreshed"}],"transitions":[{"from":"loading","to":"displaying","event":"INIT","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"loading","to":"displaying","event":"LOADED","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"displaying","event":"INIT","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"displaying","to":"refreshing","event":"REFRESH","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]},{"from":"refreshing","to":"displaying","event":"REFRESHED","effects":[["fetch","SensorReading"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"scaled-diagram","children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"breadcrumb","items":[{"label":"Home","href":"/"},{"label":"Sensor Readings"}]},{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"icon","name":"thermometer","size":"lg"},{"type":"typography","content":"Sensor Readings","variant":"h2"}]},{"type":"button","label":"Refresh","event":"REFRESH","variant":"secondary","icon":"refresh-cw"}]},{"type":"divider"},{"type":"box","padding":"md","children":[{"type":"simple-grid","columns":3,"children":[{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"SensorId"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"sensorId"]}]}]},{"type":"stat-display","label":"Value","value":["object/get",["array/first","@entity"],"value"]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Unit"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"unit"]}]}]},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"sm","children":[{"type":"typography","variant":"caption","content":"Timestamp"},{"type":"typography","variant":"h3","content":["object/get",["array/first","@entity"],"timestamp"]}]}]}]}]},{"type":"divider"},{"type":"grid","columns":2,"gap":"md","children":[{"type":"card","children":[{"type":"typography","variant":"caption","content":"Chart View"}]},{"type":"card","children":[{"type":"typography","variant":"caption","content":"Graph View"}]}]},{"type":"line-chart","data":[{"date":"Jan","value":12},{"date":"Feb","value":19},{"date":"Mar","value":15},{"date":"Apr","value":25},{"date":"May","value":22},{"date":"Jun","value":30}],"xKey":"date","yKey":"value","title":"Trend"},{"type":"chart-legend","items":[{"label":"Current","color":"primary"},{"label":"Previous","color":"muted"}]},{"type":"graph-view","nodes":[{"id":"a","label":"Start","x":50,"y":100},{"id":"b","label":"Process","x":200,"y":50},{"id":"c","label":"End","x":350,"y":100}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"}],"width":400,"height":200}]}]}]}]]}]}}],"pages":[{"name":"SensorsPage","path":"/sensors","isInitial":true,"traits":[{"ref":"SensorReadingDisplay"}]}]},{"name":"DeviceOrbital","entity":{"name":"Device","persistence":"persistent","collection":"devices","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"type","type":"string","required":true},{"name":"status","type":"string","default":"offline","values":["online","offline","maintenance"]},{"name":"lastSeen","type":"date"}]},"traits":[{"name":"DeviceBrowse","linkedEntity":"Device","category":"interaction","listens":[{"event":"DEVICE_CREATED","triggers":"DEVICE_CREATED"},{"event":"DEVICE_UPDATED","triggers":"DEVICE_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"DEVICE_CREATED","name":"DEVICE_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"DEVICE_UPDATED","name":"DEVICE_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]},{"from":"browsing","to":"browsing","event":"DEVICE_CREATED","effects":[["fetch","Device"]]},{"from":"browsing","to":"browsing","event":"DEVICE_UPDATED","effects":[["fetch","Device"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Device","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this device?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Device","@entity.id"],["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}],["notify","Device deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Device"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Devices","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Device","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Device","emptyIcon":"inbox","emptyTitle":"No devices registered","emptyDescription":"Connect a device to start monitoring.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","variant":"h3","icon":"cpu"},{"name":"status","variant":"badge"},{"name":"type","variant":"body"},{"name":"lastSeen","label":"Last Seen","variant":"caption","format":"date"}],"cols":3,"gap":"md"}]}]}]]}]}},{"name":"DeviceCreate","linkedEntity":"Device","category":"interaction","emits":[{"event":"DEVICE_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Device"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Device","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Device","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","type","status","lastSeen"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Device","@payload.data"],["fetch","Device"],["render-ui","modal",null],["emit","DEVICE_CREATED"],["notify","Device created successfully"]]}]}},{"name":"DeviceEdit","linkedEntity":"Device","category":"interaction","emits":[{"event":"DEVICE_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Device","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Device","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","type","status","lastSeen"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Device","@payload.data"],["fetch","Device"],["render-ui","modal",null],["emit","DEVICE_UPDATED"],["notify","Device updated successfully"]]}]}},{"name":"DeviceView","linkedEntity":"Device","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Device"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Device","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.name"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"body","content":"@entity.name"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Type"},{"type":"typography","variant":"body","content":"@entity.type"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Status"},{"type":"typography","variant":"body","content":"@entity.status"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Last Seen"},{"type":"typography","variant":"body","content":"@entity.lastSeen"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"DevicesPage","path":"/devices","traits":[{"ref":"DeviceBrowse"},{"ref":"DeviceCreate"},{"ref":"DeviceEdit"},{"ref":"DeviceView"}]}]},{"name":"DeviceAlertOrbital","entity":{"name":"DeviceAlert","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"deviceId","type":"string","required":true},{"name":"severity","type":"string","required":true},{"name":"message","type":"string"},{"name":"acknowledged","type":"boolean","default":false},{"name":"failureCount","type":"number","default":0},{"name":"successCount","type":"number","default":0},{"name":"threshold","type":"number","default":5}],"instances":[{"id":"sn-1","name":"ServiceNode","description":"Primary API gateway","status":"active","createdAt":"2026-01-10","failureCount":783,"successCount":603,"threshold":5}]},"traits":[{"name":"DeviceAlertCircuitBreaker","linkedEntity":"DeviceAlert","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"},{"name":"halfOpen"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"FAILURE","name":"Failure"},{"key":"SUCCESS","name":"Success"},{"key":"TIMEOUT","name":"Timeout"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","DeviceAlert"],["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"closed","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"closed","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"open","to":"halfOpen","event":"TIMEOUT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"activity","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"warning","pulse":true,"label":"Circuit Half-Open"}]},{"type":"divider"},{"type":"alert","variant":"warning","message":"Testing recovery. Limited requests are being allowed through."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]}]}]}]]},{"from":"open","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"closed","event":"SUCCESS","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]},{"from":"halfOpen","to":"open","event":"FAILURE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"error","pulse":true,"label":"Circuit Open"}]},{"type":"divider"},{"type":"alert","variant":"danger","message":"Circuit is open. Requests are being rejected to prevent cascading failures."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"halfOpen","to":"closed","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"IoT Dashboard","navItems":[{"label":"Sensors","href":"/sensors","icon":"layout-list"},{"label":"Devices","href":"/devices","icon":"cpu"},{"label":"Alerts","href":"/alerts","icon":"bell"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"bell","size":"lg"},{"type":"typography","content":"DeviceAlert","variant":"h2"}]},{"type":"status-dot","status":"success","pulse":false,"label":"Circuit Closed"}]},{"type":"divider"},{"type":"alert","variant":"success","message":"Service is healthy. All requests are being processed."},{"type":"simple-grid","columns":2,"children":[{"type":"stat-display","label":"Failures","value":["object/get",["array/first","@entity"],"failureCount"]},{"type":"stat-display","label":"Successes","value":["object/get",["array/first","@entity"],"successCount"]}]},{"type":"meter","value":["object/get",["array/first","@entity"],"failureCount"],"min":0,"max":["object/get",["array/first","@entity"],"threshold"]}]}]}]]}]}}],"pages":[{"name":"AlertsPage","path":"/alerts","traits":[{"ref":"DeviceAlertCircuitBreaker"}]}]}],"description":"IoT dashboard organism. Composes: stdDisplay(SensorReading) + stdList(Device) + stdCircuitBreaker(DeviceAlert) Pages: /sensors (initial), /devices, /alerts"},
     source: `/**
  * std-iot-dashboard
  *
@@ -18736,6 +25316,269 @@ export function stdRpgGame(params: StdRpgGameParams): OrbitalSchema {
 
 
   return wrapInGameShell(schema, appName);
+}
+`,
+  },
+  "std-service-marketplace": {
+    name: "std-service-marketplace",
+    description: "Service marketplace organism. Composes molecules and atoms via compose: - stdList(Product): product catalog with CRUD - stdServiceOauth(AuthSession): OAuth login with standalone provider picker - stdServicePaymentFlow(OrderPayment): Stripe payment + email receipt - stdList(Order): order history with CRUD Cross-orbital connections: - CHECKOUT: ProductBrowse -> OrderPaymentPayment",
+    level: "organism",
+    schema: {"name":"ServiceMarketplace","version":"1.0.0","orbitals":[{"name":"ProductOrbital","entity":{"name":"Product","persistence":"persistent","collection":"products","fields":[{"name":"id","type":"string","required":true},{"name":"name","type":"string","required":true},{"name":"description","type":"string"},{"name":"price","type":"number","required":true},{"name":"category","type":"string"},{"name":"inStock","type":"boolean","default":true}]},"traits":[{"name":"ProductBrowse","linkedEntity":"Product","category":"interaction","listens":[{"event":"PRODUCT_CREATED","triggers":"PRODUCT_CREATED"},{"event":"PRODUCT_UPDATED","triggers":"PRODUCT_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"PRODUCT_CREATED","name":"PRODUCT_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"PRODUCT_UPDATED","name":"PRODUCT_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Product"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"shopping-bag","size":"lg"},{"type":"typography","content":"Products","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Product","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Product","emptyIcon":"inbox","emptyTitle":"No products yet","emptyDescription":"Add products to build your catalog.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","label":"Name","variant":"h4","icon":"shopping-bag"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"price","label":"Price","variant":"caption"}]}]}]}]]},{"from":"browsing","to":"browsing","event":"PRODUCT_CREATED","effects":[["fetch","Product"]]},{"from":"browsing","to":"browsing","event":"PRODUCT_UPDATED","effects":[["fetch","Product"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Product","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Product","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this product?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Product","@entity.id"],["render-ui","modal",null],["fetch","Product"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"shopping-bag","size":"lg"},{"type":"typography","content":"Products","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Product","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Product","emptyIcon":"inbox","emptyTitle":"No products yet","emptyDescription":"Add products to build your catalog.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","label":"Name","variant":"h4","icon":"shopping-bag"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"price","label":"Price","variant":"caption"}]}]}]}],["notify","Product deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Product"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"shopping-bag","size":"lg"},{"type":"typography","content":"Products","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Product","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Product","emptyIcon":"inbox","emptyTitle":"No products yet","emptyDescription":"Add products to build your catalog.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","label":"Name","variant":"h4","icon":"shopping-bag"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"price","label":"Price","variant":"caption"}]}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Product"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"shopping-bag","size":"lg"},{"type":"typography","content":"Products","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Product","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Product","emptyIcon":"inbox","emptyTitle":"No products yet","emptyDescription":"Add products to build your catalog.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"name","label":"Name","variant":"h4","icon":"shopping-bag"},{"name":"description","label":"Description","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"price","label":"Price","variant":"caption"}]}]}]}]]}]},"emits":[{"event":"CHECKOUT","payload":[{"name":"id","type":"string","required":true}],"scope":"external"}]},{"name":"ProductCreate","linkedEntity":"Product","category":"interaction","emits":[{"event":"PRODUCT_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Product"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Product"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Product","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Product","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","description","price","category","inStock"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Product","@payload.data"],["fetch","Product"],["render-ui","modal",null],["emit","PRODUCT_CREATED"],["notify","Product created successfully"]]}]}},{"name":"ProductEdit","linkedEntity":"Product","category":"interaction","emits":[{"event":"PRODUCT_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Product"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Product","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Product","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Product","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["name","description","price","category","inStock"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Product","@payload.data"],["fetch","Product"],["render-ui","modal",null],["emit","PRODUCT_UPDATED"],["notify","Product updated successfully"]]}]}},{"name":"ProductView","linkedEntity":"Product","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Product"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Product","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.name"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Name"},{"type":"typography","variant":"body","content":"@entity.name"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Description"},{"type":"typography","variant":"body","content":"@entity.description"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Price"},{"type":"typography","variant":"body","content":"@entity.price"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Category"},{"type":"typography","variant":"body","content":"@entity.category"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"In Stock"},{"type":"typography","variant":"body","content":"@entity.inStock"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"ProductsPage","path":"/products","isInitial":true,"traits":[{"ref":"ProductBrowse"},{"ref":"ProductCreate"},{"ref":"ProductEdit"},{"ref":"ProductView"}]}],"services":[]},{"name":"AuthSessionOrbital","entity":{"name":"AuthSession","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"provider","type":"string","default":"google"},{"name":"authUrl","type":"string","default":""},{"name":"accessToken","type":"string","default":""},{"name":"refreshToken","type":"string","default":""},{"name":"authStatus","type":"string","default":"unauthenticated"},{"name":"error","type":"string","default":""}]},"traits":[{"name":"AuthSessionOauth","linkedEntity":"AuthSession","category":"interaction","stateMachine":{"states":[{"name":"unauthenticated","isInitial":true},{"name":"authorizing"},{"name":"authenticated"},{"name":"refreshing"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"LOGIN","name":"Login"},{"key":"AUTH_URL_RECEIVED","name":"Auth URL Received","payload":[{"name":"authUrl","type":"string","required":true}]},{"key":"CALLBACK","name":"Authorization Callback","payload":[{"name":"code","type":"string","required":true}]},{"key":"TOKEN_RECEIVED","name":"Token Received","payload":[{"name":"accessToken","type":"string","required":true},{"name":"refreshToken","type":"string","required":true}]},{"key":"REFRESH","name":"Refresh Token"},{"key":"TOKEN_REFRESHED","name":"Token Refreshed","payload":[{"name":"accessToken","type":"string","required":true}]},{"key":"LOGOUT","name":"Logout"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"}],"transitions":[{"from":"unauthenticated","to":"unauthenticated","event":"INIT","effects":[["fetch","AuthSession"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]}]]},{"from":"unauthenticated","to":"authorizing","event":"LOGIN","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Authorizing...","message":"Redirecting to provider for authorization."}]}],["call-service","oauth","authorize",{"provider":"@entity.provider","scopes":["openid","email"]}]]},{"from":"authorizing","to":"authorizing","event":"AUTH_URL_RECEIVED","effects":[["set","@entity.authUrl","@payload.authUrl"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"external-link","size":"lg"},{"type":"typography","content":"Authorization Required","variant":"h2"},{"type":"typography","content":"@entity.authUrl","variant":"body","color":"muted"},{"type":"input","label":"Authorization Code","field":"code","placeholder":"Paste authorization code here"},{"type":"button","label":"Submit","event":"CALLBACK","variant":"primary","icon":"check"}]}]}]]},{"from":"authorizing","to":"authenticated","event":"CALLBACK","effects":[["call-service","oauth","token",{"code":"@payload.code"}],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]}]]},{"from":"authenticated","to":"authenticated","event":"TOKEN_RECEIVED","effects":[["set","@entity.accessToken","@payload.accessToken"],["set","@entity.refreshToken","@payload.refreshToken"],["set","@entity.authStatus","authenticated"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]}]]},{"from":"authenticated","to":"refreshing","event":"REFRESH","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Refreshing token...","message":"Obtaining a new access token."}]}],["call-service","oauth","refresh",{"refreshToken":"@entity.refreshToken"}]]},{"from":"refreshing","to":"authenticated","event":"TOKEN_REFRESHED","effects":[["set","@entity.accessToken","@payload.accessToken"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Authenticated successfully"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Refresh Token","event":"REFRESH","variant":"outline","icon":"refresh-cw"},{"type":"button","label":"Logout","event":"LOGOUT","variant":"ghost","icon":"log-out"}]}]}]}]]},{"from":"authenticated","to":"unauthenticated","event":"LOGOUT","effects":[["set","@entity.authStatus","unauthenticated"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]}]]},{"from":"authorizing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Authentication Failed","message":"@entity.error","onRetry":"RETRY"},{"type":"button","label":"Try Again","event":"RETRY","variant":"primary","icon":"rotate-ccw"}]}]}]]},{"from":"refreshing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Authentication Failed","message":"@entity.error","onRetry":"RETRY"},{"type":"button","label":"Try Again","event":"RETRY","variant":"primary","icon":"rotate-ccw"}]}]}]]},{"from":"error","to":"unauthenticated","event":"RETRY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"lock","size":"lg"},{"type":"typography","content":"Sign In","variant":"h2"}]},{"type":"divider"},{"type":"select","label":"Provider","field":"provider","bind":"@entity.provider","options":[{"label":"Google","value":"google"},{"label":"GitHub","value":"github"},{"label":"Microsoft","value":"microsoft"}]},{"type":"button","label":"Login","event":"LOGIN","variant":"primary","icon":"log-in"}]}]}]]}]}}],"pages":[{"name":"LoginPage","path":"/login","traits":[{"ref":"AuthSessionOauth"}]}],"services":[]},{"name":"OrderPaymentOrbital","entity":{"name":"OrderPayment","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"amount","type":"number"},{"name":"currency","type":"string","default":"usd"},{"name":"paymentIntentId","type":"string"},{"name":"clientSecret","type":"string"},{"name":"paymentStatus","type":"string","default":"idle"},{"name":"to","type":"string"},{"name":"subject","type":"string","default":"Payment Receipt"},{"name":"body","type":"string"},{"name":"sendStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"OrderPaymentPayment","linkedEntity":"OrderPayment","category":"interaction","emits":[{"event":"SEND_RECEIPT"}],"stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"creating"},{"name":"confirming"},{"name":"succeeded"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE_PAYMENT","name":"Create Payment"},{"key":"PAYMENT_CREATED","name":"Payment Created","payload":[{"name":"id","type":"string","required":true},{"name":"clientSecret","type":"string","required":true}]},{"key":"PAYMENT_CONFIRMED","name":"Payment Confirmed"},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","OrderPayment"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]}]]},{"from":"idle","to":"creating","event":"CREATE_PAYMENT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Creating payment...","message":"Setting up your payment intent."}]}],["call-service","stripe","createPaymentIntent",{"amount":"@entity.amount","currency":"@entity.currency"}]]},{"from":"creating","to":"confirming","event":"PAYMENT_CREATED","effects":[["set","@entity.paymentIntentId","@payload.id"],["set","@entity.clientSecret","@payload.clientSecret"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Confirming payment...","message":"Processing your payment."}]}],["call-service","stripe","confirmPayment",{"paymentIntentId":"@entity.paymentIntentId"}]]},{"from":"confirming","to":"succeeded","event":"PAYMENT_CONFIRMED","effects":[["set","@entity.paymentStatus","succeeded"],["emit","SEND_RECEIPT"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Payment successful! Sending receipt..."},{"type":"typography","variant":"body","color":"muted","content":"@entity.paymentIntentId"},{"type":"button","label":"New Payment","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"creating","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]}]]},{"from":"confirming","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"error-state","title":"Payment Failed","message":"@entity.error","onRetry":"RETRY"}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]}]]},{"from":"succeeded","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"credit-card","size":"lg"},{"type":"typography","content":"Payment","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Amount","field":"amount","inputType":"number","placeholder":"0.00"},{"type":"select","label":"Currency","field":"currency","options":[{"label":"USD","value":"usd"},{"label":"EUR","value":"eur"},{"label":"GBP","value":"gbp"}]}]},{"type":"button","label":"Pay","event":"CREATE_PAYMENT","variant":"primary","icon":"credit-card"}]}]}]]}]},"listens":[{"event":"CHECKOUT","triggers":"INIT","scope":"external"}]},{"name":"OrderPaymentReceipt","linkedEntity":"OrderPayment","category":"interaction","listens":[{"event":"SEND_RECEIPT","triggers":"SEND_RECEIPT"}],"stateMachine":{"states":[{"name":"waiting","isInitial":true},{"name":"sending"},{"name":"sent","isTerminal":true},{"name":"receiptError"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEND_RECEIPT","name":"Send Receipt"},{"key":"SENT","name":"Receipt Sent"},{"key":"FAILED","name":"Send Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY_RECEIPT","name":"Retry Receipt"}],"transitions":[{"from":"waiting","to":"waiting","event":"INIT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"mail","size":"md"},{"type":"typography","content":"Receipt will be sent after payment.","variant":"body","color":"muted"}]}]}]]},{"from":"waiting","to":"sending","event":"SEND_RECEIPT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Sending receipt...","message":"Delivering your payment receipt."}]}],["call-service","email","send",{"to":"@entity.to","subject":"@entity.subject","body":"@entity.body"}]]},{"from":"sending","to":"sent","event":"SENT","effects":[["set","@entity.sendStatus","sent"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"icon","name":"check-circle","size":"md"},{"type":"alert","variant":"success","message":"Receipt sent successfully"}]}]}]]},{"from":"sending","to":"receiptError","event":"FAILED","effects":[["set","@entity.sendStatus","error"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"md","align":"center","children":[{"type":"error-state","title":"Receipt Failed","message":"Could not send receipt email.","onRetry":"RETRY_RECEIPT"},{"type":"button","label":"Retry","event":"RETRY_RECEIPT","variant":"primary","icon":"refresh-cw"}]}]}]]},{"from":"receiptError","to":"sending","event":"RETRY_RECEIPT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"loading-state","title":"Sending receipt...","message":"Delivering your payment receipt."}]}],["call-service","email","send",{"to":"@entity.to","subject":"@entity.subject","body":"@entity.body"}]]}]}}],"pages":[{"name":"CheckoutPage","path":"/checkout","traits":[{"ref":"OrderPaymentPayment"},{"ref":"OrderPaymentReceipt"}]}],"services":[]},{"name":"OrderOrbital","entity":{"name":"Order","persistence":"persistent","collection":"orders","fields":[{"name":"id","type":"string","required":true},{"name":"productName","type":"string","required":true},{"name":"amount","type":"number","required":true},{"name":"paymentStatus","type":"string","default":"pending"},{"name":"orderDate","type":"string"}]},"traits":[{"name":"OrderBrowse","linkedEntity":"Order","category":"interaction","listens":[{"event":"ORDER_CREATED","triggers":"ORDER_CREATED"},{"event":"ORDER_UPDATED","triggers":"ORDER_UPDATED"}],"stateMachine":{"states":[{"name":"browsing","isInitial":true},{"name":"deleting"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"CREATE"},{"key":"VIEW","name":"VIEW","payload":[{"name":"id","type":"string","required":true}]},{"key":"EDIT","name":"EDIT","payload":[{"name":"id","type":"string","required":true}]},{"key":"DELETE","name":"DELETE","payload":[{"name":"id","type":"string","required":true}]},{"key":"ORDER_CREATED","name":"ORDER_CREATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"ORDER_UPDATED","name":"ORDER_UPDATED","payload":[{"name":"data","type":"object","required":true}]},{"key":"CONFIRM_DELETE","name":"Confirm Delete"},{"key":"CANCEL","name":"Cancel"},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"browsing","to":"browsing","event":"INIT","effects":[["fetch","Order"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"Orders","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Order","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Order","emptyIcon":"inbox","emptyTitle":"No orders yet","emptyDescription":"Orders will appear here after checkout.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"productName","label":"Product Name","variant":"h4","icon":"list"},{"name":"amount","label":"Amount","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"paymentStatus","label":"Payment Status","variant":"caption"}]}]}]}]]},{"from":"browsing","to":"browsing","event":"ORDER_CREATED","effects":[["fetch","Order"]]},{"from":"browsing","to":"browsing","event":"ORDER_UPDATED","effects":[["fetch","Order"]]},{"from":"browsing","to":"deleting","event":"DELETE","effects":[["fetch","Order","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"trash-2","size":"md"},{"type":"typography","content":"Delete Order","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Are you sure you want to delete this order?","variant":"body"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Cancel","event":"CANCEL","variant":"ghost"},{"type":"button","label":"Delete","event":"CONFIRM_DELETE","variant":"danger","icon":"trash"}]}]}]]},{"from":"deleting","to":"browsing","event":"CONFIRM_DELETE","effects":[["persist","delete","Order","@entity.id"],["render-ui","modal",null],["fetch","Order"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"Orders","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Order","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Order","emptyIcon":"inbox","emptyTitle":"No orders yet","emptyDescription":"Orders will appear here after checkout.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"productName","label":"Product Name","variant":"h4","icon":"list"},{"name":"amount","label":"Amount","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"paymentStatus","label":"Payment Status","variant":"caption"}]}]}]}],["notify","Order deleted successfully"]]},{"from":"deleting","to":"browsing","event":"CANCEL","effects":[["render-ui","modal",null],["fetch","Order"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"Orders","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Order","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Order","emptyIcon":"inbox","emptyTitle":"No orders yet","emptyDescription":"Orders will appear here after checkout.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"productName","label":"Product Name","variant":"h4","icon":"list"},{"name":"amount","label":"Amount","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"paymentStatus","label":"Payment Status","variant":"caption"}]}]}]}]]},{"from":"deleting","to":"browsing","event":"CLOSE","effects":[["render-ui","modal",null],["fetch","Order"],["render-ui","main",{"type":"dashboard-layout","appName":"ServiceMarketplace","navItems":[{"label":"Products","href":"/products","icon":"package"},{"label":"Login","href":"/login","icon":"layout-list"},{"label":"Checkout","href":"/checkout","icon":"credit-card"},{"label":"Orders","href":"/orders","icon":"clipboard-list"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","className":"max-w-5xl mx-auto w-full","children":[{"type":"stack","direction":"horizontal","gap":"md","justify":"space-between","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"list","size":"lg"},{"type":"typography","content":"Orders","variant":"h2"}]},{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"button","label":"Create Order","event":"CREATE","variant":"primary","icon":"plus"}]}]},{"type":"divider"},{"type":"data-grid","entity":"Order","emptyIcon":"inbox","emptyTitle":"No orders yet","emptyDescription":"Orders will appear here after checkout.","itemActions":[{"label":"View","event":"VIEW","variant":"ghost","size":"sm"},{"label":"Edit","event":"EDIT","variant":"ghost","size":"sm"},{"label":"Delete","event":"DELETE","variant":"danger","size":"sm"}],"columns":[{"name":"productName","label":"Product Name","variant":"h4","icon":"list"},{"name":"amount","label":"Amount","variant":"badge","colorMap":{"active":"success","completed":"success","done":"success","pending":"warning","draft":"warning","scheduled":"warning","inactive":"neutral","archived":"neutral","disabled":"neutral","error":"destructive","cancelled":"destructive","failed":"destructive"}},{"name":"paymentStatus","label":"Payment Status","variant":"caption"}]}]}]}]]}]}},{"name":"OrderCreate","linkedEntity":"Order","category":"interaction","emits":[{"event":"ORDER_CREATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CREATE","name":"Open"},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Order"]]},{"from":"closed","to":"open","event":"CREATE","effects":[["fetch","Order"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"plus-circle","size":"md"},{"type":"typography","content":"Create Order","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Order","mode":"create","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["productName","amount","paymentStatus","orderDate"]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","create","Order","@payload.data"],["fetch","Order"],["render-ui","modal",null],["emit","ORDER_CREATED"],["notify","Order created successfully"]]}]}},{"name":"OrderEdit","linkedEntity":"Order","category":"interaction","emits":[{"event":"ORDER_UPDATED"}],"stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"EDIT","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"},{"key":"SAVE","name":"Save","payload":[{"name":"data","type":"object","required":true}]}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Order"]]},{"from":"closed","to":"open","event":"EDIT","effects":[["fetch","Order","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","children":[{"type":"icon","name":"edit","size":"md"},{"type":"typography","content":"Edit Order","variant":"h3"}]},{"type":"divider"},{"type":"form-section","entity":"Order","mode":"edit","submitEvent":"SAVE","cancelEvent":"CLOSE","fields":["productName","amount","paymentStatus","orderDate"],"entityId":"@entity.id"}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]},{"from":"open","to":"closed","event":"SAVE","effects":[["persist","update","Order","@payload.data"],["fetch","Order"],["render-ui","modal",null],["emit","ORDER_UPDATED"],["notify","Order updated successfully"]]}]}},{"name":"OrderView","linkedEntity":"Order","category":"interaction","stateMachine":{"states":[{"name":"closed","isInitial":true},{"name":"open"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"VIEW","name":"Open","payload":[{"name":"id","type":"string","required":true}]},{"key":"CLOSE","name":"Close"}],"transitions":[{"from":"closed","to":"closed","event":"INIT","effects":[["fetch","Order"]]},{"from":"closed","to":"open","event":"VIEW","effects":[["fetch","Order","@payload.id"],["render-ui","modal",{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"eye","size":"md"},{"type":"typography","variant":"h3","content":"@entity.productName"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Product Name"},{"type":"typography","variant":"body","content":"@entity.productName"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Amount"},{"type":"typography","variant":"body","content":"@entity.amount"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Payment Status"},{"type":"typography","variant":"body","content":"@entity.paymentStatus"}]},{"type":"stack","direction":"horizontal","gap":"md","children":[{"type":"typography","variant":"caption","content":"Order Date"},{"type":"typography","variant":"body","content":"@entity.orderDate"}]},{"type":"divider"},{"type":"stack","direction":"horizontal","gap":"sm","justify":"end","children":[{"type":"button","label":"Edit","event":"EDIT","variant":"primary","icon":"edit"},{"type":"button","label":"Close","event":"CLOSE","variant":"ghost"}]}]}]]},{"from":"open","to":"closed","event":"CLOSE","effects":[["render-ui","modal",null],["notify","Cancelled","info"]]}]}}],"pages":[{"name":"OrdersPage","path":"/orders","traits":[{"ref":"OrderBrowse"},{"ref":"OrderCreate"},{"ref":"OrderEdit"},{"ref":"OrderView"}]}],"services":[]}],"description":"Service marketplace organism. Composes molecules and atoms via compose: - stdList(Product): product catalog with CRUD - stdServiceOauth(AuthSession): OAuth login with standalone provider picker - stdServicePaymentFlow(OrderPayment): Stripe payment + email receipt - stdList(Order): order history with CRUD Cross-orbital connections: - CHECKOUT: ProductBrowse -> OrderPaymentPayment"},
+    source: `/**
+ * std-service-marketplace
+ *
+ * Service marketplace organism. Composes molecules and atoms via compose:
+ * - stdList(Product): product catalog with CRUD
+ * - stdServiceOauth(AuthSession): OAuth login with standalone provider picker
+ * - stdServicePaymentFlow(OrderPayment): Stripe payment + email receipt
+ * - stdList(Order): order history with CRUD
+ *
+ * Cross-orbital connections:
+ * - CHECKOUT: ProductBrowse -> OrderPaymentPayment
+ *
+ * @level organism
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalSchema } from '@almadar/core/types';
+import type { EntityField } from '@almadar/core/types';
+import { compose } from '@almadar/core/builders';
+import type { ComposePage, ComposeConnection } from '@almadar/core/builders';
+import { stdList } from '../molecules/std-list.js';
+import { stdServiceOauth } from '../atoms/std-service-oauth.js';
+import { stdServicePaymentFlow } from '../molecules/std-service-payment-flow.js';
+import { wrapInDashboardLayout, buildNavItems } from '../layout.js';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceMarketplaceParams {
+  appName?: string;
+  productFields?: EntityField[];
+  orderFields?: EntityField[];
+}
+
+// ============================================================================
+// Defaults
+// ============================================================================
+
+const DEFAULT_PRODUCT_FIELDS: EntityField[] = [
+  { name: 'name', type: 'string', required: true },
+  { name: 'description', type: 'string' },
+  { name: 'price', type: 'number', required: true },
+  { name: 'category', type: 'string' },
+  { name: 'inStock', type: 'boolean', default: true },
+];
+
+const DEFAULT_ORDER_FIELDS: EntityField[] = [
+  { name: 'productName', type: 'string', required: true },
+  { name: 'amount', type: 'number', required: true },
+  { name: 'paymentStatus', type: 'string', default: 'pending' },
+  { name: 'orderDate', type: 'string' },
+];
+
+// ============================================================================
+// Organism
+// ============================================================================
+
+export function stdServiceMarketplace(params: StdServiceMarketplaceParams = {}): OrbitalSchema {
+  const productFields = params.productFields ?? DEFAULT_PRODUCT_FIELDS;
+  const orderFields = params.orderFields ?? DEFAULT_ORDER_FIELDS;
+
+  const products = stdList({
+    entityName: 'Product',
+    fields: productFields,
+    pageTitle: 'Products',
+    headerIcon: 'shopping-bag',
+    emptyTitle: 'No products yet',
+    emptyDescription: 'Add products to build your catalog.',
+    pageName: 'ProductsPage',
+    pagePath: '/products',
+    isInitial: true,
+  });
+
+  const login = stdServiceOauth({
+    standalone: true,
+    pageName: 'LoginPage',
+    pagePath: '/login',
+  });
+
+  const checkout = stdServicePaymentFlow({
+    pageName: 'CheckoutPage',
+    pagePath: '/checkout',
+  });
+
+  const orders = stdList({
+    entityName: 'Order',
+    fields: orderFields,
+    pageTitle: 'Orders',
+    headerIcon: 'list',
+    emptyTitle: 'No orders yet',
+    emptyDescription: 'Orders will appear here after checkout.',
+    pageName: 'OrdersPage',
+    pagePath: '/orders',
+  });
+
+  const appName = params.appName ?? 'ServiceMarketplace';
+
+  const pages: ComposePage[] = [
+    { name: 'ProductsPage', path: '/products', traits: ['ProductBrowse', 'ProductCreate', 'ProductEdit', 'ProductView', 'ProductDelete'], isInitial: true },
+    { name: 'LoginPage', path: '/login', traits: ['AuthSessionOauth'] },
+    { name: 'CheckoutPage', path: '/checkout', traits: ['OrderPaymentPayment', 'OrderPaymentReceipt'] },
+    { name: 'OrdersPage', path: '/orders', traits: ['OrderBrowse', 'OrderCreate', 'OrderEdit', 'OrderView', 'OrderDelete'] },
+  ];
+
+  const connections: ComposeConnection[] = [
+    { from: 'ProductBrowse', event: { event: 'CHECKOUT', payload: [{ name: 'id', type: 'string', required: true }] }, to: 'OrderPaymentPayment' },
+  ];
+
+  const schema = compose(
+    [products, login, checkout, orders],
+    pages,
+    connections,
+    appName,
+  );
+
+  // Remove orbital-level service declarations for platform services.
+  // The validator loads services-registry.json and treats those as globally known.
+  // Only custom services (not in the registry) should be declared on orbitals.
+  if (schema.orbitals) {
+    for (const orbital of schema.orbitals) {
+      const o = orbital as unknown as Record<string, unknown>;
+      const services = (o.services ?? []) as Array<{ name: string }>;
+      o.services = services.filter(s => s.name.startsWith('custom-'));
+    }
+  }
+
+  const navItems = buildNavItems([
+    { name: 'Products', path: '/products' },
+    { name: 'Login', path: '/login' },
+    { name: 'Checkout', path: '/checkout' },
+    { name: 'Orders', path: '/orders' },
+  ]);
+
+  return wrapInDashboardLayout(schema, appName, navItems);
+}
+`,
+  },
+  "std-service-research-assistant": {
+    name: "std-service-research-assistant",
+    description: "Content research assistant organism. Composes service atoms/molecules via compose: - stdServiceContentPipeline(Research): YouTube search + LLM summarization - stdServiceRedis(CacheEntry): Redis cache management (standalone) - stdServiceStorage(Report): saving research reports to storage (standalone) - stdServiceCustomBearer(KnowledgeQuery): custom knowledge API queries (standalone) Cross-orbital connections: (none - each page operates independently, user navigates via dashboard nav)",
+    level: "organism",
+    schema: {"name":"ResearchAssistant","version":"1.0.0","orbitals":[{"name":"ResearchOrbital","entity":{"name":"Research","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"query","type":"string","default":""},{"name":"videoTitle","type":"string","default":""},{"name":"videoDescription","type":"string","default":""},{"name":"summary","type":"string","default":""},{"name":"pipelineStatus","type":"string","default":"idle"},{"name":"error","type":"string","default":""}]},"traits":[{"name":"ResearchPipeline","linkedEntity":"Research","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"searching"},{"name":"results"},{"name":"summarizing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"SEARCH","name":"Search"},{"key":"SEARCH_COMPLETE","name":"Search Complete","payload":[{"name":"results","type":"array","required":true}]},{"key":"SELECT_AND_SUMMARIZE","name":"Select and Summarize","payload":[{"name":"videoId","type":"string","required":true}]},{"key":"VIDEO_FETCHED","name":"Video Fetched","payload":[{"name":"title","type":"string","required":true},{"name":"description","type":"string","required":true}]},{"key":"SUMMARY_COMPLETE","name":"Summary Complete","payload":[{"name":"content","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"Research","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]}]]},{"from":"idle","to":"searching","event":"SEARCH","effects":[["set","@entity.pipelineStatus","searching"],["call-service","youtube","search",{"query":"@entity.query","maxResults":5,"type":"video"}],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Searching YouTube...","variant":"h3"},{"type":"spinner","size":"lg"},{"type":"typography","content":"@entity.query","variant":"caption"}]}]}]]},{"from":"searching","to":"results","event":"SEARCH_COMPLETE","effects":[["set","@entity.pipelineStatus","results"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"video","size":"lg"},{"type":"typography","content":"Search Results","variant":"h2"}]},{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]},{"type":"divider"},{"type":"data-grid","entity":"Research","emptyIcon":"inbox","emptyTitle":"No results found","emptyDescription":"Try a different search query.","itemActions":[{"label":"Summarize","event":"SELECT_AND_SUMMARIZE","variant":"primary","size":"sm"}],"columns":[{"name":"videoTitle","label":"Title","variant":"h4","icon":"video"},{"name":"videoDescription","label":"Description","variant":"caption"}]}]}]}]]},{"from":"results","to":"summarizing","event":"SELECT_AND_SUMMARIZE","effects":[["set","@entity.pipelineStatus","summarizing"],["call-service","youtube","getVideo",{"videoId":"@payload.videoId"}],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"cpu","size":"lg"},{"type":"typography","content":"Fetching & summarizing...","variant":"h3"},{"type":"spinner","size":"lg"},{"type":"typography","content":"@entity.videoTitle","variant":"caption"}]}]}]]},{"from":"summarizing","to":"summarizing","event":"VIDEO_FETCHED","effects":[["set","@entity.videoTitle","@payload.title"],["set","@entity.videoDescription","@payload.description"],["call-service","llm","summarize",{"text":"@entity.videoDescription"}]]},{"from":"summarizing","to":"complete","event":"SUMMARY_COMPLETE","effects":[["set","@entity.summary","@payload.content"],["set","@entity.pipelineStatus","complete"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","justify":"space-between","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Research Complete","variant":"h2"}]},{"type":"button","label":"New Search","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"video","size":"sm"},{"type":"typography","content":"@entity.videoTitle","variant":"h3"}]},{"type":"divider"},{"type":"typography","content":"Summary","variant":"caption"},{"type":"typography","content":"@entity.summary","variant":"body"}]}]}]}]}]]},{"from":"searching","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.pipelineStatus","error"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Pipeline Error","variant":"h2"},{"type":"alert","variant":"error","message":"@entity.error"},{"type":"button","label":"Try Again","event":"RESET","variant":"primary","icon":"rotate-ccw"}]}]}]]},{"from":"summarizing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.pipelineStatus","error"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"alert-triangle","size":"lg"},{"type":"typography","content":"Pipeline Error","variant":"h2"},{"type":"alert","variant":"error","message":"@entity.error"},{"type":"button","label":"Try Again","event":"RESET","variant":"primary","icon":"rotate-ccw"}]}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["set","@entity.error",""],["set","@entity.summary",""],["set","@entity.videoTitle",""],["set","@entity.videoDescription",""],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"Research","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]}]]},{"from":"results","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"Research","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.pipelineStatus","idle"],["set","@entity.error",""],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","children":[{"type":"stack","direction":"horizontal","gap":"sm","align":"center","children":[{"type":"icon","name":"search","size":"lg"},{"type":"typography","content":"Content Research","variant":"h2"}]},{"type":"divider"},{"type":"card","children":[{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"typography","content":"Search YouTube for content to summarize","variant":"body"},{"type":"form-section","entity":"Research","mode":"edit","submitEvent":"SEARCH","fields":["query"]}]}]}]}]}]]}]}}],"pages":[{"name":"ResearchPage","path":"/research","isInitial":true,"traits":[{"ref":"ResearchPipeline"}]}]},{"name":"CacheEntryOrbital","entity":{"name":"CacheEntry","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"key","type":"string"},{"name":"value","type":"string"},{"name":"ttl","type":"number","default":3600},{"name":"result","type":"string"},{"name":"redisStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"CacheEntryRedis","linkedEntity":"CacheEntry","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"executing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"GET_KEY","name":"Get Key"},{"key":"SET_KEY","name":"Set Key"},{"key":"DELETE_KEY","name":"Delete Key"},{"key":"EXECUTED","name":"Executed","payload":[{"name":"data","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","CacheEntry"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]}]]},{"from":"idle","to":"executing","event":"GET_KEY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}]}],["call-service","redis","get",{"key":"@entity.key"}]]},{"from":"idle","to":"executing","event":"SET_KEY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}]}],["call-service","redis","set",{"key":"@entity.key","value":"@entity.value","ttl":"@entity.ttl"}]]},{"from":"idle","to":"executing","event":"DELETE_KEY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Executing...","message":"Running redis operation..."}]}],["call-service","redis","delete",{"key":"@entity.key"}]]},{"from":"executing","to":"complete","event":"EXECUTED","effects":[["set","@entity.result","@payload.data"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Operation complete"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Reset","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"executing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"error-state","title":"Redis Error","message":"@entity.error","onRetry":"RESET"}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"database","size":"lg"},{"type":"typography","content":"Redis Cache","variant":"h2"}]},{"type":"divider"},{"type":"stack","direction":"vertical","gap":"md","children":[{"type":"input","label":"Key","bind":"@entity.key","placeholder":"cache-key"},{"type":"input","label":"Value","bind":"@entity.value","placeholder":"cache-value"},{"type":"input","label":"TTL (seconds)","bind":"@entity.ttl","inputType":"number","placeholder":"3600"}]},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Get","event":"GET_KEY","variant":"primary","icon":"download"},{"type":"button","label":"Set","event":"SET_KEY","variant":"primary","icon":"upload"},{"type":"button","label":"Delete","event":"DELETE_KEY","variant":"destructive","icon":"trash-2"}]}]}]}]]}]}}],"pages":[{"name":"CachePage","path":"/cache","traits":[{"ref":"CacheEntryRedis"}]}]},{"name":"ReportOrbital","entity":{"name":"Report","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"bucket","type":"string","default":"uploads"},{"name":"fileKey","type":"string"},{"name":"prefix","type":"string"},{"name":"content","type":"string"},{"name":"storageStatus","type":"string","default":"idle"},{"name":"result","type":"string"},{"name":"error","type":"string"}]},"traits":[{"name":"ReportStorage","linkedEntity":"Report","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"executing"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"UPLOAD_FILE","name":"Upload File"},{"key":"DOWNLOAD_FILE","name":"Download File"},{"key":"LIST_FILES","name":"List Files"},{"key":"DELETE_FILE","name":"Delete File"},{"key":"EXECUTED","name":"Executed","payload":[{"name":"data","type":"string","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","Report"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Report Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]}]]},{"from":"idle","to":"executing","event":"UPLOAD_FILE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Processing...","message":"Executing storage operation on report..."}]}],["call-service","storage","upload",{"bucket":"@entity.bucket","key":"@entity.fileKey","content":"@entity.content"}]]},{"from":"idle","to":"executing","event":"DOWNLOAD_FILE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Processing...","message":"Executing storage operation on report..."}]}],["call-service","storage","download",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"idle","to":"executing","event":"LIST_FILES","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Processing...","message":"Executing storage operation on report..."}]}],["call-service","storage","list",{"bucket":"@entity.bucket","prefix":"@entity.prefix"}]]},{"from":"idle","to":"executing","event":"DELETE_FILE","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Processing...","message":"Executing storage operation on report..."}]}],["call-service","storage","delete",{"bucket":"@entity.bucket","key":"@entity.fileKey"}]]},{"from":"executing","to":"complete","event":"EXECUTED","effects":[["set","@entity.result","@payload.data"],["set","@entity.storageStatus","complete"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"alert","variant":"success","message":"Operation completed successfully"},{"type":"typography","variant":"body","color":"muted","content":"@entity.result"},{"type":"button","label":"Back","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"executing","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["set","@entity.storageStatus","error"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"error-state","title":"Operation Failed","message":"@entity.error"},{"type":"button","label":"Back","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["set","@entity.storageStatus","idle"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Report Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["set","@entity.storageStatus","idle"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"stretch","children":[{"type":"stack","direction":"horizontal","gap":"md","align":"center","children":[{"type":"icon","name":"hard-drive","size":"lg"},{"type":"typography","content":"Report Storage","variant":"h2"}]},{"type":"divider"},{"type":"input","label":"Bucket","bind":"@entity.bucket","placeholder":"bucket-name"},{"type":"input","label":"File Key","bind":"@entity.fileKey","placeholder":"path/to/file.txt"},{"type":"input","label":"Prefix","bind":"@entity.prefix","placeholder":"path/prefix/"},{"type":"textarea","label":"Content","bind":"@entity.content","placeholder":"File content..."},{"type":"stack","direction":"horizontal","gap":"sm","justify":"center","children":[{"type":"button","label":"Upload","event":"UPLOAD_FILE","variant":"primary","icon":"upload"},{"type":"button","label":"Download","event":"DOWNLOAD_FILE","variant":"secondary","icon":"download"},{"type":"button","label":"List","event":"LIST_FILES","variant":"secondary","icon":"list"},{"type":"button","label":"Delete","event":"DELETE_FILE","variant":"destructive","icon":"trash-2"}]}]}]}]]}]}}],"pages":[{"name":"ReportsPage","path":"/reports","traits":[{"ref":"ReportStorage"}]}]},{"name":"KnowledgeQueryOrbital","entity":{"name":"KnowledgeQuery","persistence":"runtime","fields":[{"name":"id","type":"string","required":true},{"name":"endpoint","type":"string"},{"name":"method","type":"string","default":"GET"},{"name":"requestBody","type":"string"},{"name":"responseData","type":"string"},{"name":"statusCode","type":"number","default":0},{"name":"callStatus","type":"string","default":"idle"},{"name":"error","type":"string"}]},"traits":[{"name":"KnowledgeQueryCustomBearer","linkedEntity":"KnowledgeQuery","category":"interaction","stateMachine":{"states":[{"name":"idle","isInitial":true},{"name":"calling"},{"name":"complete"},{"name":"error"}],"events":[{"key":"INIT","name":"Initialize"},{"key":"CALL_API","name":"Call API"},{"key":"API_RESPONSE","name":"API Response","payload":[{"name":"data","type":"string","required":true},{"name":"statusCode","type":"number","required":true}]},{"key":"FAILED","name":"Failed","payload":[{"name":"error","type":"string","required":true}]},{"key":"RETRY","name":"Retry"},{"key":"RESET","name":"Reset"}],"transitions":[{"from":"idle","to":"idle","event":"INIT","effects":[["fetch","KnowledgeQuery"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]}]]},{"from":"idle","to":"calling","event":"CALL_API","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"loading-state","title":"Calling API...","message":"Sending request to knowledgequery endpoint..."}]}],["call-service","custom-bearer-api","execute",{"endpoint":"@entity.endpoint","method":"@entity.method","body":"@entity.requestBody"}]]},{"from":"calling","to":"complete","event":"API_RESPONSE","effects":[["set","@entity.responseData","@payload.data"],["set","@entity.statusCode","@payload.statusCode"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"check-circle","size":"lg"},{"type":"typography","content":"Response","variant":"h2"},{"type":"badge","content":"@entity.statusCode","variant":"info"},{"type":"code","content":"@entity.responseData","language":"json"},{"type":"button","label":"New Request","event":"RESET","variant":"ghost","icon":"rotate-ccw"}]}]}]]},{"from":"calling","to":"error","event":"FAILED","effects":[["set","@entity.error","@payload.error"],["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"error-state","title":"Request Failed","message":"@entity.error","onRetry":"RETRY"}]}]]},{"from":"error","to":"idle","event":"RETRY","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]}]]},{"from":"complete","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]}]]},{"from":"error","to":"idle","event":"RESET","effects":[["render-ui","main",{"type":"dashboard-layout","appName":"ResearchAssistant","navItems":[{"label":"Research","href":"/research","icon":"search"},{"label":"Cache","href":"/cache","icon":"database"},{"label":"Reports","href":"/reports","icon":"file-text"},{"label":"Knowledge","href":"/knowledge","icon":"book-open"}],"children":[{"type":"stack","direction":"vertical","gap":"lg","align":"center","children":[{"type":"icon","name":"shield","size":"lg"},{"type":"typography","content":"Bearer API Tester","variant":"h2"},{"type":"input","field":"endpoint","placeholder":"/users","bind":"@entity.endpoint"},{"type":"select","field":"method","bind":"@entity.method","options":[{"label":"GET","value":"GET"},{"label":"POST","value":"POST"},{"label":"PUT","value":"PUT"},{"label":"DELETE","value":"DELETE"}]},{"type":"textarea","field":"requestBody","placeholder":"JSON request body","bind":"@entity.requestBody"},{"type":"button","label":"Send Request","event":"CALL_API","variant":"primary","icon":"send"}]}]}]]}]}}],"pages":[{"name":"KnowledgePage","path":"/knowledge","traits":[{"ref":"KnowledgeQueryCustomBearer"}]}]}],"services":[{"name":"custom-bearer-api","type":"rest","baseUrl":"https://api.knowledge-base.example.com","auth":{"type":"bearer","secretEnv":"CUSTOM_BEARER_TOKEN"}}],"description":"Content research assistant organism. Composes service atoms/molecules via compose: - stdServiceContentPipeline(Research): YouTube search + LLM summarization - stdServiceRedis(CacheEntry): Redis cache management (standalone) - stdServiceStorage(Report): saving research reports to storage (standalone) - stdServiceCustomBearer(KnowledgeQuery): custom knowledge API queries (standalone) Cross-orbital connections: (none - each page operates independently, user navigates via dashboard nav)"},
+    source: `/**
+ * std-service-research-assistant
+ *
+ * Content research assistant organism. Composes service atoms/molecules via compose:
+ * - stdServiceContentPipeline(Research): YouTube search + LLM summarization
+ * - stdServiceRedis(CacheEntry): Redis cache management (standalone)
+ * - stdServiceStorage(Report): saving research reports to storage (standalone)
+ * - stdServiceCustomBearer(KnowledgeQuery): custom knowledge API queries (standalone)
+ *
+ * Cross-orbital connections:
+ * (none - each page operates independently, user navigates via dashboard nav)
+ *
+ * @level organism
+ * @family service
+ * @packageDocumentation
+ */
+
+import type { OrbitalSchema } from '@almadar/core/types';
+import type { EntityField } from '@almadar/core/types';
+import { compose } from '@almadar/core/builders';
+import type { ComposePage } from '@almadar/core/builders';
+import { stdServiceContentPipeline } from '../molecules/std-service-content-pipeline.js';
+import { stdServiceRedis } from '../atoms/std-service-redis.js';
+import { stdServiceStorage } from '../atoms/std-service-storage.js';
+import { stdServiceCustomBearer } from '../atoms/std-service-custom-bearer.js';
+import { wrapInDashboardLayout, buildNavItems } from '../layout.js';
+
+// ============================================================================
+// Params
+// ============================================================================
+
+export interface StdServiceResearchAssistantParams {
+  appName?: string;
+  researchFields?: EntityField[];
+  cacheFields?: EntityField[];
+  storageFields?: EntityField[];
+}
+
+// ============================================================================
+// Organism
+// ============================================================================
+
+export function stdServiceResearchAssistant(params: StdServiceResearchAssistantParams): OrbitalSchema {
+  const research = stdServiceContentPipeline({
+    entityName: 'Research',
+    fields: params.researchFields,
+    pageName: 'ResearchPage',
+    pagePath: '/research',
+    isInitial: true,
+  });
+
+  const cache = stdServiceRedis({
+    entityName: 'CacheEntry',
+    fields: params.cacheFields,
+    standalone: true,
+    pageName: 'CachePage',
+    pagePath: '/cache',
+  });
+
+  const reports = stdServiceStorage({
+    entityName: 'Report',
+    fields: params.storageFields,
+    standalone: true,
+    pageName: 'ReportsPage',
+    pagePath: '/reports',
+  });
+
+  const knowledge = stdServiceCustomBearer({
+    entityName: 'KnowledgeQuery',
+    standalone: true,
+    baseUrl: 'https://api.knowledge-base.example.com',
+    pageName: 'KnowledgePage',
+    pagePath: '/knowledge',
+  });
+
+  const appName = params.appName ?? 'ResearchAssistant';
+
+  const pages: ComposePage[] = [
+    { name: 'ResearchPage', path: '/research', traits: ['ResearchPipeline'], isInitial: true },
+    { name: 'CachePage', path: '/cache', traits: ['CacheEntryRedis'] },
+    { name: 'ReportsPage', path: '/reports', traits: ['ReportStorage'] },
+    { name: 'KnowledgePage', path: '/knowledge', traits: ['KnowledgeQueryCustomBearer'] },
+  ];
+
+  const schema = compose(
+    [research, cache, reports, knowledge],
+    pages,
+    [],
+    appName,
+  );
+
+  // Strip all orbital-level service declarations to avoid ORB_GEN_DUPLICATE.
+  // Platform services are validated via services-registry.json (loaded by the compiler).
+  // Custom services must be declared at schema level.
+  if (schema.orbitals) {
+    for (const orbital of schema.orbitals) {
+      delete (orbital as unknown as Record<string, unknown>).services;
+    }
+  }
+  (schema as unknown as Record<string, unknown>).services = [
+    { name: 'custom-bearer-api', type: 'rest', baseUrl: 'https://api.knowledge-base.example.com', auth: { type: 'bearer', secretEnv: 'CUSTOM_BEARER_TOKEN' } },
+  ];
+
+  const navItems = buildNavItems(pages, {
+    research: 'search',
+    cache: 'database',
+    reports: 'file-text',
+    knowledge: 'book-open',
+  });
+
+  return wrapInDashboardLayout(schema, appName, navItems);
 }
 `,
   },

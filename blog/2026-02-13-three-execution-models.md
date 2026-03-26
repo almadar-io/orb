@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture]
 image: /img/blog/three-execution-models.svg
 ---
+![](/img/blog/three-execution-models.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 The same `.orb` file runs in the browser via an interpreter, compiles to a native Rust binary, and generates production TypeScript or Python code. Three execution models from one source of truth, each optimized for its environment.

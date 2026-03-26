@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture, tutorial]
 image: /img/blog/schema-first-development.svg
 ---
+![](/img/blog/schema-first-development.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 What if you defined your entire application in a single file before writing any component code? Not just the database model, but the state machines, the UI structure, the routes, and the business rules. That is how .orb works: write the schema, validate it, compile it, run it.

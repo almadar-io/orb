@@ -3,7 +3,11 @@ slug: composing-behavior
 title: "Composing Behavior with Emit/Listen in .orb"
 authors: [osamah]
 tags: [architecture, gaming, composition]
+image: /img/blog/composing-behavior.svg
 ---
+
+![](/img/blog/composing-behavior.svg)
+
 import { AvlEmitListen } from '@almadar/ui/illustrations';
 
 In .orb, Orbital Units communicate through events. Each unit declares what it emits and what it listens to. The compiler verifies the wiring is complete. This is how you compose complex behavior from simple, independent parts.

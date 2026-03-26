@@ -3,7 +3,11 @@ slug: compiler-that-says-no
 title: "The .orb Compiler That Says No"
 authors: [osamah]
 tags: [compiler, rust, engineering]
+image: /img/blog/compiler-that-says-no.svg
 ---
+
+![](/img/blog/compiler-that-says-no.svg)
+
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 Most compilers check syntax. The .orb compiler checks logic. It runs 50+ validation rules across 12 modules before generating a single line of code, catching bugs that would normally survive all the way to production.

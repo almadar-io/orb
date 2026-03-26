@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture, state-machines]
 image: /img/blog/closed-circuit-pattern.svg
 ---
+![](/img/blog/closed-circuit-pattern.svg)
+
 import { AvlClosedCircuit } from '@almadar/ui/illustrations';
 
 Ever opened a modal and could not close it? That is a broken circuit. The .orb compiler makes it impossible to build one.

@@ -3,7 +3,11 @@ slug: one-schema-six-apps
 title: "One Schema, Five Apps: How We Built a Government Tool, an AI Platform, and Two Games with the Same Language"
 authors: [almadar]
 tags: [case-study, architecture]
+image: /img/blog/one-schema-six-apps.svg
 ---
+
+![](/img/blog/one-schema-six-apps.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 A government inspection system. A personal fitness tracker. A tactical strategy game. Three completely different domains, all built with the same .orb language. The vocabulary changes across domains. The structure does not.

@@ -5,6 +5,8 @@ image: /img/blog/s-expressions-json-functional.svg
 authors: [osamah]
 tags: [architecture]
 ---
+![](/img/blog/s-expressions-json-functional.svg)
+
 import { AvlExprTree } from '@almadar/ui/illustrations';
 
 JSON holds data beautifully but has no answer for logic. String templates are error-prone and injectable. Custom DSLs are verbose and hard to validate. JavaScript functions are not serializable. S-expressions solve all three problems: they are structured, serializable, and executable, encoded as plain JSON arrays.

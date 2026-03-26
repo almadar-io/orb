@@ -3,7 +3,11 @@ slug: machines-with-traits-part-1
 title: "Machines with Traits: How Almadar Will Transform Robotics"
 authors: [almadar]
 tags: [robotics, vision, automation, state-machines]
+image: /img/blog/machines-with-traits.svg
 ---
+
+![](/img/blog/machines-with-traits.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 Programming a robot today means writing thousands of lines of tangled imperative code where every new condition doubles the complexity, hidden state transitions breed bugs, and documentation drifts from reality within weeks. .orb takes a different approach: declare machine behavior as composable traits with explicit states, guarded transitions, and structured effects.

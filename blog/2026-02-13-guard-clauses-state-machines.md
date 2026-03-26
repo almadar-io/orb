@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture, state-machines]
 image: /img/blog/guard-clauses-state-machines.svg
 ---
+![](/img/blog/guard-clauses-state-machines.svg)
+
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 Authorization logic is usually scattered across components, API routes, and middleware. In .orb, guards are part of the state machine definition. One declaration, enforced everywhere.

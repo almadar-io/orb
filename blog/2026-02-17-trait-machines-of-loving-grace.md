@@ -3,7 +3,11 @@ slug: trait-machines-of-loving-grace
 title: "Trait Machines of Loving Grace"
 authors: [almadar]
 tags: [robotics, ai-safety, state-machines, vision, orbital]
+image: /img/blog/trait-machines.svg
 ---
+
+![](/img/blog/trait-machines.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 Autonomous systems are getting more capable and less legible. Machine learning models can perceive, classify, and optimize, but as capability grows, interpretability shrinks. In safety-critical environments, systems act faster than humans can understand why. Trait Machines address this by making autonomous behavior explicitly readable, auditable, and constrainable without discarding machine learning.

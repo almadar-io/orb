@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture, state-machines]
 image: /img/blog/fsm-underused-pattern.svg
 ---
+![](/img/blog/fsm-underused-pattern.svg)
+
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 Five boolean flags create 32 possible state combinations. Most are invalid. A state machine with five named states has exactly five valid states. That is the core argument for modeling UI behavior in .orb.

@@ -3,7 +3,11 @@ slug: understanding-state-machines
 title: Understanding State Machines in .orb
 authors: [osamah]
 tags: [architecture, tutorial]
+image: /img/blog/understanding-state-machines.svg
 ---
+
+![](/img/blog/understanding-state-machines.svg)
+
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 State machines are the foundation of every .orb program. Every trait contains one, and the compiler enforces that they are well-formed. This post explains what a state machine is in .orb and walks through a concrete example.

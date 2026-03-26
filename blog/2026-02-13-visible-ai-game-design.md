@@ -3,7 +3,11 @@ slug: visible-ai-game-design
 title: "Game AI in .orb"
 authors: [almadar]
 tags: [gaming, state-machines, game-design]
+image: /img/blog/visible-ai-game-design.svg
 ---
+
+![](/img/blog/visible-ai-game-design.svg)
+
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
 In most games, enemy AI is a black box of nested conditionals and random weights. The player reacts to opaque decisions they cannot predict or outthink. In .orb, enemy behavior is a state machine the player can read, reason about, and exploit.

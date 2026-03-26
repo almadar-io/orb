@@ -3,7 +3,11 @@ slug: real-cost-of-boilerplate
 title: "From 10,000 Lines to 200: The Real Cost of Boilerplate"
 authors: [osamah]
 tags: [startups, productivity, tutorial]
+image: /img/blog/real-cost-of-boilerplate.svg
 ---
+
+![](/img/blog/real-cost-of-boilerplate.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 You want to build a task manager. Simple CRUD: create, read, update, delete. The traditional way costs you roughly 5,000 lines across 40+ files. The .orb way: 120 lines in one file. This is not a theoretical estimate. Let's count both sides.

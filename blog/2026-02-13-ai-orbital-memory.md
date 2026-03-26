@@ -5,6 +5,8 @@ authors: [osamah]
 tags: [architecture, ai]
 image: /img/blog/ai-orbital-memory.svg
 ---
+![](/img/blog/ai-orbital-memory.svg)
+
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 An AI agent needs memory. Most approaches reach for vector databases and similarity search. In .orb, memory is just another Orbital Unit with entities, traits, and state machines.

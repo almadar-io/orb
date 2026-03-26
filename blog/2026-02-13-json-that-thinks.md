@@ -3,7 +3,11 @@ slug: json-that-thinks
 title: "JSON That Thinks: How We Built a Turing-Complete Language Inside JSON"
 authors: [osamah]
 tags: [language-design, architecture]
+image: /img/blog/json-that-thinks.svg
 ---
+
+![](/img/blog/json-that-thinks.svg)
+
 import { AvlExprTree } from '@almadar/ui/illustrations';
 
 Every configuration language eventually hits the same wall: you need logic, but your format only holds data. YAML leads to Helm chart nightmares. HCL and Dhall invent new syntax with new parsers. Jsonnet gets close but breaks JSON compatibility. Almadar took a different route: S-expressions encoded as JSON arrays, giving you a Turing-complete language that every JSON tool already understands.
