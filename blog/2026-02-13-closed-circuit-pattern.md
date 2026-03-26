@@ -3,7 +3,7 @@ slug: closed-circuit-pattern
 title: "The Closed Circuit Pattern in .orb"
 authors: [osamah]
 tags: [architecture, state-machines]
-image: /img/blog/closed-circuit-pattern.png
+image: /img/blog/closed-circuit-pattern.svg
 ---
 import { AvlClosedCircuit } from '@almadar/ui/illustrations';
 

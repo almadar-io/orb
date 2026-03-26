@@ -1,7 +1,7 @@
 ---
 slug: s-expressions-json-functional
 title: "S-Expressions: The JSON of Functional Programming (That Actually Makes Sense)"
-image: /img/blog/s-expressions-json-functional.png
+image: /img/blog/s-expressions-json-functional.svg
 authors: [osamah]
 tags: [architecture]
 ---

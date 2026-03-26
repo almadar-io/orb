@@ -3,7 +3,7 @@ slug: ai-orbital-memory
 title: "Modeling Memory with .orb"
 authors: [osamah]
 tags: [architecture, ai]
-image: /img/blog/ai-orbital-memory.png
+image: /img/blog/ai-orbital-memory.svg
 ---
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 

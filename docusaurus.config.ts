@@ -11,8 +11,7 @@ export default createConfig({
   },
   blog: {
     showReadingTime: true,
-    blogSidebarCount: 'ALL',
-    blogSidebarTitle: 'All posts',
+    blogSidebarCount: 0,
     feedOptions: { type: ['rss', 'atom'], xslt: true },
   },
   navbarItems: [

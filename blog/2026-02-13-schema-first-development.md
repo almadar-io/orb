@@ -3,7 +3,7 @@ slug: schema-first-development
 title: "Schema-First Development: Why We Write JSON Before TypeScript"
 authors: [osamah]
 tags: [architecture, tutorial]
-image: /img/blog/schema-first-development.png
+image: /img/blog/schema-first-development.svg
 ---
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 

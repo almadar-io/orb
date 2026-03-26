@@ -3,7 +3,7 @@ slug: three-execution-models
 title: "Three Execution Models, One Truth: How We Solved the 'Write Once, Run Anywhere' Problem"
 authors: [osamah]
 tags: [architecture]
-image: /img/blog/three-execution-models.png
+image: /img/blog/three-execution-models.svg
 ---
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 

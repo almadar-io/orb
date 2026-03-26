@@ -3,7 +3,7 @@ slug: fsm-underused-pattern
 title: "State Machines vs Boolean Flags in .orb"
 authors: [osamah]
 tags: [architecture, state-machines]
-image: /img/blog/fsm-underused-pattern.png
+image: /img/blog/fsm-underused-pattern.svg
 ---
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 

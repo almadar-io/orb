@@ -3,7 +3,7 @@ slug: guard-clauses-state-machines
 title: "Guard Clauses in .orb State Machines"
 authors: [osamah]
 tags: [architecture, state-machines]
-image: /img/blog/guard-clauses-state-machines.png
+image: /img/blog/guard-clauses-state-machines.svg
 ---
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 
