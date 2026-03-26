@@ -129,7 +129,7 @@ function Picker<T extends { name: string; description: string }>({
   const sortedCategories = Object.keys(byCategory).sort();
 
   return (
-    <VStack className="w-[260px] flex-shrink-0 border-r border-[var(--color-border)] overflow-hidden">
+    <VStack className="w-full md:w-[260px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-hidden">
       <HStack gap="sm" align="center" className="p-3 border-b border-[var(--color-border)]">
         <Icon icon={Search} size={14} className="flex-shrink-0" />
         <Input
@@ -481,10 +481,10 @@ function BehaviorsTab({ initialSelected }: { initialSelected?: string | null }) 
   }, []);
 
   return (
-    <HStack className="h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] min-h-[600px] overflow-hidden">
+    <HStack className="flex-col md:flex-row h-auto md:h-[calc(100vh-200px)] md:max-h-[calc(100vh-200px)] md:min-h-[600px] overflow-hidden">
       <Picker items={BEHAVIOR_LIST} selected={selected} onSelect={handleSelect} getCategory={getBehaviorCategory} />
       <VStack className="flex-1 min-h-0 overflow-hidden">
-        <HStack align="center" justify="between" className="gap-4 px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0">
+        <HStack align="center" justify="between" className="gap-4 px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0 flex-wrap">
           <VStack className="flex-1 min-w-0">
             <Typography variant="body2" color="primary" weight="semibold" className="text-[0.9rem] font-mono">
               {selected}
@@ -702,9 +702,9 @@ function ModuleDetail({ moduleName }: { moduleName: string }) {
   }, [moduleName]);
 
   return (
-    <HStack className="flex-1 overflow-hidden">
+    <HStack className="flex-col md:flex-row flex-1 overflow-hidden">
       {/* Op list */}
-      <VStack className="w-[220px] flex-shrink-0 border-r border-[var(--color-border)] overflow-y-auto">
+      <VStack className="w-full md:w-[220px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-y-auto">
         <Typography
           variant="overline"
           color="muted"
@@ -757,7 +757,7 @@ function ModulesTab({ initialSelected }: { initialSelected?: string | null }) {
   );
 
   return (
-    <HStack className="h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] min-h-[600px] overflow-hidden">
+    <HStack className="flex-col md:flex-row h-auto md:h-[calc(100vh-200px)] md:max-h-[calc(100vh-200px)] md:min-h-[600px] overflow-hidden">
       <Picker items={MODULE_LIST} selected={selected} onSelect={setSelected} getCategory={getModuleCategory} />
       <VStack className="flex-1 min-h-0 overflow-hidden">
         <HStack className="px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0">
@@ -802,7 +802,7 @@ function PlaygroundInner(): ReactNode {
   return (
     <>
       <Box className="py-12 pb-8 border-b border-[var(--color-border)]">
-        <Box className="container">
+        <Box className="container px-4 md:px-0">
           <Heading as="h1" className="text-[2rem] font-extrabold mb-2">
             Playground
           </Heading>

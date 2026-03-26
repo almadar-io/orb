@@ -49,10 +49,10 @@ export default function Downloads(): ReactNode {
               <VStack gap="md">
                 <Typography variant="h2">{translate({ id: "downloads.cli.title", message: "Orbital CLI" })}</Typography>
                 <Typography variant="body1" color="muted">{translate({ id: "downloads.cli.desc", message: "The command-line compiler and development server. Validate, compile, and run .orb programs locally." })}</Typography>
-                <Box className="font-mono text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 select-all">
+                <Box className="font-mono text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 select-all overflow-x-auto">
                   curl -fsSL https://orb.almadar.io/install.sh | sh
                 </Box>
-                <HStack gap="md" className="mt-4">
+                <HStack gap="md" className="mt-4 flex-wrap">
                   {[
                     { name: "macOS", icon: "apple" },
                     { name: "Linux", icon: "terminal" },
@@ -85,7 +85,7 @@ export default function Downloads(): ReactNode {
       {/* Editor Extensions */}
       <Box className="w-full bg-[var(--color-surface)]">
         <Box className="site-container py-24">
-          <SimpleGrid cols={2} gap="lg">
+          <SimpleGrid cols={2} gap="lg" className="!grid-cols-1 sm:!grid-cols-2">
             {EXTENSIONS.map((ext) => (
               <Card key={ext.title} className="p-6">
                 <VStack gap="sm">

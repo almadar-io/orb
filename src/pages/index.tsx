@@ -15,6 +15,8 @@ import {
   Box,
   SimpleGrid,
   Divider,
+  AnimatedReveal,
+  InstallBox,
 } from "@almadar/ui/marketing";
 import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
@@ -103,10 +105,8 @@ export default function OrbHome(): ReactNode {
             <Badge variant="primary">{translate({ id: "orb.hero.tag", message: "Open Source" })}</Badge>
             <Typography variant="h1">{translate({ id: "orb.hero.title", message: "Orb" })}</Typography>
             <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "A formal language for describing how software systems behave. Write the model. The compiler proves it correct. AI generates and consumes it natively." })}</Typography>
-            <Box className="font-mono text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-2 select-all">
-              curl -fsSL https://orb.almadar.io/install.sh | sh
-            </Box>
-            <HStack gap="md">
+            <InstallBox command="curl -fsSL https://orb.almadar.io/install.sh | sh" className="max-w-full overflow-hidden" />
+            <HStack gap="md" className="flex-wrap">
               <Link to="/docs/getting-started/introduction">
                 <Button variant="primary" size="lg">{translate({ id: "orb.hero.cta1", message: "Get Started" })}</Button>
               </Link>
@@ -122,17 +122,21 @@ export default function OrbHome(): ReactNode {
       <Box className="w-full">
         <Box className="site-container py-24">
           <HStack gap="xl" className="flex-col lg:flex-row items-start">
-            <Box className="flex-1">
-              <VStack gap="md">
-                <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
-                <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. The compiler generates frontend, backend, database, and API." })}</Typography>
-              </VStack>
-            </Box>
-            <Box className="flex-1 lg:flex-[2]">
-              <CodeBlock language="orb" title="task-manager.orb">
-                {EXAMPLE_CODE}
-              </CodeBlock>
-            </Box>
+            <AnimatedReveal animation="fade-right">
+              <Box className="flex-1">
+                <VStack gap="md">
+                  <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
+                  <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. The compiler generates frontend, backend, database, and API." })}</Typography>
+                </VStack>
+              </Box>
+            </AnimatedReveal>
+            <AnimatedReveal animation="fade-left">
+              <Box className="flex-1 lg:flex-[2]">
+                <CodeBlock language="orb" title="task-manager.orb">
+                  {EXAMPLE_CODE}
+                </CodeBlock>
+              </Box>
+            </AnimatedReveal>
           </HStack>
         </Box>
       </Box>
@@ -141,18 +145,22 @@ export default function OrbHome(): ReactNode {
       <Box className="w-full bg-[var(--color-surface)]">
         <Box className="site-container py-24">
           <VStack gap="lg" align="center" className="w-full">
-            <Typography variant="h2">
-              <Translate id="orb.why.title">Why .orb?</Translate>
-            </Typography>
-            <SimpleGrid cols={3} gap="lg">
-              {WHY_FEATURES.map((f) => (
-                <Card key={f.title} className="p-6">
-                  <VStack gap="sm">
-                    <Icon name={f.icon} size={28} className="text-[var(--color-primary)]" />
-                    <Typography variant="h4">{f.title}</Typography>
-                    <Typography variant="body2" color="muted">{f.description}</Typography>
-                  </VStack>
-                </Card>
+            <AnimatedReveal animation="fade-in">
+              <Typography variant="h2">
+                <Translate id="orb.why.title">Why .orb?</Translate>
+              </Typography>
+            </AnimatedReveal>
+            <SimpleGrid cols={3} gap="lg" className="!grid-cols-1 sm:!grid-cols-3">
+              {WHY_FEATURES.map((f, i) => (
+                <AnimatedReveal key={f.title} animation="fade-up" delay={i * 100} className="h-full">
+                  <Card className="p-6 h-full">
+                    <VStack gap="sm">
+                      <Icon name={f.icon} size={28} className="text-[var(--color-primary)]" />
+                      <Typography variant="h4">{f.title}</Typography>
+                      <Typography variant="body2" color="muted">{f.description}</Typography>
+                    </VStack>
+                  </Card>
+                </AnimatedReveal>
               ))}
             </SimpleGrid>
           </VStack>
@@ -168,11 +176,15 @@ export default function OrbHome(): ReactNode {
           <HStack gap="xl" className="flex-col lg:flex-row items-center">
             <Box className="flex-1">
               <VStack gap="md">
-                <Typography variant="h2">{translate({ id: "orb.stdlib.title", message: "Standard Library" })}</Typography>
+                <AnimatedReveal animation="fade-in">
+                  <Typography variant="h2">{translate({ id: "orb.stdlib.title", message: "Standard Library" })}</Typography>
+                </AnimatedReveal>
                 <Typography variant="body1" color="muted">{translate({ id: "orb.stdlib.subtitle", message: "93 production-quality behaviors across 18 domains. 50 atoms, 18 molecules, 25 organisms. Commerce, healthcare, education, gaming, DevOps, and more." })}</Typography>
                 <HStack gap="sm" className="flex-wrap mt-2">
-                  {DOMAIN_TAGS.map((tag) => (
-                    <Badge key={tag} variant="primary">{tag}</Badge>
+                  {DOMAIN_TAGS.map((tag, i) => (
+                    <AnimatedReveal key={tag} animation="scale" delay={i * 30}>
+                      <Badge variant="primary">{tag}</Badge>
+                    </AnimatedReveal>
                   ))}
                 </HStack>
                 <Box className="mt-2">
@@ -200,28 +212,30 @@ export default function OrbHome(): ReactNode {
 
       {/* Open Source Community */}
       <Box className="w-full bg-[var(--color-surface)]">
-        <Box className="site-container py-24">
-          <VStack gap="lg" align="center" className="w-full">
-            <Typography variant="h2">
-              <Translate id="orb.community.title">Open Source Community</Translate>
-            </Typography>
-            <Typography variant="body1" color="muted">
-              <Translate id="orb.community.subtitle">Orb and its compiler are open source. Contribute, report issues, or build something new.</Translate>
-            </Typography>
-            <HStack gap="md">
-              <a href="https://github.com/almadar-io/orb" target="_blank" rel="noopener noreferrer">
-                <Button variant="primary" size="lg" leftIcon="github">
-                  GitHub
-                </Button>
-              </a>
-              <a href="https://discord.gg/q83VjPJx" target="_blank" rel="noopener noreferrer">
-                <Button variant="secondary" size="lg" leftIcon="message-circle">
-                  Discord
-                </Button>
-              </a>
-            </HStack>
-          </VStack>
-        </Box>
+        <AnimatedReveal animation="fade-up">
+          <Box className="site-container py-24">
+            <VStack gap="lg" align="center" className="w-full">
+              <Typography variant="h2">
+                <Translate id="orb.community.title">Open Source Community</Translate>
+              </Typography>
+              <Typography variant="body1" color="muted">
+                <Translate id="orb.community.subtitle">Orb and its compiler are open source. Contribute, report issues, or build something new.</Translate>
+              </Typography>
+              <HStack gap="md" className="flex-wrap">
+                <a href="https://github.com/almadar-io/orb" target="_blank" rel="noopener noreferrer">
+                  <Button variant="primary" size="lg" leftIcon="github">
+                    GitHub
+                  </Button>
+                </a>
+                <a href="https://discord.gg/q83VjPJx" target="_blank" rel="noopener noreferrer">
+                  <Button variant="secondary" size="lg" leftIcon="message-circle">
+                    Discord
+                  </Button>
+                </a>
+              </HStack>
+            </VStack>
+          </Box>
+        </AnimatedReveal>
       </Box>
     </Layout>
   );

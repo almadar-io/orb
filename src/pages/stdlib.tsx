@@ -69,7 +69,7 @@ export default function StdLib(): ReactNode {
               />
             </Box>
           </HStack>
-          <SimpleGrid cols={3} gap="md">
+          <SimpleGrid cols={3} gap="md" className="!grid-cols-1 sm:!grid-cols-2 lg:!grid-cols-3">
             {DOMAINS.map((d) => (
               <Card key={d.title} className="p-6">
                 <HStack className="justify-between items-center">
@@ -107,7 +107,7 @@ export default function StdLib(): ReactNode {
           <VStack gap="lg" align="center">
             <Typography variant="h2">{translate({ id: "stdlib.cta.title", message: "Get Started" })}</Typography>
             <Typography variant="body1" color="muted">{translate({ id: "stdlib.cta.text", message: "Install the CLI and start building with the standard library." })}</Typography>
-            <HStack gap="md">
+            <HStack gap="md" className="flex-wrap">
               <Link to="/docs/getting-started/introduction">
                 <Button variant="primary" size="lg">{translate({ id: "stdlib.cta.docs", message: "Read the Docs" })}</Button>
               </Link>
