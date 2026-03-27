@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
         '@app/shared': path.resolve(__dirname, '../shared/src'),
         '@shared': path.resolve(__dirname, '../shared/src'),
       },
+      dedupe: ['react', 'react-dom', '@almadar/ui'],
     },
 
     server: {
