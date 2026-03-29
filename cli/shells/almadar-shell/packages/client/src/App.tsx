@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, UISlotProvider } from '@almadar/ui/context';
 import { UISlotComponent, NotifyListener } from '@almadar/ui/components';
 import {
+  EntityStoreProvider,
   EventBusProvider,
   VerificationProvider,
 } from '@almadar/ui/providers';
@@ -48,6 +49,7 @@ function App() {
     <I18nProvider value={i18nValue}>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <EntityStoreProvider>
         <EventBusProvider>
           <VerificationProvider>
             <UISlotProvider>
@@ -72,6 +74,7 @@ function App() {
             </UISlotProvider>
           </VerificationProvider>
         </EventBusProvider>
+        </EntityStoreProvider>
       </ThemeProvider>
     </QueryClientProvider>
     </I18nProvider>
