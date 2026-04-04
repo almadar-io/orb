@@ -4,19 +4,18 @@ const { execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const BINARY_NAME = process.platform === 'win32' ? 'almadar.exe' : 'almadar';
+const BINARY_NAME = process.platform === 'win32' ? 'orb.exe' : 'orb';
 
 function getBinaryPath() {
   const platform = process.platform;
   const arch = process.arch;
 
-  // Map Node.js platform/arch to package names
   const platformMap = {
-    'darwin-x64': '@almadar/cli-darwin-x64',
-    'darwin-arm64': '@almadar/cli-darwin-arm64',
-    'linux-x64': '@almadar/cli-linux-x64',
-    'linux-arm64': '@almadar/cli-linux-arm64',
-    'win32-x64': '@almadar/cli-windows-x64',
+    'darwin-x64': '@almadar/orb-darwin-x64',
+    'darwin-arm64': '@almadar/orb-darwin-arm64',
+    'linux-x64': '@almadar/orb-linux-x64',
+    'linux-arm64': '@almadar/orb-linux-arm64',
+    'win32-x64': '@almadar/orb-windows-x64',
   };
 
   const key = `${platform}-${arch}`;
@@ -24,62 +23,69 @@ function getBinaryPath() {
 
   if (!packageName) {
     console.error(`Unsupported platform: ${platform}-${arch}`);
-    console.error('Supported platforms: darwin-x64, darwin-arm64, linux-x64, linux-arm64, win32-x64');
+    console.error('Supported: darwin-x64, darwin-arm64, linux-x64, linux-arm64, win32-x64');
     process.exit(1);
   }
 
-  // Try to find the binary in node_modules
   const possiblePaths = [
-    // Installed as dependency
     path.join(__dirname, '..', 'node_modules', packageName, BINARY_NAME),
-    // Hoisted to parent node_modules
     path.join(__dirname, '..', '..', packageName, BINARY_NAME),
-    // Global install
     path.join(__dirname, '..', '..', '..', packageName, BINARY_NAME),
   ];
 
   for (const binaryPath of possiblePaths) {
     if (fs.existsSync(binaryPath)) {
-      return binaryPath;
+      return { binaryPath, platformDir: path.dirname(binaryPath) };
     }
   }
 
-  console.error(`Could not find Almadar binary for ${platform}-${arch}`);
-  console.error('Please try reinstalling: npm install -g @almadar/cli');
+  console.error(`Could not find Orb binary for ${platform}-${arch}`);
+  console.error('Try reinstalling: npm install -g @almadar/orb');
   process.exit(1);
 }
 
 function getShellsDir() {
-  // If user has set ORBITAL_SHELLS_DIR, respect it
   if (process.env.ORBITAL_SHELLS_DIR) {
     return process.env.ORBITAL_SHELLS_DIR;
   }
 
-  // Look for shells bundled with this package
   const possiblePaths = [
-    // Shells in same package
     path.join(__dirname, '..', 'shells'),
-    // Global install - shells might be one level up
-    path.join(__dirname, '..', '..', '@almadar', 'cli', 'shells'),
+    path.join(__dirname, '..', '..', '@almadar', 'orb', 'shells'),
   ];
 
   for (const shellsPath of possiblePaths) {
-    if (fs.existsSync(shellsPath) && fs.existsSync(path.join(shellsPath, 'typescript-shell'))) {
+    if (fs.existsSync(shellsPath) && (
+      fs.existsSync(path.join(shellsPath, 'almadar-shell')) ||
+      fs.existsSync(path.join(shellsPath, 'typescript-shell'))
+    )) {
       return shellsPath;
     }
   }
 
-  // No bundled shells found - binary will use its fallback or error
   return null;
 }
 
-const binaryPath = getBinaryPath();
+const { binaryPath, platformDir } = getBinaryPath();
 const shellsDir = getShellsDir();
 
-// Build environment with ORBITAL_SHELLS_DIR if we found shells
 const env = { ...process.env };
+
 if (shellsDir) {
   env.ORBITAL_SHELLS_DIR = shellsDir;
+}
+
+// Bun runtime (sibling to Rust binary in platform package)
+const bunName = process.platform === 'win32' ? 'bun.exe' : 'bun';
+const bunPath = path.join(platformDir, bunName);
+if (fs.existsSync(bunPath)) {
+  env.ORB_BUN_PATH = bunPath;
+}
+
+// Agent dist (agent/ directory in platform package)
+const agentDir = path.join(platformDir, 'agent');
+if (fs.existsSync(agentDir)) {
+  env.ORB_AGENT_DIR = agentDir;
 }
 
 try {
