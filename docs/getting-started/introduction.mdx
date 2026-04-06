@@ -1,0 +1,456 @@
+---
+id: introduction
+title: Introduction to Orb
+sidebar_label: Introduction
+---
+
+import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+
+# Introduction to Orb
+
+Orb is a programming language for describing how software behaves. You write a `.orb` program that defines your data, your state machines, and how they communicate. The compiler turns it into a working application. The runtime executes it directly.
+
+The language borrows from the **actor model**: isolated units of computation that hold local state, process messages one at a time, and communicate only through events. In Orb, these units are called **Orbitals**.
+
+```
+Orbital = Entity + Traits + Pages
+Application = a set of Orbitals communicating through events
+```
+
+## The Three Parts
+
+### Entity: what the data looks like
+
+An Entity defines a data shape with typed fields, persistence rules, and defaults.
+
+```json
+{
+  "name": "Order",
+  "persistence": "persistent",
+  "collection": "orders",
+  "fields": [
+    { "name": "id", "type": "string", "primaryKey": true },
+    { "name": "status", "type": "string", "values": ["draft", "submitted", "fulfilled", "cancelled"] },
+    { "name": "total", "type": "number", "default": 0 },
+    { "name": "items", "type": "array", "items": { "type": "object" } },
+    { "name": "customerId", "type": "string", "required": true }
+  ]
+}
+```
+
+Persistence controls scope and lifespan:
+
+| Mode | Where | Lifespan | Shared? |
+|------|-------|----------|---------|
+| `persistent` | Database | Survives restarts | Across all orbitals |
+| `runtime` | Memory | Current session only | Isolated per orbital |
+| `singleton` | Memory | Global instance | Shared across orbitals |
+
+### Trait: how it behaves
+
+A Trait is a **state machine**. It defines the states an entity can be in, the events that trigger transitions between states, the guards that control whether a transition is allowed, and the effects that execute when a transition fires.
+
+```json
+{
+  "name": "OrderFulfillment",
+  "linkedEntity": "Order",
+  "category": "interaction",
+  "stateMachine": {
+    "states": [
+      { "name": "browsing", "isInitial": true },
+      { "name": "reviewing" },
+      { "name": "submitting" },
+      { "name": "fulfilled" }
+    ],
+    "events": [
+      { "key": "INIT", "name": "Initialize" },
+      { "key": "SELECT", "name": "Select Order", "payload": [
+        { "name": "id", "type": "string", "required": true }
+      ]},
+      { "key": "SUBMIT", "name": "Submit Order" },
+      { "key": "CONFIRM", "name": "Confirm Fulfillment" }
+    ],
+    "transitions": [
+      {
+        "from": "browsing",
+        "to": "browsing",
+        "event": "INIT",
+        "effects": [
+          ["fetch", "Order"],
+          ["render-ui", "main", {
+            "type": "data-table",
+            "entity": "Order",
+            "columns": ["status", "total", "customerId"],
+            "itemActions": [
+              { "event": "SELECT", "label": "View" }
+            ]
+          }]
+        ]
+      },
+      {
+        "from": "browsing",
+        "to": "reviewing",
+        "event": "SELECT",
+        "effects": [
+          ["render-ui", "main", {
+            "type": "detail-card",
+            "entity": "Order",
+            "fields": ["status", "total", "items"]
+          }]
+        ]
+      },
+      {
+        "from": "reviewing",
+        "to": "submitting",
+        "event": "SUBMIT",
+        "guard": ["and",
+          [">", ["count", "@entity.items"], 0],
+          ["=", "@entity.status", "draft"]
+        ],
+        "effects": [
+          ["set", "@entity.status", "submitted"],
+          ["persist", "update", "Order", "@entity"],
+          ["emit", "ORDER_SUBMITTED"],
+          ["notify", "success", "Order submitted"]
+        ]
+      },
+      {
+        "from": "submitting",
+        "to": "fulfilled",
+        "event": "CONFIRM",
+        "guard": ["=", "@entity.status", "submitted"],
+        "effects": [
+          ["set", "@entity.status", "fulfilled"],
+          ["persist", "update", "Order", "@entity"]
+        ]
+      }
+    ]
+  }
+}
+```
+
+<OrbPreviewBlock showCode={false} height="450px" schema={`{
+  "name": "OrderApp",
+  "app": { "name": "order-app", "title": "Order Fulfillment" },
+  "orbitals": [{
+    "name": "OrderManagement",
+    "entity": {
+      "name": "Order",
+      "persistence": "runtime",
+      "fields": [
+        { "name": "id", "type": "string", "primaryKey": true },
+        { "name": "status", "type": "string", "default": "draft", "values": ["draft", "submitted", "fulfilled", "cancelled"] },
+        { "name": "total", "type": "number", "default": 0 },
+        { "name": "items", "type": "array", "items": { "type": "object" } },
+        { "name": "customerId", "type": "string", "required": true }
+      ]
+    },
+    "traits": [{
+      "name": "OrderFulfillment",
+      "linkedEntity": "Order",
+      "category": "interaction",
+      "stateMachine": {
+        "states": [
+          { "name": "browsing", "isInitial": true },
+          { "name": "reviewing" },
+          { "name": "submitting" },
+          { "name": "fulfilled" }
+        ],
+        "events": [
+          { "key": "INIT", "name": "Initialize" },
+          { "key": "SELECT", "name": "Select Order", "payload": [{ "name": "id", "type": "string", "required": true }] },
+          { "key": "SUBMIT", "name": "Submit Order" },
+          { "key": "CONFIRM", "name": "Confirm Fulfillment" },
+          { "key": "BACK", "name": "Back to List" }
+        ],
+        "transitions": [
+          { "from": "browsing", "to": "browsing", "event": "INIT", "effects": [["fetch", "Order"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Orders", "variant": "h2" }, { "type": "data-list", "entity": "Order", "fields": ["status", "total", "customerId"], "itemActions": [{ "event": "SELECT", "label": "View" }] }] }]] },
+          { "from": "browsing", "to": "reviewing", "event": "SELECT", "effects": [["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Order Details", "variant": "h2" }, { "type": "card", "title": "@entity.status", "subtitle": "@entity.customerId" }, { "type": "stack", "direction": "horizontal", "gap": "sm", "children": [{ "type": "button", "label": "Submit", "event": "SUBMIT", "variant": "primary" }, { "type": "button", "label": "Back", "event": "BACK" }] }] }]] },
+          { "from": "reviewing", "to": "submitting", "event": "SUBMIT", "guard": ["and", [">", ["count", "@entity.items"], 0], ["=", "@entity.status", "draft"]], "effects": [["set", "@entity.status", "submitted"], ["persist", "update", "Order", "@entity"], ["notify", "success", "Order submitted"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Order Submitted", "variant": "h2" }, { "type": "badge", "label": "submitted", "variant": "info" }, { "type": "stack", "direction": "horizontal", "gap": "sm", "children": [{ "type": "button", "label": "Confirm", "event": "CONFIRM", "variant": "primary" }, { "type": "button", "label": "Back", "event": "BACK" }] }] }]] },
+          { "from": "reviewing", "to": "browsing", "event": "BACK", "effects": [["fetch", "Order"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Orders", "variant": "h2" }, { "type": "data-list", "entity": "Order", "fields": ["status", "total", "customerId"], "itemActions": [{ "event": "SELECT", "label": "View" }] }] }]] },
+          { "from": "submitting", "to": "fulfilled", "event": "CONFIRM", "guard": ["=", "@entity.status", "submitted"], "effects": [["set", "@entity.status", "fulfilled"], ["persist", "update", "Order", "@entity"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Order Fulfilled", "variant": "h2" }, { "type": "badge", "label": "fulfilled", "variant": "success" }, { "type": "button", "label": "Back to Orders", "event": "BACK" }] }]] },
+          { "from": "submitting", "to": "browsing", "event": "BACK", "effects": [["fetch", "Order"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Orders", "variant": "h2" }, { "type": "data-list", "entity": "Order", "fields": ["status", "total", "customerId"], "itemActions": [{ "event": "SELECT", "label": "View" }] }] }]] },
+          { "from": "fulfilled", "to": "browsing", "event": "BACK", "effects": [["fetch", "Order"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Orders", "variant": "h2" }, { "type": "data-list", "entity": "Order", "fields": ["status", "total", "customerId"], "itemActions": [{ "event": "SELECT", "label": "View" }] }] }]] }
+        ]
+      }
+    }],
+    "pages": [{ "name": "OrdersPage", "path": "/orders", "traits": [{ "ref": "OrderFulfillment", "linkedEntity": "Order" }] }]
+  }]
+}`} />
+
+Every transition has three stages:
+
+1. **Guard** evaluates. If it returns false, nothing happens. The transition is blocked.
+2. **State changes** from the current state to the target state.
+3. **Effects execute** in order: update fields, persist to database, render UI, emit events to other orbitals.
+
+### Page: where it lives
+
+A Page binds traits to a URL route. When a user navigates to that route, the page initializes its traits and renders their UI.
+
+```json
+{
+  "name": "OrdersPage",
+  "path": "/orders",
+  "traits": [
+    { "ref": "OrderFulfillment" }
+  ]
+}
+```
+
+## Guards: logic as expressions
+
+All logic in Orb is written as **S-expressions** (arrays where the first element is the operator). This gives you a composable, inspectable expression language inside JSON.
+
+```json
+["and",
+  ["!=", "@payload.email", ""],
+  [">=", "@entity.balance", "@payload.amount"],
+  ["or",
+    ["=", "@user.role", "admin"],
+    ["=", "@entity.ownerId", "@user.id"]
+  ]
+]
+```
+
+Bindings like `@entity.field`, `@payload.data`, `@user.id`, and `@state` reference live runtime values. The compiler verifies that every binding points to a real field.
+
+Orb ships with **280+ operators** across modules: math, string, array, object, time, validation, formatting, async, and probability. These aren't decorative. The `prob/*` operators do Bayesian inference. The `async/*` operators handle races, debouncing, and parallel execution.
+
+## Effects: what happens
+
+Effects are the actions that fire when a transition succeeds. They're tuples.
+
+```json
+["render-ui", "main", { "type": "data-list", "entity": "Task" }]
+["render-ui", "modal", { "type": "form", "fields": ["name", "email"] }]
+["render-ui", "modal", null]
+
+["persist", "create", "Order", "@payload.data"]
+["persist", "update", "Order", "@entity"]
+["persist", "delete", "Order", "@entity.id"]
+
+["fetch", "Order", { "where": ["=", "@field.status", "active"] }]
+
+["set", "@entity.status", "fulfilled"]
+
+["emit", "ORDER_SUBMITTED", { "orderId": "@entity.id" }]
+
+["call-service", "stripe", "createPayment", { "amount": "@entity.total" }]
+
+["notify", "success", "Saved"]
+["navigate", "/orders"]
+```
+
+Effects execute on both client and server simultaneously. The client handles `render-ui` and `navigate`. The server handles `persist`, `fetch`, and `call-service`. Both handle `emit` and `set`. The compiler generates the right code for each side.
+
+## The Closed Circuit
+
+Every user interaction in Orb flows through the state machine and back to the UI. This is the **closed circuit**:
+
+```
+User Action (click, submit, type)
+     |
+     v
+  Event (SUBMIT, SELECT, CANCEL)
+     |
+     v
+  Guard (is this allowed?)
+     |
+     v
+  Transition (state A -> state B)
+     |
+     v
+  Effects (persist, render-ui, emit, notify)
+     |
+     v
+  UI updates (new component renders in slot)
+     |
+     v
+User sees result, takes next action...
+```
+
+No interaction bypasses the state machine. No UI renders without going through a transition. The compiler enforces this: if a state renders a modal, that state must have a CLOSE or CANCEL transition that dismisses it. Orphan states (unreachable from any transition) cause validation errors.
+
+This makes the entire application **deterministic and testable**. Given a state, an event, and a payload, you can predict exactly what happens. The CLI can prove it:
+
+```bash
+orb test my-app.orb --execute
+# Total: 30 passed, 0 failed, 3 skipped
+```
+
+## Cross-Orbital Communication
+
+Orbitals are isolated. They don't call each other's functions or read each other's state directly. They communicate through **events**, following the actor model.
+
+A trait declares the events it emits:
+
+```json
+{
+  "name": "CartCheckout",
+  "emits": ["ORDER_PLACED"],
+  "stateMachine": {
+    "transitions": [
+      {
+        "from": "confirming",
+        "to": "complete",
+        "event": "CONFIRM",
+        "effects": [
+          ["persist", "create", "Order", "@payload"],
+          ["emit", "ORDER_PLACED", { "orderId": "@entity.id" }]
+        ]
+      }
+    ]
+  }
+}
+```
+
+Another trait, possibly in a different orbital, declares it listens:
+
+```json
+{
+  "name": "InventoryTracker",
+  "listens": [
+    { "event": "ORDER_PLACED", "triggers": "UPDATE_STOCK" }
+  ]
+}
+```
+
+When `CartCheckout` emits `ORDER_PLACED`, `InventoryTracker` receives it as an `UPDATE_STOCK` event and transitions accordingly. The emitter doesn't know who's listening. The listener doesn't know who emitted. They're decoupled.
+
+The compiler validates that every `emits` declaration has at least one matching `listens` somewhere in the application. No dead letters.
+
+<OrbPreviewBlock showCode={false} height="450px" schema={`{
+  "name": "CrossOrbitalDemo",
+  "app": { "name": "cross-orbital-demo", "title": "Cross-Orbital Communication" },
+  "orbitals": [
+    {
+      "name": "CartOrbital",
+      "entity": {
+        "name": "CartItem",
+        "persistence": "runtime",
+        "fields": [
+          { "name": "id", "type": "string", "primaryKey": true },
+          { "name": "productName", "type": "string" },
+          { "name": "quantity", "type": "number", "default": 1 },
+          { "name": "price", "type": "number", "default": 0 }
+        ]
+      },
+      "traits": [{
+        "name": "CartCheckout",
+        "linkedEntity": "CartItem",
+        "category": "interaction",
+        "emits": [{ "event": "ORDER_PLACED" }],
+        "stateMachine": {
+          "states": [
+            { "name": "browsing", "isInitial": true },
+            { "name": "confirming" },
+            { "name": "complete" }
+          ],
+          "events": [
+            { "key": "INIT", "name": "Initialize" },
+            { "key": "CHECKOUT", "name": "Checkout" },
+            { "key": "CONFIRM", "name": "Confirm Order" },
+            { "key": "CANCEL", "name": "Cancel" }
+          ],
+          "transitions": [
+            { "from": "browsing", "to": "browsing", "event": "INIT", "effects": [["fetch", "CartItem"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Shopping Cart", "variant": "h2" }, { "type": "card", "title": "Cart Items" }, { "type": "button", "label": "Checkout", "event": "CHECKOUT", "variant": "primary" }] }]] },
+            { "from": "browsing", "to": "confirming", "event": "CHECKOUT", "effects": [["render-ui", "modal", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Confirm your order?", "variant": "h3" }, { "type": "stack", "direction": "horizontal", "gap": "md", "children": [{ "type": "button", "label": "Confirm", "event": "CONFIRM", "variant": "primary" }, { "type": "button", "label": "Cancel", "event": "CANCEL", "variant": "secondary" }] }] }]] },
+            { "from": "confirming", "to": "complete", "event": "CONFIRM", "effects": [["render-ui", "modal", null], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Order placed!", "variant": "h2" }, { "type": "badge", "label": "complete", "variant": "success" }, { "type": "button", "label": "Back to Cart", "event": "INIT" }] }], ["emit", "ORDER_PLACED", { "orderId": "@entity.id" }], ["notify", "success", "Order placed"]] },
+            { "from": "confirming", "to": "browsing", "event": "CANCEL", "effects": [["render-ui", "modal", null], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Shopping Cart", "variant": "h2" }, { "type": "card", "title": "Cart Items" }, { "type": "button", "label": "Checkout", "event": "CHECKOUT", "variant": "primary" }] }]] },
+            { "from": "complete", "to": "browsing", "event": "INIT", "effects": [["fetch", "CartItem"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Shopping Cart", "variant": "h2" }, { "type": "card", "title": "Cart Items" }, { "type": "button", "label": "Checkout", "event": "CHECKOUT", "variant": "primary" }] }]] }
+          ]
+        }
+      }],
+      "pages": [{ "name": "CartPage", "path": "/cart", "traits": [{ "ref": "CartCheckout", "linkedEntity": "CartItem" }] }]
+    },
+    {
+      "name": "InventoryOrbital",
+      "entity": {
+        "name": "Product",
+        "persistence": "runtime",
+        "fields": [
+          { "name": "id", "type": "string", "primaryKey": true },
+          { "name": "name", "type": "string" },
+          { "name": "stock", "type": "number", "default": 100 },
+          { "name": "lastUpdated", "type": "string" }
+        ]
+      },
+      "traits": [{
+        "name": "InventoryTracker",
+        "linkedEntity": "Product",
+        "category": "interaction",
+        "listens": [{ "event": "ORDER_PLACED", "triggers": "UPDATE_STOCK" }],
+        "stateMachine": {
+          "states": [
+            { "name": "monitoring", "isInitial": true },
+            { "name": "updating" }
+          ],
+          "events": [
+            { "key": "INIT", "name": "Initialize" },
+            { "key": "UPDATE_STOCK", "name": "Update Stock" }
+          ],
+          "transitions": [
+            { "from": "monitoring", "to": "monitoring", "event": "INIT", "effects": [["fetch", "Product"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Inventory", "variant": "h2" }, { "type": "card", "title": "Product Stock" }] }]] },
+            { "from": "monitoring", "to": "updating", "event": "UPDATE_STOCK", "effects": [["set", "@entity.stock", ["-", "@entity.stock", 1]], ["persist", "update", "Product", "@entity"], ["notify", "info", "Stock updated"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Stock Updated", "variant": "h2" }, { "type": "badge", "label": "updated", "variant": "info" }, { "type": "button", "label": "Back", "event": "INIT" }] }]] },
+            { "from": "updating", "to": "monitoring", "event": "INIT", "effects": [["fetch", "Product"], ["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "md", "children": [{ "type": "typography", "content": "Inventory", "variant": "h2" }, { "type": "card", "title": "Product Stock" }] }]] }
+          ]
+        }
+      }],
+      "pages": [{ "name": "InventoryPage", "path": "/inventory", "traits": [{ "ref": "InventoryTracker", "linkedEntity": "Product" }] }]
+    }
+  ]
+}`} />
+
+## Composition
+
+Orb programs compose following atomic design. Small behaviors (atoms) combine into larger ones (molecules), which combine into full features (organisms).
+
+An atom might be a loading pattern with 4 states: `idle -> loading -> success | error`. A modal pattern with 2 states: `closed -> open`. A confirmation dialog with 2 states: `idle -> confirming`.
+
+A molecule like a shopping cart composes three atoms into one orbital:
+
+```
+CartOrbital
+  Entity: CartItem (fields from all three atoms merged)
+  Trait 1: CartBrowse (browse + checkout states)
+  Trait 2: AddItem (modal: closed/open)
+  Trait 3: RemoveConfirm (confirmation: idle/confirming)
+  Page: CartPage (all three traits)
+```
+
+All three traits share the same entity and the same event bus on the page. When `CartBrowse` fires `ADD_ITEM`, the `AddItem` trait opens the modal. When `AddItem` fires `SAVE`, the `CartBrowse` trait refreshes the list. No wiring code. The state machines respond to events they care about and ignore the rest.
+
+## Standard Behaviors
+
+Orb ships with a standard library of **103 reusable behaviors** in `@almadar/std`. Each behavior is a tested, composable `.orb` program that you can use directly or compose into larger ones.
+
+Atoms: `std-loading`, `std-modal`, `std-confirmation`, `std-tabs`, `std-search`, `std-pagination`, `std-display`.
+Molecules: `std-cart`, `std-auth`, `std-geospatial`, `std-agent-rag`, `std-crud`.
+Organisms: `std-dashboard`, `std-kanban`, `std-calendar`.
+
+Every behavior in the standard library follows the same atomic design rules. You compose them using TypeScript functions in `almadar-std/behaviors/functions/` that merge entity fields, extract traits, and wire them onto a shared page. The output is a valid `.orb` program.
+
+## Two Execution Paths
+
+The same `.orb` program can be compiled or interpreted:
+
+**Compiled** (`orb compile`): the Rust compiler generates a complete TypeScript application. State machines become React components. `render-ui` becomes JSX. `persist` becomes Firestore calls. `fetch` becomes React Query hooks. The generated code has zero Orb dependencies. A developer can read, modify, and ship it without knowing Orb exists.
+
+**Interpreted** (`OrbitalServerRuntime`): the runtime loads `.orb` directly and executes state machines in-process. Events go through `processOrbitalEvent()`. Guards evaluate through `@almadar/evaluator`. Effects dispatch to context handlers. Used for servers, agents, CLI tools, and live preview.
+
+**Zero-install** (`orb serve`): compiles with Hono backend and serves the full application on a single port using the bundled Bun runtime. No Node.js, no package manager, nothing to install.
+
+```bash
+orb serve my-app.orb
+# Compiling...
+# Installing dependencies...
+# Building client...
+# Server running on http://localhost:3030
+```
+
+## Next Steps
+
+1. [Install the CLI](../downloads/cli.md)
+2. [Quickstart: build your first app](./quickstart.mdx)
+3. [Core Concepts: Entities](/docs/en/core-concepts/entities)

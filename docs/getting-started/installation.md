@@ -13,10 +13,10 @@ The Orb CLI (`orb`) is a native binary compiled from Rust. It runs on Linux, mac
 | Requirement | Purpose |
 |-------------|---------|
 | **Any OS** (Linux, macOS, Windows) | The `orb` binary is available for all major platforms |
-| **Node.js 18+** | Required for running generated apps (`orb compile` outputs TypeScript/React projects) |
-| **npm** or **pnpm** | Package manager for installing generated app dependencies |
+| **Node.js 18+** | Required for running generated apps via `orb compile` (not needed for `orb serve`) |
+| **npm** or **pnpm** | Package manager for installing generated app dependencies (not needed for `orb serve`) |
 
-The `orb` binary itself has zero runtime dependencies. Node.js is only needed when you compile a `.orb` program and want to run the generated application.
+The `orb` binary itself has zero runtime dependencies. Node.js is only needed when you use `orb compile` and want to run the generated application manually. If you use `orb serve`, no external runtime is required at all.
 
 ## Install via Script (macOS / Linux)
 
@@ -100,11 +100,22 @@ To confirm the compiler can generate code, you can also run:
 orb --help
 ```
 
-This prints all available commands: `validate`, `compile`, `dev`, `format`, and others.
+This prints all available commands: `validate`, `compile`, `serve`, `dev`, `format`, and others.
+
+The fastest way to see a running app with zero additional setup is `orb serve`:
+
+```bash
+orb serve my-app.orb
+# Compiles with Hono backend, builds client, serves on http://localhost:3030
+```
+
+This requires no Node.js, no package manager, and no `npm install`. The `orb` binary bundles everything needed to compile and serve.
 
 ## About the Shell Template
 
-When you run `orb compile`, the compiler generates a full-stack TypeScript application (React frontend, Express backend, shared types). This generated project needs Node.js and npm to install dependencies and run.
+When you run `orb compile`, the compiler generates a full-stack TypeScript application (React frontend, backend server, shared types). By default the backend uses Express. Pass `--server hono` to generate a Hono backend instead. This generated project needs Node.js and npm to install dependencies and run.
+
+Alternatively, `orb serve` skips the Node.js requirement entirely. It compiles with a Hono backend, builds the client with Vite, and serves everything using Bun, all bundled inside the `orb` binary.
 
 The relationship:
 
@@ -112,14 +123,23 @@ The relationship:
 your-app.orb          (source: your Orb program)
       |
   orb compile          (native binary, no Node.js needed)
+      |                  --server express (default)
+      |                  --server hono
       |
   my-app/              (generated TypeScript project)
     packages/client/   (React + Vite, needs Node.js)
-    packages/server/   (Express, needs Node.js)
+    packages/server/   (Express or Hono, needs Node.js)
     packages/shared/   (shared types)
+
+--- or ---
+
+  orb serve            (zero-install: compile + build + serve)
+      |                  Hono backend, bundled Bun runtime
+      |
+  http://localhost:3030  (no Node.js required)
 ```
 
-The compiler is a native binary. The output is a Node.js project. These are separate concerns: you can compile on a machine without Node.js, then deploy the generated code elsewhere.
+With `orb compile`, the compiler is a native binary and the output is a Node.js project. These are separate concerns: you can compile on a machine without Node.js, then deploy the generated code elsewhere. With `orb serve`, everything runs from the single binary.
 
 ## Next Steps
 

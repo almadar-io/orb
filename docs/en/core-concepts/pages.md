@@ -1,24 +1,28 @@
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
+import OrbPreviewBlock from '@shared/OrbPreviewBlock';
 
 # Pages
 
-> How pages work in the Orb architecture - routing, trait binding, slots, and navigation.
+> Routes that bind traits to URLs, composing state machines into navigable surfaces.
 
 **Related:**
 - [Entities](./entities.md)
 - [Traits](./traits.md)
+- [Closed Circuit](./closed-circuit.md)
 
 ---
 
-## Overview
+## What a Page Is
 
-In Orb, a **Page** is a route that composes traits to render UI. The fundamental composition is:
+A Page is a route. It maps a URL path to one or more traits, giving users a place to interact with the application. Pages do not contain UI directly. They reference traits by name, and those traits produce UI through `render-ui` effects.
+
+The fundamental composition:
 
 ```
 Orbital = Entity + Traits + Pages
 ```
 
-While [Entities](./entities.md) define data and [Traits](./traits.md) define behavior, Pages define **where** users interact with the system. Pages are **trait-driven** - they don't contain UI directly, but reference traits whose `render-ui` effects populate the page.
+[Entities](./entities.md) define data shapes. [Traits](./traits.md) define behavior through state machines. Pages define **where** those behaviors become accessible. A page at `/tasks` might reference a `TaskBrowser` trait. When a user navigates to `/tasks`, the runtime initializes that trait's state machine, fires `INIT`, and the resulting `render-ui` effects populate the page.
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit
@@ -26,143 +30,38 @@ While [Entities](./entities.md) define data and [Traits](./traits.md) define beh
   fields={4}
   persistence="persistent"
   traits={[{name: 'TaskBrowser'}, {name: 'TaskViewer'}]}
-  pages={[{name: 'TaskListPage'}, {name: 'TaskDetailPage'}, {name: 'TaskCreatePage'}]}
+  pages={[{name: 'TaskListPage'}, {name: 'TaskDetailPage'}]}
   animated
 />
 </div>
 
+Pages are stateless. They hold no data, manage no lifecycle, and execute no logic. Every piece of state lives in the trait's state machine. The page is purely a composition frame.
+
 ---
 
-## Page Definition
+## Referencing Traits by Name
 
-A page is defined in the `.orb` schema with the following structure:
+Each page contains a `traits` array. Each entry is a reference object with a `ref` field pointing to a trait name defined in the same orbital:
 
 ```orb
 {
   "name": "TaskListPage",
   "path": "/tasks",
-  "viewType": "list",
-  "primaryEntity": "Task",
   "traits": [
-    { "ref": "TaskBrowser", "linkedEntity": "Task" },
-    { "ref": "FilterPanel", "linkedEntity": "Task" }
+    { "ref": "TaskBrowser", "linkedEntity": "Task" }
   ]
 }
 ```
 
-### Page Properties
+The `ref` value must match the `name` of a trait defined in the orbital's `traits` array. The compiler validates this at build time. If `ref` points to a trait that does not exist, compilation fails with `PageInvalidTraitRef`.
 
-| Property | Required | Description |
-|----------|----------|-------------|
-| `name` | Yes | PascalCase identifier (e.g., `TaskListPage`) |
-| `path` | Yes | URL route starting with `/` |
-| `viewType` | No | Semantic hint: `list`, `detail`, `create`, `edit`, `dashboard`, `custom` |
-| `primaryEntity` | No | Main entity this page operates on |
-| `traits` | Yes | Array of trait references that drive the UI |
-| `isInitial` | No | Whether this is the entry point page |
+`linkedEntity` binds the trait to a specific entity on this page. When the trait uses `@entity` bindings, they resolve to the linked entity's data. When it calls `["persist", "create", "Task", "@payload"]`, it operates on the linked entity's collection.
 
 ---
 
-## Routes and Path Patterns
+## Multiple Traits on One Page
 
-Page paths define the URL routes for your application.
-
-### Path Rules
-
-- Must start with `/`
-- Valid characters: letters, numbers, hyphens, underscores, colons, slashes
-- Must be unique across all pages in the schema
-
-### Static Paths
-
-Simple paths without dynamic segments:
-
-```orb
-{ "path": "/tasks" }
-{ "path": "/dashboard" }
-{ "path": "/settings/profile" }
-```
-
-### Dynamic Segments
-
-Use colon syntax for dynamic parameters:
-
-```orb
-{ "path": "/tasks/:id" }
-{ "path": "/users/:userId/tasks/:taskId" }
-{ "path": "/projects/:projectId/members/:memberId" }
-```
-
-Dynamic segments are extracted and available in:
-- Event payloads (`@payload.id`)
-- Navigation effects
-- Entity lookups
-
-### Path Examples
-
-| Path | Description |
-|------|-------------|
-| `/tasks` | Task list page |
-| `/tasks/:id` | Single task detail |
-| `/tasks/create` | Create new task |
-| `/tasks/:id/edit` | Edit existing task |
-| `/users/:id/profile` | User profile |
-| `/dashboard` | Dashboard view |
-
----
-
-## View Types
-
-View types are semantic hints about the page's purpose:
-
-| Type | Purpose | Typical Patterns |
-|------|---------|------------------|
-| `list` | Display collection of entities | `entity-table`, `entity-cards`, `entity-list` |
-| `detail` | Display single entity | `entity-detail`, `stats` |
-| `create` | Create new entity | `form` |
-| `edit` | Edit existing entity | `form` |
-| `dashboard` | Overview with multiple sections | `dashboard-grid`, `stats` |
-| `custom` | Custom layout | Any patterns |
-
-**Important:** View types don't constrain the UI - actual rendering is controlled by `render-ui` effects in [traits](./traits.md#effects). View types are metadata for:
-- Documentation
-- Code generation hints
-- UI scaffolding
-
----
-
-## Page-Trait Binding
-
-Pages reference traits that provide their behavior and UI.
-
-### Trait References
-
-```orb
-{
-  "pages": [
-    {
-      "name": "TaskListPage",
-      "path": "/tasks",
-      "traits": [
-        { "ref": "TaskBrowser", "linkedEntity": "Task" },
-        { "ref": "QuickActions", "linkedEntity": "Task", "config": { "showCreate": true } }
-      ]
-    }
-  ]
-}
-```
-
-### PageTraitRef Structure
-
-| Property | Required | Description |
-|----------|----------|-------------|
-| `ref` | Yes | Trait name or path (e.g., `"TaskBrowser"`, `"Std.traits.CRUD"`) |
-| `linkedEntity` | No | Entity this trait operates on |
-| `config` | No | Trait-specific configuration |
-
-### Multiple Traits Per Page
-
-A page can have multiple traits, each contributing UI to different slots:
+A page can reference multiple traits. All traits on a page share a single event bus. This means one trait can emit an event that another trait on the same page listens to. This is how you compose independent behaviors into a cohesive UI.
 
 ```orb
 {
@@ -176,187 +75,86 @@ A page can have multiple traits, each contributing UI to different slots:
 }
 ```
 
-Each trait's `render-ui` effects target specific [slots](#slots-and-ui-rendering).
+Each trait runs its own state machine independently. `StatsSummary` might be in its `loaded` state showing charts, while `RecentActivity` is still in `fetching`. They do not block each other. But if `QuickActions` emits a `TASK_CREATED` event, `RecentActivity` can listen for it and refresh.
 
-### linkedEntity on Traits
+The shared event bus is the key to multi-trait coordination. It follows the actor model: traits are independent actors communicating through messages. No trait reaches into another trait's state. Communication happens exclusively through the event bus, which the [closed circuit](./closed-circuit.md) governs.
 
-The `linkedEntity` property binds a trait to a specific entity:
-
-```orb
-{ "ref": "StatusManager", "linkedEntity": "Task" }
-```
-
-This means:
-- `@entity` bindings in the trait resolve to `Task` data
-- Effects like `persist` operate on the `Task` collection
-- The trait's state machine manages `Task` instances
-
-See [Trait-Entity Binding](./traits.md#linkedentity-trait-entity-binding) for details.
+Each trait's `render-ui` effects target specific slots (`main`, `sidebar`, `modal`). Multiple traits can render to different slots simultaneously, building up a complex page layout from independent state machines.
 
 ---
 
-## Primary Entity
+## Path Parameters
 
-The `primaryEntity` property indicates the main entity a page operates on:
+Use colon-prefixed segments for dynamic routes:
 
 ```orb
-{
-  "name": "TaskDetailPage",
-  "path": "/tasks/:id",
-  "primaryEntity": "Task",
-  "traits": [
-    { "ref": "TaskViewer" },
-    { "ref": "CommentList", "linkedEntity": "Comment" }
-  ]
-}
+{ "path": "/tasks/:id" }
+{ "path": "/users/:userId/tasks/:taskId" }
 ```
 
-**Usage:**
-- Default entity for traits without explicit `linkedEntity`
-- Validation to ensure entity exists
-- Code generation hints
-- Not required if all traits explicitly specify their entity
+Path parameters are extracted at runtime and made available in event payloads. When a user navigates to `/tasks/abc123`, the `:id` segment becomes `abc123` and is accessible as `@payload.id` in transitions.
+
+Rules for paths:
+- Must start with `/`
+- Valid characters: letters, numbers, hyphens, underscores, colons, slashes
+- Must be unique across all pages in the orbital
+- Dynamic segments use `:paramName` syntax
+
+| Path | Description |
+|------|-------------|
+| `/tasks` | Static list route |
+| `/tasks/:id` | Single entity by ID |
+| `/tasks/create` | Static nested route |
+| `/tasks/:id/edit` | Parameterized nested route |
+| `/users/:userId/tasks/:taskId` | Multi-parameter route |
 
 ---
 
-## Slots and UI Rendering
+## Navigation Between Pages
 
-Traits render UI through `render-ui` effects that target **slots** - named regions on the page.
-
-### Available Slots
-
-| Slot | Purpose |
-|------|---------|
-| `main` | Primary content area |
-| `sidebar` | Side panel |
-| `modal` | Modal overlay |
-| `drawer` | Drawer panel |
-| `overlay` | Full-screen overlay |
-| `center` | Centered content |
-| `toast` | Toast notifications |
-| `hud-top` | Top HUD (game UI) |
-| `hud-bottom` | Bottom HUD (game UI) |
-| `floating` | Floating element |
-| `system` | Invisible system components |
-
-### render-ui Effect
-
-Traits populate slots using the `render-ui` effect:
-
-```orb
-["render-ui", "main", {
-  "type": "entity-table",
-  "entity": "Task",
-  "columns": ["title", "status", "dueDate"],
-  "itemActions": [
-    { "event": "VIEW", "label": "View" },
-    { "event": "EDIT", "label": "Edit" }
-  ]
-}]
-```
-
-### Slot Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Page: TaskListPage                                         │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Slot: main                                          │   │
-│  │  ┌─────────────────────────────────────────────┐    │   │
-│  │  │  Pattern: entity-table (from TaskBrowser)   │    │   │
-│  │  │  - Columns: title, status, dueDate          │    │   │
-│  │  │  - Actions: VIEW, EDIT                      │    │   │
-│  │  └─────────────────────────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Slot: sidebar                                       │   │
-│  │  ┌─────────────────────────────────────────────┐    │   │
-│  │  │  Pattern: filter-panel (from FilterPanel)   │    │   │
-│  │  └─────────────────────────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Multiple Renders to Same Slot
-
-If multiple traits render to the same slot, they stack (later replaces or appends based on pattern type):
-
-```orb
-// Trait A
-["render-ui", "main", { "type": "stats", ... }]
-
-// Trait B (later in page)
-["render-ui", "main", { "type": "entity-table", ... }]
-```
-
----
-
-## Navigation
-
-Navigation between pages is handled through the `navigate` effect in traits.
-
-### navigate Effect
+Navigation is an effect, not a page property. Traits navigate between pages using the `navigate` effect in transitions:
 
 ```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
-**Format:** `["navigate", path, params?]`
-
-| Argument | Description |
-|----------|-------------|
-| `path` | Target page path (can include dynamic segments) |
-| `params` | Optional object to fill dynamic segments |
-
-### Navigation Examples
+The format is `["navigate", path, params?]`. The path can include dynamic segments that get filled from the optional params object. If a segment value starts with `@`, it resolves from the current binding context (`@entity`, `@payload`, etc.).
 
 **Simple navigation:**
 ```orb
 ["navigate", "/dashboard"]
 ```
 
-**With entity ID:**
+**With entity data:**
 ```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
-**With payload:**
+**With payload parameters:**
 ```orb
 ["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
 ```
 
-**Nested path:**
-```orb
-["navigate", "/users/:userId/tasks/:taskId", {
-  "userId": "@entity.assigneeId",
-  "taskId": "@entity.id"
-}]
-```
-
-### Navigation in Transitions
-
-Navigation typically occurs after state changes:
+Navigation typically happens after a state change completes. A `TaskBrowser` trait in its `viewing` state handles a `VIEW` event, persists any needed data, then navigates to the detail page:
 
 ```orb
 {
-  "from": "editing",
-  "to": "saved",
-  "event": "SAVE",
+  "from": "viewing",
+  "to": "viewing",
+  "event": "VIEW",
   "effects": [
-    ["persist", "update", "Task", "@entity.id", "@payload"],
-    ["notify", "Task saved!", "success"],
-    ["navigate", "/tasks/@entity.id"]
+    ["navigate", "/tasks/@payload.id"]
   ]
 }
 ```
 
-See [Effects](./traits.md#effects) for more details.
+On the target page, the `INIT` event fires automatically. If the page is at `/tasks/:id`, the `:id` value arrives in `@payload.id`, so the detail trait can fetch the right entity.
 
 ---
 
 ## Initial Page
 
-Mark a page as the entry point with `isInitial`:
+Mark a page as the application entry point with `isInitial`:
 
 ```orb
 {
@@ -369,100 +167,207 @@ Mark a page as the entry point with `isInitial`:
 }
 ```
 
-**Behavior:**
-- Application loads this page first
-- Redirects from root (`/`) go here
-- Only one page should be marked initial per orbital
+The application loads this page first. Only one page per orbital should be marked initial. If no page is marked, the first page in the array is used.
 
 ---
 
-## Page Validation
+## Live Example: Multi-Page Note App
 
-Pages are validated at compile time with these rules:
+This orbital defines two pages. The list page at `/notes` shows all notes with a button to create new ones. Clicking a note navigates to the detail page at `/notes/:id`. The detail page has a back button that navigates to the list.
 
-### Required Fields
-- `name` - Must be PascalCase
-- `path` - Must start with `/`, valid characters only
-- `traits` - Must have at least one trait reference
-
-### Validation Errors
-
-| Error | Description |
-|-------|-------------|
-| `PageMissingName` | Page name is required |
-| `PageMissingPath` | Page path is required |
-| `PageInvalidPath` | Path doesn't match pattern |
-| `PageEmptyTraits` | Traits array cannot be empty |
-| `PageInvalidTraitRef` | Referenced trait doesn't exist |
-| `PageInvalidViewType` | viewType not in valid list |
-| `PageDuplicatePath` | Another page uses the same path |
-
----
-
-## Complete Example
-
-A complete page example with multiple traits:
-
-```orb
-{
+<OrbPreviewBlock title="Multi-Page Notes App" height="450px" schema={`{
+  "name": "NotesApp",
   "orbitals": [
     {
-      "name": "TaskManagement",
+      "name": "NoteManager",
       "entity": {
-        "name": "Task",
-        "collection": "tasks",
+        "name": "Note",
+        "persistence": "runtime",
         "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "title", "type": "string", "required": true },
-          { "name": "status", "type": "enum", "values": ["pending", "active", "done"] },
-          { "name": "assigneeId", "type": "relation", "relation": { "entity": "User" } }
+          { "name": "id", "type": "string" },
+          { "name": "title", "type": "string" },
+          { "name": "body", "type": "string" },
+          { "name": "updatedAt", "type": "string" }
         ]
       },
       "traits": [
         {
-          "name": "TaskBrowser",
-          "linkedEntity": "Task",
+          "name": "NoteBrowser",
+          "linkedEntity": "Note",
+          "category": "interaction",
           "stateMachine": {
             "states": [
-              { "name": "idle", "isInitial": true },
-              { "name": "viewing" }
+              { "name": "listing", "isInitial": true },
+              { "name": "creating" }
+            ],
+            "events": [
+              { "key": "INIT", "name": "Initialize" },
+              { "key": "CREATE", "name": "Create" },
+              { "key": "SAVE", "name": "Save" },
+              { "key": "CANCEL", "name": "Cancel" },
+              { "key": "CLOSE", "name": "Close" },
+              { "key": "VIEW", "name": "View", "payload": [{ "name": "id", "type": "string" }] }
             ],
             "transitions": [
               {
-                "from": "idle",
-                "to": "viewing",
+                "from": "listing",
+                "to": "listing",
                 "event": "INIT",
                 "effects": [
-                  ["fetch", "Task", {}],
+                  ["fetch", "Note"],
                   ["render-ui", "main", {
-                    "type": "entity-table",
-                    "entity": "Task",
-                    "columns": ["title", "status", "assigneeId"],
-                    "itemActions": [
-                      { "event": "VIEW", "label": "View" },
-                      { "event": "EDIT", "label": "Edit" }
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "lg",
+                    "children": [
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "justify": "space-between",
+                        "children": [
+                          { "type": "typography", "content": "Notes", "variant": "h2" },
+                          { "type": "button", "label": "New Note", "event": "CREATE", "variant": "primary", "icon": "plus" }
+                        ]
+                      },
+                      { "type": "divider" },
+                      { "type": "typography", "content": "No notes yet. Create your first note to get started.", "variant": "body", "color": "muted" }
                     ]
                   }]
                 ]
               },
               {
-                "from": "viewing",
-                "to": "viewing",
+                "from": "listing",
+                "to": "creating",
+                "event": "CREATE",
+                "effects": [
+                  ["render-ui", "modal", {
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "md",
+                    "children": [
+                      { "type": "typography", "content": "New Note", "variant": "h3" },
+                      { "type": "input", "label": "Title", "placeholder": "Note title" },
+                      { "type": "textarea", "label": "Body", "placeholder": "Write your note..." },
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "children": [
+                          { "type": "button", "label": "Save", "event": "SAVE", "variant": "primary" },
+                          { "type": "button", "label": "Cancel", "event": "CANCEL", "variant": "secondary" }
+                        ]
+                      }
+                    ]
+                  }]
+                ]
+              },
+              {
+                "from": "creating",
+                "to": "listing",
+                "event": "SAVE",
+                "effects": [
+                  ["persist", "create", "Note", "@payload"],
+                  ["notify", "success", "Note created"],
+                  ["render-ui", "modal", null],
+                  ["render-ui", "main", {
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "lg",
+                    "children": [
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "justify": "space-between",
+                        "children": [
+                          { "type": "typography", "content": "Notes", "variant": "h2" },
+                          { "type": "button", "label": "New Note", "event": "CREATE", "variant": "primary", "icon": "plus" }
+                        ]
+                      },
+                      { "type": "divider" },
+                      { "type": "typography", "content": "No notes yet. Create your first note to get started.", "variant": "body", "color": "muted" }
+                    ]
+                  }]
+                ]
+              },
+              {
+                "from": "creating",
+                "to": "listing",
+                "event": "CANCEL",
+                "effects": [
+                  ["render-ui", "modal", null],
+                  ["render-ui", "main", {
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "lg",
+                    "children": [
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "justify": "space-between",
+                        "children": [
+                          { "type": "typography", "content": "Notes", "variant": "h2" },
+                          { "type": "button", "label": "New Note", "event": "CREATE", "variant": "primary", "icon": "plus" }
+                        ]
+                      },
+                      { "type": "divider" },
+                      { "type": "typography", "content": "No notes yet. Create your first note to get started.", "variant": "body", "color": "muted" }
+                    ]
+                  }]
+                ]
+              },
+              {
+                "from": "creating",
+                "to": "listing",
+                "event": "CLOSE",
+                "effects": [
+                  ["render-ui", "modal", null],
+                  ["render-ui", "main", {
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "lg",
+                    "children": [
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "justify": "space-between",
+                        "children": [
+                          { "type": "typography", "content": "Notes", "variant": "h2" },
+                          { "type": "button", "label": "New Note", "event": "CREATE", "variant": "primary", "icon": "plus" }
+                        ]
+                      },
+                      { "type": "divider" },
+                      { "type": "typography", "content": "No notes yet. Create your first note to get started.", "variant": "body", "color": "muted" }
+                    ]
+                  }]
+                ]
+              },
+              {
+                "from": "listing",
+                "to": "listing",
                 "event": "VIEW",
                 "effects": [
-                  ["navigate", "/tasks/@payload.id"]
+                  ["navigate", "/notes/@payload.id"]
                 ]
               }
             ]
           }
         },
         {
-          "name": "TaskViewer",
-          "linkedEntity": "Task",
+          "name": "NoteViewer",
+          "linkedEntity": "Note",
+          "category": "interaction",
           "stateMachine": {
             "states": [
               { "name": "loading", "isInitial": true },
               { "name": "viewing" }
+            ],
+            "events": [
+              { "key": "INIT", "name": "Initialize", "payload": [{ "name": "id", "type": "string" }] },
+              { "key": "BACK", "name": "Back" }
             ],
             "transitions": [
               {
@@ -470,20 +375,25 @@ A complete page example with multiple traits:
                 "to": "viewing",
                 "event": "INIT",
                 "effects": [
-                  ["fetch", "Task", { "id": "@payload.id" }],
+                  ["fetch", "Note", { "id": "@payload.id" }],
                   ["render-ui", "main", {
-                    "type": "entity-detail",
-                    "entity": "Task",
-                    "fields": ["title", "status", "assigneeId", "createdAt"]
+                    "type": "stack",
+                    "direction": "vertical",
+                    "gap": "lg",
+                    "children": [
+                      {
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "gap": "md",
+                        "children": [
+                          { "type": "button", "label": "Back to Notes", "event": "BACK", "variant": "secondary", "icon": "arrow-left" },
+                          { "type": "typography", "content": "Note Detail", "variant": "h2" }
+                        ]
+                      },
+                      { "type": "divider" },
+                      { "type": "typography", "content": "Select a note from the list to view its details here.", "variant": "body", "color": "muted" }
+                    ]
                   }]
-                ]
-              },
-              {
-                "from": "viewing",
-                "to": "viewing",
-                "event": "EDIT",
-                "effects": [
-                  ["navigate", "/tasks/@entity.id/edit"]
                 ]
               },
               {
@@ -491,7 +401,7 @@ A complete page example with multiple traits:
                 "to": "viewing",
                 "event": "BACK",
                 "effects": [
-                  ["navigate", "/tasks"]
+                  ["navigate", "/notes"]
                 ]
               }
             ]
@@ -500,58 +410,53 @@ A complete page example with multiple traits:
       ],
       "pages": [
         {
-          "name": "TaskListPage",
-          "path": "/tasks",
-          "viewType": "list",
-          "primaryEntity": "Task",
+          "name": "NoteListPage",
+          "path": "/notes",
           "isInitial": true,
           "traits": [
-            { "ref": "TaskBrowser", "linkedEntity": "Task" }
+            { "ref": "NoteBrowser", "linkedEntity": "Note" }
           ]
         },
         {
-          "name": "TaskDetailPage",
-          "path": "/tasks/:id",
-          "viewType": "detail",
-          "primaryEntity": "Task",
+          "name": "NoteDetailPage",
+          "path": "/notes/:id",
           "traits": [
-            { "ref": "TaskViewer", "linkedEntity": "Task" }
+            { "ref": "NoteViewer", "linkedEntity": "Note" }
           ]
         }
       ]
     }
   ]
-}
-```
+}`} />
+
+In this example, the `NoteBrowser` trait handles list and create flows on the `/notes` page. The `VIEW` event triggers a `navigate` effect to `/notes/@payload.id`. On the detail page, `NoteViewer` fetches the specific note by ID from `@payload.id` (extracted from the `:id` path parameter) and renders it. The `BACK` event navigates back to `/notes`.
+
+---
+
+## Validation
+
+The compiler enforces these rules at build time:
+
+| Error | Cause |
+|-------|-------|
+| `PageMissingName` | Page has no `name` field |
+| `PageMissingPath` | Page has no `path` field |
+| `PageInvalidPath` | Path contains invalid characters or does not start with `/` |
+| `PageEmptyTraits` | `traits` array is empty (a page with no traits renders nothing) |
+| `PageInvalidTraitRef` | `ref` points to a trait name that does not exist in the orbital |
+| `PageDuplicatePath` | Another page already uses this path |
+| `PageInvalidViewType` | `viewType` is not one of `list`, `detail`, `create`, `edit`, `dashboard`, `custom` |
 
 ---
 
 ## Key Principles
 
-1. **Trait-Driven Pages** - Pages are containers for trait references. UI emerges from `render-ui` effects in traits, not from page definitions.
+1. **Pages are stateless.** All state lives in trait state machines. The page is a composition frame, nothing more.
 
-2. **Slots Architecture** - UI flows through standardized slots (`main`, `sidebar`, `modal`), enabling layout composition without hardcoding.
+2. **Traits are referenced by name.** The `ref` field creates a compile-time-verified link between the page and the trait definition.
 
-3. **Path as Contract** - Page path is the primary interface - it defines the URL users navigate to.
+3. **Shared event bus.** Multiple traits on the same page communicate through events, following the actor model. No trait directly accesses another trait's state.
 
-4. **Explicit Entity Binding** - `linkedEntity` on trait refs makes entity relationships explicit.
+4. **Navigation is an effect.** Moving between pages is a state machine transition effect, not an imperative call. This keeps navigation part of the deterministic event circuit.
 
-5. **No Page State** - Pages are pure compositional. All state lives in trait state machines.
-
-6. **Effect-Driven Navigation** - Navigation is an effect triggered by trait transitions, not a page property.
-
----
-
-## Summary
-
-The Orb pages system provides:
-
-1. **Routing** - Path-based navigation with dynamic segments
-2. **Trait Composition** - Multiple traits per page, each contributing UI
-3. **Slots** - Named regions for UI placement (main, sidebar, modal, etc.)
-4. **View Types** - Semantic hints for page purpose (list, detail, dashboard)
-5. **Navigation** - Effect-driven routing between pages
-6. **Entity Binding** - Explicit entity relationships via `linkedEntity`
-7. **Validation** - Compiler enforces path uniqueness and trait existence
-
-Pages are the routing and composition layer - they define **where** users go, while [traits](./traits.md) define **what** happens and [entities](./entities.md) define **what data** is involved.
+5. **Path parameters flow into payloads.** Dynamic `:param` segments are extracted and injected into `@payload`, making them available to guards, effects, and bindings.

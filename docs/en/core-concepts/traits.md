@@ -1,26 +1,29 @@
 import { AvlStateMachine } from '@almadar/ui/illustrations';
+import OrbPreviewBlock from '@shared/OrbPreviewBlock';
 
 # Traits
 
-> Trait definitions and state machine types for Orb
+> State machines that define how entities behave over time.
 
 ---
 
-> How traits work in the Orb architecture - state machines, guards, effects, and cross-orbital communication.
+## What Is a Trait?
 
-**Related:** [Entities](./entities.md)
+A Trait is a **state machine attached to an entity**. Where an [Entity](./entities.md) defines the shape of data, a Trait defines how that data changes: which states are valid, which events cause transitions between them, what conditions must hold for a transition to fire, and what side effects execute when it does.
 
----
-
-## Overview
-
-In Orb, a **Trait** is a state machine that defines behavior for an entity. The fundamental composition is:
+The relationship is direct. An Entity is a noun. A Trait is the verb.
 
 ```
 Orbital Unit = Entity + Traits + Pages
 ```
 
-While [Entities](./entities.md) define the shape of data, Traits define how that data changes over time through **states**, **transitions**, **guards**, and **effects**.
+Every Trait has five parts:
+
+1. **States** - The finite set of conditions the trait can be in
+2. **Events** - Named signals that request a state change
+3. **Transitions** - Rules mapping (state, event) pairs to new states
+4. **Guards** - Boolean conditions that block or allow a transition
+5. **Effects** - Actions executed when a transition fires (render UI, persist data, emit events)
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
@@ -41,175 +44,70 @@ While [Entities](./entities.md) define the shape of data, Traits define how that
 />
 </div>
 
----
-
-## Trait Definition
-
-A trait is defined in the `.orb` schema with the following structure:
-
-```orb
-{
-  "name": "TaskManagement",
-  "category": "interaction",
-  "linkedEntity": "Task",
-  "description": "Manages task lifecycle and status changes",
-  "emits": [
-    { "event": "TASK_COMPLETED", "scope": "external" }
-  ],
-  "listens": [
-    { "event": "USER_ASSIGNED", "triggers": "ASSIGN" }
-  ],
-  "stateMachine": {
-    "states": [
-      { "name": "idle", "isInitial": true },
-      { "name": "active" },
-      { "name": "completed", "isTerminal": true }
-    ],
-    "events": [
-      { "key": "START", "name": "Start Task" },
-      { "key": "COMPLETE", "name": "Complete Task" }
-    ],
-    "transitions": [
-      {
-        "from": "idle",
-        "to": "active",
-        "event": "START",
-        "effects": [["set", "@entity.id", "status", "active"]]
-      },
-      {
-        "from": "active",
-        "to": "completed",
-        "event": "COMPLETE",
-        "guard": ["=", "@entity.assigneeId", "@user.id"],
-        "effects": [
-          ["set", "@entity.id", "status", "completed"],
-          ["emit", "TASK_COMPLETED", { "taskId": "@entity.id" }]
-        ]
-      }
-    ]
-  }
-}
-```
-
-### Trait Properties
-
-| Property | Required | Description |
-|----------|----------|-------------|
-| `name` | Yes | Trait identifier (PascalCase) |
-| `category` | No | Trait category (see below) |
-| `linkedEntity` | No | Entity this trait operates on |
-| `description` | No | Human-readable description |
-| `emits` | No | Events this trait can emit |
-| `listens` | No | Events this trait listens for |
-| `stateMachine` | Yes | State machine definition |
-| `ticks` | No | Scheduled/periodic effects |
-| `config` | No | Configuration schema |
+Think of it as the actor model applied to UI. Each Trait is an actor that holds state, receives messages (events), and produces effects. Multiple Traits on the same page are concurrent actors communicating through a shared event bus.
 
 ---
 
-## Trait Categories
+## States
 
-Traits are categorized by their primary purpose:
-
-| Category | Purpose | Typical Effects |
-|----------|---------|-----------------|
-| `interaction` | Client-side UI event handling | `render-ui`, `navigate`, `notify` |
-| `integration` | Server-side operations | `persist`, `fetch`, `call-service` |
-| `lifecycle` | Entity lifecycle management | `persist`, `emit` |
-| `gameCore` | Game loop and physics | `set`, `emit`, ticks |
-| `gameEntity` | Game entity behaviors | `set`, `emit`, `render-ui` |
-| `gameUi` | Game UI, HUD, controls | `render-ui`, `notify` |
-
-### Category Examples
-
-**Interaction Trait** - Handles UI events:
-```orb
-{
-  "name": "FormInteraction",
-  "category": "interaction",
-  "stateMachine": {
-    "transitions": [{
-      "event": "SUBMIT",
-      "effects": [
-        ["render-ui", "main", { "type": "form", "loading": true }],
-        ["emit", "FORM_SUBMITTED", "@payload"]
-      ]
-    }]
-  }
-}
-```
-
-**Integration Trait** - Handles server operations:
-```orb
-{
-  "name": "DataPersistence",
-  "category": "integration",
-  "stateMachine": {
-    "transitions": [{
-      "event": "SAVE",
-      "effects": [
-        ["persist", "update", "Task", "@entity.id", "@payload"],
-        ["emit", "DATA_SAVED", { "id": "@entity.id" }]
-      ]
-    }]
-  }
-}
-```
-
----
-
-## State Machine
-
-Every trait has a state machine that defines its behavior.
-
-### States
-
-States represent the possible conditions of a trait:
+States are the finite set of positions a Trait can occupy. Every Trait must declare exactly one `isInitial` state. States marked `isTerminal` signal that no further outgoing transitions are expected.
 
 ```orb
 {
   "states": [
-    { "name": "idle", "isInitial": true, "description": "Waiting for input" },
-    { "name": "loading", "description": "Fetching data" },
-    { "name": "active", "description": "Ready for interaction" },
-    { "name": "error", "isTerminal": true, "description": "Error state" }
+    { "name": "idle", "isInitial": true },
+    { "name": "loading" },
+    { "name": "active" },
+    { "name": "error", "isTerminal": true }
   ]
 }
 ```
 
-| Property | Description |
-|----------|-------------|
-| `name` | State identifier (lowercase) |
-| `isInitial` | Starting state (exactly one required) |
-| `isTerminal` | No outgoing transitions expected |
-| `description` | Human-readable description |
+| Property | Required | Description |
+|----------|----------|-------------|
+| `name` | Yes | Lowercase identifier for the state |
+| `isInitial` | One required | The starting state when the Trait initializes |
+| `isTerminal` | No | Marks a terminal state. No outgoing transitions expected. |
+| `description` | No | Human-readable label |
 
-### Events
+Rules:
 
-Events trigger state transitions:
+- Exactly **one** state must be `isInitial`.
+- Every non-initial, non-terminal state must have at least one incoming transition. States with no incoming transitions cause validation errors (unreachable state).
+- Any state rendering to a `modal` slot must have a `CLOSE` or `CANCEL` transition. Without it, the user gets trapped in a modal with no way to dismiss it. This is the [Closed Circuit](./closed-circuit.md) rule.
+
+---
+
+## Events
+
+Events are named signals that request a state change. They use `UPPER_SNAKE_CASE` keys by convention and can optionally declare a payload schema describing the data they carry.
 
 ```orb
 {
   "events": [
     { "key": "INIT", "name": "Initialize" },
     { "key": "SUBMIT", "name": "Submit Form", "payload": [
-      { "name": "email", "type": "string", "required": true },
-      { "name": "name", "type": "string", "required": true }
+      { "name": "title", "type": "string", "required": true },
+      { "name": "priority", "type": "number" }
     ]},
-    { "key": "ERROR", "name": "Error Occurred" }
+    { "key": "CANCEL", "name": "Cancel" }
   ]
 }
 ```
 
-| Property | Description |
-|----------|-------------|
-| `key` | Event identifier (UPPER_SNAKE_CASE) |
-| `name` | Display name |
-| `payload` | Expected payload schema |
+| Property | Required | Description |
+|----------|----------|-------------|
+| `key` | Yes | Unique event identifier (`UPPER_SNAKE_CASE`) |
+| `name` | No | Display name for UI buttons and tooling |
+| `payload` | No | Array of field definitions describing event data |
 
-### Transitions
+If you reference `@payload.fieldName` anywhere in guards or effects, the field **must** appear in the event's `payload` schema. The compiler checks this.
 
-Transitions define how states change in response to events:
+---
+
+## Transitions
+
+A transition connects a source state to a target state, triggered by a specific event. Optionally, it includes a guard (a condition that must pass) and effects (actions to execute).
 
 ```orb
 {
@@ -218,141 +116,136 @@ Transitions define how states change in response to events:
       "from": "idle",
       "to": "loading",
       "event": "SUBMIT",
-      "guard": ["and", ["!=", "@payload.email", ""], ["!=", "@payload.name", ""]],
+      "guard": ["!=", "@payload.title", ""],
       "effects": [
-        ["set", "@entity.id", "email", "@payload.email"],
-        ["persist", "create", "User", "@payload"]
+        ["persist", "create", "Task", "@payload"],
+        ["notify", "Task created", "success"]
       ]
     },
     {
-      "from": ["loading", "active"],
-      "to": "error",
-      "event": "ERROR"
+      "from": ["loading", "error"],
+      "to": "idle",
+      "event": "CANCEL"
     }
   ]
 }
 ```
 
-| Property | Description |
-|----------|-------------|
-| `from` | Source state(s) - string or array |
-| `to` | Target state (always single) |
-| `event` | Triggering event key |
-| `guard` | Condition that must pass (optional) |
-| `effects` | Effects to execute on transition (optional) |
+| Property | Required | Description |
+|----------|----------|-------------|
+| `from` | Yes | Source state (string) or states (array of strings) |
+| `to` | Yes | Target state (always a single string) |
+| `event` | Yes | The event key that triggers this transition |
+| `guard` | No | S-expression that must evaluate to `true` |
+| `effects` | No | Array of S-expression effects to execute |
 
-**Multi-source transitions:** Use an array for `from` to handle the same event from multiple states:
+When `from` is an array, the same transition rule applies from each listed state. This is shorthand for writing multiple identical transitions:
+
 ```orb
 { "from": ["idle", "error"], "to": "loading", "event": "RETRY" }
 ```
+
+The processing pipeline for every incoming event:
+
+1. Find transitions where `from` matches the current state and `event` matches the incoming event key
+2. Evaluate the `guard`. If it returns `false`, the transition is blocked, no effects run, and the state does not change.
+3. If the guard passes (or no guard exists), execute all `effects` in order
+4. Move the Trait to the `to` state
 
 ---
 
 ## Guards
 
-Guards are conditions that must evaluate to `true` for a transition to occur. They use S-expression syntax.
+Guards are S-expression boolean conditions. They gate transitions: if the guard evaluates to `false`, the transition does not fire, no effects execute, and the state remains unchanged.
 
-### Guard Operators
+### Operators
 
 | Category | Operators |
 |----------|-----------|
 | Comparison | `=`, `!=`, `<`, `>`, `<=`, `>=` |
 | Logic | `and`, `or`, `not` |
-| Math | `+`, `-`, `*`, `/`, `%` |
 | Array | `count`, `includes`, `every`, `some` |
 
-### Guard Examples
+### Bindings
+
+Guards access data through binding roots:
+
+| Binding | Description |
+|---------|-------------|
+| `@entity.field` | Field on the linked entity |
+| `@payload.field` | Field from the event payload |
+| `@state` | Current state name (string) |
+| `@user.id` | Authenticated user ID |
+| `@now` | Current timestamp in milliseconds |
+| `@EntityName.field` | Singleton entity field (e.g., `@Player.health`) |
+
+Note: `@result` is **not** a valid binding root. Call-service results flow through the runtime differently.
+
+### Composition
+
+Guards compose with `and`, `or`, and `not`. There is no limit to nesting depth.
 
 ```orb
-// Simple equality
+// Simple: entity field equals a literal
 ["=", "@entity.status", "active"]
 
-// Compound condition
+// Compound: both payload fields must be non-empty
 ["and",
   ["!=", "@payload.email", ""],
   ["!=", "@payload.name", ""]
 ]
 
-// Numeric comparison
-[">=", "@entity.balance", "@payload.amount"]
+// Negation: entity is NOT in a terminal status
+["not", ["or",
+  ["=", "@entity.status", "cancelled"],
+  ["=", "@entity.status", "archived"]
+]]
 
-// Array check
+// Numeric with array: cart must have items
 [">", ["count", "@entity.items"], 0]
 
-// User permission
-["=", "@entity.ownerId", "@user.id"]
-
-// Complex guard
-["and",
-  ["=", "@entity.status", "pending"],
-  ["or",
-    ["=", "@user.role", "admin"],
-    ["=", "@entity.assigneeId", "@user.id"]
-  ]
+// Role-based access: only the owner or an admin can approve
+["or",
+  ["=", "@entity.ownerId", "@user.id"],
+  ["=", "@user.role", "admin"]
 ]
 ```
-
-### Guard Bindings
-
-Guards can reference data through bindings (see [Entity Bindings](./entities.md#entity-bindings-in-s-expressions)):
-
-| Binding | Description |
-|---------|-------------|
-| `@entity.field` | Current entity field value |
-| `@payload.field` | Event payload field |
-| `@state` | Current trait state name |
-| `@user.id` | Authenticated user ID |
-| `@now` | Current timestamp |
-
-### Guard Failure
-
-If a guard evaluates to `false`:
-1. Transition is **blocked**
-2. No effects execute
-3. State remains unchanged
-4. Response indicates `transitioned: false`
 
 ---
 
 ## Effects
 
-Effects are actions executed when a transition occurs. They use S-expression syntax.
+Effects are S-expression actions executed when a transition fires. They are the Trait's way of changing the world: rendering UI, writing to the database, emitting events to other Traits, navigating to a new page.
 
 ### Effect Types
 
-| Effect | Server | Client | Purpose |
-|--------|--------|--------|---------|
-| `render-ui` | Ignored | Executes | Display pattern to UI slot |
-| `navigate` | Ignored | Executes | Route navigation |
-| `notify` | Ignored | Executes | Show notification/toast |
-| `fetch` | Executes | Ignored | Query database |
-| `persist` | Executes | Ignored | Create/update/delete data |
-| `call-service` | Executes | Ignored | Call external API |
-| `emit` | Executes | Executes | Publish event |
-| `set` | Executes | Executes | Modify entity field (supports increment/decrement via S-expressions) |
+| Effect | Purpose |
+|--------|---------|
+| `render-ui` | Display a UI pattern in a named slot |
+| `persist` | Create, update, or delete entity data in the database |
+| `fetch` | Query entity data from the database |
+| `emit` | Publish an event to other Traits |
+| `set` | Modify a field on the entity |
+| `notify` | Show a toast/notification |
+| `navigate` | Change the current route |
+| `call-service` | Call an external API or service |
 
-### Dual Execution Model
+### Client vs. Server Execution
 
-Traits execute on **both client and server** simultaneously:
+Traits execute on both client and server simultaneously. Each effect type runs in one context or the other:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Client                          Server                     │
-│  ───────                         ──────                     │
-│  render-ui  ✓                    render-ui  → clientEffects │
-│  navigate   ✓                    navigate   → clientEffects │
-│  notify     ✓                    notify     → clientEffects │
-│  fetch      ✗                    fetch      ✓ (queries DB)  │
-│  persist    ✗                    persist    ✓ (writes DB)   │
-│  call-service ✗                  call-service ✓ (API call)  │
-│  emit       ✓ (EventBus)         emit       ✓ (cross-orbital)│
-│  set        ✓                    set        ✓               │
-└─────────────────────────────────────────────────────────────┘
+Client-side:   render-ui  navigate  notify
+Server-side:   persist    fetch     call-service
+Both:          emit       set
 ```
 
-### Effect Examples
+Server-only effects (`persist`, `fetch`, `call-service`) are skipped on the client. Client-only effects (`render-ui`, `navigate`, `notify`) are collected by the server and returned as `clientEffects` in the response. `emit` and `set` run in both contexts.
 
-**render-ui** - Display a UI pattern:
+### Effect Reference
+
+**render-ui**: Render a UI pattern into a named slot. The pattern type must exist in the [pattern registry](./patterns.md).
+
 ```orb
 ["render-ui", "main", {
   "type": "entity-table",
@@ -361,145 +254,882 @@ Traits execute on **both client and server** simultaneously:
 }]
 ```
 
-**persist** - Database operations:
+**persist**: Write to the database. Three operations: `create`, `update`, `delete`.
+
 ```orb
-// Create
 ["persist", "create", "Task", "@payload"]
-
-// Update
 ["persist", "update", "Task", "@entity.id", { "status": "completed" }]
-
-// Delete
 ["persist", "delete", "Task", "@entity.id"]
 ```
 
-**fetch** - Query data:
+**fetch**: Query entity data.
+
 ```orb
 ["fetch", "Task", { "status": "active", "assigneeId": "@user.id" }]
 ```
 
-**emit** - Publish event:
+**emit**: Publish an event. The event name must appear in the Trait's `emits` declaration.
+
 ```orb
-["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "completedBy": "@user.id" }]
+["emit", "TASK_COMPLETED", { "taskId": "@entity.id" }]
 ```
 
-**set** - Modify field:
+**set**: Modify a field value. Supports S-expression math for increment/decrement.
+
 ```orb
 ["set", "@entity.id", "status", "active"]
+["set", "@entity.id", "score", ["+", "@entity.score", 10]]
+["set", "@entity.id", "health", ["-", "@entity.health", 5]]
 ["set", "@entity.id", "updatedAt", "@now"]
-// Increment/decrement using math operators:
-["set", "@entity.id", "score", ["+", "@entity.score", 10]]  // Increment by 10
-["set", "@entity.id", "health", ["-", "@entity.health", 5]]  // Decrement by 5
 ```
 
-**Note:** `increment` and `decrement` are not separate effect types. Use the `set` effect with S-expression math operators (`+`, `-`) to modify numeric fields.
+**notify**: Display a toast notification.
 
-**navigate** - Route change:
+```orb
+["notify", "Task saved successfully", "success"]
+["notify", "Something went wrong", "error"]
+```
+
+**navigate**: Route to a different page. Supports entity-bound path segments.
+
 ```orb
 ["navigate", "/tasks/@entity.id"]
 ```
 
-**notify** - Show notification:
-```orb
-["notify", "Task completed successfully", "success"]
-```
+**call-service**: Invoke an external service.
 
-**call-service** - External API:
 ```orb
 ["call-service", "email", "send", {
   "to": "@entity.email",
-  "subject": "Task Assigned",
-  "body": "You have been assigned a new task."
+  "subject": "Task Assigned"
 }]
 ```
 
 ---
 
-## linkedEntity - Trait-Entity Binding
+## A Simple Trait
 
-The `linkedEntity` property specifies which entity a trait operates on.
+Here is a complete orbital with a single trait that manages a list of notes. The trait has three states: listing notes, creating a new note, and viewing a note. Every transition includes effects that render the appropriate UI and persist changes.
 
-### Primary Entity
-
-Every orbital has a primary entity. Traits without `linkedEntity` use this entity:
-
-```orb
-{
-  "name": "TaskManagement",
-  "entity": { "name": "Task", "fields": [...] },
-  "traits": [
-    { "name": "StatusTrait" }  // Uses Task entity
+<OrbPreviewBlock title="Note Manager: basic trait with CRUD states" schema={`{
+  "name": "note-manager",
+  "app": {
+    "name": "note-manager",
+    "title": "Note Manager"
+  },
+  "orbitals": [
+    {
+      "name": "NoteManager",
+      "entity": {
+        "name": "Note",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "body",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "enum",
+            "values": [
+              "draft",
+              "published"
+            ],
+            "default": "draft"
+          },
+          {
+            "name": "createdAt",
+            "type": "datetime"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "NoteLifecycle",
+          "linkedEntity": "Note",
+          "category": "interaction",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "listing",
+                "isInitial": true
+              },
+              {
+                "name": "creating"
+              },
+              {
+                "name": "viewing"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "NEW",
+                "name": "New Note"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payload": [
+                  {
+                    "name": "title",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "body",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "VIEW",
+                "name": "View Note"
+              },
+              {
+                "key": "BACK",
+                "name": "Back to List"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "listing",
+                "to": "listing",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Note"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Notes",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Note",
+                          "fields": [
+                            "title",
+                            "status",
+                            "createdAt"
+                          ],
+                          "itemActions": [
+                            {
+                              "event": "VIEW",
+                              "label": "View"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "listing",
+                "to": "creating",
+                "event": "NEW",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "form-section",
+                      "entity": "Note",
+                      "fields": [
+                        "title",
+                        "body"
+                      ],
+                      "submitEvent": "SAVE",
+                      "cancelEvent": "BACK"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "creating",
+                "to": "listing",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "Note",
+                    "@payload"
+                  ],
+                  [
+                    "notify",
+                    "Note created",
+                    "success"
+                  ],
+                  [
+                    "fetch",
+                    "Note"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Notes",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Note",
+                          "fields": [
+                            "title",
+                            "status",
+                            "createdAt"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "creating",
+                "to": "listing",
+                "event": "BACK",
+                "effects": [
+                  [
+                    "fetch",
+                    "Note"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Notes",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Note",
+                          "fields": [
+                            "title",
+                            "status",
+                            "createdAt"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "listing",
+                "to": "viewing",
+                "event": "VIEW",
+                "effects": [
+                  [
+                    "fetch",
+                    "Note"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "detail-panel",
+                      "entity": "Note",
+                      "fields": [
+                        "title",
+                        "body",
+                        "status",
+                        "createdAt"
+                      ],
+                      "actions": [
+                        {
+                          "event": "BACK",
+                          "label": "Back"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "viewing",
+                "to": "listing",
+                "event": "BACK",
+                "effects": [
+                  [
+                    "fetch",
+                    "Note"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Notes",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Note",
+                          "fields": [
+                            "title",
+                            "status",
+                            "createdAt"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "NotesPage",
+          "path": "/notes",
+          "traits": [
+            {
+              "ref": "NoteLifecycle",
+              "linkedEntity": "Note"
+            }
+          ]
+        }
+      ]
+    }
   ]
-}
-```
-
-### Explicit linkedEntity
-
-Specify `linkedEntity` to operate on a different entity:
-
-```orb
-{
-  "name": "TaskManagement",
-  "entity": { "name": "Task" },
-  "traits": [
-    { "name": "StatusTrait", "linkedEntity": "Task" },
-    { "name": "CommentTrait", "linkedEntity": "Comment" },
-    { "name": "PlayerStatsTrait", "linkedEntity": "Player" }
-  ]
-}
-```
-
-### Why linkedEntity?
-
-1. **Reusable traits** - A generic trait can work with any entity
-2. **Cross-entity operations** - Operate on related entities
-3. **Type safety** - Compiler verifies entity field references
-4. **Clear dependencies** - Explicit binding improves readability
-
-See [Entity Bindings](./entities.md#linkedentity-concept) for more details.
+}`} />
 
 ---
 
-## Event Communication (emit/listen)
+## Guards and Multiple Effects in Practice
 
-Traits communicate through events, enabling loose coupling between orbitals.
+This example demonstrates a more complex trait with compound guards and multiple effects per transition. An approval workflow where only managers can approve items above a certain value, and rejected items get a reason logged.
 
-### Emitting Events
+<OrbPreviewBlock title="Approval Workflow: guards, persist, set effects" schema={`{
+  "name": "approval-system",
+  "app": {
+    "name": "approval-system",
+    "title": "Approval System"
+  },
+  "orbitals": [
+    {
+      "name": "ApprovalWorkflow",
+      "entity": {
+        "name": "Request",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "number",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "enum",
+            "values": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "default": "pending"
+          },
+          {
+            "name": "submittedBy",
+            "type": "string"
+          },
+          {
+            "name": "reviewedBy",
+            "type": "string"
+          },
+          {
+            "name": "rejectionReason",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "reviewedAt",
+            "type": "datetime"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ApprovalFlow",
+          "linkedEntity": "Request",
+          "category": "interaction",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "pending",
+                "isInitial": true
+              },
+              {
+                "name": "reviewing"
+              },
+              {
+                "name": "approved",
+                "isTerminal": true
+              },
+              {
+                "name": "rejected",
+                "isTerminal": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "REVIEW",
+                "name": "Start Review"
+              },
+              {
+                "key": "APPROVE",
+                "name": "Approve"
+              },
+              {
+                "key": "REJECT",
+                "name": "Reject",
+                "payload": [
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "BACK",
+                "name": "Back"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "pending",
+                "to": "pending",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Request",
+                    {
+                      "status": "pending"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Requests",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Request",
+                          "fields": [
+                            "title",
+                            "amount",
+                            "status",
+                            "submittedBy"
+                          ],
+                          "itemActions": [
+                            {
+                              "event": "REVIEW",
+                              "label": "Review"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "pending",
+                "to": "reviewing",
+                "event": "REVIEW",
+                "effects": [
+                  [
+                    "fetch",
+                    "Request"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "detail-panel",
+                      "entity": "Request",
+                      "fields": [
+                        "title",
+                        "amount",
+                        "submittedBy"
+                      ],
+                      "actions": [
+                        {
+                          "event": "APPROVE",
+                          "label": "Approve"
+                        },
+                        {
+                          "event": "REJECT",
+                          "label": "Reject"
+                        },
+                        {
+                          "event": "BACK",
+                          "label": "Back"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "reviewing",
+                "to": "approved",
+                "event": "APPROVE",
+                "guard": [
+                  "and",
+                  [
+                    "!=",
+                    "@entity.submittedBy",
+                    "@user.id"
+                  ],
+                  [
+                    "or",
+                    [
+                      "<=",
+                      "@entity.amount",
+                      1000
+                    ],
+                    [
+                      "=",
+                      "@user.role",
+                      "manager"
+                    ]
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "status",
+                    "approved"
+                  ],
+                  [
+                    "set",
+                    "@entity.id",
+                    "reviewedBy",
+                    "@user.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.id",
+                    "reviewedAt",
+                    "@now"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Request",
+                    "@entity.id",
+                    {
+                      "status": "approved",
+                      "reviewedBy": "@user.id"
+                    }
+                  ],
+                  [
+                    "notify",
+                    "Request approved",
+                    "success"
+                  ]
+                ]
+              },
+              {
+                "from": "reviewing",
+                "to": "rejected",
+                "event": "REJECT",
+                "guard": [
+                  "and",
+                  [
+                    "!=",
+                    "@entity.submittedBy",
+                    "@user.id"
+                  ],
+                  [
+                    "!=",
+                    "@payload.reason",
+                    ""
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "status",
+                    "rejected"
+                  ],
+                  [
+                    "set",
+                    "@entity.id",
+                    "rejectionReason",
+                    "@payload.reason"
+                  ],
+                  [
+                    "set",
+                    "@entity.id",
+                    "reviewedBy",
+                    "@user.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.id",
+                    "reviewedAt",
+                    "@now"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Request",
+                    "@entity.id",
+                    {
+                      "status": "rejected",
+                      "rejectionReason": "@payload.reason"
+                    }
+                  ],
+                  [
+                    "notify",
+                    "Request rejected",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "reviewing",
+                "to": "pending",
+                "event": "BACK",
+                "effects": [
+                  [
+                    "fetch",
+                    "Request",
+                    {
+                      "status": "pending"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Requests",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "data-list",
+                          "entity": "Request",
+                          "fields": [
+                            "title",
+                            "amount",
+                            "status",
+                            "submittedBy"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "pages": [
+        {
+          "name": "ApprovalsPage",
+          "path": "/approvals",
+          "traits": [
+            {
+              "ref": "ApprovalFlow",
+              "linkedEntity": "Request"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`} />
 
-Declare events a trait can emit:
+The APPROVE transition's guard demonstrates composition: a reviewer cannot approve their own request (`!=` check), and requests above 1000 require the `manager` role (nested `or` inside `and`). If the guard fails, the state stays at `reviewing`, no effects run, and the UI does not change.
+
+---
+
+## linkedEntity: Binding a Trait to Its Data
+
+The `linkedEntity` property specifies which entity a Trait operates on. When you write `@entity.title` in a guard or effect, the runtime resolves `@entity` to the linked entity.
+
+### Default Binding
+
+Every orbital has a primary entity defined in its `entity` property. Traits without an explicit `linkedEntity` use the primary entity:
 
 ```orb
 {
-  "name": "OrderFlow",
-  "emits": [
+  "name": "TaskManager",
+  "entity": { "name": "Task", "fields": [...] },
+  "traits": [
+    { "name": "StatusTrait" }
+  ]
+}
+```
+
+Here `StatusTrait` operates on `Task` by default.
+
+### Explicit Binding
+
+Use `linkedEntity` when a trait needs to operate on a different entity, or when you want to make the binding explicit:
+
+```orb
+{
+  "name": "ProjectDashboard",
+  "entity": { "name": "Project", "fields": [...] },
+  "traits": [
+    { "name": "ProjectOverview", "linkedEntity": "Project" },
+    { "name": "TaskList", "linkedEntity": "Task" },
+    { "name": "MemberList", "linkedEntity": "Member" }
+  ]
+}
+```
+
+Each trait gets its own entity context. `@entity.title` in `TaskList` resolves to `Task.title`, while `@entity.title` in `ProjectOverview` resolves to `Project.title`.
+
+### Why This Matters
+
+1. **Reusable traits.** A generic `StatusTrait` can work with any entity that has a `status` field.
+2. **Cross-entity operations.** An orbital can compose traits that act on different entities.
+3. **Type safety.** The compiler verifies that every `@entity.fieldName` reference resolves to an actual field on the linked entity.
+
+---
+
+## Multi-Trait Composition
+
+A single page can mount multiple Traits. Each Trait runs as an independent state machine, but they share the same event bus. When one Trait emits an event, other Traits on the same page can react to it.
+
+```orb
+{
+  "pages": [
     {
-      "event": "ORDER_CONFIRMED",
-      "scope": "external",
-      "description": "Fired when order is confirmed",
-      "payload": [
-        { "name": "orderId", "type": "string" },
-        { "name": "items", "type": "array" }
+      "name": "DashboardPage",
+      "path": "/dashboard",
+      "traits": [
+        { "ref": "ProjectOverview", "linkedEntity": "Project" },
+        { "ref": "TaskList", "linkedEntity": "Task" },
+        { "ref": "ActivityFeed", "linkedEntity": "Activity" }
       ]
     }
   ]
 }
 ```
 
-Emit in effects:
+Here, three Traits render concurrently on the same page. If `TaskList` emits a `TASK_COMPLETED` event internally, `ActivityFeed` can listen for it and update. Each Trait manages its own state independently. `ProjectOverview` might be in state `active` while `TaskList` is in state `loading` and `ActivityFeed` is in state `idle`.
+
+This is concurrency through composition, not through threads or callbacks. The event bus coordinates communication. Each Trait remains a self-contained state machine.
+
+---
+
+## Cross-Orbital Communication: emits and listens
+
+Traits in different orbitals communicate through declared event contracts. This is the only mechanism for cross-orbital communication, and it requires explicit declarations on both sides.
+
+### Emitting Events
+
+A Trait declares the events it can emit in its `emits` array:
+
 ```orb
-["emit", "ORDER_CONFIRMED", { "orderId": "@entity.id", "items": "@entity.items" }]
+{
+  "name": "OrderFlow",
+  "emits": [
+    {
+      "event": "ORDER_PLACED",
+      "scope": "external",
+      "payload": [
+        { "name": "orderId", "type": "string" },
+        { "name": "total", "type": "number" }
+      ]
+    }
+  ]
+}
 ```
+
+The event name used in an `["emit", "ORDER_PLACED", ...]` effect must match an entry in the `emits` array. The validator checks this. `scope: "external"` means the event can cross orbital boundaries. `scope: "internal"` restricts it to the same orbital.
 
 ### Listening for Events
 
-Declare events a trait listens for:
+A Trait declares the events it responds to in its `listens` array:
 
 ```orb
 {
   "name": "InventorySync",
   "listens": [
     {
-      "event": "ORDER_CONFIRMED",
+      "event": "ORDER_PLACED",
       "triggers": "RESERVE_STOCK",
       "scope": "external",
       "payloadMapping": {
@@ -513,324 +1143,55 @@ Declare events a trait listens for:
 
 | Property | Description |
 |----------|-------------|
-| `event` | Event name to listen for |
-| `triggers` | Internal event to trigger (defaults to event name) |
-| `scope` | `internal` (same orbital) or `external` (cross-orbital) |
-| `payloadMapping` | Transform incoming payload |
-| `guard` | Optional condition to filter events |
+| `event` | The event name to listen for |
+| `triggers` | The internal event key to fire when the external event arrives |
+| `scope` | `internal` (same orbital only) or `external` (cross-orbital) |
+| `payloadMapping` | Transform the incoming payload before triggering |
+| `guard` | S-expression condition. If false, the event is ignored. |
 
-### Event Scope
-
-| Scope | Description |
-|-------|-------------|
-| `internal` | Events within the same orbital only |
-| `external` | Events can cross orbital boundaries |
-
-### Cross-Orbital Communication Flow
+### The Communication Flow
 
 ```
-┌──────────────────┐         ┌──────────────────┐
-│  OrderManagement │         │ InventoryManagement│
-│                  │         │                  │
-│  ┌────────────┐  │  emit   │  ┌────────────┐  │
-│  │ OrderFlow  │──┼────────►│  │InventorySync│  │
-│  └────────────┘  │ ORDER_  │  └────────────┘  │
-│                  │CONFIRMED│                  │
-└──────────────────┘         └──────────────────┘
+OrderManagement orbital            InventoryManagement orbital
+┌─────────────────────┐            ┌─────────────────────┐
+│                     │            │                     │
+│  OrderFlow trait    │   emit     │  InventorySync trait │
+│  state: confirmed   │──────────►│  state: idle         │
+│                     │ ORDER_    │                     │
+│  emits:             │ PLACED    │  listens:            │
+│    ORDER_PLACED     │            │    ORDER_PLACED      │
+│                     │            │    → RESERVE_STOCK   │
+└─────────────────────┘            └─────────────────────┘
 ```
 
-1. `OrderFlow` trait emits `ORDER_CONFIRMED` (external scope)
-2. Event bus broadcasts to all listening traits
-3. `InventorySync` receives event, maps payload
-4. `RESERVE_STOCK` event triggers on `InventorySync`
-5. State machine processes transition normally
+1. `OrderFlow` fires an `["emit", "ORDER_PLACED", ...]` effect
+2. The event bus broadcasts to all traits with a matching `listens` entry
+3. `InventorySync` receives the event, applies `payloadMapping`, checks the `guard`
+4. If the guard passes, `RESERVE_STOCK` fires as an internal event on `InventorySync`
+5. `InventorySync` processes the `RESERVE_STOCK` transition normally
 
----
-
-## Ticks (Scheduled Effects)
-
-Ticks run effects periodically, even without user interaction.
-
-### Tick Definition
-
-```orb
-{
-  "ticks": [
-    {
-      "name": "cleanup_expired",
-      "interval": "60000",
-      "guard": [">", ["count", "@entity.expiredSessions"], 0],
-      "effects": [
-        ["persist", "delete", "Session", { "expiresAt": ["<", "@now"] }]
-      ],
-      "description": "Clean up expired sessions every minute"
-    },
-    {
-      "name": "sync_status",
-      "interval": "5000",
-      "effects": [
-        ["fetch", "ExternalStatus", {}],
-        ["set", "@entity.id", "lastSync", "@now"]
-      ]
-    }
-  ]
-}
-```
-
-### Tick Properties
-
-| Property | Description |
-|----------|-------------|
-| `name` | Tick identifier |
-| `interval` | Milliseconds, or string like `"5s"`, `"1m"` |
-| `guard` | Condition (tick skipped if false) |
-| `effects` | Effects to execute |
-| `appliesTo` | Specific entity IDs (optional) |
-| `description` | Human description |
-
-### Common Tick Patterns
-
-**Cleanup:**
-```orb
-{
-  "name": "cleanup",
-  "interval": "300000",
-  "effects": [["persist", "delete", "TempData", { "createdAt": ["<", ["-", "@now", 86400000]] }]]
-}
-```
-
-**Periodic Sync:**
-```orb
-{
-  "name": "sync",
-  "interval": "10000",
-  "effects": [
-    ["call-service", "external-api", "fetch-updates", {}],
-    ["emit", "DATA_SYNCED", { "timestamp": "@now" }]
-  ]
-}
-```
-
-**Game Loop:**
-```orb
-{
-  "name": "game_tick",
-  "interval": "16",
-  "effects": [
-    ["set", "@entity.id", "position", ["+", "@entity.position", "@entity.velocity"]],
-    ["render-ui", "canvas", { "type": "game-canvas" }]
-  ]
-}
-```
-
----
-
-## Trait References vs. Inline Traits
-
-Traits can be defined inline or referenced from external sources.
-
-### Inline Definition
-
-Define the trait directly in the orbital:
-
-```orb
-{
-  "orbital": "TaskManagement",
-  "traits": [
-    {
-      "name": "StatusTrait",
-      "stateMachine": {
-        "states": [...],
-        "transitions": [...]
-      }
-    }
-  ]
-}
-```
-
-### Reference Definition
-
-Reference a trait from the standard library or imports:
-
-```orb
-{
-  "orbital": "TaskManagement",
-  "uses": [
-    { "from": "std/behaviors/crud", "as": "CRUD" }
-  ],
-  "traits": [
-    {
-      "ref": "CRUD.traits.CRUDManagement",
-      "linkedEntity": "Task",
-      "config": {
-        "allowDelete": true,
-        "softDelete": false
-      }
-    }
-  ]
-}
-```
-
-### Reference Properties
-
-| Property | Description |
-|----------|-------------|
-| `ref` | Path to trait (e.g., `"Alias.traits.TraitName"`) |
-| `linkedEntity` | Override entity binding |
-| `config` | Configuration overrides |
-
-### When to Use References
-
-- **Reusable patterns** - CRUD, authentication, pagination
-- **Standard behaviors** - From `std/behaviors/`
-- **Cross-project sharing** - Import from other schemas
-- **Configuration-driven** - Same trait, different config
-
----
-
-## Complete Example
-
-A complete trait demonstrating all features:
-
-```orb
-{
-  "name": "CheckoutFlow",
-  "category": "integration",
-  "linkedEntity": "Order",
-  "description": "Handles the checkout process from cart to confirmation",
-
-  "emits": [
-    { "event": "ORDER_PLACED", "scope": "external", "payload": [
-      { "name": "orderId", "type": "string" },
-      { "name": "total", "type": "number" }
-    ]},
-    { "event": "PAYMENT_FAILED", "scope": "internal" }
-  ],
-
-  "listens": [
-    { "event": "CART_UPDATED", "triggers": "RECALCULATE", "scope": "internal" },
-    { "event": "INVENTORY_RESERVED", "triggers": "CONFIRM_STOCK", "scope": "external" }
-  ],
-
-  "stateMachine": {
-    "states": [
-      { "name": "cart", "isInitial": true, "description": "Shopping cart" },
-      { "name": "checkout", "description": "Entering shipping/payment" },
-      { "name": "processing", "description": "Processing payment" },
-      { "name": "confirmed", "description": "Order confirmed" },
-      { "name": "failed", "isTerminal": true, "description": "Order failed" }
-    ],
-
-    "events": [
-      { "key": "PROCEED", "name": "Proceed to Checkout" },
-      { "key": "SUBMIT", "name": "Submit Order", "payload": [
-        { "name": "paymentMethod", "type": "string", "required": true }
-      ]},
-      { "key": "PAYMENT_SUCCESS", "name": "Payment Succeeded" },
-      { "key": "PAYMENT_FAILED", "name": "Payment Failed" },
-      { "key": "RECALCULATE", "name": "Recalculate Totals" },
-      { "key": "CONFIRM_STOCK", "name": "Stock Confirmed" }
-    ],
-
-    "transitions": [
-      {
-        "from": "cart",
-        "to": "checkout",
-        "event": "PROCEED",
-        "guard": [">", ["count", "@entity.items"], 0],
-        "effects": [
-          ["render-ui", "main", { "type": "form", "schema": "checkout" }]
-        ]
-      },
-      {
-        "from": "checkout",
-        "to": "processing",
-        "event": "SUBMIT",
-        "guard": ["and",
-          ["!=", "@payload.paymentMethod", ""],
-          [">=", "@entity.total", 0]
-        ],
-        "effects": [
-          ["set", "@entity.id", "paymentMethod", "@payload.paymentMethod"],
-          ["set", "@entity.id", "status", "processing"],
-          ["call-service", "payment", "charge", {
-            "amount": "@entity.total",
-            "method": "@payload.paymentMethod"
-          }],
-          ["render-ui", "main", { "type": "stats", "loading": true }]
-        ]
-      },
-      {
-        "from": "processing",
-        "to": "confirmed",
-        "event": "PAYMENT_SUCCESS",
-        "effects": [
-          ["set", "@entity.id", "status", "confirmed"],
-          ["set", "@entity.id", "confirmedAt", "@now"],
-          ["persist", "update", "Order", "@entity.id", "@entity"],
-          ["emit", "ORDER_PLACED", { "orderId": "@entity.id", "total": "@entity.total" }],
-          ["notify", "Order confirmed!", "success"],
-          ["navigate", "/orders/@entity.id"]
-        ]
-      },
-      {
-        "from": "processing",
-        "to": "failed",
-        "event": "PAYMENT_FAILED",
-        "effects": [
-          ["set", "@entity.id", "status", "failed"],
-          ["emit", "PAYMENT_FAILED", { "orderId": "@entity.id" }],
-          ["notify", "Payment failed. Please try again.", "error"]
-        ]
-      },
-      {
-        "from": ["cart", "checkout"],
-        "to": "cart",
-        "event": "RECALCULATE",
-        "effects": [
-          ["set", "@entity.id", "total", ["array/reduce", "@entity.items",
-            ["lambda", ["sum", "item"], ["+", "@sum", "@item.price"]], 0]]
-        ]
-      }
-    ]
-  },
-
-  "ticks": [
-    {
-      "name": "expire_abandoned",
-      "interval": "300000",
-      "guard": ["and",
-        ["=", "@state", "checkout"],
-        ["<", "@entity.updatedAt", ["-", "@now", 1800000]]
-      ],
-      "effects": [
-        ["set", "@entity.id", "status", "abandoned"],
-        ["persist", "update", "Order", "@entity.id", { "status": "abandoned" }]
-      ]
-    }
-  ]
-}
-```
+This is the .orb equivalent of pub/sub. Every `emits` declaration is a contract: "this trait publishes this event." Every `listens` declaration is a subscription: "this trait reacts to this event." The core rule: **every `emits` should have a matching `listens` somewhere**, or the event disappears into the void.
 
 ---
 
 ## Summary
 
-The Orb trait system provides:
+Traits are the behavioral core of Orb. They define **how** entities change over time through a deterministic, composable state machine model.
 
-1. **State Machines** - Define possible states and transitions
-2. **Guards** - Protect transitions with boolean conditions
-3. **Effects** - Execute actions on transition (UI, database, events)
-4. **Dual Execution** - Server effects (persist, fetch) + Client effects (render, navigate)
-5. **Event Communication** - Emit/listen for cross-trait and cross-orbital messaging
-6. **Ticks** - Scheduled periodic effects
-7. **linkedEntity** - Explicit binding to [entity data](./entities.md)
-8. **Categories** - Classify traits by purpose (interaction, integration, game)
-9. **Reusability** - Reference traits from libraries or define inline
+| Concept | Role |
+|---------|------|
+| **States** | Finite set of conditions. One initial, zero or more terminal. |
+| **Events** | Named signals with optional payload schemas. |
+| **Transitions** | Rules: (from, event) → to, gated by guards, executing effects. |
+| **Guards** | S-expression boolean conditions that block or allow transitions. |
+| **Effects** | Actions on transition: render UI, persist data, emit events, navigate. |
+| **linkedEntity** | Binds a Trait to the entity it operates on. |
+| **Multi-trait pages** | Multiple concurrent state machines on one page, shared event bus. |
+| **emits/listens** | Declared contracts for cross-orbital event communication. |
 
-Traits are the behavioral core of Orbital Units - they define *how* entities change over time through a declarative, composable state machine model.
+A Trait is a complete behavioral unit. Give it an entity, mount it on a page, and it handles the rest: the UI it renders, the data it persists, the events it publishes, the conditions it enforces. Every user interaction follows the same path through the Trait's state machine, and every path is accounted for in the transition table. No dead ends, no orphaned state, no ambiguity.
 
 ---
 
 *Document created: 2026-02-02*
-*Based on codebase analysis of orbital-rust and builder packages*
+*Rewritten: 2026-04-06*

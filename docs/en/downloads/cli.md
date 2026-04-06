@@ -101,6 +101,7 @@ orb --help
 # COMMANDS:
 #     validate   Validate an .orb schema
 #     compile    Compile schema to target shell
+#     serve      Compile and serve (zero-install)
 #     format     Format an .orb schema
 #     dev        Start development server
 #     test       Run state machine tests
@@ -125,6 +126,25 @@ orb compile my-app.orb --shell typescript --output ./generated
 # ✓ Generated 24 files
 # ✓ Output: ./generated
 ```
+
+By default, the compiled app uses an Express backend. To generate a Hono backend instead, pass the `--server hono` flag:
+
+```bash
+orb compile my-app.orb --shell typescript --server hono --output ./generated
+```
+
+### Serve (Zero-Install)
+
+Compile and serve a full-stack app from a `.orb` file with zero dependencies. Compiles with a Hono backend, builds the client with Vite, and serves everything on a single port using the bundled Bun runtime.
+
+```bash
+orb serve my-app.orb              # Serve on port 3030
+orb serve my-app.orb --port 8080  # Custom port
+orb serve my-app.orb --open       # Open browser after start
+orb serve my-app.orb --no-build   # Skip rebuild, serve existing
+```
+
+No Node.js, no package manager, no installation steps. The `orb` binary includes Bun and the Hono shell template. One command from `.orb` to running app.
 
 ### Start Development Server
 
