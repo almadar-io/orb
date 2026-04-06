@@ -204,7 +204,7 @@ install() {
     tar -xzf "$FILENAME"
   fi
 
-  # Install
+  # Install full distribution (binary + agent + bun + shells)
   echo "Installing to ${INSTALL_DIR}..."
   mkdir -p "$INSTALL_DIR"
 
@@ -213,6 +213,30 @@ install() {
   else
     mv orb "$INSTALL_DIR/"
     chmod +x "$INSTALL_DIR/orb"
+
+    # Install symlink
+    if [ -f almadar ]; then
+      mv almadar "$INSTALL_DIR/"
+      chmod +x "$INSTALL_DIR/almadar"
+    fi
+
+    # Install Bun runtime (agent needs it)
+    if [ -f bun ]; then
+      mv bun "$INSTALL_DIR/"
+      chmod +x "$INSTALL_DIR/bun"
+    fi
+
+    # Install agent CLI bundle
+    if [ -d agent ]; then
+      mkdir -p "$INSTALL_DIR/agent"
+      cp -r agent/* "$INSTALL_DIR/agent/"
+    fi
+
+    # Install shell templates (used by orb compile)
+    if [ -d shells ]; then
+      mkdir -p "$INSTALL_DIR/shells"
+      cp -r shells/* "$INSTALL_DIR/shells/"
+    fi
   fi
 
   echo ""
