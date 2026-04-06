@@ -24,18 +24,14 @@ A user clicks a button. That click emits an event onto the event bus. The state 
 <div style={{margin: '2rem 0'}}>
 <AvlClosedCircuit
   states={[
-    { name: "Event" },
-    { name: "Guard" },
-    { name: "Transition" },
-    { name: "Effects" },
-    { name: "UI Slot" },
+    {name: 'browsing', isInitial: true},
+    {name: 'creating'},
   ]}
   transitions={[
-    { from: "Event", to: "Guard", event: "trigger" },
-    { from: "Guard", to: "Transition", event: "pass" },
-    { from: "Transition", to: "Effects", event: "execute" },
-    { from: "Effects", to: "UI Slot", event: "render" },
-    { from: "UI Slot", to: "Event", event: "emit" },
+    {from: 'browsing', to: 'browsing', event: 'INIT', effects: ['fetch', 'render-ui']},
+    {from: 'browsing', to: 'creating', event: 'CREATE', effects: ['render-ui']},
+    {from: 'creating', to: 'browsing', event: 'SAVE', effects: ['persist', 'render-ui']},
+    {from: 'creating', to: 'browsing', event: 'CANCEL', effects: ['render-ui']}
   ]}
   animated
 />
@@ -128,209 +124,17 @@ No browser is needed. No React rendering. The state machine is tested in isolati
 
 ## Live Example: Modal Open/Close Circuit
 
-This trait demonstrates a complete closed circuit for a modal interaction. The `viewing` state renders a page header with an "Add Item" button. Clicking the button emits `ADD`, which transitions to `formOpen` and renders a form in the `modal` slot. The form has Save and Cancel buttons. Both `SAVE` and `CANCEL` transition back to `viewing` and re-render the main content. The modal slot empties. The circuit is closed on both exit paths.
+This trait demonstrates a complete closed circuit for a modal interaction. The `closed` state renders a page with an "Open" button. Clicking it emits `OPEN`, which transitions to the `open` state and renders entity details inside a `modal` slot. The modal includes a Close button. `CLOSE` transitions back to `closed`, clears the modal, and re-renders the main content. The circuit is closed: every event the UI can emit has a matching transition.
 
-<OrbPreviewBlock title="Modal Closed Circuit" height="450px" schema={`{
-  "name": "ClosedCircuitDemo",
-  "orbitals": [
-    {
-      "name": "ItemManager",
-      "entity": {
-        "name": "Item",
-        "persistence": "runtime",
-        "fields": [
-          { "name": "id", "type": "string" },
-          { "name": "name", "type": "string" },
-          { "name": "category", "type": "string", "default": "general", "values": ["general", "urgent", "archive"] },
-          { "name": "createdAt", "type": "string" }
-        ]
-      },
-      "traits": [
-        {
-          "name": "ItemCrud",
-          "linkedEntity": "Item",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "viewing", "isInitial": true },
-              { "name": "formOpen" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "ADD", "name": "Add Item" },
-              { "key": "SAVE", "name": "Save" },
-              { "key": "CANCEL", "name": "Cancel" },
-              { "key": "CLOSE", "name": "Close" }
-            ],
-            "transitions": [
-              {
-                "from": "viewing",
-                "to": "viewing",
-                "event": "INIT",
-                "effects": [
-                  ["fetch", "Item"],
-                  ["render-ui", "main", {
-                    "type": "stack",
-                    "direction": "vertical",
-                    "gap": "lg",
-                    "children": [
-                      {
-                        "type": "stack",
-                        "direction": "horizontal",
-                        "gap": "md",
-                        "justify": "space-between",
-                        "children": [
-                          { "type": "typography", "content": "Items", "variant": "h2" },
-                          { "type": "button", "label": "Add Item", "event": "ADD", "variant": "primary", "icon": "plus" }
-                        ]
-                      },
-                      { "type": "divider" },
-                      { "type": "typography", "content": "No items yet. Click Add Item to create one.", "variant": "body", "color": "muted" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "viewing",
-                "to": "formOpen",
-                "event": "ADD",
-                "effects": [
-                  ["render-ui", "modal", {
-                    "type": "stack",
-                    "direction": "vertical",
-                    "gap": "md",
-                    "children": [
-                      { "type": "typography", "content": "New Item", "variant": "h3" },
-                      { "type": "input", "label": "Name", "placeholder": "Enter item name" },
-                      { "type": "select", "label": "Category", "options": [
-                        { "value": "general", "label": "General" },
-                        { "value": "urgent", "label": "Urgent" },
-                        { "value": "archive", "label": "Archive" }
-                      ]},
-                      {
-                        "type": "stack",
-                        "direction": "horizontal",
-                        "gap": "md",
-                        "children": [
-                          { "type": "button", "label": "Save", "event": "SAVE", "variant": "primary" },
-                          { "type": "button", "label": "Cancel", "event": "CANCEL", "variant": "secondary" }
-                        ]
-                      }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "formOpen",
-                "to": "viewing",
-                "event": "SAVE",
-                "effects": [
-                  ["persist", "create", "Item", "@payload"],
-                  ["notify", "success", "Item created"],
-                  ["render-ui", "modal", null],
-                  ["render-ui", "main", {
-                    "type": "stack",
-                    "direction": "vertical",
-                    "gap": "lg",
-                    "children": [
-                      {
-                        "type": "stack",
-                        "direction": "horizontal",
-                        "gap": "md",
-                        "justify": "space-between",
-                        "children": [
-                          { "type": "typography", "content": "Items", "variant": "h2" },
-                          { "type": "button", "label": "Add Item", "event": "ADD", "variant": "primary", "icon": "plus" }
-                        ]
-                      },
-                      { "type": "divider" },
-                      { "type": "typography", "content": "No items yet. Click Add Item to create one.", "variant": "body", "color": "muted" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "formOpen",
-                "to": "viewing",
-                "event": "CANCEL",
-                "effects": [
-                  ["render-ui", "modal", null],
-                  ["render-ui", "main", {
-                    "type": "stack",
-                    "direction": "vertical",
-                    "gap": "lg",
-                    "children": [
-                      {
-                        "type": "stack",
-                        "direction": "horizontal",
-                        "gap": "md",
-                        "justify": "space-between",
-                        "children": [
-                          { "type": "typography", "content": "Items", "variant": "h2" },
-                          { "type": "button", "label": "Add Item", "event": "ADD", "variant": "primary", "icon": "plus" }
-                        ]
-                      },
-                      { "type": "divider" },
-                      { "type": "typography", "content": "No items yet. Click Add Item to create one.", "variant": "body", "color": "muted" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "formOpen",
-                "to": "viewing",
-                "event": "CLOSE",
-                "effects": [
-                  ["render-ui", "modal", null],
-                  ["render-ui", "main", {
-                    "type": "stack",
-                    "direction": "vertical",
-                    "gap": "lg",
-                    "children": [
-                      {
-                        "type": "stack",
-                        "direction": "horizontal",
-                        "gap": "md",
-                        "justify": "space-between",
-                        "children": [
-                          { "type": "typography", "content": "Items", "variant": "h2" },
-                          { "type": "button", "label": "Add Item", "event": "ADD", "variant": "primary", "icon": "plus" }
-                        ]
-                      },
-                      { "type": "divider" },
-                      { "type": "typography", "content": "No items yet. Click Add Item to create one.", "variant": "body", "color": "muted" }
-                    ]
-                  }]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "ItemListPage",
-          "path": "/items",
-          "isInitial": true,
-          "traits": [
-            { "ref": "ItemCrud", "linkedEntity": "Item" }
-          ]
-        }
-      ]
-    }
-  ]
-}`} />
+<OrbPreviewBlock title="Modal Closed Circuit" height="450px" schema={`{"name": "ModalRecordOrbital", "orbitals": [{"name": "ModalRecordOrbital", "entity": {"name": "ModalRecord", "persistence": "runtime", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}]}, "traits": [{"name": "ModalRecordModal", "linkedEntity": "ModalRecord", "category": "interaction", "stateMachine": {"states": [{"name": "closed", "isInitial": true}, {"name": "open"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "OPEN", "name": "Open"}, {"key": "CLOSE", "name": "Close"}], "transitions": [{"from": "closed", "to": "closed", "event": "INIT", "effects": [["ref", "ModalRecord"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "layout-panel-top", "size": "lg"}, {"type": "typography", "content": "Details", "variant": "h2"}]}, {"type": "button", "label": "Open", "event": "OPEN", "variant": "primary", "icon": "layout-panel-top"}]}, {"type": "divider"}, {"type": "empty-state", "icon": "layout-panel-top", "title": "Nothing open", "description": "Click Open to view details in a modal overlay."}]}]]}, {"from": "closed", "to": "open", "event": "OPEN", "effects": [["render-ui", "modal", {"type": "modal", "title": "Details", "isOpen": true, "children": [{"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Name"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "name"]}]}, {"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Description"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "description"]}]}, {"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Status"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "status"]}]}, {"type": "divider"}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Close", "event": "CLOSE", "variant": "ghost"}]}]}]}]]}, {"from": "open", "to": "closed", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["notify", "Cancelled", "info"], ["ref", "ModalRecord"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "layout-panel-top", "size": "lg"}, {"type": "typography", "content": "Details", "variant": "h2"}]}, {"type": "button", "label": "Open", "event": "OPEN", "variant": "primary", "icon": "layout-panel-top"}]}, {"type": "divider"}, {"type": "empty-state", "icon": "layout-panel-top", "title": "Nothing open", "description": "Click Open to view details in a modal overlay."}]}]]}]}}], "pages": [{"name": "ModalRecordModalPage", "path": "/modalrecords/modal", "traits": [{"ref": "ModalRecordModal"}]}]}], "description": "Modal overlay atom. Accepts content injection so molecules can control what renders inside the open state."}`} />
 
 Trace the circuit:
 
-1. **INIT** fires on page load. State machine moves `viewing -> viewing`. Effects: fetch items, render main content with an "Add Item" button.
-2. User clicks "Add Item". Button emits **ADD**. State machine moves `viewing -> formOpen`. Effects: render form to `modal` slot.
-3. User clicks "Save". Button emits **SAVE**. State machine moves `formOpen -> viewing`. Effects: persist new item, show notification, re-render main. Modal clears.
-4. Alternatively, user clicks "Cancel". Button emits **CANCEL**. State machine moves `formOpen -> viewing`. Effects: re-render main. Modal clears. No data persisted.
-5. If the user clicks the modal's X button or presses Escape, the slot wrapper emits **CLOSE**. State machine moves `formOpen -> viewing`. Same result as Cancel.
+1. **INIT** fires on page load. State machine stays `closed -> closed`. Effects: ref entity data, render main content with an "Open" button.
+2. User clicks "Open". Button emits **OPEN**. State machine moves `closed -> open`. Effects: render entity details to `modal` slot with a Close button.
+3. User clicks "Close". Button emits **CLOSE**. State machine moves `open -> closed`. Effects: clear modal (`render-ui modal null`), notify, re-render main content.
 
-Three exit paths from `formOpen` (SAVE, CANCEL, CLOSE), all returning to `viewing`. The circuit is closed on every path. No dead ends.
-
+Two states, three transitions, one exit path from `open` (CLOSE). The circuit is closed on every path. No dead ends.
 ---
 
 ## Slot Return Requirements
