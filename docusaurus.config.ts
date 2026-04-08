@@ -1,4 +1,5 @@
 import { createConfig } from './shared/config/base-config';
+import remarkLoloCompile from '../../tools/remark-lolo-compile/src/index';
 
 export default createConfig({
   site: 'orb',
@@ -8,6 +9,7 @@ export default createConfig({
   customCss: './src/css/custom.css',
   docs: {
     sidebarPath: './sidebars.ts',
+    remarkPlugins: [remarkLoloCompile],
   },
   blog: {
     showReadingTime: true,

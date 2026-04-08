@@ -13,7 +13,7 @@ interface SiteConfig {
   favicon?: string;
   customCss: string;
   /** Whether this site has docs */
-  docs?: false | { sidebarPath: string };
+  docs?: false | { sidebarPath: string; remarkPlugins?: any[] };
   /** Whether this site has a blog */
   blog?: false | object;
   /** Additional navbar items */
@@ -83,6 +83,12 @@ export function createConfig(opts: SiteConfig): Config {
       'static',
       './shared/static',
       ...(opts.staticDirectories || []),
+    ],
+
+    // Register Orb and LOLO syntax highlighting with Prism on client load
+    clientModules: [
+      path.resolve(__dirname, '../theme/register-orb-prism.ts'),
+      path.resolve(__dirname, '../theme/register-lolo-prism.ts'),
     ],
 
     plugins: [
@@ -176,7 +182,10 @@ export function createConfig(opts: SiteConfig): Config {
       [
         "classic",
         {
-          docs: opts.docs === false ? false : (opts.docs || false),
+          docs: opts.docs === false ? false : opts.docs ? {
+            sidebarPath: opts.docs.sidebarPath,
+            ...(opts.docs.remarkPlugins ? { remarkPlugins: opts.docs.remarkPlugins } : {}),
+          } : false,
           blog: opts.blog === false ? false : (opts.blog || false),
           theme: { customCss: opts.customCss },
           gtag: { trackingID: "G-4XLGPPVQ6C", anonymizeIP: true },
