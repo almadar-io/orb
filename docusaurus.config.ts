@@ -1,5 +1,5 @@
 import { createConfig } from './shared/config/base-config';
-import remarkLoloCompile from '../../tools/remark-lolo-compile/src/index';
+import remarkLoloCompile from './shared/plugins/remark-lolo-compile';
 
 export default createConfig({
   site: 'orb',
