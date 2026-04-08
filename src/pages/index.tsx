@@ -188,7 +188,7 @@ export default function OrbHome(): ReactNode {
                   ))}
                 </HStack>
                 <Box className="mt-2">
-                  <Link to="/stdlib">
+                  <Link to="/playground">
                     <Button variant="primary" size="lg">
                       <Translate id="orb.stdlib.cta">Browse the Standard Library</Translate>
                     </Button>
