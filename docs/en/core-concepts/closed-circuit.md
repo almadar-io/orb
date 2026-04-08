@@ -126,7 +126,36 @@ No browser is needed. No React rendering. The state machine is tested in isolati
 
 This trait demonstrates a complete closed circuit for a modal interaction. The `closed` state renders a page with an "Open" button. Clicking it emits `OPEN`, which transitions to the `open` state and renders entity details inside a `modal` slot. The modal includes a Close button. `CLOSE` transitions back to `closed`, clears the modal, and re-renders the main content. The circuit is closed: every event the UI can emit has a matching transition.
 
-<OrbPreviewBlock title="Modal Closed Circuit" height="450px" schema={`{"name": "ModalRecordOrbital", "orbitals": [{"name": "ModalRecordOrbital", "entity": {"name": "ModalRecord", "persistence": "runtime", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}]}, "traits": [{"name": "ModalRecordModal", "linkedEntity": "ModalRecord", "category": "interaction", "stateMachine": {"states": [{"name": "closed", "isInitial": true}, {"name": "open"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "OPEN", "name": "Open"}, {"key": "CLOSE", "name": "Close"}], "transitions": [{"from": "closed", "to": "closed", "event": "INIT", "effects": [["ref", "ModalRecord"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "layout-panel-top", "size": "lg"}, {"type": "typography", "content": "Details", "variant": "h2"}]}, {"type": "button", "label": "Open", "event": "OPEN", "variant": "primary", "icon": "layout-panel-top"}]}, {"type": "divider"}, {"type": "empty-state", "icon": "layout-panel-top", "title": "Nothing open", "description": "Click Open to view details in a modal overlay."}]}]]}, {"from": "closed", "to": "open", "event": "OPEN", "effects": [["render-ui", "modal", {"type": "modal", "title": "Details", "isOpen": true, "children": [{"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Name"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "name"]}]}, {"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Description"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "description"]}]}, {"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "typography", "variant": "caption", "content": "Status"}, {"type": "typography", "variant": "body", "content": ["object/get", ["array/first", "@entity"], "status"]}]}, {"type": "divider"}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Close", "event": "CLOSE", "variant": "ghost"}]}]}]}]]}, {"from": "open", "to": "closed", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["notify", "Cancelled", "info"], ["ref", "ModalRecord"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "layout-panel-top", "size": "lg"}, {"type": "typography", "content": "Details", "variant": "h2"}]}, {"type": "button", "label": "Open", "event": "OPEN", "variant": "primary", "icon": "layout-panel-top"}]}, {"type": "divider"}, {"type": "empty-state", "icon": "layout-panel-top", "title": "Nothing open", "description": "Click Open to view details in a modal overlay."}]}]]}]}}], "pages": [{"name": "ModalRecordModalPage", "path": "/modalrecords/modal", "traits": [{"ref": "ModalRecordModal"}]}]}], "description": "Modal overlay atom. Accepts content injection so molecules can control what renders inside the open state."}`} />
+{/* height: 450px */}
+```lolo preview
+orbital ModalRecordOrbital {
+  entity ModalRecord [runtime] {
+    id : string
+    name : string
+    description : string
+    status : string
+    createdAt : string
+  }
+  trait ModalRecordModal -> ModalRecord [interaction] {
+    initial: closed
+    state closed {
+      INIT -> closed
+        (ref ModalRecord)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "icon", name: "layout-panel-top", size: "lg" }, { type: "typography", content: "Details", variant: "h2" }] }, { type: "button", label: "Open", event: "OPEN", variant: "primary", icon: "layout-panel-top" }] }, { type: "divider" }, { type: "empty-state", icon: "layout-panel-top", title: "Nothing open", description: "Click Open to view details in a modal overlay." }] })
+      OPEN -> open
+        (render-ui modal { type: "modal", title: "Details", isOpen: true, children: [{ type: "stack", direction: "vertical", gap: "md", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "typography", variant: "caption", content: "Name" }, { type: "typography", variant: "body", content: ["object/get", ["array/first", "@entity"], "name"] }] }, { type: "stack", direction: "horizontal", gap: "md", children: [{ type: "typography", variant: "caption", content: "Description" }, { type: "typography", variant: "body", content: ["object/get", ["array/first", "@entity"], "description"] }] }, { type: "stack", direction: "horizontal", gap: "md", children: [{ type: "typography", variant: "caption", content: "Status" }, { type: "typography", variant: "body", content: ["object/get", ["array/first", "@entity"], "status"] }] }, { type: "divider" }, { type: "stack", direction: "horizontal", gap: "sm", justify: "end", children: [{ type: "button", label: "Close", event: "CLOSE", variant: "ghost" }] }] }] })
+    }
+    state open {
+      CLOSE -> closed
+        (render-ui modal null)
+        (notify Cancelled info)
+        (ref ModalRecord)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "icon", name: "layout-panel-top", size: "lg" }, { type: "typography", content: "Details", variant: "h2" }] }, { type: "button", label: "Open", event: "OPEN", variant: "primary", icon: "layout-panel-top" }] }, { type: "divider" }, { type: "empty-state", icon: "layout-panel-top", title: "Nothing open", description: "Click Open to view details in a modal overlay." }] })
+    }
+  }
+  page "/modalrecords/modal" -> ModalRecordModal
+}
+```
 
 Trace the circuit:
 

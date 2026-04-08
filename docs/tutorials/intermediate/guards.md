@@ -100,96 +100,29 @@ This is the complete `AccountManager` from `03-guards.orb`. It demonstrates:
 - Using `@payload.amount` to check against user input
 - Simple state transitions (freeze/unfreeze) without guards
 
-```orb
-{
-  "name": "AccountManager",
-  "version": "1.0.0",
-  "orbitals": [
-    {
-      "name": "AccountManager",
-      "entity": {
-        "name": "Account",
-        "persistence": "persistent",
-        "collection": "accounts",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "balance", "type": "number", "default": 0 },
-          { "name": "isVerified", "type": "boolean", "default": false }
-        ]
-      },
-      "traits": [
-        {
-          "name": "AccountActions",
-          "linkedEntity": "Account",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "active", "isInitial": true },
-              { "name": "frozen" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "WITHDRAW", "name": "Withdraw Funds", "payload": [
-                { "name": "amount", "type": "number", "required": true }
-              ]},
-              { "key": "FREEZE", "name": "Freeze Account" },
-              { "key": "UNFREEZE", "name": "Unfreeze Account" }
-            ],
-            "transitions": [
-              {
-                "from": "active",
-                "event": "INIT",
-                "to": "active",
-                "effects": [
-                  ["fetch", "Account"],
-                  ["render-ui", "main", {
-                    "type": "entity-table",
-                    "entity": "Account",
-                    "columns": ["balance", "isVerified"],
-                    "itemActions": [
-                      { "event": "WITHDRAW", "label": "Withdraw" },
-                      { "event": "FREEZE", "label": "Freeze" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "active",
-                "event": "WITHDRAW",
-                "to": "active",
-                "guard": ["and",
-                  [">=", "@entity.balance", "@payload.amount"],
-                  ["=", "@entity.isVerified", true]
-                ],
-                "effects": [
-                  ["set", "@entity.balance", ["-", "@entity.balance", "@payload.amount"]]
-                ]
-              },
-              {
-                "from": "active",
-                "event": "FREEZE",
-                "to": "frozen"
-              },
-              {
-                "from": "frozen",
-                "event": "UNFREEZE",
-                "to": "active"
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "AccountListPage",
-          "path": "/accounts",
-          "traits": [
-            { "ref": "AccountActions", "linkedEntity": "Account" }
-          ]
-        }
-      ]
+```lolo
+orbital AccountManager {
+  entity Account [persistent: accounts] {
+    id : string!
+    balance : number
+    isVerified : boolean
+  }
+  trait AccountActions -> Account [interaction] {
+    initial: active
+    state active {
+      INIT -> active
+        (fetch Account)
+        (render-ui main { type: "entity-table", entity: "Account", fields: ["balance", "isVerified"], columns: ["balance", "isVerified"], itemActions: [{ event: "WITHDRAW", label: "Withdraw" }, { event: "FREEZE", label: "Freeze" }] })
+      WITHDRAW -> active
+        ? (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
+        (set @entity.balance (- @entity.balance @payload.amount))
+      FREEZE -> frozen
     }
-  ]
+    state frozen {
+      UNFREEZE -> active
+    }
+  }
+  page "/accounts" -> AccountActions
 }
 ```
 

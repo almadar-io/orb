@@ -30,38 +30,28 @@ Orb هي **لغة تصريحية** تُغيّر طريقة بناء البرمج
 
 ## مثال سريع
 
-```orb
-{
-  "name": "مدير_المهام",
-  "orbitals": [{
-    "name": "المهام",
-    "entity": {
-      "name": "مهمة",
-      "fields": [
-        { "name": "العنوان", "type": "string" },
-        { "name": "الحالة", "type": "enum", "values": ["معلق", "منجز"] }
-      ]
-    },
-    "traits": [{
-      "name": "دورة_حياة_المهمة",
-      "stateMachine": {
-        "states": [
-          { "name": "معلق", "isInitial": true },
-          { "name": "منجز" }
-        ],
-        "events": [{ "key": "إنجاز", "name": "إنجاز المهمة" }],
-        "transitions": [{
-          "from": "معلق",
-          "to": "منجز",
-          "event": "إنجاز",
-          "effects": [
-            ["حفظ", "تحديث", "مهمة", "@الكيان"],
-            ["إشعار", "نجاح", "تم إنجاز المهمة!"]
-          ]
-        }]
-      }
-    }]
-  }]
+```lolo
+;; app TaskManager
+
+orbital Tasks {
+  entity Task {
+    id : string!
+    title : string
+    status : string
+  }
+  trait TaskLifecycle -> Task [interaction] {
+    initial: pending
+    state pending {
+      INIT -> pending
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], itemActions: [{ event: "COMPLETE", label: "Complete" }] })
+      COMPLETE -> done
+        (persist update Task @entity)
+        (notify success "Task completed!")
+    }
+    state done {}
+  }
+  page "/tasks" -> TaskLifecycle
 }
 ```
 

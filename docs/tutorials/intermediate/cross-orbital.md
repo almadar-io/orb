@@ -190,183 +190,70 @@ At the receiving orbital level, declare which orbital the events come from:
 
 ## The Complete Schema
 
-```orb
-{
-  "name": "cross-orbital-test",
-  "version": "1.0.0",
-  "orbitals": [
-    {
-      "name": "CartManager",
-      "entity": {
-        "name": "Cart",
-        "persistence": "runtime",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "itemCount", "type": "number", "default": 0 },
-          { "name": "total", "type": "number", "default": 0 }
-        ]
-      },
-      "traits": [
-        {
-          "name": "CartActions",
-          "linkedEntity": "Cart",
-          "category": "interaction",
-          "emits": [
-            {
-              "event": "ITEM_ADDED",
-              "scope": "external",
-              "payload": [
-                { "name": "itemCount", "type": "number", "required": true },
-                { "name": "total", "type": "number", "required": true }
-              ]
-            },
-            {
-              "event": "CART_CLEARED",
-              "scope": "external",
-              "payload": [
-                { "name": "timestamp", "type": "number", "required": true }
-              ]
-            }
-          ],
-          "stateMachine": {
-            "states": [
-              { "name": "empty", "isInitial": true },
-              { "name": "hasItems" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "ADD_ITEM", "name": "Add Item", "payload": [
-                { "name": "price", "type": "number", "required": true }
-              ]},
-              { "key": "CLEAR", "name": "Clear Cart" }
-            ],
-            "transitions": [
-              {
-                "from": "empty", "event": "INIT", "to": "empty",
-                "effects": [
-                  ["render-ui", "main", {
-                    "type": "stats",
-                    "title": "Shopping Cart",
-                    "value": "@entity.itemCount",
-                    "subtitle": "Total: $@entity.total",
-                    "actions": [{ "event": "ADD_ITEM", "label": "Add Item" }]
-                  }]
-                ]
-              },
-              {
-                "from": "empty", "event": "ADD_ITEM", "to": "hasItems",
-                "effects": [
-                  ["increment", "@entity.itemCount", 1],
-                  ["set", "@entity.total", ["+", "@entity.total", "@payload.price"]],
-                  ["emit", "ITEM_ADDED", { "itemCount": "@entity.itemCount", "total": "@entity.total" }]
-                ]
-              },
-              {
-                "from": "hasItems", "event": "ADD_ITEM", "to": "hasItems",
-                "effects": [
-                  ["increment", "@entity.itemCount", 1],
-                  ["set", "@entity.total", ["+", "@entity.total", "@payload.price"]],
-                  ["emit", "ITEM_ADDED", { "itemCount": "@entity.itemCount", "total": "@entity.total" }]
-                ]
-              },
-              {
-                "from": "hasItems", "event": "CLEAR", "to": "empty",
-                "effects": [
-                  ["set", "@entity.itemCount", 0],
-                  ["set", "@entity.total", 0],
-                  ["emit", "CART_CLEARED", { "timestamp": "@now" }]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "CartPage",
-          "path": "/cart",
-          "traits": [{ "ref": "CartActions", "linkedEntity": "Cart" }]
-        }
-      ],
-      "emits": ["ITEM_ADDED", "CART_CLEARED"]
-    },
-    {
-      "name": "NotificationManager",
-      "entity": {
-        "name": "Notification",
-        "persistence": "runtime",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "message", "type": "string" },
-          { "name": "count", "type": "number", "default": 0 }
-        ]
-      },
-      "traits": [
-        {
-          "name": "NotificationHandler",
-          "linkedEntity": "Notification",
-          "category": "interaction",
-          "listens": [
-            { "event": "ITEM_ADDED", "scope": "external" },
-            { "event": "CART_CLEARED", "scope": "external" }
-          ],
-          "stateMachine": {
-            "states": [
-              { "name": "idle", "isInitial": true },
-              { "name": "notified" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "ITEM_ADDED", "name": "Item Added" },
-              { "key": "CART_CLEARED", "name": "Cart Cleared" }
-            ],
-            "transitions": [
-              {
-                "from": "idle", "event": "INIT", "to": "idle",
-                "effects": [
-                  ["render-ui", "main", {
-                    "type": "stats",
-                    "title": "Notifications",
-                    "value": "@entity.count",
-                    "subtitle": "@entity.message"
-                  }]
-                ]
-              },
-              {
-                "from": "idle", "event": "ITEM_ADDED", "to": "notified",
-                "effects": [
-                  ["increment", "@entity.count", 1],
-                  ["set", "@entity.message", "Item added to cart"]
-                ]
-              },
-              {
-                "from": "notified", "event": "ITEM_ADDED", "to": "notified",
-                "effects": [["increment", "@entity.count", 1]]
-              },
-              {
-                "from": "notified", "event": "CART_CLEARED", "to": "idle",
-                "effects": [
-                  ["set", "@entity.message", "Cart cleared"],
-                  ["set", "@entity.count", 0]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "NotificationsPage",
-          "path": "/notifications",
-          "traits": [{ "ref": "NotificationHandler", "linkedEntity": "Notification" }]
-        }
-      ],
-      "listens": [
-        { "event": "ITEM_ADDED", "from": "CartManager" },
-        { "event": "CART_CLEARED", "from": "CartManager" }
-      ]
+```lolo
+;; app cross-orbital-test
+
+orbital CartManager {
+  entity Cart [runtime] {
+    id : string!
+    itemCount : number
+    total : number
+  }
+  trait CartActions -> Cart [interaction] {
+    initial: empty
+    state empty {
+      INIT -> empty
+        (render-ui main { type: "stats", title: "Shopping Cart", value: "@entity.itemCount", subtitle: "Total: $@entity.total" })
+      ADD_ITEM -> hasItems
+        (increment @entity.itemCount 1)
+        (set @entity.total (+ @entity.total @payload.price))
+        (emit ITEM_ADDED { itemCount: "@entity.itemCount", total: "@entity.total" })
     }
-  ]
+    state hasItems {
+      ADD_ITEM -> hasItems
+        (increment @entity.itemCount 1)
+        (set @entity.total (+ @entity.total @payload.price))
+        (emit ITEM_ADDED { itemCount: "@entity.itemCount", total: "@entity.total" })
+      CLEAR -> empty
+        (set @entity.itemCount 0)
+        (set @entity.total 0)
+        (emit CART_CLEARED { timestamp: "@now" })
+    }
+    emits {
+      ITEM_ADDED external { itemCount: number, total: number }
+      CART_CLEARED external { timestamp: number }
+    }
+  }
+  page "/cart" -> CartActions
+}
+orbital NotificationManager {
+  entity Notification [runtime] {
+    id : string!
+    message : string
+    count : number
+  }
+  trait NotificationHandler -> Notification [interaction] {
+    initial: idle
+    state idle {
+      INIT -> idle
+        (render-ui main { type: "stats", title: "Notifications", value: "@entity.count", subtitle: "@entity.message" })
+      ITEM_ADDED -> notified
+        (increment @entity.count 1)
+        (set @entity.message "Item added to cart")
+    }
+    state notified {
+      ITEM_ADDED -> notified
+        (increment @entity.count 1)
+      CART_CLEARED -> idle
+        (set @entity.message "Cart cleared")
+        (set @entity.count 0)
+    }
+    listens {
+      * ITEM_ADDED -> undefined
+      * CART_CLEARED -> undefined
+    }
+  }
+  page "/notifications" -> NotificationHandler
 }
 ```
 

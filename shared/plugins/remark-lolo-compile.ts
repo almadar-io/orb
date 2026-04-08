@@ -6,15 +6,15 @@
  *
  *  1. Pipes the .lolo source to `orbital emit-orb` via stdin
  *  2. Captures the .orb JSON from stdout
- *  3. Replaces the single fence node with two JSX nodes:
- *       <CodeBlock language="lolo" code={rawLoloSource} />
- *       <OrbPreview schema={preCompiledOrbJson} autoMock />
+ *  3. Replaces the fence node with:
+ *       - The original `code` AST node (lang=lolo) stays in place — Docusaurus renders it via Prism
+ *       - <OrbPreviewBlock schema={preCompiledOrbJson} showCode={false} /> inserted after it (preview fences only)
  *
- * Fences without "preview" meta render as a plain CodeBlock only.
+ * Fences without "preview" meta are left as standard `code` nodes unchanged.
  * Fences with "preview" that fail to compile throw a build error.
  *
  * Usage in docusaurus.config.ts:
- *   import remarkLoloCompile from './path/to/remark-lolo-compile/src/index';
+ *   import remarkLoloCompile from './shared/plugins/remark-lolo-compile';
  *   // under docs preset config:
  *   remarkPlugins: [remarkLoloCompile],
  */
@@ -30,10 +30,15 @@ type Node = {
   [key: string]: unknown;
 };
 
+type MdxJsxAttributeValue =
+  | string
+  | null
+  | { type: 'mdxJsxAttributeValueExpression'; value: string };
+
 type MdxJsxAttribute = {
   type: 'mdxJsxAttribute';
   name: string;
-  value: string | null;
+  value: MdxJsxAttributeValue;
 };
 
 type MdxJsxFlowElement = {
@@ -73,12 +78,8 @@ export default function remarkLoloCompile() {
       const meta = (node.meta as string | undefined) ?? '';
       const hasPreview = meta.includes('preview');
 
-      const codeBlockNode = makeCodeBlock(loloSource);
-
-      if (!hasPreview) {
-        (parent.children as Node[]).splice(index, 1, codeBlockNode);
-        continue;
-      }
+      // Non-preview fences: leave as-is — Docusaurus renders them natively via Prism
+      if (!hasPreview) continue;
 
       let orbJson: string;
       try {
@@ -94,35 +95,24 @@ export default function remarkLoloCompile() {
         );
       }
 
+      // Preview fences: keep the code node in-place, insert OrbPreviewBlock after it
       (parent.children as Node[]).splice(
-        index,
-        1,
-        codeBlockNode,
+        index + 1,
+        0,
         makeOrbPreview(orbJson.trim()),
       );
     }
   };
 }
 
-function makeCodeBlock(loloSource: string): MdxJsxFlowElement {
-  return {
-    type: 'mdxJsxFlowElement',
-    name: 'CodeBlock',
-    attributes: [
-      { type: 'mdxJsxAttribute', name: 'language', value: 'lolo' },
-      { type: 'mdxJsxAttribute', name: 'code', value: loloSource },
-    ],
-    children: [],
-  };
-}
-
 function makeOrbPreview(orbJson: string): MdxJsxFlowElement {
   return {
     type: 'mdxJsxFlowElement',
-    name: 'OrbPreview',
+    name: 'OrbPreviewBlock',
     attributes: [
       { type: 'mdxJsxAttribute', name: 'schema', value: orbJson },
-      { type: 'mdxJsxAttribute', name: 'autoMock', value: null },
+      // lolo fence above already shows the code — only show the live preview
+      { type: 'mdxJsxAttribute', name: 'showCode', value: { type: 'mdxJsxAttributeValueExpression', value: 'false' } },
     ],
     children: [],
   };

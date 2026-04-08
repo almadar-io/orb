@@ -273,150 +273,67 @@ The lifecycle trait (`TaskLifecycle`) doesn't need its own page here — it's wi
 
 ## The Complete Schema
 
-```orb
-{
-  "name": "TaskManager",
-  "version": "1.0.0",
-  "orbitals": [
-    {
-      "name": "TaskManager",
-      "entity": {
-        "name": "Task",
-        "persistence": "persistent",
-        "collection": "tasks",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "title", "type": "string", "required": true },
-          { "name": "description", "type": "string" },
-          { "name": "priority", "type": "enum", "values": ["low", "medium", "high"], "default": "medium" },
-          { "name": "dueDate", "type": "date" },
-          { "name": "assigneeId", "type": "string" },
-          { "name": "projectId", "type": "string" }
-        ]
-      },
-      "traits": [
-        {
-          "name": "TaskLifecycle",
-          "linkedEntity": "Task",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "todo", "isInitial": true },
-              { "name": "inProgress" },
-              { "name": "review" },
-              { "name": "done", "isTerminal": true }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "START", "name": "Start Task" },
-              { "key": "SUBMIT_FOR_REVIEW", "name": "Submit for Review" },
-              { "key": "APPROVE", "name": "Approve" },
-              { "key": "REJECT", "name": "Request Changes" },
-              { "key": "COMPLETE", "name": "Complete" }
-            ],
-            "transitions": [
-              {
-                "from": "todo", "event": "INIT", "to": "todo",
-                "effects": [
-                  ["fetch", "Task"],
-                  ["render-ui", "main", { "type": "stats", "items": [
-                    { "label": "Todo", "value": "@entity.todo" },
-                    { "label": "In Progress", "value": "@entity.inProgress" },
-                    { "label": "Done", "value": "@entity.done" }
-                  ]}]
-                ]
-              },
-              { "from": "todo", "event": "START", "to": "inProgress" },
-              { "from": "inProgress", "event": "SUBMIT_FOR_REVIEW", "to": "review" },
-              { "from": "review", "event": "APPROVE", "to": "done", "effects": [
-                ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]
-              ]},
-              { "from": "review", "event": "REJECT", "to": "inProgress" },
-              { "from": "inProgress", "event": "COMPLETE", "to": "done", "effects": [
-                ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]
-              ]}
-            ]
-          }
-        },
-        {
-          "name": "TaskCRUD",
-          "linkedEntity": "Task",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "listing", "isInitial": true },
-              { "name": "creating" },
-              { "name": "editing" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "VIEW", "name": "View Task", "payload": [
-                { "name": "id", "type": "string", "required": true }
-              ]},
-              { "key": "CREATE", "name": "Create Task" },
-              { "key": "EDIT", "name": "Edit Task" },
-              { "key": "SAVE", "name": "Save" },
-              { "key": "CANCEL", "name": "Cancel" },
-              { "key": "DELETE", "name": "Delete Task" }
-            ],
-            "transitions": [
-              {
-                "from": "listing", "event": "INIT", "to": "listing",
-                "effects": [
-                  ["fetch", "Task"],
-                  ["render-ui", "main", {
-                    "type": "entity-table", "entity": "Task",
-                    "columns": ["title", "priority", "dueDate"],
-                    "itemActions": [
-                      { "event": "VIEW", "label": "View" },
-                      { "event": "EDIT", "label": "Edit" },
-                      { "event": "DELETE", "label": "Delete" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "listing", "event": "CREATE", "to": "creating",
-                "effects": [["render-ui", "main", { "type": "form", "entity": "Task" }]]
-              },
-              {
-                "from": "creating", "event": "SAVE", "to": "listing",
-                "effects": [
-                  ["persist", "update", "Task", "@entity"],
-                  ["notify", "success", "Task created"]
-                ]
-              },
-              { "from": "creating", "event": "CANCEL", "to": "listing" },
-              { "from": "listing", "event": "EDIT", "to": "editing" },
-              {
-                "from": "editing", "event": "SAVE", "to": "listing",
-                "effects": [["persist", "update", "Task", "@entity"]]
-              },
-              { "from": "editing", "event": "CANCEL", "to": "listing" },
-              {
-                "from": "listing", "event": "DELETE", "to": "listing",
-                "effects": [
-                  ["persist", "delete", "Task", "@entity.id"],
-                  ["notify", "info", "Task deleted"]
-                ]
-              },
-              {
-                "from": "listing", "event": "VIEW", "to": "listing",
-                "effects": [["navigate", "/tasks/@payload.id"]]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "TaskListPage",
-          "path": "/tasks",
-          "traits": [{ "ref": "TaskCRUD", "linkedEntity": "Task" }]
-        }
-      ]
+```lolo
+orbital TaskManager {
+  entity Task [persistent: tasks] {
+    id : string!
+    title : string!
+    description : string
+    priority : string
+    dueDate : datetime
+    assigneeId : string
+    projectId : string
+  }
+  trait TaskLifecycle -> Task [interaction] {
+    initial: todo
+    state todo {
+      INIT -> todo
+        (fetch Task)
+        (render-ui main { type: "stats", entity: "Task", title: "Task Overview" })
+      START -> inProgress
     }
-  ]
+    state inProgress {
+      SUBMIT_FOR_REVIEW -> review
+      COMPLETE -> done
+        (persist update Task @entity)
+        (notify success "Task completed!")
+    }
+    state review {
+      APPROVE -> done
+        (persist update Task @entity)
+        (notify success "Task approved!")
+      REJECT -> inProgress
+    }
+    state done {}
+  }
+  trait TaskCRUD -> Task [interaction] {
+    initial: listing
+    state listing {
+      INIT -> listing
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "priority", "dueDate"], columns: ["title", "priority", "dueDate"], itemActions: [{ event: "VIEW", label: "View" }, { event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete" }] })
+      CREATE -> creating
+        (render-ui main { type: "form", entity: "Task", fields: ["title", "description", "priority", "dueDate"] })
+      EDIT -> editing
+      DELETE -> listing
+        (persist delete Task @entity.id)
+        (notify info "Task deleted")
+      VIEW -> listing
+        (navigate "/tasks/@payload.id")
+    }
+    state creating {
+      SAVE -> listing
+        (persist update Task @entity)
+        (notify success "Task created")
+      CANCEL -> listing
+    }
+    state editing {
+      SAVE -> listing
+        (persist update Task @entity)
+      CANCEL -> listing
+    }
+  }
+  page "/tasks" -> TaskCRUD
 }
 ```
 

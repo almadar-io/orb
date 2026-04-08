@@ -314,7 +314,80 @@ Server-only effects (`persist`, `fetch`, `call-service`) are skipped on the clie
 
 Here is a complete orbital with a shopping cart trait. The cart has two states: `browsing` (viewing the cart, managing items) and `checkout` (reviewing the order before confirmation). The trait demonstrates multi-state navigation, item actions, and persistence effects. This is the `std-cart` behavior, a molecule that composes three atomic traits: browse, modal, and confirmation.
 
-<OrbPreviewBlock title="Shopping Cart: multi-trait molecule with browse, modal, and confirmation" schema={`{"name": "CartItemOrbital", "orbitals": [{"name": "CartItemOrbital", "entity": {"name": "CartItem", "persistence": "persistent", "collection": "cartitems", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}, {"name": "pendingId", "type": "string", "default": ""}]}, "traits": [{"name": "CartItemCartBrowse", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "browsing", "isInitial": true}, {"name": "checkout"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "ADD_ITEM", "name": "Add Item"}, {"key": "REQUEST_REMOVE", "name": "Request Remove", "payload": [{"name": "id", "type": "string", "required": true}]}, {"key": "PROCEED_CHECKOUT", "name": "Proceed to Checkout"}, {"key": "BACK_TO_CART", "name": "Back to Cart"}, {"key": "CONFIRM_ORDER", "name": "Confirm Order"}], "transitions": [{"from": "browsing", "to": "browsing", "event": "INIT", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "shopping-cart", "size": "lg"}, {"type": "typography", "content": "Shopping Cart", "variant": "h2"}]}, {"type": "button", "label": "Add Item", "event": "ADD_ITEM", "variant": "primary", "icon": "plus"}]}, {"type": "divider"}, {"type": "simple-grid", "columns": 3, "children": [{"type": "stat-display", "label": "Items", "value": ["array/len", "@entity"], "icon": "package"}, {"type": "stat-display", "label": "Subtotal", "value": ["array/len", "@entity"], "icon": "dollar-sign"}, {"type": "stat-display", "label": "Total", "value": ["array/len", "@entity"], "icon": "receipt"}]}, {"type": "divider"}, {"type": "data-grid", "entity": "CartItem", "emptyIcon": "inbox", "emptyTitle": "Your cart is empty", "emptyDescription": "Add items to get started.", "itemActions": [{"label": "Remove", "event": "REQUEST_REMOVE", "variant": "danger", "size": "sm"}], "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "shopping-cart"}, {"name": "description", "label": "Description", "variant": "caption", "format": "currency"}, {"name": "status", "label": "Status", "variant": "badge"}]}, {"type": "button", "label": "Proceed to Checkout", "event": "PROCEED_CHECKOUT", "variant": "primary", "icon": "arrow-right"}]}]]}, {"from": "browsing", "to": "checkout", "event": "PROCEED_CHECKOUT", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "children": [{"type": "icon", "name": "clipboard", "size": "lg"}, {"type": "typography", "content": "Checkout", "variant": "h2"}]}, {"type": "divider"}, {"type": "data-grid", "entity": "CartItem", "emptyIcon": "inbox", "emptyTitle": "Your cart is empty", "emptyDescription": "Add items to get started.", "itemActions": [{"label": "Remove", "event": "REQUEST_REMOVE", "variant": "danger", "size": "sm"}], "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "shopping-cart"}, {"name": "description", "label": "Description", "variant": "caption", "format": "currency"}, {"name": "status", "label": "Status", "variant": "badge"}]}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Back to Cart", "event": "BACK_TO_CART", "variant": "ghost", "icon": "arrow-left"}, {"type": "button", "label": "Confirm Order", "event": "CONFIRM_ORDER", "variant": "primary", "icon": "check"}]}]}]]}, {"from": "checkout", "to": "browsing", "event": "BACK_TO_CART", "effects": [["ref", "CartItem"]]}, {"from": "checkout", "to": "browsing", "event": "CONFIRM_ORDER", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "align": "center", "children": [{"type": "icon", "name": "check-circle", "size": "lg"}, {"type": "typography", "content": "Order Confirmed", "variant": "h2"}, {"type": "typography", "content": "Your order has been placed successfully.", "variant": "body"}, {"type": "button", "label": "Continue Shopping", "event": "INIT", "variant": "primary"}]}]]}]}}, {"name": "CartItemAddItem", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "closed", "isInitial": true}, {"name": "open"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "ADD_ITEM", "name": "Open"}, {"key": "CLOSE", "name": "Close"}, {"key": "SAVE", "name": "Save", "payload": [{"name": "data", "type": "object", "required": true}]}], "transitions": [{"from": "closed", "to": "closed", "event": "INIT", "effects": [["ref", "CartItem"]]}, {"from": "closed", "to": "open", "event": "ADD_ITEM", "effects": [["fetch", "CartItem"], ["render-ui", "modal", {"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "children": [{"type": "icon", "name": "plus-circle", "size": "md"}, {"type": "typography", "content": "Add Item", "variant": "h3"}]}, {"type": "divider"}, {"type": "form-section", "entity": "CartItem", "mode": "create", "submitEvent": "SAVE", "cancelEvent": "CLOSE", "fields": ["name", "description", "status"]}]}]]}, {"from": "open", "to": "closed", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["notify", "Cancelled", "info"]]}, {"from": "open", "to": "closed", "event": "SAVE", "effects": [["persist", "create", "CartItem", "@payload.data"], ["render-ui", "modal", null], ["notify", "CartItem created successfully"]]}]}}, {"name": "CartItemRemoveConfirm", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "idle", "isInitial": true}, {"name": "confirming"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "REQUEST_REMOVE", "name": "Request Confirmation", "payload": [{"name": "id", "type": "string", "required": true}]}, {"key": "CONFIRM_REMOVE", "name": "Confirm"}, {"key": "CANCEL", "name": "Cancel"}, {"key": "CLOSE", "name": "Close"}], "transitions": [{"from": "idle", "to": "idle", "event": "INIT", "effects": [["ref", "CartItem"]]}, {"from": "idle", "to": "confirming", "event": "REQUEST_REMOVE", "effects": [["set", "@entity.pendingId", "@payload.id"], ["fetch", "CartItem", {"id": "@payload.id"}], ["render-ui", "modal", {"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "align": "center", "children": [{"type": "icon", "name": "alert-triangle", "size": "md"}, {"type": "typography", "content": "Remove Item", "variant": "h3"}]}, {"type": "divider"}, {"type": "alert", "variant": "danger", "message": "Are you sure you want to remove this item from your cart?"}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Cancel", "event": "CANCEL", "variant": "ghost"}, {"type": "button", "label": "Remove", "event": "CONFIRM_REMOVE", "variant": "danger", "icon": "check"}]}]}]]}, {"from": "confirming", "to": "idle", "event": "CONFIRM_REMOVE", "effects": [["persist", "delete", "CartItem", "@entity.pendingId"], ["render-ui", "modal", null], ["ref", "CartItem"], ["notify", "CartItem deleted successfully"]]}, {"from": "confirming", "to": "idle", "event": "CANCEL", "effects": [["render-ui", "modal", null], ["ref", "CartItem"]]}, {"from": "confirming", "to": "idle", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["ref", "CartItem"]]}]}}], "pages": [{"name": "CartItemPage", "path": "/cart", "traits": [{"ref": "CartItemCartBrowse"}, {"ref": "CartItemAddItem"}, {"ref": "CartItemRemoveConfirm"}]}]}], "description": "Shopping cart molecule. Composes atoms: - Cart-specific browse trait (empty/hasItems/checkout states) - stdModal for the add-item form (responds to ADD_ITEM)"}`} />
+```lolo preview
+orbital CartItemOrbital {
+  entity CartItem [persistent: cartitems] {
+    id : string
+    name : string
+    description : string
+    status : string
+    createdAt : string
+    pendingId : string
+  }
+  trait CartItemCartBrowse -> CartItem [interaction] {
+    initial: browsing
+    state browsing {
+      INIT -> browsing
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "icon", name: "shopping-cart", size: "lg" }, { type: "typography", content: "Shopping Cart", variant: "h2" }] }, { type: "button", label: "Add Item", event: "ADD_ITEM", variant: "primary", icon: "plus" }] }, { type: "divider" }, { type: "simple-grid", columns: 3, children: [{ type: "stat-display", label: "Items", value: ["array/len", "@entity"], icon: "package" }, { type: "stat-display", label: "Subtotal", value: ["array/len", "@entity"], icon: "dollar-sign" }, { type: "stat-display", label: "Total", value: ["array/len", "@entity"], icon: "receipt" }] }, { type: "divider" }, { type: "data-grid", entity: "CartItem", emptyIcon: "inbox", emptyTitle: "Your cart is empty", emptyDescription: "Add items to get started.", itemActions: [{ label: "Remove", event: "REQUEST_REMOVE", variant: "danger", size: "sm" }], columns: [{ name: "name", label: "Name", variant: "h4", icon: "shopping-cart" }, { name: "description", label: "Description", variant: "caption", format: "currency" }, { name: "status", label: "Status", variant: "badge" }] }, { type: "button", label: "Proceed to Checkout", event: "PROCEED_CHECKOUT", variant: "primary", icon: "arrow-right" }] })
+      PROCEED_CHECKOUT -> checkout
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "sm", children: [{ type: "icon", name: "clipboard", size: "lg" }, { type: "typography", content: "Checkout", variant: "h2" }] }, { type: "divider" }, { type: "data-grid", entity: "CartItem", emptyIcon: "inbox", emptyTitle: "Your cart is empty", emptyDescription: "Add items to get started.", itemActions: [{ label: "Remove", event: "REQUEST_REMOVE", variant: "danger", size: "sm" }], columns: [{ name: "name", label: "Name", variant: "h4", icon: "shopping-cart" }, { name: "description", label: "Description", variant: "caption", format: "currency" }, { name: "status", label: "Status", variant: "badge" }] }, { type: "stack", direction: "horizontal", gap: "sm", justify: "end", children: [{ type: "button", label: "Back to Cart", event: "BACK_TO_CART", variant: "ghost", icon: "arrow-left" }, { type: "button", label: "Confirm Order", event: "CONFIRM_ORDER", variant: "primary", icon: "check" }] }] })
+    }
+    state checkout {
+      BACK_TO_CART -> browsing
+        (ref CartItem)
+      CONFIRM_ORDER -> browsing
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", align: "center", children: [{ type: "icon", name: "check-circle", size: "lg" }, { type: "typography", content: "Order Confirmed", variant: "h2" }, { type: "typography", content: "Your order has been placed successfully.", variant: "body" }, { type: "button", label: "Continue Shopping", event: "INIT", variant: "primary" }] })
+    }
+  }
+  trait CartItemAddItem -> CartItem [interaction] {
+    initial: closed
+    state closed {
+      INIT -> closed
+        (ref CartItem)
+      ADD_ITEM -> open
+        (fetch CartItem)
+        (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "stack", direction: "horizontal", gap: "sm", children: [{ type: "icon", name: "plus-circle", size: "md" }, { type: "typography", content: "Add Item", variant: "h3" }] }, { type: "divider" }, { type: "form-section", entity: "CartItem", mode: "create", submitEvent: "SAVE", cancelEvent: "CLOSE", fields: ["name", "description", "status"] }] })
+    }
+    state open {
+      CLOSE -> closed
+        (render-ui modal null)
+        (notify Cancelled info)
+      SAVE -> closed
+        (persist create CartItem @payload.data)
+        (render-ui modal null)
+        (notify "CartItem created successfully")
+    }
+  }
+  trait CartItemRemoveConfirm -> CartItem [interaction] {
+    initial: idle
+    state idle {
+      INIT -> idle
+        (ref CartItem)
+      REQUEST_REMOVE -> confirming
+        (set @entity.pendingId @payload.id)
+        (fetch CartItem { id: "@payload.id" })
+        (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "stack", direction: "horizontal", gap: "sm", align: "center", children: [{ type: "icon", name: "alert-triangle", size: "md" }, { type: "typography", content: "Remove Item", variant: "h3" }] }, { type: "divider" }, { type: "alert", variant: "danger", message: "Are you sure you want to remove this item from your cart?" }, { type: "stack", direction: "horizontal", gap: "sm", justify: "end", children: [{ type: "button", label: "Cancel", event: "CANCEL", variant: "ghost" }, { type: "button", label: "Remove", event: "CONFIRM_REMOVE", variant: "danger", icon: "check" }] }] })
+    }
+    state confirming {
+      CONFIRM_REMOVE -> idle
+        (persist delete CartItem @entity.pendingId)
+        (render-ui modal null)
+        (ref CartItem)
+        (notify "CartItem deleted successfully")
+      CANCEL -> idle
+        (render-ui modal null)
+        (ref CartItem)
+      CLOSE -> idle
+        (render-ui modal null)
+        (ref CartItem)
+    }
+  }
+  page "/cart" -> CartItemCartBrowse, CartItemAddItem, CartItemRemoveConfirm
+}
+```
 
 ---
 
@@ -322,7 +395,80 @@ Here is a complete orbital with a shopping cart trait. The cart has two states: 
 
 This is the same cart orbital viewed from the angle of guards and effects. Notice the `CartItemRemoveConfirm` trait: it uses a confirmation dialog pattern where `REQUEST_REMOVE` transitions to a `confirming` state with a modal, and `CONFIRM_REMOVE` executes `["persist", "delete", ...]` to actually remove the item. The `CANCEL` and `CLOSE` transitions provide the closed-circuit exit paths.
 
-<OrbPreviewBlock title="Cart: guards, persist, set, and confirmation effects" schema={`{"name": "CartItemOrbital", "orbitals": [{"name": "CartItemOrbital", "entity": {"name": "CartItem", "persistence": "persistent", "collection": "cartitems", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}, {"name": "pendingId", "type": "string", "default": ""}]}, "traits": [{"name": "CartItemCartBrowse", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "browsing", "isInitial": true}, {"name": "checkout"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "ADD_ITEM", "name": "Add Item"}, {"key": "REQUEST_REMOVE", "name": "Request Remove", "payload": [{"name": "id", "type": "string", "required": true}]}, {"key": "PROCEED_CHECKOUT", "name": "Proceed to Checkout"}, {"key": "BACK_TO_CART", "name": "Back to Cart"}, {"key": "CONFIRM_ORDER", "name": "Confirm Order"}], "transitions": [{"from": "browsing", "to": "browsing", "event": "INIT", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "children": [{"type": "icon", "name": "shopping-cart", "size": "lg"}, {"type": "typography", "content": "Shopping Cart", "variant": "h2"}]}, {"type": "button", "label": "Add Item", "event": "ADD_ITEM", "variant": "primary", "icon": "plus"}]}, {"type": "divider"}, {"type": "simple-grid", "columns": 3, "children": [{"type": "stat-display", "label": "Items", "value": ["array/len", "@entity"], "icon": "package"}, {"type": "stat-display", "label": "Subtotal", "value": ["array/len", "@entity"], "icon": "dollar-sign"}, {"type": "stat-display", "label": "Total", "value": ["array/len", "@entity"], "icon": "receipt"}]}, {"type": "divider"}, {"type": "data-grid", "entity": "CartItem", "emptyIcon": "inbox", "emptyTitle": "Your cart is empty", "emptyDescription": "Add items to get started.", "itemActions": [{"label": "Remove", "event": "REQUEST_REMOVE", "variant": "danger", "size": "sm"}], "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "shopping-cart"}, {"name": "description", "label": "Description", "variant": "caption", "format": "currency"}, {"name": "status", "label": "Status", "variant": "badge"}]}, {"type": "button", "label": "Proceed to Checkout", "event": "PROCEED_CHECKOUT", "variant": "primary", "icon": "arrow-right"}]}]]}, {"from": "browsing", "to": "checkout", "event": "PROCEED_CHECKOUT", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "children": [{"type": "icon", "name": "clipboard", "size": "lg"}, {"type": "typography", "content": "Checkout", "variant": "h2"}]}, {"type": "divider"}, {"type": "data-grid", "entity": "CartItem", "emptyIcon": "inbox", "emptyTitle": "Your cart is empty", "emptyDescription": "Add items to get started.", "itemActions": [{"label": "Remove", "event": "REQUEST_REMOVE", "variant": "danger", "size": "sm"}], "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "shopping-cart"}, {"name": "description", "label": "Description", "variant": "caption", "format": "currency"}, {"name": "status", "label": "Status", "variant": "badge"}]}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Back to Cart", "event": "BACK_TO_CART", "variant": "ghost", "icon": "arrow-left"}, {"type": "button", "label": "Confirm Order", "event": "CONFIRM_ORDER", "variant": "primary", "icon": "check"}]}]}]]}, {"from": "checkout", "to": "browsing", "event": "BACK_TO_CART", "effects": [["ref", "CartItem"]]}, {"from": "checkout", "to": "browsing", "event": "CONFIRM_ORDER", "effects": [["ref", "CartItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "align": "center", "children": [{"type": "icon", "name": "check-circle", "size": "lg"}, {"type": "typography", "content": "Order Confirmed", "variant": "h2"}, {"type": "typography", "content": "Your order has been placed successfully.", "variant": "body"}, {"type": "button", "label": "Continue Shopping", "event": "INIT", "variant": "primary"}]}]]}]}}, {"name": "CartItemAddItem", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "closed", "isInitial": true}, {"name": "open"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "ADD_ITEM", "name": "Open"}, {"key": "CLOSE", "name": "Close"}, {"key": "SAVE", "name": "Save", "payload": [{"name": "data", "type": "object", "required": true}]}], "transitions": [{"from": "closed", "to": "closed", "event": "INIT", "effects": [["ref", "CartItem"]]}, {"from": "closed", "to": "open", "event": "ADD_ITEM", "effects": [["fetch", "CartItem"], ["render-ui", "modal", {"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "children": [{"type": "icon", "name": "plus-circle", "size": "md"}, {"type": "typography", "content": "Add Item", "variant": "h3"}]}, {"type": "divider"}, {"type": "form-section", "entity": "CartItem", "mode": "create", "submitEvent": "SAVE", "cancelEvent": "CLOSE", "fields": ["name", "description", "status"]}]}]]}, {"from": "open", "to": "closed", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["notify", "Cancelled", "info"]]}, {"from": "open", "to": "closed", "event": "SAVE", "effects": [["persist", "create", "CartItem", "@payload.data"], ["render-ui", "modal", null], ["notify", "CartItem created successfully"]]}]}}, {"name": "CartItemRemoveConfirm", "linkedEntity": "CartItem", "category": "interaction", "stateMachine": {"states": [{"name": "idle", "isInitial": true}, {"name": "confirming"}], "events": [{"key": "INIT", "name": "Initialize"}, {"key": "REQUEST_REMOVE", "name": "Request Confirmation", "payload": [{"name": "id", "type": "string", "required": true}]}, {"key": "CONFIRM_REMOVE", "name": "Confirm"}, {"key": "CANCEL", "name": "Cancel"}, {"key": "CLOSE", "name": "Close"}], "transitions": [{"from": "idle", "to": "idle", "event": "INIT", "effects": [["ref", "CartItem"]]}, {"from": "idle", "to": "confirming", "event": "REQUEST_REMOVE", "effects": [["set", "@entity.pendingId", "@payload.id"], ["fetch", "CartItem", {"id": "@payload.id"}], ["render-ui", "modal", {"type": "stack", "direction": "vertical", "gap": "md", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "align": "center", "children": [{"type": "icon", "name": "alert-triangle", "size": "md"}, {"type": "typography", "content": "Remove Item", "variant": "h3"}]}, {"type": "divider"}, {"type": "alert", "variant": "danger", "message": "Are you sure you want to remove this item from your cart?"}, {"type": "stack", "direction": "horizontal", "gap": "sm", "justify": "end", "children": [{"type": "button", "label": "Cancel", "event": "CANCEL", "variant": "ghost"}, {"type": "button", "label": "Remove", "event": "CONFIRM_REMOVE", "variant": "danger", "icon": "check"}]}]}]]}, {"from": "confirming", "to": "idle", "event": "CONFIRM_REMOVE", "effects": [["persist", "delete", "CartItem", "@entity.pendingId"], ["render-ui", "modal", null], ["ref", "CartItem"], ["notify", "CartItem deleted successfully"]]}, {"from": "confirming", "to": "idle", "event": "CANCEL", "effects": [["render-ui", "modal", null], ["ref", "CartItem"]]}, {"from": "confirming", "to": "idle", "event": "CLOSE", "effects": [["render-ui", "modal", null], ["ref", "CartItem"]]}]}}], "pages": [{"name": "CartItemPage", "path": "/cart", "traits": [{"ref": "CartItemCartBrowse"}, {"ref": "CartItemAddItem"}, {"ref": "CartItemRemoveConfirm"}]}]}], "description": "Shopping cart molecule. Composes atoms: - Cart-specific browse trait (empty/hasItems/checkout states) - stdModal for the add-item form (responds to ADD_ITEM)"}`} />
+```lolo preview
+orbital CartItemOrbital {
+  entity CartItem [persistent: cartitems] {
+    id : string
+    name : string
+    description : string
+    status : string
+    createdAt : string
+    pendingId : string
+  }
+  trait CartItemCartBrowse -> CartItem [interaction] {
+    initial: browsing
+    state browsing {
+      INIT -> browsing
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "icon", name: "shopping-cart", size: "lg" }, { type: "typography", content: "Shopping Cart", variant: "h2" }] }, { type: "button", label: "Add Item", event: "ADD_ITEM", variant: "primary", icon: "plus" }] }, { type: "divider" }, { type: "simple-grid", columns: 3, children: [{ type: "stat-display", label: "Items", value: ["array/len", "@entity"], icon: "package" }, { type: "stat-display", label: "Subtotal", value: ["array/len", "@entity"], icon: "dollar-sign" }, { type: "stat-display", label: "Total", value: ["array/len", "@entity"], icon: "receipt" }] }, { type: "divider" }, { type: "data-grid", entity: "CartItem", emptyIcon: "inbox", emptyTitle: "Your cart is empty", emptyDescription: "Add items to get started.", itemActions: [{ label: "Remove", event: "REQUEST_REMOVE", variant: "danger", size: "sm" }], columns: [{ name: "name", label: "Name", variant: "h4", icon: "shopping-cart" }, { name: "description", label: "Description", variant: "caption", format: "currency" }, { name: "status", label: "Status", variant: "badge" }] }, { type: "button", label: "Proceed to Checkout", event: "PROCEED_CHECKOUT", variant: "primary", icon: "arrow-right" }] })
+      PROCEED_CHECKOUT -> checkout
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "stack", direction: "horizontal", gap: "sm", children: [{ type: "icon", name: "clipboard", size: "lg" }, { type: "typography", content: "Checkout", variant: "h2" }] }, { type: "divider" }, { type: "data-grid", entity: "CartItem", emptyIcon: "inbox", emptyTitle: "Your cart is empty", emptyDescription: "Add items to get started.", itemActions: [{ label: "Remove", event: "REQUEST_REMOVE", variant: "danger", size: "sm" }], columns: [{ name: "name", label: "Name", variant: "h4", icon: "shopping-cart" }, { name: "description", label: "Description", variant: "caption", format: "currency" }, { name: "status", label: "Status", variant: "badge" }] }, { type: "stack", direction: "horizontal", gap: "sm", justify: "end", children: [{ type: "button", label: "Back to Cart", event: "BACK_TO_CART", variant: "ghost", icon: "arrow-left" }, { type: "button", label: "Confirm Order", event: "CONFIRM_ORDER", variant: "primary", icon: "check" }] }] })
+    }
+    state checkout {
+      BACK_TO_CART -> browsing
+        (ref CartItem)
+      CONFIRM_ORDER -> browsing
+        (ref CartItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", align: "center", children: [{ type: "icon", name: "check-circle", size: "lg" }, { type: "typography", content: "Order Confirmed", variant: "h2" }, { type: "typography", content: "Your order has been placed successfully.", variant: "body" }, { type: "button", label: "Continue Shopping", event: "INIT", variant: "primary" }] })
+    }
+  }
+  trait CartItemAddItem -> CartItem [interaction] {
+    initial: closed
+    state closed {
+      INIT -> closed
+        (ref CartItem)
+      ADD_ITEM -> open
+        (fetch CartItem)
+        (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "stack", direction: "horizontal", gap: "sm", children: [{ type: "icon", name: "plus-circle", size: "md" }, { type: "typography", content: "Add Item", variant: "h3" }] }, { type: "divider" }, { type: "form-section", entity: "CartItem", mode: "create", submitEvent: "SAVE", cancelEvent: "CLOSE", fields: ["name", "description", "status"] }] })
+    }
+    state open {
+      CLOSE -> closed
+        (render-ui modal null)
+        (notify Cancelled info)
+      SAVE -> closed
+        (persist create CartItem @payload.data)
+        (render-ui modal null)
+        (notify "CartItem created successfully")
+    }
+  }
+  trait CartItemRemoveConfirm -> CartItem [interaction] {
+    initial: idle
+    state idle {
+      INIT -> idle
+        (ref CartItem)
+      REQUEST_REMOVE -> confirming
+        (set @entity.pendingId @payload.id)
+        (fetch CartItem { id: "@payload.id" })
+        (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "stack", direction: "horizontal", gap: "sm", align: "center", children: [{ type: "icon", name: "alert-triangle", size: "md" }, { type: "typography", content: "Remove Item", variant: "h3" }] }, { type: "divider" }, { type: "alert", variant: "danger", message: "Are you sure you want to remove this item from your cart?" }, { type: "stack", direction: "horizontal", gap: "sm", justify: "end", children: [{ type: "button", label: "Cancel", event: "CANCEL", variant: "ghost" }, { type: "button", label: "Remove", event: "CONFIRM_REMOVE", variant: "danger", icon: "check" }] }] })
+    }
+    state confirming {
+      CONFIRM_REMOVE -> idle
+        (persist delete CartItem @entity.pendingId)
+        (render-ui modal null)
+        (ref CartItem)
+        (notify "CartItem deleted successfully")
+      CANCEL -> idle
+        (render-ui modal null)
+        (ref CartItem)
+      CLOSE -> idle
+        (render-ui modal null)
+        (ref CartItem)
+    }
+  }
+  page "/cart" -> CartItemCartBrowse, CartItemAddItem, CartItemRemoveConfirm
+}
+```
 
 The APPROVE transition's guard demonstrates composition: a reviewer cannot approve their own request (`!=` check), and requests above 1000 require the `manager` role (nested `or` inside `and`). If the guard fails, the state stays at `reviewing`, no effects run, and the UI does not change.
 

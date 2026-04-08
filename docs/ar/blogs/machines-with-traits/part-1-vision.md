@@ -181,26 +181,53 @@ class RobotArm:
 
 ### مثال: روبوت توصيل في NEOM
 
-```orb
-{
-  "name": "روبوت_التوصيل",
-  "orbitals": [
-    {
-      "name": "الملاحة",
-      "traits": [{ "ref": "سمة_GPS" }, { "ref": "سمة_تجنب_العوائق" }]
-    },
-    {
-      "name": "التوصيل",
-      "traits": [{ "ref": "سمة_استلام_الطرد" }, { "ref": "سمة_تسليم_الطرد" }]
-    },
-    {
-      "name": "التواصل",
-      "traits": [{ "ref": "سمة_إشعار_العميل" }],
-      "listens": [
-        { "event": "تم_التسليم", "triggers": "إرسال_تأكيد" }
-      ]
+```lolo
+;; app DeliveryRobot
+
+orbital Navigation {
+  entity Route {
+    id : string!
+    destination : string
+  }
+  trait NavigationTrait -> Route [interaction] {
+    state idle {
+      INIT -> idle
+        (fetch Route)
+        (render-ui main { type: "entity-table", entity: "Route", fields: ["destination"], itemActions: [{ event: "VIEW", label: "View" }] })
+      VIEW -> idle
     }
-  ]
+  }
+  page "/navigation" -> NavigationTrait
+}
+orbital Delivery {
+  entity Package {
+    id : string!
+    status : string
+  }
+  trait DeliveryTrait -> Package [interaction] {
+    state idle {
+      INIT -> idle
+        (fetch Package)
+        (render-ui main { type: "entity-table", entity: "Package", fields: ["status"], itemActions: [{ event: "VIEW", label: "View" }] })
+      VIEW -> idle
+    }
+  }
+  page "/delivery" -> DeliveryTrait
+}
+orbital Communication {
+  entity Notification {
+    id : string!
+    message : string
+  }
+  trait CommunicationTrait -> Notification [interaction] {
+    state idle {
+      INIT -> idle
+        (fetch Notification)
+        (render-ui main { type: "entity-table", entity: "Notification", fields: ["message"], itemActions: [{ event: "VIEW", label: "View" }] })
+      VIEW -> idle
+    }
+  }
+  page "/notifications" -> CommunicationTrait
 }
 ```
 

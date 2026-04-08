@@ -390,124 +390,42 @@ Orbital = Entity + Traits + Pages
 
 مثال صفحة كاملة مع سمات متعددة:
 
-```orb
-{
-  "orbitals": [
-    {
-      "name": "TaskManagement",
-      "entity": {
-        "name": "Task",
-        "collection": "tasks",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "title", "type": "string", "required": true },
-          { "name": "status", "type": "enum", "values": ["pending", "active", "done"] },
-          { "name": "assigneeId", "type": "relation", "relation": { "entity": "User" } }
-        ]
-      },
-      "traits": [
-        {
-          "name": "TaskBrowser",
-          "linkedEntity": "Task",
-          "stateMachine": {
-            "states": [
-              { "name": "idle", "isInitial": true },
-              { "name": "viewing" }
-            ],
-            "transitions": [
-              {
-                "from": "idle",
-                "to": "viewing",
-                "event": "INIT",
-                "effects": [
-                  ["fetch", "Task", {}],
-                  ["render-ui", "main", {
-                    "type": "entity-table",
-                    "entity": "Task",
-                    "columns": ["title", "status", "assigneeId"],
-                    "itemActions": [
-                      { "event": "VIEW", "label": "View" },
-                      { "event": "EDIT", "label": "Edit" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "viewing",
-                "to": "viewing",
-                "event": "VIEW",
-                "effects": [
-                  ["navigate", "/tasks/@payload.id"]
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "TaskViewer",
-          "linkedEntity": "Task",
-          "stateMachine": {
-            "states": [
-              { "name": "loading", "isInitial": true },
-              { "name": "viewing" }
-            ],
-            "transitions": [
-              {
-                "from": "loading",
-                "to": "viewing",
-                "event": "INIT",
-                "effects": [
-                  ["fetch", "Task", { "id": "@payload.id" }],
-                  ["render-ui", "main", {
-                    "type": "entity-detail",
-                    "entity": "Task",
-                    "fields": ["title", "status", "assigneeId", "createdAt"]
-                  }]
-                ]
-              },
-              {
-                "from": "viewing",
-                "to": "viewing",
-                "event": "EDIT",
-                "effects": [
-                  ["navigate", "/tasks/@entity.id/edit"]
-                ]
-              },
-              {
-                "from": "viewing",
-                "to": "viewing",
-                "event": "BACK",
-                "effects": [
-                  ["navigate", "/tasks"]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "TaskListPage",
-          "path": "/tasks",
-          "viewType": "list",
-          "primaryEntity": "Task",
-          "isInitial": true,
-          "traits": [
-            { "ref": "TaskBrowser", "linkedEntity": "Task" }
-          ]
-        },
-        {
-          "name": "TaskDetailPage",
-          "path": "/tasks/:id",
-          "viewType": "detail",
-          "primaryEntity": "Task",
-          "traits": [
-            { "ref": "TaskViewer", "linkedEntity": "Task" }
-          ]
-        }
-      ]
+```lolo
+orbital TaskManagement {
+  entity Task {
+    id : string!
+    title : string!
+    status : string
+    assigneeId : string
+  }
+  trait TaskBrowser -> Task {
+    initial: idle
+    state idle {
+      INIT -> viewing
+        (fetch Task {  })
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status", "assigneeId"], columns: ["title", "status", "assigneeId"], itemActions: [{ event: "VIEW", label: "View" }] })
     }
-  ]
+    state viewing {
+      VIEW -> viewing
+        (navigate "/tasks/@payload.id" { id: "@entity.id" })
+    }
+  }
+  trait TaskViewer -> Task {
+    initial: loading
+    state loading {
+      INIT -> viewing
+        (fetch Task { id: "@payload.id" })
+        (render-ui main { type: "detail-panel", entity: "Task", fields: ["title", "status", "assigneeId"] })
+    }
+    state viewing {
+      EDIT -> viewing
+        (navigate "/tasks/@entity.id/edit")
+      BACK -> viewing
+        (navigate "/tasks" { id: "@entity.id" })
+    }
+  }
+  page "/tasks" -> TaskBrowser
+  page "/tasks/:id" -> TaskViewer
 }
 ```
 

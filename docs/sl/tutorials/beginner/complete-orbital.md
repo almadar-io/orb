@@ -194,77 +194,28 @@ Strani vezejo lastnosti na URL poti. To je del, ki najpogosteje manjka.
 
 Vse skupaj - popolnoma delujoce Orbital enota `TaskManager`:
 
-```orb
-{
-  "name": "TaskManager",
-  "orbitals": [
-    {
-      "name": "Tasks",
-      "entity": {
-        "name": "Task",
-        "persistence": "persistent",
-        "collection": "tasks",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "title", "type": "string", "required": true },
-          { "name": "status", "type": "enum", "values": ["pending", "done"], "default": "pending" }
-        ]
-      },
-      "traits": [
-        {
-          "name": "TaskLifecycle",
-          "linkedEntity": "Task",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "Pending", "isInitial": true },
-              { "name": "Done", "isTerminal": true }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "COMPLETE", "name": "Complete Task" }
-            ],
-            "transitions": [
-              {
-                "from": "Pending",
-                "event": "INIT",
-                "to": "Pending",
-                "effects": [
-                  ["fetch", "Task"],
-                  ["render-ui", "main", {
-                    "type": "entity-table",
-                    "entity": "Task",
-                    "columns": ["title", "status"],
-                    "itemActions": [
-                      { "event": "COMPLETE", "label": "Complete" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "Pending",
-                "event": "COMPLETE",
-                "to": "Done",
-                "effects": [
-                  ["persist", "update", "Task", "@entity"],
-                  ["notify", "success", "Task completed!"]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "TaskListPage",
-          "path": "/tasks",
-          "traits": [
-            { "ref": "TaskLifecycle", "linkedEntity": "Task" }
-          ]
-        }
-      ]
+```lolo
+;; app TaskManager
+
+orbital Tasks {
+  entity Task [persistent: tasks] {
+    id : string!
+    title : string!
+    status : string
+  }
+  trait TaskLifecycle -> Task [interaction] {
+    initial: Pending
+    state Pending {
+      INIT -> Pending
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "COMPLETE", label: "Complete" }] })
+      COMPLETE -> Done
+        (persist update Task @entity)
+        (notify success "Task completed!")
     }
-  ]
+    state Done {}
+  }
+  page "/tasks" -> TaskLifecycle
 }
 ```
 

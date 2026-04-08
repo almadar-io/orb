@@ -16,146 +16,54 @@ sidebar_label: البداية السريعة
 
 أنشئ ملفاً باسم `my-app.orb` بالمحتوى التالي:
 
-```json
-{
-  "app": {
-    "name": "my-app",
-    "title": "My Task Manager"
-  },
-  "orbitals": [
-    {
-      "name": "TaskManager",
-      "entity": {
-        "name": "Task",
-        "persistence": "persistent",
-        "collection": "tasks",
-        "fields": [
-          { "name": "id", "type": "string", "required": true },
-          { "name": "title", "type": "string", "required": true },
-          { "name": "description", "type": "string" },
-          { "name": "status", "type": "enum", "values": ["pending", "in_progress", "done"], "default": "pending" }
-        ]
-      },
-      "traits": [
-        {
-          "name": "TaskCrud",
-          "linkedEntity": "Task",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [
-              { "name": "Listing", "isInitial": true },
-              { "name": "Creating" },
-              { "name": "Editing" }
-            ],
-            "events": [
-              { "key": "INIT", "name": "Initialize" },
-              { "key": "CREATE", "name": "Create Task" },
-              { "key": "EDIT", "name": "Edit Task" },
-              { "key": "SAVE", "name": "Save" },
-              { "key": "CANCEL", "name": "Cancel" },
-              { "key": "DELETE", "name": "Delete Task" }
-            ],
-            "transitions": [
-              {
-                "from": "Listing",
-                "event": "INIT",
-                "to": "Listing",
-                "effects": [
-                  ["fetch", "Task"],
-                  ["render-ui", "main", {
-                    "type": "entity-table",
-                    "entity": "Task",
-                    "columns": ["title", "status"],
-                    "actions": [
-                      { "event": "CREATE", "label": "New Task", "icon": "plus" }
-                    ],
-                    "itemActions": [
-                      { "event": "EDIT", "label": "Edit" },
-                      { "event": "DELETE", "label": "Delete", "variant": "danger" }
-                    ]
-                  }]
-                ]
-              },
-              {
-                "from": "Listing",
-                "event": "CREATE",
-                "to": "Creating",
-                "effects": [
-                  ["render-ui", "modal", {
-                    "type": "entity-form",
-                    "entity": "Task",
-                    "fields": ["title", "description", "status"],
-                    "submitEvent": "SAVE",
-                    "cancelEvent": "CANCEL"
-                  }]
-                ]
-              },
-              {
-                "from": "Creating",
-                "event": "SAVE",
-                "to": "Listing",
-                "effects": [
-                  ["persist", "create", "Task", "@payload"],
-                  ["notify", "success", "Task created"]
-                ]
-              },
-              {
-                "from": "Creating",
-                "event": "CANCEL",
-                "to": "Listing"
-              },
-              {
-                "from": "Listing",
-                "event": "EDIT",
-                "to": "Editing",
-                "effects": [
-                  ["render-ui", "modal", {
-                    "type": "entity-form",
-                    "entity": "Task",
-                    "fields": ["title", "description", "status"],
-                    "submitEvent": "SAVE",
-                    "cancelEvent": "CANCEL"
-                  }]
-                ]
-              },
-              {
-                "from": "Editing",
-                "event": "SAVE",
-                "to": "Listing",
-                "effects": [
-                  ["persist", "update", "Task", "@entity"],
-                  ["notify", "success", "Task updated"]
-                ]
-              },
-              {
-                "from": "Editing",
-                "event": "CANCEL",
-                "to": "Listing"
-              },
-              {
-                "from": "Listing",
-                "event": "DELETE",
-                "to": "Listing",
-                "effects": [
-                  ["persist", "delete", "Task", "@entity.id"],
-                  ["notify", "success", "Task deleted"]
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "TaskListPage",
-          "path": "/tasks",
-          "traits": [
-            { "ref": "TaskCrud", "linkedEntity": "Task" }
-          ]
-        }
-      ]
+```lolo
+orbital TaskManager {
+  entity Task [persistent: tasks] {
+    id : string!
+    title : string!
+    description : string
+    status : string
+  }
+  trait TaskCrud -> Task [interaction] {
+    initial: Listing
+    state Listing {
+      INIT -> Listing
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete", variant: "danger" }] })
+      CREATE -> Creating
+        (render-ui modal { type: "form", entity: "Task", fields: ["title", "description", "status"], submitEvent: "SAVE", cancelEvent: "CANCEL" })
+      EDIT -> Editing
+        (render-ui modal { type: "form", entity: "Task", fields: ["title", "description", "status"], submitEvent: "SAVE", cancelEvent: "CANCEL" })
+      DELETE -> Listing
+        (persist delete Task @entity.id)
+        (notify success "Task deleted")
     }
-  ]
+    state Creating {
+      SAVE -> Listing
+        (render-ui modal null)
+        (persist create Task @payload)
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete", variant: "danger" }] })
+        (notify success "Task created")
+      CANCEL -> Listing
+        (render-ui modal null)
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete", variant: "danger" }] })
+    }
+    state Editing {
+      SAVE -> Listing
+        (render-ui modal null)
+        (persist update Task @entity)
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete", variant: "danger" }] })
+        (notify success "Task updated")
+      CANCEL -> Listing
+        (render-ui modal null)
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"], columns: ["title", "status"], itemActions: [{ event: "EDIT", label: "Edit" }, { event: "DELETE", label: "Delete", variant: "danger" }] })
+    }
+  }
+  page "/tasks" -> TaskCrud
 }
 ```
 

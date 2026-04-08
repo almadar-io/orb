@@ -234,7 +234,26 @@ Use singleton entities for global state that every orbital should see and modify
 
 This complete .orb program defines a `BrowseItem` entity with five fields and a single-state trait that renders them in a data grid. The entity uses `runtime` persistence (in-memory, session-scoped) and demonstrates string fields with an enum-like `status` field constrained by a `values` array. Ten seed instances are provided so the grid has data to display immediately.
 
-<OrbPreviewBlock showCode={false} height="400px" schema={`{"name": "BrowseItemOrbital", "orbitals": [{"name": "BrowseItemOrbital", "entity": {"name": "BrowseItem", "persistence": "runtime", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}], "instances": [{"id": "bi-1", "name": "Terry Schultz", "description": "Senior product designer with 8 years of experience", "status": "active", "createdAt": "2026-01-15"}, {"id": "bi-2", "name": "Dale Franey", "description": "Full-stack developer specializing in React and Node.js", "status": "active", "createdAt": "2026-01-18"}, {"id": "bi-3", "name": "Lorena Mayer", "description": "Data analyst focused on business intelligence", "status": "pending", "createdAt": "2026-01-20"}, {"id": "bi-4", "name": "Andrea Paucek", "description": "Project manager with PMP certification", "status": "active", "createdAt": "2026-02-01"}, {"id": "bi-5", "name": "Geneva Durgan", "description": "UX researcher conducting user interviews", "status": "inactive", "createdAt": "2026-02-05"}, {"id": "bi-6", "name": "Samantha Okuneva", "description": "DevOps engineer managing cloud infrastructure", "status": "active", "createdAt": "2026-02-10"}, {"id": "bi-7", "name": "Nelson Halby", "description": "Technical writer documenting APIs", "status": "active", "createdAt": "2026-02-15"}, {"id": "bi-8", "name": "Tanya Hand", "description": "QA lead overseeing test automation", "status": "pending", "createdAt": "2026-02-20"}, {"id": "bi-9", "name": "Rosemary Lind", "description": "Marketing analyst tracking campaign performance", "status": "active", "createdAt": "2026-03-01"}, {"id": "bi-10", "name": "Bernadette Anderson", "description": "Security engineer conducting penetration tests", "status": "active", "createdAt": "2026-03-05"}]}, "traits": [{"name": "BrowseItemBrowse", "linkedEntity": "BrowseItem", "category": "interaction", "stateMachine": {"states": [{"name": "browsing", "isInitial": true}], "events": [{"key": "INIT", "name": "Initialize"}], "transitions": [{"from": "browsing", "to": "browsing", "event": "INIT", "effects": [["ref", "BrowseItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "className": "max-w-5xl mx-auto w-full", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "align": "center", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "align": "center", "children": [{"type": "icon", "name": "list", "size": "lg"}, {"type": "typography", "content": "BrowseItems", "variant": "h2"}]}]}, {"type": "divider"}, {"type": "data-grid", "entity": "BrowseItem", "emptyIcon": "inbox", "emptyTitle": "No browseitems yet", "emptyDescription": "Create your first browseitem to get started.", "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "list"}, {"name": "description", "label": "Description", "variant": "badge", "colorMap": {"active": "success", "completed": "success", "done": "success", "pending": "warning", "draft": "warning", "scheduled": "warning", "inactive": "neutral", "archived": "neutral", "disabled": "neutral", "error": "destructive", "cancelled": "destructive", "failed": "destructive"}}, {"name": "status", "label": "Status", "variant": "caption"}]}, {"type": "floating-action-button", "icon": "plus", "event": "INIT", "label": "Create", "tooltip": "Create"}]}]]}]}}], "pages": [{"name": "BrowseItemPage", "path": "/browseitems", "traits": [{"ref": "BrowseItemBrowse"}]}]}], "description": "Data grid browsing atom. Renders a list of entities with configurable item actions. The browsing view that molecules compose with modal/confirmation atoms."}`} />
+{/* height: 400px */}
+```lolo preview
+orbital BrowseItemOrbital {
+  entity BrowseItem [runtime] {
+    id : string
+    name : string
+    description : string
+    status : string
+    createdAt : string
+  }
+  trait BrowseItemBrowse -> BrowseItem [interaction] {
+    state browsing {
+      INIT -> browsing
+        (ref BrowseItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", className: "max-w-5xl mx-auto w-full", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", align: "center", children: [{ type: "stack", direction: "horizontal", gap: "sm", align: "center", children: [{ type: "icon", name: "list", size: "lg" }, { type: "typography", content: "BrowseItems", variant: "h2" }] }] }, { type: "divider" }, { type: "data-grid", entity: "BrowseItem", emptyIcon: "inbox", emptyTitle: "No browseitems yet", emptyDescription: "Create your first browseitem to get started.", columns: [{ name: "name", label: "Name", variant: "h4", icon: "list" }, { name: "description", label: "Description", variant: "badge", colorMap: { active: "success", completed: "success", done: "success", pending: "warning", draft: "warning", scheduled: "warning", inactive: "neutral", archived: "neutral", disabled: "neutral", error: "destructive", cancelled: "destructive", failed: "destructive" } }, { name: "status", label: "Status", variant: "caption" }] }, { type: "floating-action-button", icon: "plus", event: "INIT", label: "Create", tooltip: "Create" }] })
+    }
+  }
+  page "/browseitems" -> BrowseItemBrowse
+}
+```
 
 ---
 
@@ -312,117 +331,57 @@ Bindings support dot-separated paths to reach nested values:
 
 This program demonstrates `@entity`, `@payload`, and `@state` bindings. The counter trait uses `@entity.count` to display the current value and S-expression math (`["+", "@entity.count", 1]`) to increment it.
 
-```orb
-{
-  "app": { "name": "counter-app", "title": "Counter" },
-  "orbitals": [{
-    "name": "CounterUnit",
-    "entity": {
-      "name": "Counter",
-      "persistence": "runtime",
-      "fields": [
-        { "name": "id", "type": "string", "required": true },
-        { "name": "count", "type": "number", "default": 0 },
-        { "name": "label", "type": "string", "default": "My Counter" }
-      ]
-    },
-    "traits": [{
-      "name": "CounterTrait",
-      "linkedEntity": "Counter",
-      "category": "interaction",
-      "stateMachine": {
-        "states": [
-          { "name": "Counting", "isInitial": true }
-        ],
-        "events": [
-          { "key": "INIT", "name": "Initialize" },
-          { "key": "INCREMENT", "name": "Increment" },
-          { "key": "DECREMENT", "name": "Decrement" },
-          { "key": "RESET", "name": "Reset" }
-        ],
-        "transitions": [
-          {
-            "from": "Counting", "event": "INIT", "to": "Counting",
-            "effects": [
-              ["render-ui", "main", {
-                "type": "stats",
-                "entity": "Counter",
-                "stats": [
-                  { "label": "Count", "value": "@entity.count" },
-                  { "label": "State", "value": "@state" }
-                ],
-                "actions": [
-                  { "event": "INCREMENT", "label": "+1" },
-                  { "event": "DECREMENT", "label": "-1" },
-                  { "event": "RESET", "label": "Reset" }
-                ]
-              }]
-            ]
-          },
-          {
-            "from": "Counting", "event": "INCREMENT", "to": "Counting",
-            "effects": [
-              ["set", "@entity.id", "count", ["+", "@entity.count", 1]]
-            ]
-          },
-          {
-            "from": "Counting", "event": "DECREMENT", "to": "Counting",
-            "guard": [">", "@entity.count", 0],
-            "effects": [
-              ["set", "@entity.id", "count", ["-", "@entity.count", 1]]
-            ]
-          },
-          {
-            "from": "Counting", "event": "RESET", "to": "Counting",
-            "effects": [
-              ["set", "@entity.id", "count", 0]
-            ]
-          }
-        ]
-      }
-    }],
-    "pages": [{ "name": "CounterPage", "path": "/counter", "traits": [{ "ref": "CounterTrait", "linkedEntity": "Counter" }] }]
-  }]
+```lolo
+;; app CounterApp
+
+orbital CounterUnit {
+  entity Counter [runtime] {
+    id : string!
+    count : number
+    label : string
+  }
+  trait CounterTrait -> Counter [interaction] {
+    state Counting {
+      INIT -> Counting
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", align: "center", children: [{ type: "typography", content: "@entity.count", variant: "h1" }, { type: "stack", direction: "horizontal", gap: "md", children: [{ type: "button", label: "+1", event: "INCREMENT", variant: "primary" }, { type: "button", label: "-1", event: "DECREMENT", variant: "secondary" }, { type: "button", label: "Reset", event: "RESET", variant: "outline" }] }] })
+      INCREMENT -> Counting
+        (set @entity.count (+ @entity.count 1))
+      DECREMENT -> Counting
+        ? (> @entity.count 0)
+        (set @entity.count (- @entity.count 1))
+      RESET -> Counting
+        (set @entity.count 0)
+    }
+  }
+  page "/counter" -> CounterTrait
 }
 ```
 
-<OrbPreviewBlock showCode={false} height="350px" schema={`{
-  "name": "CounterApp",
-  "app": { "name": "counter-app", "title": "Counter" },
-  "orbitals": [{
-    "name": "CounterUnit",
-    "entity": {
-      "name": "Counter",
-      "persistence": "runtime",
-      "fields": [
-        { "name": "id", "type": "string", "required": true },
-        { "name": "count", "type": "number", "default": 0 },
-        { "name": "label", "type": "string", "default": "My Counter" }
-      ]
-    },
-    "traits": [{
-      "name": "CounterTrait",
-      "linkedEntity": "Counter",
-      "category": "interaction",
-      "stateMachine": {
-        "states": [{ "name": "Counting", "isInitial": true }],
-        "events": [
-          { "key": "INIT", "name": "Initialize" },
-          { "key": "INCREMENT", "name": "Increment" },
-          { "key": "DECREMENT", "name": "Decrement" },
-          { "key": "RESET", "name": "Reset" }
-        ],
-        "transitions": [
-          { "from": "Counting", "event": "INIT", "to": "Counting", "effects": [["render-ui", "main", { "type": "stack", "direction": "vertical", "gap": "lg", "align": "center", "children": [{ "type": "typography", "content": "Counter", "variant": "h2" }, { "type": "typography", "content": "0", "variant": "h1" }, { "type": "stack", "direction": "horizontal", "gap": "md", "children": [{ "type": "button", "label": "+1", "event": "INCREMENT", "variant": "primary" }, { "type": "button", "label": "-1", "event": "DECREMENT", "variant": "secondary" }, { "type": "button", "label": "Reset", "event": "RESET", "variant": "outline" }] }] }]] },
-          { "from": "Counting", "event": "INCREMENT", "to": "Counting", "effects": [["set", "@entity.id", "count", ["+", "@entity.count", 1]]] },
-          { "from": "Counting", "event": "DECREMENT", "to": "Counting", "effects": [["set", "@entity.id", "count", ["-", "@entity.count", 1]]] },
-          { "from": "Counting", "event": "RESET", "to": "Counting", "effects": [["set", "@entity.id", "count", 0]] }
-        ]
-      }
-    }],
-    "pages": [{ "name": "CounterPage", "path": "/counter", "traits": [{ "ref": "CounterTrait", "linkedEntity": "Counter" }] }]
-  }]
-}`} />
+{/* height: 350px */}
+```lolo preview
+;; app CounterApp
+
+orbital CounterUnit {
+  entity Counter [runtime] {
+    id : string!
+    count : number
+    label : string
+  }
+  trait CounterTrait -> Counter [interaction] {
+    state Counting {
+      INIT -> Counting
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", align: "center", children: [{ type: "typography", content: "Counter", variant: "h2" }, { type: "typography", content: "0", variant: "h1" }, { type: "stack", direction: "horizontal", gap: "md", children: [{ type: "button", label: "+1", event: "INCREMENT", variant: "primary" }, { type: "button", label: "-1", event: "DECREMENT", variant: "secondary" }, { type: "button", label: "Reset", event: "RESET", variant: "outline" }] }] })
+      INCREMENT -> Counting
+        (set @entity.count (+ @entity.count 1))
+      DECREMENT -> Counting
+        (set @entity.count (- @entity.count 1))
+      RESET -> Counting
+        (set @entity.count 0)
+    }
+  }
+  page "/counter" -> CounterTrait
+}
+```
 
 ---
 
@@ -508,7 +467,26 @@ Orbital C ──┘
 
 This program shows an entity with string fields constrained by `values` arrays, simulating enum behavior. The `status` field accepts only `active`, `inactive`, or `pending`. The browse trait renders all instances in a data grid with columns for name, description, and status. This is the same `std-browse` behavior pattern used across all Almadar applications for list views.
 
-<OrbPreviewBlock showCode={false} height="400px" schema={`{"name": "BrowseItemOrbital", "orbitals": [{"name": "BrowseItemOrbital", "entity": {"name": "BrowseItem", "persistence": "runtime", "fields": [{"name": "id", "type": "string"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "status", "type": "string", "default": "active", "values": ["active", "inactive", "pending"]}, {"name": "createdAt", "type": "string"}], "instances": [{"id": "bi-1", "name": "Terry Schultz", "description": "Senior product designer with 8 years of experience", "status": "active", "createdAt": "2026-01-15"}, {"id": "bi-2", "name": "Dale Franey", "description": "Full-stack developer specializing in React and Node.js", "status": "active", "createdAt": "2026-01-18"}, {"id": "bi-3", "name": "Lorena Mayer", "description": "Data analyst focused on business intelligence", "status": "pending", "createdAt": "2026-01-20"}, {"id": "bi-4", "name": "Andrea Paucek", "description": "Project manager with PMP certification", "status": "active", "createdAt": "2026-02-01"}, {"id": "bi-5", "name": "Geneva Durgan", "description": "UX researcher conducting user interviews", "status": "inactive", "createdAt": "2026-02-05"}, {"id": "bi-6", "name": "Samantha Okuneva", "description": "DevOps engineer managing cloud infrastructure", "status": "active", "createdAt": "2026-02-10"}, {"id": "bi-7", "name": "Nelson Halby", "description": "Technical writer documenting APIs", "status": "active", "createdAt": "2026-02-15"}, {"id": "bi-8", "name": "Tanya Hand", "description": "QA lead overseeing test automation", "status": "pending", "createdAt": "2026-02-20"}, {"id": "bi-9", "name": "Rosemary Lind", "description": "Marketing analyst tracking campaign performance", "status": "active", "createdAt": "2026-03-01"}, {"id": "bi-10", "name": "Bernadette Anderson", "description": "Security engineer conducting penetration tests", "status": "active", "createdAt": "2026-03-05"}]}, "traits": [{"name": "BrowseItemBrowse", "linkedEntity": "BrowseItem", "category": "interaction", "stateMachine": {"states": [{"name": "browsing", "isInitial": true}], "events": [{"key": "INIT", "name": "Initialize"}], "transitions": [{"from": "browsing", "to": "browsing", "event": "INIT", "effects": [["ref", "BrowseItem"], ["render-ui", "main", {"type": "stack", "direction": "vertical", "gap": "lg", "className": "max-w-5xl mx-auto w-full", "children": [{"type": "stack", "direction": "horizontal", "gap": "md", "justify": "space-between", "align": "center", "children": [{"type": "stack", "direction": "horizontal", "gap": "sm", "align": "center", "children": [{"type": "icon", "name": "list", "size": "lg"}, {"type": "typography", "content": "BrowseItems", "variant": "h2"}]}]}, {"type": "divider"}, {"type": "data-grid", "entity": "BrowseItem", "emptyIcon": "inbox", "emptyTitle": "No browseitems yet", "emptyDescription": "Create your first browseitem to get started.", "columns": [{"name": "name", "label": "Name", "variant": "h4", "icon": "list"}, {"name": "description", "label": "Description", "variant": "badge", "colorMap": {"active": "success", "completed": "success", "done": "success", "pending": "warning", "draft": "warning", "scheduled": "warning", "inactive": "neutral", "archived": "neutral", "disabled": "neutral", "error": "destructive", "cancelled": "destructive", "failed": "destructive"}}, {"name": "status", "label": "Status", "variant": "caption"}]}, {"type": "floating-action-button", "icon": "plus", "event": "INIT", "label": "Create", "tooltip": "Create"}]}]]}]}}], "pages": [{"name": "BrowseItemPage", "path": "/browseitems", "traits": [{"ref": "BrowseItemBrowse"}]}]}], "description": "Data grid browsing atom. Renders a list of entities with configurable item actions. The browsing view that molecules compose with modal/confirmation atoms."}`} />
+{/* height: 400px */}
+```lolo preview
+orbital BrowseItemOrbital {
+  entity BrowseItem [runtime] {
+    id : string
+    name : string
+    description : string
+    status : string
+    createdAt : string
+  }
+  trait BrowseItemBrowse -> BrowseItem [interaction] {
+    state browsing {
+      INIT -> browsing
+        (ref BrowseItem)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", className: "max-w-5xl mx-auto w-full", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "space-between", align: "center", children: [{ type: "stack", direction: "horizontal", gap: "sm", align: "center", children: [{ type: "icon", name: "list", size: "lg" }, { type: "typography", content: "BrowseItems", variant: "h2" }] }] }, { type: "divider" }, { type: "data-grid", entity: "BrowseItem", emptyIcon: "inbox", emptyTitle: "No browseitems yet", emptyDescription: "Create your first browseitem to get started.", columns: [{ name: "name", label: "Name", variant: "h4", icon: "list" }, { name: "description", label: "Description", variant: "badge", colorMap: { active: "success", completed: "success", done: "success", pending: "warning", draft: "warning", scheduled: "warning", inactive: "neutral", archived: "neutral", disabled: "neutral", error: "destructive", cancelled: "destructive", failed: "destructive" } }, { name: "status", label: "Status", variant: "caption" }] }, { type: "floating-action-button", icon: "plus", event: "INIT", label: "Create", tooltip: "Create" }] })
+    }
+  }
+  page "/browseitems" -> BrowseItemBrowse
+}
+```
 
 ---
 
