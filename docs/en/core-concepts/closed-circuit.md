@@ -1,5 +1,6 @@
 import { AvlClosedCircuit } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import closedCircuitSchema from './closed-circuit.orb.json';
 
 # Closed Circuit
 
@@ -127,7 +128,7 @@ No browser is needed. No React rendering. The state machine is tested in isolati
 This trait demonstrates a complete closed circuit for a modal interaction. The `closed` state renders a page with an "Open" button. Clicking it emits `OPEN`, which transitions to the `open` state and renders entity details inside a `modal` slot. The modal includes a Close button. `CLOSE` transitions back to `closed`, clears the modal, and re-renders the main content. The circuit is closed: every event the UI can emit has a matching transition.
 
 {/* height: 450px */}
-```lolo preview
+```lolo
 orbital ModalRecordOrbital {
   entity ModalRecord [runtime] {
     id : string
@@ -156,6 +157,8 @@ orbital ModalRecordOrbital {
   page "/modalrecords/modal" -> ModalRecordModal
 }
 ```
+
+<OrbPreviewBlock schema={JSON.stringify(closedCircuitSchema)} showCode={false} />
 
 Trace the circuit:
 

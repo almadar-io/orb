@@ -35,24 +35,21 @@ The `TaskManager` orbital has one entity (`Task`) and two traits: one for the ta
 
 ## Step 1 — The Task Entity
 
-```orb
-{
-  "name": "Task",
-  "persistence": "persistent",
-  "collection": "tasks",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "title", "type": "string", "required": true },
-    { "name": "description", "type": "string" },
-    { "name": "priority", "type": "enum", "values": ["low", "medium", "high"], "default": "medium" },
-    { "name": "dueDate", "type": "date" },
-    { "name": "assigneeId", "type": "string" },
-    { "name": "projectId", "type": "string" }
-  ]
+```lolo
+type Priority = low | medium | high
+
+entity Task [persistent: tasks] {
+  id          : string!
+  title       : string!
+  description : string
+  priority    : Priority = medium
+  dueDate     : date
+  assigneeId  : string
+  projectId   : string
 }
 ```
 
-`persistence: "persistent"` means this is stored in your database. The `collection` key sets the database collection/table name.
+`[persistent: tasks]` means this is stored in your database. The identifier after the colon sets the database collection/table name.
 
 ---
 
@@ -80,64 +77,33 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 />
 </div>
 
-```orb
-{
-  "name": "TaskLifecycle",
-  "linkedEntity": "Task",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [
-      { "name": "todo", "isInitial": true },
-      { "name": "inProgress" },
-      { "name": "review" },
-      { "name": "done", "isTerminal": true, "description": "Task completed" }
-    ],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "START", "name": "Start Task" },
-      { "key": "SUBMIT_FOR_REVIEW", "name": "Submit for Review" },
-      { "key": "APPROVE", "name": "Approve" },
-      { "key": "REJECT", "name": "Request Changes" },
-      { "key": "COMPLETE", "name": "Complete" }
-    ],
-    "transitions": [
-      {
-        "from": "todo",
-        "event": "INIT",
-        "to": "todo",
-        "effects": [
-          ["fetch", "Task"],
-          ["render-ui", "main", {
-            "type": "stats",
-            "items": [
-              { "label": "Todo", "value": "@entity.todo" },
-              { "label": "In Progress", "value": "@entity.inProgress" },
-              { "label": "Done", "value": "@entity.done" }
-            ]
-          }]
+```lolo
+trait TaskLifecycle -> Task [interaction] {
+  initial: todo
+  state todo {
+    INIT -> todo
+      (fetch Task)
+      (render-ui main {
+        type: "stats",
+        items: [
+          { label: "Todo", value: "@entity.todo" },
+          { label: "In Progress", value: "@entity.inProgress" },
+          { label: "Done", value: "@entity.done" }
         ]
-      },
-      { "from": "todo", "event": "START", "to": "inProgress" },
-      { "from": "inProgress", "event": "SUBMIT_FOR_REVIEW", "to": "review" },
-      {
-        "from": "review",
-        "event": "APPROVE",
-        "to": "done",
-        "effects": [
-          ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]
-        ]
-      },
-      { "from": "review", "event": "REJECT", "to": "inProgress" },
-      {
-        "from": "inProgress",
-        "event": "COMPLETE",
-        "to": "done",
-        "effects": [
-          ["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]
-        ]
-      }
-    ]
+      })
+    START -> inProgress
   }
+  state inProgress {
+    SUBMIT_FOR_REVIEW -> review
+    COMPLETE -> done
+      (emit TASK_COMPLETED { taskId: @entity.id, projectId: @entity.projectId })
+  }
+  state review {
+    APPROVE -> done
+      (emit TASK_COMPLETED { taskId: @entity.id, projectId: @entity.projectId })
+    REJECT -> inProgress
+  }
+  state done {}
 }
 ```
 
@@ -152,93 +118,41 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 
 The `TaskCRUD` trait handles the list management UI: viewing the list, creating, editing, and deleting tasks.
 
-```orb
-{
-  "name": "TaskCRUD",
-  "linkedEntity": "Task",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [
-      { "name": "listing", "isInitial": true },
-      { "name": "creating" },
-      { "name": "editing" }
-    ],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "VIEW", "name": "View Task", "payload": [
-        { "name": "id", "type": "string", "required": true }
-      ]},
-      { "key": "CREATE", "name": "Create Task" },
-      { "key": "EDIT", "name": "Edit Task" },
-      { "key": "SAVE", "name": "Save" },
-      { "key": "CANCEL", "name": "Cancel" },
-      { "key": "DELETE", "name": "Delete Task" }
-    ],
-    "transitions": [
-      {
-        "from": "listing",
-        "event": "INIT",
-        "to": "listing",
-        "effects": [
-          ["fetch", "Task"],
-          ["render-ui", "main", {
-            "type": "entity-table",
-            "entity": "Task",
-            "columns": ["title", "priority", "dueDate"],
-            "itemActions": [
-              { "event": "VIEW", "label": "View" },
-              { "event": "EDIT", "label": "Edit" },
-              { "event": "DELETE", "label": "Delete" }
-            ]
-          }]
+```lolo
+trait TaskCRUD -> Task [interaction] {
+  initial: listing
+  state listing {
+    INIT -> listing
+      (fetch Task)
+      (render-ui main {
+        type: "entity-table",
+        entity: "Task",
+        columns: ["title", "priority", "dueDate"],
+        itemActions: [
+          { event: "VIEW", label: "View" },
+          { event: "EDIT", label: "Edit" },
+          { event: "DELETE", label: "Delete" }
         ]
-      },
-      {
-        "from": "listing",
-        "event": "CREATE",
-        "to": "creating",
-        "effects": [
-          ["render-ui", "main", { "type": "form", "entity": "Task" }]
-        ]
-      },
-      {
-        "from": "creating",
-        "event": "SAVE",
-        "to": "listing",
-        "effects": [
-          ["persist", "update", "Task", "@entity"],
-          ["notify", "success", "Task created"]
-        ]
-      },
-      { "from": "creating", "event": "CANCEL", "to": "listing" },
-      { "from": "listing", "event": "EDIT", "to": "editing" },
-      {
-        "from": "editing",
-        "event": "SAVE",
-        "to": "listing",
-        "effects": [
-          ["persist", "update", "Task", "@entity"]
-        ]
-      },
-      { "from": "editing", "event": "CANCEL", "to": "listing" },
-      {
-        "from": "listing",
-        "event": "DELETE",
-        "to": "listing",
-        "effects": [
-          ["persist", "delete", "Task", "@entity.id"],
-          ["notify", "info", "Task deleted"]
-        ]
-      },
-      {
-        "from": "listing",
-        "event": "VIEW",
-        "to": "listing",
-        "effects": [
-          ["navigate", "/tasks/@payload.id"]
-        ]
-      }
-    ]
+      })
+    CREATE -> creating
+      (render-ui main { type: "form", entity: "Task" })
+    EDIT -> editing
+    DELETE -> listing
+      (persist delete Task @entity.id)
+      (notify info "Task deleted")
+    VIEW -> listing
+      (navigate "/tasks/@payload.id")
+  }
+  state creating {
+    SAVE -> listing
+      (persist update Task @entity)
+      (notify success "Task created")
+    CANCEL -> listing
+  }
+  state editing {
+    SAVE -> listing
+      (persist update Task @entity)
+    CANCEL -> listing
   }
 }
 ```
@@ -255,16 +169,8 @@ The `TaskCRUD` trait handles the list management UI: viewing the list, creating,
 
 ## Step 4 — Add Pages
 
-```orb
-"pages": [
-  {
-    "name": "TaskListPage",
-    "path": "/tasks",
-    "traits": [
-      { "ref": "TaskCRUD", "linkedEntity": "Task" }
-    ]
-  }
-]
+```lolo
+page "/tasks" -> TaskCRUD
 ```
 
 The lifecycle trait (`TaskLifecycle`) doesn't need its own page here — it's wired to the same data and its events are triggered programmatically. The list page uses `TaskCRUD`, which manages the browsing experience.

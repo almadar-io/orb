@@ -1,5 +1,8 @@
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import schema1 from './entities-1.orb.json';
+import schema2 from './entities-2.orb.json';
+import schema3 from './entities-3.orb.json';
 
 # Entities
 
@@ -32,19 +35,16 @@ The entity defines **what data exists**. Traits define **how it changes**. Pages
 
 An entity declaration looks like this:
 
-```orb
-{
-  "name": "Contact",
-  "persistence": "persistent",
-  "collection": "contacts",
-  "fields": [
-    { "name": "id", "type": "string", "required": true, "primaryKey": true },
-    { "name": "fullName", "type": "string", "required": true },
-    { "name": "email", "type": "string" },
-    { "name": "status", "type": "enum", "values": ["active", "inactive", "archived"] },
-    { "name": "tags", "type": "array", "items": { "type": "string" } },
-    { "name": "createdAt", "type": "date" }
-  ]
+```lolo
+type ContactStatus = active | inactive | archived
+
+entity Contact [persistent: contacts] {
+  id : string!
+  fullName : string!
+  email : string
+  status : ContactStatus
+  tags : [string]
+  createdAt : string
 }
 ```
 
@@ -95,14 +95,13 @@ Each field accepts these properties:
 
 ### Enum Fields
 
-Enum fields restrict values to a predefined set. The `values` array lists every valid option:
+Enum fields restrict values to a predefined set. Declare a named type alias with `|`-separated variants:
 
-```orb
-{
-  "name": "priority",
-  "type": "enum",
-  "values": ["low", "medium", "high", "critical"],
-  "default": "medium"
+```lolo
+type Priority = low | medium | high | critical
+
+entity Task [persistent: tasks] {
+  priority : Priority = "medium"
 }
 ```
 
@@ -110,48 +109,39 @@ The compiler generates a TypeScript union type: `"low" | "medium" | "high" | "cr
 
 ### Array and Object Fields
 
-Array fields declare the element type through `items`:
+Array fields use bracket syntax `[elementType]`:
 
-```orb
-{
-  "name": "tags",
-  "type": "array",
-  "items": { "type": "string" }
+```lolo
+entity Post [persistent: posts] {
+  tags : [string]
+  scores : [number]
 }
 ```
 
-Object fields declare nested structure through `properties`:
+Object fields use the `object` type:
 
-```orb
-{
-  "name": "address",
-  "type": "object",
-  "properties": [
-    { "name": "street", "type": "string" },
-    { "name": "city", "type": "string" },
-    { "name": "zipCode", "type": "string" }
-  ]
+```lolo
+entity Profile [persistent: profiles] {
+  id : string!
+  address : object
 }
 ```
 
 ### Relation Fields
 
-Relations link entities together. The `relation` property specifies the target entity and how many references the field holds:
+Relations link entities together. A `one` relation is a string FK; a `many` relation is an array of string IDs:
 
-```orb
-{
-  "name": "assigneeId",
-  "type": "relation",
-  "relation": {
-    "entity": "User",
-    "cardinality": "one"
-  }
+```lolo
+entity Task [persistent: tasks] {
+  id : string!
+  assigneeId : string    // FK to User (one)
+  reviewerIds : [string] // FKs to User (many)
 }
 ```
 
 **Cardinality options:**
-- `one`: single reference (foreign key stored as a string ID)
-- `many`: multiple references (stored as an array of string IDs)
+- `string` field: single reference (foreign key)
+- `[string]` field: multiple references (array of IDs)
 
 ---
 
@@ -163,16 +153,13 @@ The `persistence` property controls where entity data lives and how it is shared
 
 Data is stored in a database (Firestore, PostgreSQL, or another adapter). It survives restarts and is shared across all sessions. Requires a `collection` name.
 
-```orb
-{
-  "name": "Order",
-  "persistence": "persistent",
-  "collection": "orders",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "total", "type": "number" },
-    { "name": "status", "type": "enum", "values": ["pending", "paid", "shipped"] }
-  ]
+```lolo
+type OrderStatus = pending | paid | shipped
+
+entity Order [persistent: orders] {
+  id : string!
+  total : number
+  status : OrderStatus
 }
 ```
 
@@ -184,16 +171,12 @@ All orbitals referencing the same entity name share the same collection. If Orbi
 
 Data exists only in memory for the duration of the session. No database, no collection. Lost on restart.
 
-```orb
-{
-  "name": "Particle",
-  "persistence": "runtime",
-  "fields": [
-    { "name": "id", "type": "string" },
-    { "name": "x", "type": "number", "default": 0 },
-    { "name": "y", "type": "number", "default": 0 },
-    { "name": "velocity", "type": "number", "default": 1 }
-  ]
+```lolo
+entity Particle [runtime] {
+  id : string
+  x : number = 0
+  y : number = 0
+  velocity : number = 1
 }
 ```
 
@@ -203,16 +186,14 @@ Use runtime entities for temporary, session-scoped data: game enemies, particles
 
 A single instance shared across all orbitals. Stored in memory, one record only. No collection needed.
 
-```orb
-{
-  "name": "AppConfig",
-  "persistence": "singleton",
-  "fields": [
-    { "name": "id", "type": "string" },
-    { "name": "theme", "type": "enum", "values": ["light", "dark"], "default": "light" },
-    { "name": "language", "type": "string", "default": "en" },
-    { "name": "debugMode", "type": "boolean", "default": false }
-  ]
+```lolo
+type Theme = light | dark
+
+entity AppConfig [singleton] {
+  id : string
+  theme : Theme = "light"
+  language : string = "en"
+  debugMode : boolean = false
 }
 ```
 
@@ -235,7 +216,7 @@ Use singleton entities for global state that every orbital should see and modify
 This complete .orb program defines a `BrowseItem` entity with five fields and a single-state trait that renders them in a data grid. The entity uses `runtime` persistence (in-memory, session-scoped) and demonstrates string fields with an enum-like `status` field constrained by a `values` array. Ten seed instances are provided so the grid has data to display immediately.
 
 {/* height: 400px */}
-```lolo preview
+```lolo
 orbital BrowseItemOrbital {
   entity BrowseItem [runtime] {
     id : string
@@ -254,6 +235,8 @@ orbital BrowseItemOrbital {
   page "/browseitems" -> BrowseItemBrowse
 }
 ```
+
+<OrbPreviewBlock schema={JSON.stringify(schema1)} showCode={false} />
 
 ---
 
@@ -278,15 +261,10 @@ These are the valid binding roots. `@result` is not a binding root; call-service
 
 Guards use bindings to evaluate conditions before allowing a transition:
 
-```orb
-{
-  "from": "active",
-  "to": "completed",
-  "event": "COMPLETE",
-  "guard": ["and",
-    [">=", "@entity.progress", 100],
-    ["=", "@entity.assigneeId", "@user.id"]
-  ]
+```lolo
+state active {
+  COMPLETE -> completed
+    when (and (>= @entity.progress 100) (= @entity.assigneeId @user.id))
 }
 ```
 
@@ -296,14 +274,11 @@ This transition only fires if progress is at least 100 AND the current user is t
 
 Effects use bindings to read data and write changes:
 
-```orb
-{
-  "effects": [
-    ["set", "@entity.id", "status", "@payload.newStatus"],
-    ["set", "@entity.id", "updatedAt", "@now"],
-    ["set", "@entity.id", "score", ["+", "@entity.score", 10]]
-  ]
-}
+```lolo
+SET_STATUS -> active
+  (set @entity.status @payload.newStatus)
+  (set @entity.updatedAt @now)
+  (set @entity.score (+ @entity.score 10))
 ```
 
 The first effect reads `@payload.newStatus` and writes it to the entity's `status` field. The third uses an S-expression to increment `score` by 10.
@@ -347,7 +322,7 @@ orbital CounterUnit {
       INCREMENT -> Counting
         (set @entity.count (+ @entity.count 1))
       DECREMENT -> Counting
-        ? (> @entity.count 0)
+        when (> @entity.count 0)
         (set @entity.count (- @entity.count 1))
       RESET -> Counting
         (set @entity.count 0)
@@ -358,7 +333,7 @@ orbital CounterUnit {
 ```
 
 {/* height: 350px */}
-```lolo preview
+```lolo
 ;; app CounterApp
 
 orbital CounterUnit {
@@ -383,6 +358,8 @@ orbital CounterUnit {
 }
 ```
 
+<OrbPreviewBlock schema={JSON.stringify(schema2)} showCode={false} />
+
 ---
 
 ## Trait-Entity Binding (linkedEntity)
@@ -393,34 +370,25 @@ Traits are state machines. Each trait operates on one entity. The connection bet
 
 Every orbital has a primary entity defined in its `entity` property. Traits that omit `linkedEntity` default to this primary entity:
 
-```orb
-{
-  "name": "TaskManager",
-  "entity": {
-    "name": "Task",
-    "fields": [...]
-  },
-  "traits": [
-    { "name": "StatusTrait" }
-  ]
+```lolo
+orbital TaskManager {
+  entity Task [persistent: tasks] { ... }
+  trait StatusTrait -> Task [interaction] { ... }
 }
 ```
 
-Here, `StatusTrait` automatically operates on `Task` because `Task` is the orbital's primary entity. All `@entity` bindings inside `StatusTrait` resolve to `Task` data.
+Here, `StatusTrait` explicitly binds to `Task` via `-> Task`. All `@entity` bindings inside `StatusTrait` resolve to `Task` data.
 
 ### Explicit Binding
 
 When a trait needs to operate on a different entity, specify `linkedEntity`:
 
-```orb
-{
-  "name": "ProjectDashboard",
-  "entity": { "name": "Project", "fields": [...] },
-  "traits": [
-    { "name": "ProjectOverview", "linkedEntity": "Project" },
-    { "name": "MemberList", "linkedEntity": "Member" },
-    { "name": "ActivityFeed", "linkedEntity": "Activity" }
-  ]
+```lolo
+orbital ProjectDashboard {
+  entity Project [persistent: projects] { ... }
+  trait ProjectOverview -> Project [interaction] { ... }
+  trait MemberList -> Member [interaction] { ... }
+  trait ActivityFeed -> Activity [interaction] { ... }
 }
 ```
 
@@ -468,7 +436,7 @@ Orbital C ──┘
 This program shows an entity with string fields constrained by `values` arrays, simulating enum behavior. The `status` field accepts only `active`, `inactive`, or `pending`. The browse trait renders all instances in a data grid with columns for name, description, and status. This is the same `std-browse` behavior pattern used across all Almadar applications for list views.
 
 {/* height: 400px */}
-```lolo preview
+```lolo
 orbital BrowseItemOrbital {
   entity BrowseItem [runtime] {
     id : string
@@ -487,6 +455,8 @@ orbital BrowseItemOrbital {
   page "/browseitems" -> BrowseItemBrowse
 }
 ```
+
+<OrbPreviewBlock schema={JSON.stringify(schema3)} showCode={false} />
 
 ---
 

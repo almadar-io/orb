@@ -1,5 +1,6 @@
 import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import pagesSchema from './pages.orb.json';
 
 # Pages
 
@@ -41,21 +42,15 @@ Pages are stateless. They hold no data, manage no lifecycle, and execute no logi
 
 ## Referencing Traits by Name
 
-Each page contains a `traits` array. Each entry is a reference object with a `ref` field pointing to a trait name defined in the same orbital:
+Each page maps a path to a trait name defined in the same orbital:
 
-```orb
-{
-  "name": "TaskListPage",
-  "path": "/tasks",
-  "traits": [
-    { "ref": "TaskBrowser", "linkedEntity": "Task" }
-  ]
-}
+```lolo
+page "/tasks" -> TaskBrowser
 ```
 
-The `ref` value must match the `name` of a trait defined in the orbital's `traits` array. The compiler validates this at build time. If `ref` points to a trait that does not exist, compilation fails with `PageInvalidTraitRef`.
+The trait name after `->` must match a trait defined in the orbital's body. The compiler validates this at build time. If the name points to a trait that does not exist, compilation fails with `PageInvalidTraitRef`.
 
-`linkedEntity` binds the trait to a specific entity on this page. When the trait uses `@entity` bindings, they resolve to the linked entity's data. When it calls `["persist", "create", "Task", "@payload"]`, it operates on the linked entity's collection.
+The `[entity: EntityName]` option binds the trait to a specific entity on this page. When the trait uses `@entity` bindings, they resolve to the linked entity's data. When it calls `(persist create Task @payload)`, it operates on the linked entity's collection.
 
 ---
 
@@ -63,16 +58,8 @@ The `ref` value must match the `name` of a trait defined in the orbital's `trait
 
 A page can reference multiple traits. All traits on a page share a single event bus. This means one trait can emit an event that another trait on the same page listens to. This is how you compose independent behaviors into a cohesive UI.
 
-```orb
-{
-  "name": "DashboardPage",
-  "path": "/dashboard",
-  "traits": [
-    { "ref": "StatsSummary", "linkedEntity": "Analytics" },
-    { "ref": "RecentActivity", "linkedEntity": "Activity" },
-    { "ref": "QuickActions", "linkedEntity": "Task" }
-  ]
-}
+```lolo
+page "/dashboard" -> StatsSummary, RecentActivity, QuickActions
 ```
 
 Each trait runs its own state machine independently. `StatsSummary` might be in its `loaded` state showing charts, while `RecentActivity` is still in `fetching`. They do not block each other. But if `QuickActions` emits a `TASK_CREATED` event, `RecentActivity` can listen for it and refresh.
@@ -87,9 +74,9 @@ Each trait's `render-ui` effects target specific slots (`main`, `sidebar`, `moda
 
 Use colon-prefixed segments for dynamic routes:
 
-```orb
-{ "path": "/tasks/:id" }
-{ "path": "/users/:userId/tasks/:taskId" }
+```lolo
+page "/tasks/:id" -> TaskViewer
+page "/users/:userId/tasks/:taskId" -> TaskViewer
 ```
 
 Path parameters are extracted at runtime and made available in event payloads. When a user navigates to `/tasks/abc123`, the `:id` segment becomes `abc123` and is accessible as `@payload.id` in transitions.
@@ -114,37 +101,33 @@ Rules for paths:
 
 Navigation is an effect, not a page property. Traits navigate between pages using the `navigate` effect in transitions:
 
-```orb
-["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
+```lolo
+(navigate "/tasks/:id" { id: @payload.taskId })
 ```
 
-The format is `["navigate", path, params?]`. The path can include dynamic segments that get filled from the optional params object. If a segment value starts with `@`, it resolves from the current binding context (`@entity`, `@payload`, etc.).
+The format is `(navigate path params?)`. The path can include dynamic segments that get filled from the optional params object. If a segment value starts with `@`, it resolves from the current binding context (`@entity`, `@payload`, etc.).
 
 **Simple navigation:**
-```orb
-["navigate", "/dashboard"]
+```lolo
+(navigate "/dashboard")
 ```
 
 **With entity data:**
-```orb
-["navigate", "/tasks/@entity.id"]
+```lolo
+(navigate "/tasks/@entity.id")
 ```
 
 **With payload parameters:**
-```orb
-["navigate", "/tasks/:id", { "id": "@payload.taskId" }]
+```lolo
+(navigate "/tasks/:id" { id: @payload.taskId })
 ```
 
 Navigation typically happens after a state change completes. A `TaskBrowser` trait in its `viewing` state handles a `VIEW` event, persists any needed data, then navigates to the detail page:
 
-```orb
-{
-  "from": "viewing",
-  "to": "viewing",
-  "event": "VIEW",
-  "effects": [
-    ["navigate", "/tasks/@payload.id"]
-  ]
+```lolo
+state viewing {
+  VIEW -> viewing
+    (navigate "/tasks/@payload.id")
 }
 ```
 
@@ -154,17 +137,10 @@ On the target page, the `INIT` event fires automatically. If the page is at `/ta
 
 ## Initial Page
 
-Mark a page as the application entry point with `isInitial`:
+Mark a page as the application entry point with the `initial` option:
 
-```orb
-{
-  "name": "HomePage",
-  "path": "/",
-  "isInitial": true,
-  "traits": [
-    { "ref": "WelcomeBanner" }
-  ]
-}
+```lolo
+page "/" -> WelcomeBanner [initial]
 ```
 
 The application loads this page first. Only one page per orbital should be marked initial. If no page is marked, the first page in the array is used.
@@ -176,7 +152,7 @@ The application loads this page first. Only one page per orbital should be marke
 This orbital defines a single page at `/browseitems` with one trait. The `BrowseItemBrowse` trait renders a data grid showing all `BrowseItem` entities. This is the simplest page setup: one path, one trait, one entity. The page itself is stateless. All behavior lives in the trait's state machine.
 
 {/* height: 450px */}
-```lolo preview
+```lolo
 orbital BrowseItemOrbital {
   entity BrowseItem [runtime] {
     id : string
@@ -196,7 +172,9 @@ orbital BrowseItemOrbital {
 }
 ```
 
-The page definition is minimal. It maps the path `/browseitems` to the `BrowseItemBrowse` trait via `ref`. When a user navigates to that URL, the runtime initializes the trait's state machine, fires `INIT`, and the resulting `render-ui` effects populate the page with the data grid.
+<OrbPreviewBlock schema={JSON.stringify(pagesSchema)} showCode={false} />
+
+The page definition is minimal. It maps the path `/browseitems` to the `BrowseItemBrowse` trait. When a user navigates to that URL, the runtime initializes the trait's state machine, fires `INIT`, and the resulting `render-ui` effects populate the page with the data grid.
 ---
 
 ## Validation
@@ -205,11 +183,11 @@ The compiler enforces these rules at build time:
 
 | Error | Cause |
 |-------|-------|
-| `PageMissingName` | Page has no `name` field |
-| `PageMissingPath` | Page has no `path` field |
+| `PageMissingName` | Page has no name |
+| `PageMissingPath` | Page has no path |
 | `PageInvalidPath` | Path contains invalid characters or does not start with `/` |
-| `PageEmptyTraits` | `traits` array is empty (a page with no traits renders nothing) |
-| `PageInvalidTraitRef` | `ref` points to a trait name that does not exist in the orbital |
+| `PageEmptyTraits` | No traits listed after `->` (a page with no traits renders nothing) |
+| `PageInvalidTraitRef` | Trait name after `->` does not exist in the orbital |
 | `PageDuplicatePath` | Another page already uses this path |
 | `PageInvalidViewType` | `viewType` is not one of `list`, `detail`, `create`, `edit`, `dashboard`, `custom` |
 
@@ -219,7 +197,7 @@ The compiler enforces these rules at build time:
 
 1. **Pages are stateless.** All state lives in trait state machines. The page is a composition frame, nothing more.
 
-2. **Traits are referenced by name.** The `ref` field creates a compile-time-verified link between the page and the trait definition.
+2. **Traits are referenced by name.** The `->` arrow creates a compile-time-verified link between the page and the trait definition.
 
 3. **Shared event bus.** Multiple traits on the same page communicate through events, following the actor model. No trait directly accesses another trait's state.
 

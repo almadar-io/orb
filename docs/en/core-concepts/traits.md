@@ -1,5 +1,7 @@
 import { AvlStateMachine } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
+import schema1 from './traits-1.orb.json';
+import schema2 from './traits-2.orb.json';
 
 # Traits
 
@@ -55,14 +57,13 @@ Think of it as the actor model applied to UI. Each Trait is an actor that holds 
 
 States are the finite set of positions a Trait can occupy. Every Trait must declare exactly one `isInitial` state. States marked `isTerminal` signal that no further outgoing transitions are expected.
 
-```orb
-{
-  "states": [
-    { "name": "idle", "isInitial": true },
-    { "name": "loading" },
-    { "name": "active" },
-    { "name": "error", "isTerminal": true }
-  ]
+```lolo
+trait MyTrait -> MyEntity [interaction] {
+  initial: idle
+  state idle { ... }
+  state loading { ... }
+  state active { ... }
+  state error { ... }  ;; terminal — no outgoing transitions
 }
 ```
 
@@ -85,16 +86,18 @@ Rules:
 
 Events are named signals that request a state change. They use `UPPER_SNAKE_CASE` keys by convention and can optionally declare a payload schema describing the data they carry.
 
-```orb
-{
-  "events": [
-    { "key": "INIT", "name": "Initialize" },
-    { "key": "SUBMIT", "name": "Submit Form", "payload": [
-      { "name": "title", "type": "string", "required": true },
-      { "name": "priority", "type": "number" }
-    ]},
-    { "key": "CANCEL", "name": "Cancel" }
-  ]
+```lolo
+trait TaskTrait -> Task [interaction] {
+  initial: idle
+  state idle {
+    INIT -> idle
+      (ref Task)
+    SUBMIT -> loading
+      when (!= ?title "")
+      (persist create Task { title: ?title, priority: ?priority })
+    CANCEL -> idle
+  }
+  state loading { ... }
 }
 ```
 
@@ -112,25 +115,18 @@ If you reference `@payload.fieldName` anywhere in guards or effects, the field *
 
 A transition connects a source state to a target state, triggered by a specific event. Optionally, it includes a guard (a condition that must pass) and effects (actions to execute).
 
-```orb
-{
-  "transitions": [
-    {
-      "from": "idle",
-      "to": "loading",
-      "event": "SUBMIT",
-      "guard": ["!=", "@payload.title", ""],
-      "effects": [
-        ["persist", "create", "Task", "@payload"],
-        ["notify", "Task created", "success"]
-      ]
-    },
-    {
-      "from": ["loading", "error"],
-      "to": "idle",
-      "event": "CANCEL"
-    }
-  ]
+```lolo
+state idle {
+  SUBMIT -> loading
+    when (!= ?title "")
+    (persist create Task @payload)
+    (notify "Task created" success)
+}
+state loading {
+  CANCEL -> idle
+}
+state error {
+  CANCEL -> idle
 }
 ```
 
@@ -144,8 +140,13 @@ A transition connects a source state to a target state, triggered by a specific 
 
 When `from` is an array, the same transition rule applies from each listed state. This is shorthand for writing multiple identical transitions:
 
-```orb
-{ "from": ["idle", "error"], "to": "loading", "event": "RETRY" }
+```lolo
+state idle {
+  RETRY -> loading
+}
+state error {
+  RETRY -> loading
+}
 ```
 
 The processing pipeline for every incoming event:
@@ -188,30 +189,21 @@ Note: `@result` is **not** a valid binding root. Call-service results flow throu
 
 Guards compose with `and`, `or`, and `not`. There is no limit to nesting depth.
 
-```orb
-// Simple: entity field equals a literal
-["=", "@entity.status", "active"]
+```lolo
+;; Simple: entity field equals a literal
+when (= @entity.status "active")
 
-// Compound: both payload fields must be non-empty
-["and",
-  ["!=", "@payload.email", ""],
-  ["!=", "@payload.name", ""]
-]
+;; Compound: both payload fields must be non-empty
+when (and (!= ?email "") (!= ?name ""))
 
-// Negation: entity is NOT in a terminal status
-["not", ["or",
-  ["=", "@entity.status", "cancelled"],
-  ["=", "@entity.status", "archived"]
-]]
+;; Negation: entity is NOT in a terminal status
+when (not (or (= @entity.status "cancelled") (= @entity.status "archived")))
 
-// Numeric with array: cart must have items
-[">", ["count", "@entity.items"], 0]
+;; Numeric with array: cart must have items
+when (> (count @entity.items) 0)
 
-// Role-based access: only the owner or an admin can approve
-["or",
-  ["=", "@entity.ownerId", "@user.id"],
-  ["=", "@user.role", "admin"]
-]
+;; Role-based access: only the owner or an admin can approve
+when (or (= @entity.ownerId @user.id) (= @user.role "admin"))
 ```
 
 ---
@@ -249,63 +241,56 @@ Server-only effects (`persist`, `fetch`, `call-service`) are skipped on the clie
 
 **render-ui**: Render a UI pattern into a named slot. The pattern type must exist in the [pattern registry](./patterns.md).
 
-```orb
-["render-ui", "main", {
-  "type": "entity-table",
-  "entity": "Task",
-  "columns": ["title", "status", "dueDate"]
-}]
+```lolo
+(render-ui main { type: "entity-table", entity: "Task", columns: ["title", "status", "dueDate"] })
 ```
 
 **persist**: Write to the database. Three operations: `create`, `update`, `delete`.
 
-```orb
-["persist", "create", "Task", "@payload"]
-["persist", "update", "Task", "@entity.id", { "status": "completed" }]
-["persist", "delete", "Task", "@entity.id"]
+```lolo
+(persist create Task @payload)
+(persist update Task @entity)
+(persist delete Task @entity.id)
 ```
 
 **fetch**: Query entity data.
 
-```orb
-["fetch", "Task", { "status": "active", "assigneeId": "@user.id" }]
+```lolo
+(fetch Task { status: "active", assigneeId: @user.id })
 ```
 
-**emit**: Publish an event. The event name must appear in the Trait's `emits` declaration.
+**emit**: Publish an event. The event name must appear in the Trait's `emits` block.
 
-```orb
-["emit", "TASK_COMPLETED", { "taskId": "@entity.id" }]
+```lolo
+(emit TASK_COMPLETED { taskId: @entity.id })
 ```
 
 **set**: Modify a field value. Supports S-expression math for increment/decrement.
 
-```orb
-["set", "@entity.id", "status", "active"]
-["set", "@entity.id", "score", ["+", "@entity.score", 10]]
-["set", "@entity.id", "health", ["-", "@entity.health", 5]]
-["set", "@entity.id", "updatedAt", "@now"]
+```lolo
+(set @entity.status "active")
+(set @entity.score (+ @entity.score 10))
+(set @entity.health (- @entity.health 5))
+(set @entity.updatedAt @now)
 ```
 
 **notify**: Display a toast notification.
 
-```orb
-["notify", "Task saved successfully", "success"]
-["notify", "Something went wrong", "error"]
+```lolo
+(notify "Task saved successfully" success)
+(notify "Something went wrong" error)
 ```
 
 **navigate**: Route to a different page. Supports entity-bound path segments.
 
-```orb
-["navigate", "/tasks/@entity.id"]
+```lolo
+(navigate "/tasks/@entity.id")
 ```
 
 **call-service**: Invoke an external service.
 
-```orb
-["call-service", "email", "send", {
-  "to": "@entity.email",
-  "subject": "Task Assigned"
-}]
+```lolo
+(call-service email send { to: @entity.email, subject: "Task Assigned" })
 ```
 
 ---
@@ -314,7 +299,7 @@ Server-only effects (`persist`, `fetch`, `call-service`) are skipped on the clie
 
 Here is a complete orbital with a shopping cart trait. The cart has two states: `browsing` (viewing the cart, managing items) and `checkout` (reviewing the order before confirmation). The trait demonstrates multi-state navigation, item actions, and persistence effects. This is the `std-cart` behavior, a molecule that composes three atomic traits: browse, modal, and confirmation.
 
-```lolo preview
+```lolo
 orbital CartItemOrbital {
   entity CartItem [persistent: cartitems] {
     id : string
@@ -388,6 +373,8 @@ orbital CartItemOrbital {
   page "/cart" -> CartItemCartBrowse, CartItemAddItem, CartItemRemoveConfirm
 }
 ```
+
+<OrbPreviewBlock schema={JSON.stringify(schema1)} showCode={false} />
 
 ---
 
@@ -395,7 +382,7 @@ orbital CartItemOrbital {
 
 This is the same cart orbital viewed from the angle of guards and effects. Notice the `CartItemRemoveConfirm` trait: it uses a confirmation dialog pattern where `REQUEST_REMOVE` transitions to a `confirming` state with a modal, and `CONFIRM_REMOVE` executes `["persist", "delete", ...]` to actually remove the item. The `CANCEL` and `CLOSE` transitions provide the closed-circuit exit paths.
 
-```lolo preview
+```lolo
 orbital CartItemOrbital {
   entity CartItem [persistent: cartitems] {
     id : string
@@ -469,6 +456,8 @@ orbital CartItemOrbital {
   page "/cart" -> CartItemCartBrowse, CartItemAddItem, CartItemRemoveConfirm
 }
 ```
+
+<OrbPreviewBlock schema={JSON.stringify(schema2)} showCode={false} />
 
 The APPROVE transition's guard demonstrates composition: a reviewer cannot approve their own request (`!=` check), and requests above 1000 require the `manager` role (nested `or` inside `and`). If the guard fails, the state stays at `reviewing`, no effects run, and the UI does not change.
 
@@ -482,31 +471,25 @@ The `linkedEntity` property specifies which entity a Trait operates on. When you
 
 Every orbital has a primary entity defined in its `entity` property. Traits without an explicit `linkedEntity` use the primary entity:
 
-```orb
-{
-  "name": "TaskManager",
-  "entity": { "name": "Task", "fields": [...] },
-  "traits": [
-    { "name": "StatusTrait" }
-  ]
+```lolo
+orbital TaskManager {
+  entity Task [persistent: tasks] { ... }
+  trait StatusTrait -> Task [interaction] { ... }
 }
 ```
 
-Here `StatusTrait` operates on `Task` by default.
+Here `StatusTrait` operates on `Task` via `-> Task`.
 
 ### Explicit Binding
 
 Use `linkedEntity` when a trait needs to operate on a different entity, or when you want to make the binding explicit:
 
-```orb
-{
-  "name": "ProjectDashboard",
-  "entity": { "name": "Project", "fields": [...] },
-  "traits": [
-    { "name": "ProjectOverview", "linkedEntity": "Project" },
-    { "name": "TaskList", "linkedEntity": "Task" },
-    { "name": "MemberList", "linkedEntity": "Member" }
-  ]
+```lolo
+orbital ProjectDashboard {
+  entity Project [persistent: projects] { ... }
+  trait ProjectOverview -> Project [interaction] { ... }
+  trait TaskList -> Task [interaction] { ... }
+  trait MemberList -> Member [interaction] { ... }
 }
 ```
 
@@ -524,19 +507,13 @@ Each trait gets its own entity context. `@entity.title` in `TaskList` resolves t
 
 A single page can mount multiple Traits. Each Trait runs as an independent state machine, but they share the same event bus. When one Trait emits an event, other Traits on the same page can react to it.
 
-```orb
-{
-  "pages": [
-    {
-      "name": "DashboardPage",
-      "path": "/dashboard",
-      "traits": [
-        { "ref": "ProjectOverview", "linkedEntity": "Project" },
-        { "ref": "TaskList", "linkedEntity": "Task" },
-        { "ref": "ActivityFeed", "linkedEntity": "Activity" }
-      ]
-    }
-  ]
+```lolo
+orbital ProjectDashboard {
+  entity Project [persistent: projects] { ... }
+  trait ProjectOverview -> Project [interaction] { ... }
+  trait TaskList -> Task [interaction] { ... }
+  trait ActivityFeed -> Activity [interaction] { ... }
+  page "/dashboard" -> ProjectOverview
 }
 ```
 
@@ -554,19 +531,12 @@ Traits in different orbitals communicate through declared event contracts. This 
 
 A Trait declares the events it can emit in its `emits` array:
 
-```orb
-{
-  "name": "OrderFlow",
-  "emits": [
-    {
-      "event": "ORDER_PLACED",
-      "scope": "external",
-      "payload": [
-        { "name": "orderId", "type": "string" },
-        { "name": "total", "type": "number" }
-      ]
-    }
-  ]
+```lolo
+trait OrderFlow -> Order [interaction] {
+  ...
+  emits {
+    ORDER_PLACED external { orderId: string, total: number }
+  }
 }
 ```
 
@@ -576,20 +546,17 @@ The event name used in an `["emit", "ORDER_PLACED", ...]` effect must match an e
 
 A Trait declares the events it responds to in its `listens` array:
 
-```orb
-{
-  "name": "InventorySync",
-  "listens": [
-    {
-      "event": "ORDER_PLACED",
-      "triggers": "RESERVE_STOCK",
-      "scope": "external",
-      "payloadMapping": {
-        "items": "@payload.items"
-      },
-      "guard": [">", ["count", "@payload.items"], 0]
-    }
-  ]
+```lolo
+trait InventorySync -> Inventory [interaction] {
+  ...
+  listens {
+    * ORDER_PLACED -> undefined
+  }
+  state idle {
+    ORDER_PLACED -> reserving
+      when (> (count ?items) 0)
+      (persist update Inventory @entity)
+  }
 }
 ```
 

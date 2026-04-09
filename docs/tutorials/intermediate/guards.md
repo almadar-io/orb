@@ -25,15 +25,13 @@ Guards are conditions that must be true for a transition to fire. They act as th
 
 ## What is a Guard?
 
-A guard is an S-expression on a transition. If it evaluates to `false`, the transition is blocked:
+A guard is a condition on a transition, written with `?` before the expression. If it evaluates to `false`, the transition is blocked:
 
-```orb
-{
-  "from": "active",
-  "event": "WITHDRAW",
-  "to": "active",
-  "guard": [">=", "@entity.balance", "@payload.amount"],
-  "effects": [...]
+```lolo
+state active {
+  WITHDRAW -> active
+    when (>= @entity.balance @payload.amount)
+    ;; effects...
 }
 ```
 
@@ -43,16 +41,16 @@ The user can only withdraw if `balance >= amount`. If not, the transition is sil
 
 ## S-Expression Syntax
 
-Guards are written as nested arrays where the first element is the operator:
+Guards use Lisp-style prefix notation — the operator comes first, then its arguments:
 
 ```
-[operator, arg1, arg2, ...]
+(operator arg1 arg2 ...)
 ```
 
 Arguments can be:
 - **Literals:** `100`, `"active"`, `true`
-- **Bindings:** `"@entity.field"`, `"@payload.field"`, `"@state"`, `"@now"`
-- **Nested expressions:** `["+", "@entity.count", 1]`
+- **Bindings:** `@entity.field`, `@payload.field`, `@state`, `@now`
+- **Nested expressions:** `(+ @entity.count 1)`
 
 ---
 
@@ -60,12 +58,12 @@ Arguments can be:
 
 | Operator | Meaning | Example |
 |----------|---------|---------|
-| `=` | Equal | `["=", "@entity.status", "active"]` |
-| `!=` | Not equal | `["!=", "@entity.role", "guest"]` |
-| `>` | Greater than | `[">", "@entity.score", 0]` |
-| `>=` | Greater or equal | `[">=", "@entity.balance", "@payload.amount"]` |
-| `<` | Less than | `["<", "@entity.attempts", 3]` |
-| `<=` | Less or equal | `["<=", "@entity.age", 65]` |
+| `=` | Equal | `(= @entity.status "active")` |
+| `!=` | Not equal | `(!= @entity.role "guest")` |
+| `>` | Greater than | `(> @entity.score 0)` |
+| `>=` | Greater or equal | `(>= @entity.balance @payload.amount)` |
+| `<` | Less than | `(< @entity.attempts 3)` |
+| `<=` | Less or equal | `(<= @entity.age 65)` |
 
 ---
 
@@ -73,22 +71,16 @@ Arguments can be:
 
 Combine conditions with `and`, `or`, `not`:
 
-```orb
-["and",
-  [">=", "@entity.balance", "@payload.amount"],
-  ["=", "@entity.isVerified", true]
-]
+```lolo
+when (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
 ```
 
-```orb
-["or",
-  ["=", "@entity.role", "admin"],
-  ["=", "@entity.role", "manager"]
-]
+```lolo
+when (or (= @entity.role "admin") (= @entity.role "manager"))
 ```
 
-```orb
-["not", ["=", "@entity.status", "frozen"]]
+```lolo
+when (not (= @entity.status "frozen"))
 ```
 
 ---
@@ -114,7 +106,7 @@ orbital AccountManager {
         (fetch Account)
         (render-ui main { type: "entity-table", entity: "Account", fields: ["balance", "isVerified"], columns: ["balance", "isVerified"], itemActions: [{ event: "WITHDRAW", label: "Withdraw" }, { event: "FREEZE", label: "Freeze" }] })
       WITHDRAW -> active
-        ? (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
+        when (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
         (set @entity.balance (- @entity.balance @payload.amount))
       FREEZE -> frozen
     }
@@ -127,11 +119,10 @@ orbital AccountManager {
 ```
 
 **Reading the WITHDRAW guard:**
-```orb
-["and",
-  [">=", "@entity.balance", "@payload.amount"],  // Account has enough funds
-  ["=", "@entity.isVerified", true]              // Account is verified
-]
+```lolo
+when (and
+    (>= @entity.balance @payload.amount)  ;; Account has enough funds
+    (= @entity.isVerified true))          ;; Account is verified
 ```
 
 Both conditions must be true. If the account is unverified, or the balance is too low, the withdrawal is blocked.
@@ -142,20 +133,14 @@ Both conditions must be true. If the account is unverified, or the balance is to
 
 Guards can use arithmetic operators — the result of a nested expression is used as an argument:
 
-```orb
-// Only allow if balance after withdrawal stays above minimum
-[">=",
-  ["-", "@entity.balance", "@payload.amount"],
-  100
-]
+```lolo
+;; Only allow if balance after withdrawal stays above minimum
+when (>= (- @entity.balance @payload.amount) 100)
 ```
 
-```orb
-// Only allow if item count is within limit
-["<",
-  ["+", "@entity.itemCount", 1],
-  50
-]
+```lolo
+;; Only allow if item count is within limit
+when (< (+ @entity.itemCount 1) 50)
 ```
 
 ---
@@ -164,49 +149,36 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 ### Role-based access
 
-```orb
-// Only admins can delete
-{
-  "from": "listing",
-  "event": "DELETE",
-  "to": "listing",
-  "guard": ["=", "@currentUser.role", "admin"],
-  "effects": [["persist", "delete", "Task", "@entity.id"]]
+```lolo
+state listing {
+  DELETE -> listing
+    when (= @user.role "admin")
+    (persist delete Task @entity.id)
 }
 ```
 
 ### Ownership check
 
-```orb
-// Only the assignee can start the task
-{
-  "from": "Pending",
-  "event": "START",
-  "to": "InProgress",
-  "guard": ["=", "@entity.assigneeId", "@currentUser.id"],
-  "effects": [["persist", "update", "Task", "@entity"]]
+```lolo
+state Pending {
+  START -> InProgress
+    when (= @entity.assigneeId @user.id)
+    (persist update Task @entity)
 }
 ```
 
 ### Field validation
 
-```orb
-// Score must be between 0 and 100
-{
-  "guard": ["and",
-    [">=", "@payload.score", 0],
-    ["<=", "@payload.score", 100]
-  ]
-}
+```lolo
+SUBMIT -> processing
+  when (and (>= ?score 0) (<= ?score 100))
 ```
 
 ### Status precondition
 
-```orb
-// Can only approve if currently in review
-{
-  "guard": ["=", "@entity.status", "review"]
-}
+```lolo
+APPROVE -> approved
+  when (= @entity.status "review")
 ```
 
 ---
@@ -215,14 +187,15 @@ Guards can use arithmetic operators — the result of a nested expression is use
 
 Guards run **before** the transition. Effects run **after**. Never use effects to enforce business rules — that's what guards are for.
 
-```orb
-// ❌ Wrong: using effects to simulate a guard
-"effects": [
-  ["if", ["<", "@entity.balance", 0], ["notify", "error", "Insufficient funds"]]
-]
+```lolo
+;; Wrong: using effects to simulate a guard
+WITHDRAW -> active
+  (if (< @entity.balance 0) (notify "Insufficient funds" error))
 
-// ✅ Correct: guard blocks the transition entirely
-"guard": [">=", "@entity.balance", "@payload.amount"]
+;; Correct: guard blocks the transition entirely
+WITHDRAW -> active
+  when (>= @entity.balance @payload.amount)
+  (set @entity.balance (- @entity.balance @payload.amount))
 ```
 
 ---

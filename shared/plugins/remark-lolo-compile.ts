@@ -110,7 +110,9 @@ function makeOrbPreview(orbJson: string): MdxJsxFlowElement {
     type: 'mdxJsxFlowElement',
     name: 'OrbPreviewBlock',
     attributes: [
-      { type: 'mdxJsxAttribute', name: 'schema', value: orbJson },
+      // Use expression value so JSON is a single-line JS string literal — plain string values
+      // with embedded newlines break MDX/JSX parsing.
+      { type: 'mdxJsxAttribute', name: 'schema', value: { type: 'mdxJsxAttributeValueExpression', value: JSON.stringify(orbJson) } },
       // lolo fence above already shows the code — only show the live preview
       { type: 'mdxJsxAttribute', name: 'showCode', value: { type: 'mdxJsxAttributeValueExpression', value: 'false' } },
     ],

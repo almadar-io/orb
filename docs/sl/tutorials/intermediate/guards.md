@@ -99,7 +99,7 @@ orbital AccountManager {
         (fetch Account)
         (render-ui main { type: "entity-table", entity: "Account", fields: ["balance", "isVerified"], columns: ["balance", "isVerified"], itemActions: [{ event: "WITHDRAW", label: "Withdraw" }, { event: "FREEZE", label: "Freeze" }] })
       WITHDRAW -> active
-        ? (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
+        when (and (>= @entity.balance @payload.amount) (= @entity.isVerified true))
         (set @entity.balance (- @entity.balance @payload.amount))
       FREEZE -> frozen
     }

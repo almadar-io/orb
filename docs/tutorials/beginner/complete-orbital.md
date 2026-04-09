@@ -25,11 +25,11 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 | Part | Purpose | Missing it means... |
 |------|---------|---------------------|
 | `entity` | What data you manage | No data to work with |
-| `traits` | How the app behaves | No behavior or UI |
-| `stateMachine` | The states, events, and transitions | No lifecycle defined |
-| `pages` | Where the UI appears (routes) | Page loads blank — nothing renders |
+| `trait` | How the app behaves | No behavior or UI |
+| states + transitions | The states, events, and transitions inside the trait | No lifecycle defined |
+| `page` | Where the UI appears (routes) | Page loads blank — nothing renders |
 
-**Pages are the most commonly forgotten part.** Without `pages`, the trait exists but is never mounted to a route — the user sees nothing.
+**Pages are the most commonly forgotten part.** Without a `page` declaration, the trait exists but is never mounted to a route — the user sees nothing.
 
 ---
 
@@ -37,16 +37,13 @@ Orbital = Entity + Trait(s) + State Machine + Pages
 
 The entity is your data structure. It describes what you're managing and how it persists.
 
-```orb
-{
-  "name": "Task",
-  "persistence": "persistent",
-  "collection": "tasks",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "title", "type": "string", "required": true },
-    { "name": "status", "type": "enum", "values": ["pending", "done"], "default": "pending" }
-  ]
+```lolo
+type Status = pending | done
+
+entity Task [persistent: tasks] {
+  id : string!
+  title : string!
+  status : Status = pending
 }
 ```
 
@@ -65,7 +62,7 @@ The state machine lives inside a trait. It describes what states the feature can
 
 ### States
 
-Every state machine needs at least one state marked `"isInitial": true`. States are **objects**, not strings:
+Every state machine needs at least one initial state, declared with `initial:`. States are named blocks:
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
@@ -81,23 +78,15 @@ Every state machine needs at least one state marked `"isInitial": true`. States 
 />
 </div>
 
-```orb
-"states": [
-  { "name": "Pending", "isInitial": true },
-  { "name": "Done", "isTerminal": true }
-]
+```lolo
+initial: Pending
+state Pending { }
+state Done { }
 ```
 
 ### Events
 
-Events are triggers — user actions, system events, or lifecycle hooks:
-
-```orb
-"events": [
-  { "key": "INIT", "name": "Initialize" },
-  { "key": "COMPLETE", "name": "Complete Task" }
-]
-```
+Events are triggers — user actions, system events, or lifecycle hooks. They are declared implicitly by the transitions that use them. For example, a trait handling `INIT` and `COMPLETE` would have transitions like:
 
 > **`INIT` is mandatory.** Without an INIT transition, the page loads but renders nothing.
 
@@ -105,90 +94,42 @@ Events are triggers — user actions, system events, or lifecycle hooks:
 
 Transitions wire states and events together. They can carry guards (conditions) and effects (actions):
 
-```orb
-"transitions": [
-  {
-    "from": "Pending",
-    "event": "INIT",
-    "to": "Pending",
-    "effects": [
-      ["fetch", "Task"],
-      ["render-ui", "main", {
-        "type": "entity-table",
-        "entity": "Task",
-        "columns": ["title", "status"],
-        "itemActions": [
-          { "event": "COMPLETE", "label": "Complete" }
-        ]
-      }]
-    ]
-  },
-  {
-    "from": "Pending",
-    "event": "COMPLETE",
-    "to": "Done",
-    "effects": [
-      ["persist", "update", "Task", "@entity"],
-      ["notify", "success", "Task completed!"]
-    ]
-  }
-]
+```lolo
+state Pending {
+  INIT -> Pending
+    (fetch Task)
+    (render-ui main { type: "entity-table", entity: "Task", columns: ["title", "status"], itemActions: [{ event: "COMPLETE", label: "Complete" }] })
+  COMPLETE -> Done
+    (persist update Task @entity)
+    (notify success "Task completed!")
+}
+state Done { }
 ```
 
 ---
 
 ## Step 3 — Build the Trait
 
-Wrap the state machine in a trait with `name`, `linkedEntity`, and `category`:
+Wrap the state machine in a trait with a name, linked entity, and category:
 
-```orb
-{
-  "name": "TaskLifecycle",
-  "linkedEntity": "Task",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [
-      { "name": "Pending", "isInitial": true },
-      { "name": "Done", "isTerminal": true }
-    ],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "COMPLETE", "name": "Complete Task" }
-    ],
-    "transitions": [
-      {
-        "from": "Pending",
-        "event": "INIT",
-        "to": "Pending",
-        "effects": [
-          ["fetch", "Task"],
-          ["render-ui", "main", {
-            "type": "entity-table",
-            "entity": "Task",
-            "columns": ["title", "status"],
-            "itemActions": [
-              { "event": "COMPLETE", "label": "Complete" }
-            ]
-          }]
-        ]
-      },
-      {
-        "from": "Pending",
-        "event": "COMPLETE",
-        "to": "Done",
-        "effects": [
-          ["persist", "update", "Task", "@entity"],
-          ["notify", "success", "Task completed!"]
-        ]
-      }
-    ]
+```lolo
+trait TaskLifecycle -> Task [interaction] {
+  initial: Pending
+  state Pending {
+    INIT -> Pending
+      (fetch Task)
+      (render-ui main { type: "entity-table", entity: "Task", columns: ["title", "status"], itemActions: [{ event: "COMPLETE", label: "Complete" }] })
+    COMPLETE -> Done
+      (persist update Task @entity)
+      (notify success "Task completed!")
   }
+  state Done { }
 }
 ```
 
-**`category`** can be:
-- `interaction` — has UI, fires `render-ui` effects
-- `integration` — backend service calls, no UI
+The trait category (in brackets after the entity name) can be:
+- `[interaction]` — has UI, fires `render-ui` effects
+- `[integration]` — backend service calls, no UI
 
 ---
 
@@ -196,21 +137,13 @@ Wrap the state machine in a trait with `name`, `linkedEntity`, and `category`:
 
 Pages bind traits to URL routes. This is the part most often missing.
 
-```orb
-"pages": [
-  {
-    "name": "TaskListPage",
-    "path": "/tasks",
-    "traits": [
-      { "ref": "TaskLifecycle", "linkedEntity": "Task" }
-    ]
-  }
-]
+```lolo
+page "/tasks" -> TaskLifecycle
 ```
 
-- `path` is the URL route (supports `:id` params, e.g. `/tasks/:id`)
-- `traits[].ref` references a trait by name defined in the same orbital
-- `traits[].linkedEntity` tells the runtime which entity to bind
+- The path is the URL route (supports `:id` params, e.g. `/tasks/:id`)
+- The trait name after `->` references a trait defined in the same orbital
+- The orbital's entity is automatically bound to the page
 
 ---
 
@@ -247,56 +180,54 @@ orbital Tasks {
 
 ## Common Mistakes
 
-### Missing `pages`
+### Missing `page`
 
-```orb
-// ❌ Incomplete — nothing renders at any route
-{
-  "name": "Tasks",
-  "entity": { ... },
-  "traits": [ { "name": "TaskLifecycle", ... } ]
+```lolo
+;; ❌ Incomplete — nothing renders at any route
+orbital Tasks {
+  entity Task [persistent: tasks] { ... }
+  trait TaskLifecycle -> Task [interaction] { ... }
 }
 
-// ✅ Complete — trait is mounted at /tasks
-{
-  "name": "Tasks",
-  "entity": { ... },
-  "traits": [ { "name": "TaskLifecycle", ... } ],
-  "pages": [
-    { "name": "TaskListPage", "path": "/tasks", "traits": [{ "ref": "TaskLifecycle", "linkedEntity": "Task" }] }
-  ]
+;; ✅ Complete — trait is mounted at /tasks
+orbital Tasks {
+  entity Task [persistent: tasks] { ... }
+  trait TaskLifecycle -> Task [interaction] { ... }
+  page "/tasks" -> TaskLifecycle
 }
 ```
 
 ### States as strings (invalid)
 
-```orb
-// ❌ Wrong format
-"states": ["Pending", "Done"]
+In lolo, every state is a named block. There is no list of strings — declare each state with the `state` keyword:
 
-// ✅ States must be objects
-"states": [
-  { "name": "Pending", "isInitial": true },
-  { "name": "Done", "isTerminal": true }
-]
+```lolo
+;; ❌ Not valid lolo
+;; states: ["Pending", "Done"]
+
+;; ✅ States are blocks, initial state declared with initial:
+initial: Pending
+state Pending { }
+state Done { }
 ```
 
 ### Missing INIT transition
 
-```orb
-// ❌ Page opens but is blank — no initial render-ui
-"transitions": [
-  { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }
-]
+```lolo
+;; ❌ Page opens but is blank — no initial render-ui
+state Pending {
+  COMPLETE -> Done
+    (persist update Task @entity)
+}
 
-// ✅ Add a self-loop on INIT to render the initial UI
-"transitions": [
-  {
-    "from": "Pending", "event": "INIT", "to": "Pending",
-    "effects": [["fetch", "Task"], ["render-ui", "main", { "type": "entity-table", "entity": "Task" }]]
-  },
-  { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }
-]
+;; ✅ Add a self-loop on INIT to render the initial UI
+state Pending {
+  INIT -> Pending
+    (fetch Task)
+    (render-ui main { type: "entity-table", entity: "Task" })
+  COMPLETE -> Done
+    (persist update Task @entity)
+}
 ```
 
 ---

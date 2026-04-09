@@ -2,7 +2,7 @@ import { AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 # Generating Schemas with an LLM
 
-Orb schemas are structured JSON, and that structure makes them ideal targets for LLM generation. You describe your application in plain language; the LLM outputs a valid `.orb` schema.
+The .orb language has a clear, regular structure that makes it an ideal target for LLM generation. You describe your application in plain language; the LLM outputs a valid `.lolo` program.
 
 This tutorial covers:
 - Installing and using the Orb skill
@@ -100,40 +100,20 @@ A good generation prompt covers:
 
 For each orbital, the LLM should output all four required parts:
 
-```orb
-{
-  "name": "AppName",
-  "version": "1.0.0",
-  "orbitals": [
-    {
-      "name": "OrbitalName",
-      "entity": {
-        "name": "EntityName",
-        "persistence": "persistent",
-        "collection": "collection_name",
-        "fields": [...]
-      },
-      "traits": [
-        {
-          "name": "TraitName",
-          "linkedEntity": "EntityName",
-          "category": "interaction",
-          "stateMachine": {
-            "states": [...],
-            "events": [...],
-            "transitions": [...]
-          }
-        }
-      ],
-      "pages": [
-        {
-          "name": "PageName",
-          "path": "/route",
-          "traits": [{ "ref": "TraitName", "linkedEntity": "EntityName" }]
-        }
-      ]
+```lolo
+orbital OrbitalName {
+  entity EntityName [persistent: collection_name] {
+    ;; fields...
+  }
+  trait TraitName -> EntityName [interaction] {
+    initial: SomeState
+    state SomeState {
+      INIT -> SomeState
+        (fetch EntityName)
+        (render-ui main { type: "entity-table", entity: "EntityName" })
     }
-  ]
+  }
+  page "/route" -> TraitName
 }
 ```
 
@@ -145,52 +125,41 @@ LLMs that don't have the Orb skill loaded will make predictable mistakes. Learn 
 
 ### 1. Missing `pages` (most common)
 
-The LLM generates entity + traits but forgets the pages array entirely.
+The LLM generates entity + traits but forgets the page declaration entirely.
 
-```orb
-// ❌ Incomplete — no pages
-{
-  "name": "TaskManager",
-  "orbitals": [{
-    "name": "Tasks",
-    "entity": { ... },
-    "traits": [ { "name": "TaskCRUD", ... } ]
-  }]
+```lolo
+;; ❌ Incomplete — no page
+orbital Tasks {
+  entity Task [persistent: tasks] { ... }
+  trait TaskCRUD -> Task [interaction] { ... }
 }
 
-// ✅ Add pages
-{
-  "name": "TaskManager",
-  "orbitals": [{
-    "name": "Tasks",
-    "entity": { ... },
-    "traits": [ { "name": "TaskCRUD", ... } ],
-    "pages": [
-      { "name": "TaskListPage", "path": "/tasks", "traits": [{ "ref": "TaskCRUD", "linkedEntity": "Task" }] }
-    ]
-  }]
+;; ✅ Add a page declaration
+orbital Tasks {
+  entity Task [persistent: tasks] { ... }
+  trait TaskCRUD -> Task [interaction] { ... }
+  page "/tasks" -> TaskCRUD
 }
 ```
 
-**Fix prompt:** `"The schema is missing the pages array for each orbital. Please add pages with path and traits[].ref for every orbital."`
+**Fix prompt:** `"The schema is missing a page declaration for each orbital. Please add page \"/path\" -> TraitName for every orbital."`
 
 ---
 
-### 2. States as strings instead of objects
+### 2. States as strings instead of blocks
 
-```orb
-// ❌ Wrong
-"states": ["Pending", "InProgress", "Done"]
+```lolo
+;; ❌ Not valid lolo
+;; states: ["Pending", "InProgress", "Done"]
 
-// ✅ Correct
-"states": [
-  { "name": "Pending", "isInitial": true },
-  { "name": "InProgress" },
-  { "name": "Done", "isTerminal": true }
-]
+;; ✅ Correct — each state is a named block; initial: marks the entry point
+initial: Pending
+state Pending { }
+state InProgress { }
+state Done { }
 ```
 
-**Fix prompt:** `"States must be objects with a 'name' property. The initial state needs 'isInitial': true. Terminal states need 'isTerminal': true."`
+**Fix prompt:** `"In lolo, states are named blocks declared with the state keyword. Use initial: StateName to mark the entry point. There is no array of state names."`
 
 ---
 
@@ -198,23 +167,21 @@ The LLM generates entity + traits but forgets the pages array entirely.
 
 The page loads but renders nothing because there's no INIT self-loop with `render-ui`.
 
-```orb
-// ❌ No INIT — page is blank
-"transitions": [
-  { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }
-]
+```lolo
+;; ❌ No INIT — page is blank
+state Pending {
+  COMPLETE -> Done
+    (persist update Task @entity)
+}
 
-// ✅ Add INIT
-"transitions": [
-  {
-    "from": "Pending", "event": "INIT", "to": "Pending",
-    "effects": [
-      ["fetch", "Task"],
-      ["render-ui", "main", { "type": "entity-table", "entity": "Task" }]
-    ]
-  },
-  { "from": "Pending", "event": "COMPLETE", "to": "Done", "effects": [...] }
-]
+;; ✅ Add INIT
+state Pending {
+  INIT -> Pending
+    (fetch Task)
+    (render-ui main { type: "entity-table", entity: "Task" })
+  COMPLETE -> Done
+    (persist update Task @entity)
+}
 ```
 
 **Fix prompt:** `"Every interaction trait needs an INIT transition (self-loop) that fires render-ui to render the initial UI. Without it the page will be blank."`
@@ -223,56 +190,51 @@ The page loads but renders nothing because there's no INIT self-loop with `rende
 
 ### 4. Using deprecated action props
 
-```orb
-// ❌ Deprecated — these will fail validation
-{ "type": "form-section", "onSubmit": "SAVE", "onCancel": "CANCEL" }
+```lolo
+;; ❌ Deprecated — these will fail validation
+(render-ui main { type: "form-section", onSubmit: "SAVE", onCancel: "CANCEL" })
 
-// ✅ Correct
-{ "type": "form-section", "submitEvent": "SAVE", "cancelEvent": "CANCEL" }
+;; ✅ Correct
+(render-ui main { type: "form-section", submitEvent: "SAVE", cancelEvent: "CANCEL" })
 ```
 
-```orb
-// ❌ Deprecated
-{ "type": "page-header", "headerActions": [...] }
+```lolo
+;; ❌ Deprecated
+(render-ui main { type: "page-header", headerActions: [...] })
 
-// ✅ Correct
-{ "type": "page-header", "actions": [...] }
+;; ✅ Correct
+(render-ui main { type: "page-header", actions: [...] })
 ```
 
 ---
 
-### 5. Schema-level traits array (wrong structure)
+### 5. Traits outside orbitals (wrong structure)
 
-```orb
-// ❌ Wrong — traits at the root level (legacy format)
-{
-  "name": "App",
-  "traits": [...],
-  "pages": [...]
-}
+```lolo
+;; ❌ Wrong — traits must live inside an orbital block
+trait TaskCRUD -> Task [interaction] { ... }
+page "/tasks" -> TaskCRUD
 
-// ✅ Correct — traits live inside orbitals
-{
-  "name": "App",
-  "orbitals": [{
-    "name": "FeatureName",
-    "entity": { ... },
-    "traits": [...],
-    "pages": [...]
-  }]
+;; ✅ Correct — traits and pages belong inside the orbital
+orbital FeatureName {
+  entity Task [persistent: tasks] { ... }
+  trait TaskCRUD -> Task [interaction] { ... }
+  page "/tasks" -> TaskCRUD
 }
 ```
 
 ---
 
-### 6. Missing `linkedEntity` on trait
+### 6. Missing entity binding on trait
 
-```orb
-// ❌ Missing linkedEntity
-{ "name": "TaskCRUD", "category": "interaction", "stateMachine": { ... } }
+In lolo, the entity a trait operates on is declared inline with `->`. Omitting it is a syntax error:
 
-// ✅ Correct
-{ "name": "TaskCRUD", "linkedEntity": "Task", "category": "interaction", "stateMachine": { ... } }
+```lolo
+;; ❌ Missing entity binding — not valid lolo
+trait TaskCRUD [interaction] { ... }
+
+;; ✅ Correct — entity name follows ->
+trait TaskCRUD -> Task [interaction] { ... }
 ```
 
 ---
@@ -304,9 +266,9 @@ Common validation errors and what they mean:
 
 | Error | Cause |
 |-------|-------|
-| `Missing initial state` | No state has `"isInitial": true` |
-| `Unknown event in transition` | A transition references an event key not in the `events` array |
-| `Missing pages` | An orbital has traits but no `pages` array |
+| `Missing initial state` | No `initial: StateName` declaration in the trait |
+| `Unknown event in transition` | A transition event name is never used in a reachable state |
+| `Missing pages` | An orbital has traits but no `page "/path" -> TraitName` line |
 | `Invalid pattern type` | The `type` in a `render-ui` effect is not a valid pattern name |
 | `Deprecated prop` | Using `onSubmit` instead of `submitEvent`, etc. |
 | `Circular dependency` | Two orbitals listen to each other (use a third mediator orbital) |
@@ -318,16 +280,17 @@ Common validation errors and what they mean:
 This prompt works well with the Orb skill installed:
 
 ```
-Using the Orb language, generate a complete .orb schema for: [YOUR APP DESCRIPTION]
+Using the lolo language, generate a complete .lolo program for: [YOUR APP DESCRIPTION]
 
 Requirements:
-- Each feature domain becomes one orbital with: entity, traits, pages
-- Every trait must have an INIT self-loop transition that renders the initial UI using render-ui
-- States must be objects: { "name": "StateName", "isInitial": true }
-- Pages must be present with path and traits[].ref wiring
+- Each feature domain becomes one orbital block containing: entity, trait(s), page
+- Every interaction trait must have an INIT self-loop transition that fires render-ui
+- States are named blocks declared with the state keyword; use initial: StateName
+- Every orbital must have a page "/path" -> TraitName declaration
+- Traits are bound to their entity with ->: trait Name -> Entity [interaction]
 - Use "submitEvent"/"cancelEvent" on form-section (not onSubmit/onCancel)
 - Use "actions" on page-header (not headerActions)
-- All traits belong inside orbitals — there is no schema-level traits array
+- All traits and pages belong inside orbital blocks
 
 Entities needed: [LIST ENTITIES]
 Workflows: [DESCRIBE STATE TRANSITIONS]

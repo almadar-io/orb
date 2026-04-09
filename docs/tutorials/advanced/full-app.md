@@ -73,20 +73,17 @@ TaskManager orbital          ProjectManager orbital       UserManager orbital
 
 ### Entity
 
-```orb
-{
-  "name": "Task",
-  "persistence": "persistent",
-  "collection": "tasks",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "title", "type": "string", "required": true },
-    { "name": "description", "type": "string" },
-    { "name": "priority", "type": "enum", "values": ["low", "medium", "high"], "default": "medium" },
-    { "name": "dueDate", "type": "date" },
-    { "name": "assigneeId", "type": "string" },
-    { "name": "projectId", "type": "string" }
-  ]
+```lolo
+type Priority = low | medium | high
+
+entity Task [persistent: tasks] {
+  id : string!
+  title : string!
+  description : string
+  priority : Priority = medium
+  dueDate : date
+  assigneeId : string
+  projectId : string
 }
 ```
 
@@ -97,12 +94,14 @@ Manages the task's workflow status. Emits `TASK_COMPLETED` when a task is approv
 **States:** `todo → inProgress → review → done`
 
 Key transitions:
-```orb
-{ "from": "review", "event": "APPROVE", "to": "done",
-  "effects": [["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]]
-},
-{ "from": "inProgress", "event": "COMPLETE", "to": "done",
-  "effects": [["emit", "TASK_COMPLETED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }]]
+```lolo
+state review {
+  APPROVE -> done
+    (emit TASK_COMPLETED { taskId: @entity.id, projectId: @entity.projectId })
+}
+state inProgress {
+  COMPLETE -> done
+    (emit TASK_COMPLETED { taskId: @entity.id, projectId: @entity.projectId })
 }
 ```
 
@@ -113,35 +112,34 @@ Manages the list UI. Emits `TASK_CREATED` when a new task is saved.
 **States:** `listing → creating | editing`
 
 Key transitions:
-```orb
-{ "from": "creating", "event": "SAVE", "to": "listing",
-  "effects": [
-    ["persist", "update", "Task", "@entity"],
-    ["emit", "TASK_CREATED", { "taskId": "@entity.id", "projectId": "@entity.projectId" }],
-    ["notify", "success", "Task created"]
-  ]
-},
-{ "from": "listing", "event": "VIEW", "to": "listing",
-  "effects": [["navigate", "/tasks/@payload.id"]]
+```lolo
+state creating {
+  SAVE -> listing
+    (persist update Task @entity)
+    (emit TASK_CREATED { taskId: @entity.id, projectId: @entity.projectId })
+    (notify success "Task created")
+}
+state listing {
+  VIEW -> listing
+    (navigate "/tasks/@payload.id")
 }
 ```
 
 ### Pages
 
-```orb
-"pages": [
-  {
-    "name": "TaskListPage",
-    "path": "/tasks",
-    "traits": [{ "ref": "TaskCRUD", "linkedEntity": "Task" }]
-  }
-]
+```lolo
+page "/tasks" -> TaskCRUD
 ```
 
 ### Orbital-level emits
 
-```orb
-"emits": ["TASK_COMPLETED", "TASK_CREATED"]
+Declared inside the trait's `emits` block:
+
+```lolo
+emits {
+  TASK_COMPLETED external { taskId: string, projectId: string }
+  TASK_CREATED external { taskId: string, projectId: string }
+}
 ```
 
 ---
@@ -152,18 +150,13 @@ Key transitions:
 
 Tracks aggregate stats per project, updated reactively when tasks change:
 
-```orb
-{
-  "name": "Project",
-  "persistence": "persistent",
-  "collection": "projects",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "name", "type": "string", "required": true },
-    { "name": "description", "type": "string" },
-    { "name": "taskCount", "type": "number", "default": 0 },
-    { "name": "completedCount", "type": "number", "default": 0 }
-  ]
+```lolo
+entity Project [persistent: projects] {
+  id : string!
+  name : string!
+  description : string
+  taskCount : number = 0
+  completedCount : number = 0
 }
 ```
 
@@ -171,45 +164,21 @@ Tracks aggregate stats per project, updated reactively when tasks change:
 
 Listens to both `TASK_COMPLETED` and `TASK_CREATED` and increments counters:
 
-```orb
-{
-  "name": "ProjectStats",
-  "linkedEntity": "Project",
-  "category": "interaction",
-  "listens": [
-    { "event": "TASK_COMPLETED", "scope": "external" },
-    { "event": "TASK_CREATED", "scope": "external" }
-  ],
-  "stateMachine": {
-    "states": [{ "name": "idle", "isInitial": true }],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "TASK_COMPLETED", "name": "Task Completed" },
-      { "key": "TASK_CREATED", "name": "Task Created" }
-    ],
-    "transitions": [
-      {
-        "from": "idle", "event": "INIT", "to": "idle",
-        "effects": [
-          ["fetch", "Project"],
-          ["render-ui", "main", {
-            "type": "stats",
-            "items": [
-              { "label": "Total Tasks", "value": "@entity.taskCount" },
-              { "label": "Completed", "value": "@entity.completedCount" }
-            ]
-          }]
-        ]
-      },
-      {
-        "from": "idle", "event": "TASK_CREATED", "to": "idle",
-        "effects": [["increment", "@entity.taskCount", 1]]
-      },
-      {
-        "from": "idle", "event": "TASK_COMPLETED", "to": "idle",
-        "effects": [["increment", "@entity.completedCount", 1]]
-      }
-    ]
+```lolo
+trait ProjectStats -> Project [interaction] {
+  initial: idle
+  state idle {
+    INIT -> idle
+      (fetch Project)
+      (render-ui main { type: "stats", items: [{ label: "Total Tasks", value: "@entity.taskCount" }, { label: "Completed", value: "@entity.completedCount" }] })
+    TASK_CREATED -> idle
+      (increment @entity.taskCount 1)
+    TASK_COMPLETED -> idle
+      (increment @entity.completedCount 1)
+  }
+  listens {
+    * TASK_CREATED -> TASK_CREATED
+    * TASK_COMPLETED -> TASK_COMPLETED
   }
 }
 ```
@@ -218,18 +187,10 @@ The `TASK_CREATED` and `TASK_COMPLETED` events are received from `TaskManager`. 
 
 ### Pages & orbital-level listens
 
-```orb
-"pages": [
-  {
-    "name": "ProjectListPage",
-    "path": "/projects",
-    "traits": [{ "ref": "ProjectStats", "linkedEntity": "Project" }]
-  }
-],
-"listens": [
-  { "event": "TASK_COMPLETED", "from": "TaskManager" },
-  { "event": "TASK_CREATED", "from": "TaskManager" }
-]
+The page declaration and the cross-orbital listens (wired via the trait's `listens` block above):
+
+```lolo
+page "/projects" -> ProjectStats
 ```
 
 ---
@@ -240,67 +201,36 @@ The simplest orbital — a read-only browser for users with a navigate-to-detail
 
 ### Entity
 
-```orb
-{
-  "name": "User",
-  "persistence": "persistent",
-  "collection": "users",
-  "fields": [
-    { "name": "id", "type": "string", "required": true },
-    { "name": "name", "type": "string", "required": true },
-    { "name": "email", "type": "string", "required": true },
-    { "name": "role", "type": "enum", "values": ["admin", "member", "guest"], "default": "member" }
-  ]
+```lolo
+type Role = admin | member | guest
+
+entity User [persistent: users] {
+  id : string!
+  name : string!
+  email : string!
+  role : Role = member
 }
 ```
 
 ### Trait: UserBrowser
 
-```orb
-{
-  "name": "UserBrowser",
-  "linkedEntity": "User",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [{ "name": "browsing", "isInitial": true }],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "VIEW", "name": "View User", "payload": [
-        { "name": "id", "type": "string", "required": true }
-      ]}
-    ],
-    "transitions": [
-      {
-        "from": "browsing", "event": "INIT", "to": "browsing",
-        "effects": [
-          ["fetch", "User"],
-          ["render-ui", "main", {
-            "type": "entity-table",
-            "entity": "User",
-            "columns": ["name", "email", "role"],
-            "itemActions": [{ "event": "VIEW", "label": "View" }]
-          }]
-        ]
-      },
-      {
-        "from": "browsing", "event": "VIEW", "to": "browsing",
-        "effects": [["navigate", "/users/@payload.id"]]
-      }
-    ]
+```lolo
+trait UserBrowser -> User [interaction] {
+  initial: browsing
+  state browsing {
+    INIT -> browsing
+      (fetch User)
+      (render-ui main { type: "entity-table", entity: "User", columns: ["name", "email", "role"], itemActions: [{ event: "VIEW", label: "View" }] })
+    VIEW -> browsing
+      (navigate "/users/@payload.id")
   }
 }
 ```
 
 ### Pages
 
-```orb
-"pages": [
-  {
-    "name": "UserListPage",
-    "path": "/users",
-    "traits": [{ "ref": "UserBrowser", "linkedEntity": "User" }]
-  }
-]
+```lolo
+page "/users" -> UserBrowser
 ```
 
 ---
@@ -321,13 +251,13 @@ The simplest orbital — a read-only browser for users with a navigate-to-detail
 | Concept | Where it appears |
 |---------|-----------------|
 | Multiple traits per orbital | TaskManager has TaskLifecycle + TaskCRUD |
-| Terminal states | `done` in TaskLifecycle (`isTerminal: true`) |
+| Terminal states | `done` in TaskLifecycle (last state with no outgoing transitions) |
 | Cross-orbital emit | TaskLifecycle emits `TASK_COMPLETED`, TaskCRUD emits `TASK_CREATED` |
 | Cross-orbital listen | ProjectStats listens to both events and increments counters |
 | Self-loop transitions | All INIT transitions; ProjectStats event handlers |
 | Payload in events | `VIEW` carries `id`; `TASK_COMPLETED` carries `taskId` + `projectId` |
 | navigate effect | TaskCRUD's VIEW transition navigates to `/tasks/@payload.id` |
-| increment effect | ProjectStats uses `["increment", "@entity.taskCount", 1]` |
+| increment effect | ProjectStats uses `(increment @entity.taskCount 1)` |
 
 ---
 

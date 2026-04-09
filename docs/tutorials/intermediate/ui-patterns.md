@@ -21,8 +21,8 @@ Orb UI is driven entirely by `render-ui` effects inside state machine transition
 
 ## How render-ui Works
 
-```orb
-["render-ui", "slot", { "type": "pattern", ...props }]
+```lolo
+(render-ui slot { type: "pattern", ...props })
 ```
 
 | Argument | Description |
@@ -32,8 +32,8 @@ Orb UI is driven entirely by `render-ui` effects inside state machine transition
 | `...props` | Pattern-specific configuration |
 
 **To clear a slot:**
-```orb
-["render-ui", "slot", null]
+```lolo
+(render-ui slot null)
 ```
 
 ---
@@ -60,39 +60,39 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`entity-table`** — Data table with columns, sorting, and row actions.
 
-```orb
-["render-ui", "main", {
-  "type": "entity-table",
-  "entity": "Product",
-  "columns": ["name", "price", "stock", "category"],
-  "itemActions": [
-    { "event": "VIEW", "label": "View" },
-    { "event": "EDIT", "label": "Edit" },
-    { "event": "DELETE", "label": "Delete" }
+```lolo
+(render-ui main {
+  type: "entity-table",
+  entity: "Product",
+  columns: ["name", "price", "stock", "category"],
+  itemActions: [
+    { event: "VIEW", label: "View" },
+    { event: "EDIT", label: "Edit" },
+    { event: "DELETE", label: "Delete" }
   ]
-}]
+})
 ```
 
 **`entity-detail`** — Read-only detail view for a single record.
 
-```orb
-["render-ui", "main", {
-  "type": "entity-detail",
-  "entity": "Product",
-  "fields": ["name", "description", "price", "stock", "category"]
-}]
+```lolo
+(render-ui main {
+  type: "entity-detail",
+  entity: "Product",
+  fields: ["name", "description", "price", "stock", "category"]
+})
 ```
 
 **`stats`** — Dashboard stat cards (counts, totals, summaries).
 
-```orb
-["render-ui", "main", {
-  "type": "stats",
-  "items": [
-    { "label": "Total Products", "value": "@entity.count" },
-    { "label": "Out of Stock", "value": "@entity.outOfStock" }
+```lolo
+(render-ui main {
+  type: "stats",
+  items: [
+    { label: "Total Products", value: "@entity.count" },
+    { label: "Out of Stock", value: "@entity.outOfStock" }
   ]
-}]
+})
 ```
 
 ---
@@ -101,30 +101,30 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`form`** — Auto-generated form for an entity. Renders all fields or a specified subset.
 
-```orb
-["render-ui", "main", {
-  "type": "form",
-  "entity": "Product",
-  "fields": [
-    { "name": "name", "label": "Product Name", "required": true },
-    { "name": "description", "label": "Description", "type": "textarea" },
-    { "name": "price", "label": "Price", "type": "number", "required": true },
-    { "name": "stock", "label": "Stock", "type": "number" },
-    { "name": "category", "label": "Category" }
+```lolo
+(render-ui main {
+  type: "form",
+  entity: "Product",
+  fields: [
+    { name: "name", label: "Product Name", required: true },
+    { name: "description", label: "Description", type: "textarea" },
+    { name: "price", label: "Price", type: "number", required: true },
+    { name: "stock", label: "Stock", type: "number" },
+    { name: "category", label: "Category" }
   ]
-}]
+})
 ```
 
 **`form-section`** — A form inside a modal or drawer, with submit/cancel wired to events.
 
-```orb
-["render-ui", "modal", {
-  "type": "form-section",
-  "entity": "Task",
-  "fields": ["title", "priority", "dueDate"],
-  "submitEvent": "SAVE",
-  "cancelEvent": "CANCEL"
-}]
+```lolo
+(render-ui modal {
+  type: "form-section",
+  entity: "Task",
+  fields: ["title", "priority", "dueDate"],
+  submitEvent: "SAVE",
+  cancelEvent: "CANCEL"
+})
 ```
 
 > **Important:** Use `submitEvent` and `cancelEvent` (not `onSubmit`/`onCancel` — those are deprecated).
@@ -135,27 +135,27 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`page-header`** — Page title with optional action buttons.
 
-```orb
-["render-ui", "main", {
-  "type": "page-header",
-  "title": "Products",
-  "subtitle": "Manage your product catalog",
-  "actions": [
-    { "event": "CREATE", "label": "New Product", "variant": "primary" }
+```lolo
+(render-ui main {
+  type: "page-header",
+  title: "Products",
+  subtitle: "Manage your product catalog",
+  actions: [
+    { event: "CREATE", label: "New Product", variant: "primary" }
   ]
-}]
+})
 ```
 
 **`breadcrumb`** — Navigation trail.
 
-```orb
-["render-ui", "main", {
-  "type": "breadcrumb",
-  "items": [
-    { "label": "Products", "path": "/products" },
-    { "label": "@entity.name" }
+```lolo
+(render-ui main {
+  type: "breadcrumb",
+  items: [
+    { label: "Products", path: "/products" },
+    { label: "@entity.name" }
   ]
-}]
+})
 ```
 
 ---
@@ -164,22 +164,22 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 **`empty-state`** — Shown when a list has no items.
 
-```orb
-["render-ui", "main", {
-  "type": "empty-state",
-  "title": "No products yet",
-  "description": "Add your first product to get started",
-  "actions": [{ "event": "CREATE", "label": "Add Product" }]
-}]
+```lolo
+(render-ui main {
+  type: "empty-state",
+  title: "No products yet",
+  description: "Add your first product to get started",
+  actions: [{ event: "CREATE", label: "Add Product" }]
+})
 ```
 
 **`loading-state`** — Spinner while data loads.
 
-```orb
-["render-ui", "main", {
-  "type": "loading-state",
-  "title": "Loading products..."
-}]
+```lolo
+(render-ui main {
+  type: "loading-state",
+  title: "Loading products..."
+})
 ```
 
 ---
@@ -188,133 +188,73 @@ Slots divide the page into named regions. Each slot is owned by one trait at a t
 
 The power of `render-ui` is that it changes based on state. Different states render different components into the same slot. Here's the full `ProductCRUD` trait from `08-patterns.orb`:
 
-```orb
-{
-  "name": "ProductCRUD",
-  "linkedEntity": "Product",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [
-      { "name": "listing", "isInitial": true },
-      { "name": "viewing" },
-      { "name": "editing" },
-      { "name": "creating" }
-    ],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "VIEW", "name": "View Product", "payload": [
-        { "name": "id", "type": "string", "required": true }
-      ]},
-      { "key": "EDIT", "name": "Edit Product" },
-      { "key": "CREATE", "name": "Create Product" },
-      { "key": "SAVE", "name": "Save" },
-      { "key": "CANCEL", "name": "Cancel" },
-      { "key": "BACK", "name": "Back to List" },
-      { "key": "DELETE", "name": "Delete Product", "payload": [
-        { "name": "id", "type": "string", "required": true }
-      ]}
-    ],
-    "transitions": [
-      {
-        "from": "listing", "event": "INIT", "to": "listing",
-        "effects": [
-          ["fetch", "Product"],
-          ["render-ui", "main", {
-            "type": "entity-table",
-            "entity": "Product",
-            "columns": ["name", "price", "stock", "category"],
-            "itemActions": [
-              { "event": "VIEW", "label": "View" },
-              { "event": "EDIT", "label": "Edit" },
-              { "event": "DELETE", "label": "Delete" }
-            ]
-          }]
+```lolo
+trait ProductCRUD -> Product [interaction] {
+  initial: listing
+  state listing {
+    INIT -> listing
+      (fetch Product)
+      (render-ui main {
+        type: "entity-table",
+        entity: "Product",
+        columns: ["name", "price", "stock", "category"],
+        itemActions: [
+          { event: "VIEW", label: "View" },
+          { event: "EDIT", label: "Edit" },
+          { event: "DELETE", label: "Delete" }
         ]
-      },
-      {
-        "from": "listing", "event": "VIEW", "to": "viewing",
-        "effects": [
-          ["fetch", "Product", "@payload.id"],
-          ["render-ui", "main", {
-            "type": "entity-detail",
-            "entity": "Product",
-            "fields": ["name", "description", "price", "stock", "category"]
-          }]
+      })
+    VIEW -> viewing
+      (fetch Product @payload.id)
+      (render-ui main {
+        type: "entity-detail",
+        entity: "Product",
+        fields: ["name", "description", "price", "stock", "category"]
+      })
+    CREATE -> creating
+      (render-ui main {
+        type: "form",
+        entity: "Product",
+        fields: [
+          { name: "name", label: "Product Name", required: true },
+          { name: "description", label: "Description", type: "textarea" },
+          { name: "price", label: "Price", type: "number", required: true },
+          { name: "stock", label: "Stock", type: "number" },
+          { name: "category", label: "Category" }
         ]
-      },
-      {
-        "from": "listing", "event": "CREATE", "to": "creating",
-        "effects": [
-          ["render-ui", "main", {
-            "type": "form",
-            "entity": "Product",
-            "fields": [
-              { "name": "name", "label": "Product Name", "required": true },
-              { "name": "description", "label": "Description", "type": "textarea" },
-              { "name": "price", "label": "Price", "type": "number", "required": true },
-              { "name": "stock", "label": "Stock", "type": "number" },
-              { "name": "category", "label": "Category" }
-            ]
-          }]
-        ]
-      },
-      {
-        "from": "viewing", "event": "EDIT", "to": "editing",
-        "effects": [
-          ["render-ui", "main", { "type": "form", "entity": "Product", "mode": "edit" }]
-        ]
-      },
-      {
-        "from": "viewing", "event": "BACK", "to": "listing",
-        "effects": [["navigate", "/products"]]
-      },
-      {
-        "from": "editing", "event": "SAVE", "to": "viewing",
-        "effects": [
-          ["persist", "update", "Product", "@entity"],
-          ["notify", "success", "Product saved successfully"]
-        ]
-      },
-      { "from": "editing", "event": "CANCEL", "to": "viewing" },
-      {
-        "from": "creating", "event": "SAVE", "to": "listing",
-        "effects": [
-          ["persist", "update", "Product", "@entity"],
-          ["notify", "success", "Product created successfully"],
-          ["navigate", "/products"]
-        ]
-      },
-      {
-        "from": "creating", "event": "CANCEL", "to": "listing",
-        "effects": [["navigate", "/products"]]
-      },
-      {
-        "from": "listing", "event": "DELETE", "to": "listing",
-        "effects": [
-          ["persist", "delete", "Product", "@payload.id"],
-          ["notify", "info", "Product deleted"]
-        ]
-      }
-    ]
+      })
+    DELETE -> listing
+      (persist delete Product @payload.id)
+      (notify info "Product deleted")
+  }
+  state viewing {
+    EDIT -> editing
+      (render-ui main { type: "form", entity: "Product", mode: "edit" })
+    BACK -> listing
+      (navigate "/products")
+  }
+  state editing {
+    SAVE -> viewing
+      (persist update Product @entity)
+      (notify success "Product saved successfully")
+    CANCEL -> viewing
+  }
+  state creating {
+    SAVE -> listing
+      (persist update Product @entity)
+      (notify success "Product created successfully")
+      (navigate "/products")
+    CANCEL -> listing
+      (navigate "/products")
   }
 }
 ```
 
 With pages:
 
-```orb
-"pages": [
-  {
-    "name": "ProductListPage",
-    "path": "/products",
-    "traits": [{ "ref": "ProductCRUD", "linkedEntity": "Product" }]
-  },
-  {
-    "name": "ProductDetailPage",
-    "path": "/products/:id",
-    "traits": [{ "ref": "ProductCRUD", "linkedEntity": "Product" }]
-  }
-]
+```lolo
+page "/products" -> ProductCRUD
+page "/products/:id" -> ProductCRUD
 ```
 
 **What the state machine renders per state:**
@@ -354,8 +294,8 @@ Pattern props accept bindings to read live data:
 | `@now` | Current timestamp |
 
 Example:
-```orb
-{ "type": "stats", "title": "Cart Total: $@entity.total" }
+```lolo
+(render-ui main { type: "stats", title: "Cart Total: $@entity.total" })
 ```
 
 ---
