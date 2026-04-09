@@ -1,4 +1,4 @@
-import { AvlStateMachine } from '@almadar/ui/illustrations';
+import { AvlStateMachine, AvlClosedCircuit } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
 import closedCircuitSchema from './closed-circuit.orb.json';
 
@@ -21,6 +21,26 @@ Event -> Guard -> Transition -> Effects -> UI Response -> Event
 ```
 
 A user clicks a button. That click emits an event onto the event bus. The state machine checks whether a transition exists for that event from the current state. If a guard is defined, it evaluates. If the guard passes (or none exists), the transition executes. Effects run in order: data is persisted, notifications fire, UI re-renders. The new UI presents buttons and actions that emit events. The cycle repeats.
+
+<div style={{maxWidth: 500, margin: '2rem auto'}}>
+<AvlClosedCircuit
+  states={[
+    { name: "Event" },
+    { name: "Guard" },
+    { name: "Transition" },
+    { name: "Effects" },
+    { name: "UI Response" },
+  ]}
+  transitions={[
+    { from: "Event", to: "Guard" },
+    { from: "Guard", to: "Transition" },
+    { from: "Transition", to: "Effects" },
+    { from: "Effects", to: "UI Response" },
+    { from: "UI Response", to: "Event" },
+  ]}
+  animated
+/>
+</div>
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine

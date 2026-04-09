@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import BrowserOnly from "@docusaurus/BrowserOnly";
 import {
@@ -16,6 +16,59 @@ import {
 } from "lucide-react";
 import { BEHAVIOR_CATALOG, type BehaviorEntry } from "../data/behavior-catalog";
 import { MODULE_CATALOG } from "../data/module-catalog";
+import type { SExpr } from "@almadar/evaluator";
+
+// ─── Lolo s-expression parser (for module evaluator) ─────────────────────────
+
+function loloExprToJson(lolo: string): SExpr {
+  const trimmed = lolo.trim();
+  if (trimmed.startsWith("[")) return JSON.parse(trimmed) as SExpr;
+  return parseSExpr(trimmed);
+}
+function parseSExpr(input: string): SExpr {
+  const t = input.trim();
+  if (t.startsWith("(") && t.endsWith(")")) {
+    const tokens = tokenizeSExpr(t.slice(1, -1).trim());
+    return tokens.length === 0 ? [] : tokens.map(parseSExprToken);
+  }
+  return parseSExprToken(t);
+}
+function parseSExprToken(t: string): SExpr {
+  if (t === "null" || t === "nil") return null;
+  if (t === "true") return true;
+  if (t === "false") return false;
+  if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1);
+  if (t.startsWith("(")) return parseSExpr(t);
+  const n = Number(t);
+  if (!isNaN(n) && t !== "") return n;
+  return t;
+}
+function tokenizeSExpr(input: string): string[] {
+  const tokens: string[] = [];
+  let i = 0;
+  while (i < input.length) {
+    if (/\s/.test(input[i])) { i++; continue; }
+    if (input[i] === '"') {
+      let j = i + 1;
+      while (j < input.length && !(input[j] === '"' && input[j - 1] !== '\\')) j++;
+      tokens.push(input.slice(i, j + 1)); i = j + 1; continue;
+    }
+    if (input[i] === '(') {
+      let depth = 0, j = i;
+      while (j < input.length) {
+        if (input[j] === '(') depth++;
+        else if (input[j] === ')') { if (--depth === 0) break; }
+        j++;
+      }
+      tokens.push(input.slice(i, j + 1)); i = j + 1; continue;
+    }
+    let j = i;
+    while (j < input.length && !/\s/.test(input[j]) && input[j] !== '(' && input[j] !== ')') j++;
+    if (j > i) tokens.push(input.slice(i, j));
+    i = j;
+  }
+  return tokens;
+}
 import {
   Box,
   VStack,
@@ -304,48 +357,15 @@ function CompositionView({ entry, onSelect }: {
 // `prepareSchemaForPreview` and are enabled via `<OrbPreview autoMock />`.
 // Both the docs MDX path and this playground render schemas the same way.
 
-// ─── Code Panel (for browser chrome code toggle) ──────────────────────────────
-
-type CodeTab = "source" | "schema";
+// ─── Code Panel (shows lolo source for each behavior) ────────────────────────
 
 function CodePanel({ entry }: { entry: BehaviorEntry }) {
-  const [activeTab, setActiveTab] = useState<CodeTab>("source");
-
-  const schemaJson = JSON.stringify(entry.schema, null, 2);
-  const hasSource = entry.source.trim().length > 0;
-
-  const content = activeTab === "source" && hasSource ? entry.source : schemaJson;
-  const lang = activeTab === "source" ? "typescript" : "json";
-
   return (
     <VStack className="h-full">
-      <HStack className="border-b border-[var(--color-border)] flex-shrink-0">
-        {hasSource && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`px-4 py-1.5 rounded-none text-[0.7rem] font-semibold uppercase tracking-wide border-b-2 ${
-              activeTab === "source"
-                ? "border-b-[var(--color-primary)]"
-                : "border-b-transparent"
-            }`}
-            onClick={() => setActiveTab("source")}
-          >
-            Source (.ts)
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`px-4 py-1.5 rounded-none text-[0.7rem] font-semibold uppercase tracking-wide border-b-2 ${
-            activeTab === "schema"
-              ? "border-b-[var(--color-primary)]"
-              : "border-b-transparent"
-          }`}
-          onClick={() => setActiveTab("schema")}
-        >
-          Schema (.orb)
-        </Button>
+      <HStack className="border-b border-[var(--color-border)] flex-shrink-0 px-4 py-1.5">
+        <Typography variant="caption" color="muted" className="text-[0.65rem] font-mono uppercase tracking-wider">
+          source (.orb)
+        </Typography>
       </HStack>
       <Box className="flex-1 overflow-auto">
         <Typography
@@ -353,10 +373,9 @@ function CodePanel({ entry }: { entry: BehaviorEntry }) {
           variant="small"
           className="m-0 px-5 py-4 font-mono leading-relaxed whitespace-pre"
           style={{ tabSize: 2 }}
-          data-language={lang}
         >
           <Typography as="code" color="inherit" className="p-0 border-none">
-            {content}
+            {entry.lolo}
           </Typography>
         </Typography>
       </Box>
@@ -791,18 +810,36 @@ function parseExample(example: string): { expr: string; expected: string } {
   return { expr: example.trim(), expected: "" };
 }
 
+/** Convert a JSON-array example like `["math/abs", -5] // => 5` to lolo `(math/abs -5)` */
+function exampleJsonToLolo(example: string): string {
+  const arrowIdx = example.indexOf("// =>");
+  const exprPart = arrowIdx > 0 ? example.slice(0, arrowIdx).trim() : example.trim();
+  try {
+    const arr = JSON.parse(exprPart) as unknown[];
+    if (!Array.isArray(arr) || arr.length === 0) return exprPart;
+    const [op, ...args] = arr;
+    const argStr = args.map((a) => {
+      if (typeof a === "string" && !a.startsWith("@")) return `"${a}"`;
+      return String(a);
+    }).join(" ");
+    return `(${op}${argStr ? " " + argStr : ""})`;
+  } catch {
+    return exprPart;
+  }
+}
+
 function ModuleOperatorPanel({ moduleName, opName, op }: {
   moduleName: string;
   opName: string;
   op: { description: string; example: string; returnType: string };
 }) {
-  const { expr: defaultExpr } = parseExample(op.example);
-  const [expr, setExpr] = useState(defaultExpr || `["${opName}"]`);
+  const defaultLoloExpr = exampleJsonToLolo(op.example) || `(${opName})`;
+  const [expr, setExpr] = useState(defaultLoloExpr);
   const [result, setResult] = useState<{ text: string; isError: boolean } | null>(null);
 
   const run = useCallback(async () => {
     try {
-      const parsed = JSON.parse(expr.trim());
+      const parsed = loloExprToJson(expr.trim());
       const { SExpressionEvaluator, createMinimalContext } = await import("@almadar/evaluator");
       const evaluator = new SExpressionEvaluator();
       const ctx = createMinimalContext({}, {}, "initial");
@@ -818,7 +855,7 @@ function ModuleOperatorPanel({ moduleName, opName, op }: {
   }, [expr, opName]);
 
   useEffect(() => {
-    if (defaultExpr) run();
+    if (defaultLoloExpr) run();
   }, [opName]);
 
   return (
