@@ -25,8 +25,8 @@ Sets a seeded Mulberry32 PRNG on the evaluation context. All subsequent prob/* o
 |-----------|------|-------------|
 | `n` | `number` | Seed value |
 
-```json
-["prob/seed", 42]
+```lolo
+(prob/seed 42)
 ```
 
 ### `prob/flip`
@@ -39,8 +39,8 @@ Returns true with probability p and false with probability (1 - p). Uses Box-Mul
 |-----------|------|-------------|
 | `p` | `number` | Probability (0.0 to 1.0) |
 
-```json
-["prob/flip", 0.7] // => true ~70% of the time
+```lolo
+(prob/flip 0.7) // => true ~70% of the time
 ```
 
 ### `prob/gaussian`
@@ -54,8 +54,8 @@ Samples from a normal (Gaussian) distribution using the Box-Muller transform.
 | `mu` | `number` | Mean |
 | `sigma` | `number` | Standard deviation |
 
-```json
-["prob/gaussian", 0, 1] // => standard normal sample
+```lolo
+(prob/gaussian 0 1) // => standard normal sample
 ```
 
 ### `prob/uniform`
@@ -69,8 +69,8 @@ Samples uniformly from the half-open interval [lo, hi).
 | `lo` | `number` | Lower bound (inclusive) |
 | `hi` | `number` | Upper bound (exclusive) |
 
-```json
-["prob/uniform", 0, 1] // => value in [0, 1)
+```lolo
+(prob/uniform 0 1) // => value in [0, 1)
 ```
 
 ### `prob/beta`
@@ -84,8 +84,8 @@ Samples from a Beta distribution using the Marsaglia-Tsang gamma variate method.
 | `alpha` | `number` | Shape parameter α &gt; 0 |
 | `beta` | `number` | Shape parameter β &gt; 0 |
 
-```json
-["prob/beta", 2, 5] // => value in (0, 1), mean ≈ 0.286
+```lolo
+(prob/beta 2 5) // => value in (0, 1), mean ≈ 0.286
 ```
 
 ### `prob/categorical`
@@ -99,8 +99,8 @@ Selects an item from a weighted categorical distribution.
 | `items` | `array` | Array of items to sample from |
 | `weights` | `number[]` | Non-negative weights (need not sum to 1) |
 
-```json
-["prob/categorical", ["a", "b", "c"], [1, 2, 1]] // => "b" ~50%
+```lolo
+(prob/categorical (a "b" "c") [1 2 1]) // => "b" ~50%
 ```
 
 ### `prob/poisson`
@@ -113,8 +113,8 @@ Samples from a Poisson distribution using Knuth's algorithm.
 |-----------|------|-------------|
 | `lambda` | `number` | Rate parameter λ &gt; 0 |
 
-```json
-["prob/poisson", 4] // => integer, mean ≈ 4
+```lolo
+(prob/poisson 4) // => integer, mean ≈ 4
 ```
 
 ### `prob/condition`
@@ -128,8 +128,8 @@ Used inside inference models. If the predicate is false, marks the current sampl
 |-----------|------|-------------|
 | `predicate` | `boolean` | Condition that must hold for the sample to be accepted |
 
-```json
-["prob/condition", [">", "@entity.x", 5]]
+```lolo
+(prob/condition (> "@entity.x" 5))
 ```
 
 ### `prob/sample`
@@ -143,8 +143,8 @@ Evaluates an expression n times and returns the results as an array. The express
 | `n` | `number` | Number of samples |
 | `expr` | `expression` | Expression to evaluate (lazy) |
 
-```json
-["prob/sample", 1000, ["prob/flip", 0.5]]
+```lolo
+(prob/sample 1000 (prob/flip 0.5))
 ```
 
 ### `prob/posterior`
@@ -160,8 +160,8 @@ Runs rejection sampling: evaluates model, applies evidence condition, collects q
 | `query` | `expression` | Value to collect from accepted samples (lazy) |
 | `n` | `number` | Number of simulation runs |
 
-```json
-["prob/posterior", model, evidence, "@entity.x", 5000]
+```lolo
+(prob/posterior model evidence "@entity.x" 5000)
 ```
 
 ### `prob/infer`
@@ -177,8 +177,8 @@ Like prob/posterior but returns a summary object instead of raw samples.
 | `query` | `expression` | Value to summarize (lazy) |
 | `n` | `number` | Number of simulation runs |
 
-```json
-["prob/infer", model, evidence, "@entity.x", 5000]
+```lolo
+(prob/infer model evidence "@entity.x" 5000)
 ```
 
 ### `prob/expected-value`
@@ -191,8 +191,8 @@ Computes the arithmetic mean of a numeric array.
 |-----------|------|-------------|
 | `samples` | `number[]` | Array of numeric samples |
 
-```json
-["prob/expected-value", [1, 2, 3, 4]] // => 2.5
+```lolo
+(prob/expected-value [1 2 3 4]) // => 2.5
 ```
 
 ### `prob/variance`
@@ -205,8 +205,8 @@ Computes the population variance of a numeric array.
 |-----------|------|-------------|
 | `samples` | `number[]` | Array of numeric samples |
 
-```json
-["prob/variance", [2, 4, 4, 4, 5, 5, 7, 9]] // => 4
+```lolo
+(prob/variance [2 4 4 4 5 5 7 9]) // => 4
 ```
 
 ### `prob/histogram`
@@ -220,8 +220,8 @@ Bins samples into a histogram.
 | `samples` | `number[]` | Numeric samples |
 | `bins` | `number` | Number of bins |
 
-```json
-["prob/histogram", samples, 10]
+```lolo
+(prob/histogram samples 10)
 ```
 
 ### `prob/percentile`
@@ -235,8 +235,8 @@ Returns the value at the given percentile (0-100) of a sorted sample array.
 | `samples` | `number[]` | Numeric samples |
 | `p` | `number` | Percentile (0 to 100) |
 
-```json
-["prob/percentile", samples, 50] // => median
+```lolo
+(prob/percentile samples 50) // => median
 ```
 
 ### `prob/credible-interval`
@@ -250,6 +250,6 @@ Returns a (1 - alpha) credible interval [lo, hi] from sorted samples.
 | `samples` | `number[]` | Numeric samples |
 | `alpha` | `number` | Significance level (e.g. 0.05 for 95% CI) |
 
-```json
-["prob/credible-interval", samples, 0.05] // => 95% CI
+```lolo
+(prob/credible-interval samples 0.05) // => 95% CI
 ```

@@ -29,14 +29,14 @@ These operators work without a module prefix:
 
 | Operator | Example | Returns |
 |----------|---------|---------|
-| Arithmetic | `["+", 1, 2]` | number |
-| Comparison | `[">", "@entity.x", 5]` | boolean |
-| Logic | `["and", true, false]` | boolean |
-| `if` | `["if", cond, then, else]` | any |
-| `do` | `["do", expr1, expr2]` | last value |
-| `set` | `["set", "@entity.x", 42]` | void |
-| `get` | `["get", "@entity.x"]` | any |
-| `emit` | `["emit", "EVENT"]` | void |
+| Arithmetic | `(+ 1 2)` | number |
+| Comparison | `(> @entity.x 5)` | boolean |
+| Logic | `(and true false)` | boolean |
+| `if` | `(if cond then else)` | any |
+| `do` | `(do expr1 expr2)` | last value |
+| `set` | `(set @entity.x 42)` | void |
+| `get` | `(get @entity.x)` | any |
+| `emit` | `(emit EVENT)` | void |
 
 See [Core Concepts: Standard Library](/docs/en/core-concepts/standard-library) for the complete core operator list.
 

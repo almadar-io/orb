@@ -1,4 +1,4 @@
-import { AvlStateMachine } from '@almadar/ui/illustrations';
+import { AvlStateMachine, AvlEmitListen } from '@almadar/ui/illustrations';
 import OrbPreviewBlock from '@shared/OrbPreviewBlock';
 import schema1 from './traits-1.orb.json';
 import schema2 from './traits-2.orb.json';
@@ -570,24 +570,20 @@ trait InventorySync -> Inventory [interaction] {
 
 ### The Communication Flow
 
-```
-OrderManagement orbital            InventoryManagement orbital
-┌─────────────────────┐            ┌─────────────────────┐
-│                     │            │                     │
-│  OrderFlow trait    │   emit     │  InventorySync trait │
-│  state: confirmed   │──────────►│  state: idle         │
-│                     │ ORDER_    │                     │
-│  emits:             │ PLACED    │  listens:            │
-│    ORDER_PLACED     │            │    ORDER_PLACED      │
-│                     │            │    → RESERVE_STOCK   │
-└─────────────────────┘            └─────────────────────┘
-```
+<div style={{margin: '2rem 0'}}>
+<AvlEmitListen
+  emitter={{name: "OrderManagement", fields: 3}}
+  listener={{name: "InventoryManagement", fields: 2}}
+  eventName="ORDER_PLACED"
+  animated
+/>
+</div>
 
-1. `OrderFlow` fires an `["emit", "ORDER_PLACED", ...]` effect
+1. `OrderFlow` fires `(emit ORDER_PLACED {...})` in a transition effect
 2. The event bus broadcasts to all traits with a matching `listens` entry
-3. `InventorySync` receives the event, applies `payloadMapping`, checks the `guard`
-4. If the guard passes, `RESERVE_STOCK` fires as an internal event on `InventorySync`
-5. `InventorySync` processes the `RESERVE_STOCK` transition normally
+3. `InventorySync` receives the event, checks the `when` guard
+4. If the guard passes, the matching transition fires on `InventorySync`
+5. `InventorySync` processes the transition normally — state changes, effects run
 
 This is the .orb equivalent of pub/sub. Every `emits` declaration is a contract: "this trait publishes this event." Every `listens` declaration is a subscription: "this trait reacts to this event." The core rule: **every `emits` should have a matching `listens` somewhere**, or the event disappears into the void.
 

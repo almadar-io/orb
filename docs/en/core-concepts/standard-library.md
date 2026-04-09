@@ -16,7 +16,7 @@ The Standard Library provides **93 reusable behaviors** for Orb applications, or
 | **Molecules** | 18 | Compose atoms via shared event bus | std-list, std-cart, std-detail, std-messaging |
 | **Organisms** | 25 | Compose molecules into full applications | std-ecommerce, std-crm, std-lms, std-helpdesk |
 
-Each behavior is a pure function that returns a complete `OrbitalDefinition` (entity + traits + pages). You call it with parameters (entity name, fields, page path) and get a ready-to-compile `.orb` structure.
+Each behavior is a reusable orbital unit. Import it with `uses`, rebind the entity with `-> YourEntity`, override specific event effects with `on EVENT { ... }`, and bind it to a page.
 
 <div style={{margin: '2rem 0'}}>
 <AvlOrbitalUnit
@@ -28,21 +28,6 @@ Each behavior is a pure function that returns a complete `OrbitalDefinition` (en
   animated
 />
 </div>
-
-```typescript
-import { stdList } from '@almadar/std/behaviors/functions';
-
-const orbital = stdList({
-  entityName: 'Product',
-  fields: [
-    { name: 'title', type: 'string', required: true },
-    { name: 'price', type: 'number', required: true },
-  ],
-  pagePath: '/products',
-  pageTitle: 'Products',
-});
-// Returns: entity + 4 traits (browse, create, edit, view) + 1 page
-```
 
 ---
 
@@ -61,7 +46,7 @@ std-filter: Idle ──FILTER──► Filtered ──CLEAR──► Idle
 
 ### Molecules: Composed Atoms
 
-Molecules combine atoms using `extractTrait` (pull out the trait) and `wire` (connect emit/listen events between traits). A molecule is NOT a new behavior. It's atoms wired together.
+Molecules combine atoms via wired events. A molecule is NOT a new behavior. It's atoms wired together.
 
 ```
 std-list = std-browse + std-modal(create) + std-modal(edit) + std-modal(view)
@@ -70,27 +55,7 @@ std-list = std-browse + std-modal(create) + std-modal(edit) + std-modal(view)
   └─ edit emits SAVED ──► browse listens (refresh)
 ```
 
-```typescript
-import { stdBrowse, stdModal } from '@almadar/std/behaviors/functions';
-import { connect, compose } from '@almadar/core/builders';
-
-// std-list is roughly this composition:
-const browseTrait = extractTrait(stdBrowse({ entityName: 'Product', ... }));
-const createTrait = extractTrait(stdModal({ mode: 'create', ... }));
-const editTrait = extractTrait(stdModal({ mode: 'edit', ... }));
-const viewTrait = extractTrait(stdModal({ mode: 'view', ... }));
-
-// Wire events between traits
-wire(createTrait, 'PRODUCT_CREATED', browseTrait, 'INIT');
-wire(editTrait, 'PRODUCT_UPDATED', browseTrait, 'INIT');
-
-// Compose into one orbital
-const orbital = compose({
-  entityName: 'Product',
-  traits: [browseTrait, createTrait, editTrait, viewTrait],
-  pages: [{ path: '/products', traits: ['ProductBrowse', 'ProductCreate', 'ProductEdit', 'ProductView'] }],
-});
-```
+When you write `uses List from "std/behaviors/std-list"`, the entire composition above is resolved at compile time.
 
 ### Organisms: Full Applications
 
@@ -240,61 +205,88 @@ std-ecommerce = std-list(Product) + std-cart(CartItem) + std-wizard(Checkout)
 
 ## Using Behaviors
 
-### As Pure Functions
+Import a behavior with `uses`, rebind it to your entity with `->`, and override specific event effects with `on EVENT { ... }`. The rest of the atom's state machine is inherited as-is.
 
-```typescript
-import { stdList, stdEcommerce } from '@almadar/std/behaviors/functions';
+### Atom: Browse Only
 
-// Simple: one entity with CRUD
-const tasks = stdList({
-  entityName: 'Task',
-  fields: [
-    { name: 'title', type: 'string', required: true },
-    { name: 'status', type: 'enum', values: ['todo', 'doing', 'done'] },
-  ],
-  pagePath: '/tasks',
-});
+```lolo
+orbital TaskOrbital {
+  uses Browse from "std/behaviors/std-browse"
 
-// Complex: multi-entity e-commerce
-const shop = stdEcommerce({
-  productEntity: 'Product',
-  productFields: [...],
-  cartEntity: 'CartItem',
-  orderEntity: 'Order',
-});
+  entity Task [persistent: tasks] {
+    id     : string!
+    title  : string!
+    status : string
+  }
+
+  trait TaskBrowse = Browse.traits.BrowseItemBrowse -> Task {
+    on INIT {
+      (fetch Task)
+      (render-ui main {
+        type: "stack", direction: "vertical", gap: "lg",
+        children: [
+          { type: "typography", content: "Tasks", variant: "h2" },
+          { type: "entity-table", entity: "Task", fields: ["title", "status"] }
+        ]
+      })
+    }
+  }
+
+  page "/tasks" -> TaskBrowse
+}
 ```
 
-### As Golden .orb Files
+### Atoms Composed: Browse + Create
 
-Every behavior is also exported as a `.orb` file in `@almadar/std/behaviors/exports/`:
+```lolo
+orbital TaskOrbital {
+  uses Browse from "std/behaviors/std-browse"
+  uses Modal  from "std/behaviors/std-modal"
 
-```bash
-# List all available behaviors
-ls node_modules/@almadar/std/behaviors/exports/atoms/
-ls node_modules/@almadar/std/behaviors/exports/molecules/
-ls node_modules/@almadar/std/behaviors/exports/organisms/
-```
+  entity Task [persistent: tasks] {
+    id     : string!
+    title  : string!
+    status : string
+  }
 
-These golden files are used by:
-- The Orb compiler for behavior matching
-- The AI agent for schema generation
-- The Masar planner for structural comparison
+  trait TaskBrowse = Browse.traits.BrowseItemBrowse -> Task {
+    on INIT {
+      (fetch Task)
+      (render-ui main {
+        type: "stack", direction: "vertical", gap: "lg",
+        children: [
+          { type: "typography", content: "Tasks", variant: "h2" },
+          { type: "entity-table", entity: "Task", fields: ["title", "status"] }
+        ]
+      })
+    }
+  }
 
-### Composing Custom Behaviors
+  trait TaskCreate = Modal.traits.ModalRecordModal -> Task {
+    events { OPEN: CREATE }
+    emitsScope internal
+    on CREATE {
+      (render-ui modal {
+        type: "modal", isOpen: true, title: "Create Task",
+        children: [{ type: "form-section", entity: "Task", fields: ["title", "status"], mode: "create" }]
+      })
+    }
+    on SAVE {
+      (persist create Task @payload.data)
+      (render-ui modal null)
+      (fetch Task)
+      (render-ui main {
+        type: "stack", direction: "vertical", gap: "lg",
+        children: [
+          { type: "typography", content: "Tasks", variant: "h2" },
+          { type: "entity-table", entity: "Task", fields: ["title", "status"] }
+        ]
+      })
+    }
+  }
 
-```typescript
-import { stdBrowse, stdModal, stdSearch } from '@almadar/std/behaviors/functions';
-import { compose, wire, extractTrait } from '@almadar/core/builders';
-
-// Create a custom molecule: searchable list with create modal
-const searchableCatalog = compose({
-  appName: 'Catalog',
-  orbitals: [
-    stdBrowse({ entityName: 'Item', fields: [...] }),
-    stdSearch({ entityName: 'Item' }),
-    stdModal({ entityName: 'Item', mode: 'create' }),
-  ],
-});
+  page "/tasks" -> TaskBrowse, TaskCreate
+}
 ```
 
 ---

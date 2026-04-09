@@ -24,8 +24,8 @@ Array length
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/len", [1, 2, 3]] // => 3
+```lolo
+(array/len [1 2 3]) // => 3
 ```
 
 ### `array/empty?`
@@ -38,8 +38,8 @@ Check if array is empty
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/empty?", []] // => true
+```lolo
+(array/empty? []) // => true
 ```
 
 ### `array/first`
@@ -52,8 +52,8 @@ Get first element
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/first", [1, 2, 3]] // => 1
+```lolo
+(array/first [1 2 3]) // => 1
 ```
 
 ### `array/last`
@@ -66,8 +66,8 @@ Get last element
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/last", [1, 2, 3]] // => 3
+```lolo
+(array/last [1 2 3]) // => 3
 ```
 
 ### `array/nth`
@@ -81,8 +81,8 @@ Get element at index
 | `arr` | `array` | The array |
 | `index` | `number` | Index (0-based) |
 
-```json
-["array/nth", [1, 2, 3], 1] // => 2
+```lolo
+(array/nth [1 2 3] 1) // => 2
 ```
 
 ### `array/slice`
@@ -97,8 +97,8 @@ Extract subarray
 | `start` | `number` | Start index |
 | `end` | `number` | End index (exclusive) |
 
-```json
-["array/slice", [1, 2, 3, 4], 1, 3] // => [2, 3]
+```lolo
+(array/slice [1 2 3 4] 1 3) // => [2, 3]
 ```
 
 ### `array/concat`
@@ -111,8 +111,8 @@ Concatenate arrays
 |-----------|------|-------------|
 | `...arrs` | `array[]` | Arrays to concatenate |
 
-```json
-["array/concat", [1, 2], [3, 4]] // => [1, 2, 3, 4]
+```lolo
+(array/concat [1 2] [3 4]) // => [1, 2, 3, 4]
 ```
 
 ### `array/append`
@@ -126,8 +126,8 @@ Add item to end (returns new array)
 | `arr` | `array` | The array |
 | `item` | `any` | Item to add |
 
-```json
-["array/append", [1, 2], 3] // => [1, 2, 3]
+```lolo
+(array/append [1 2] 3) // => [1, 2, 3]
 ```
 
 ### `array/prepend`
@@ -141,8 +141,8 @@ Add item to start (returns new array)
 | `arr` | `array` | The array |
 | `item` | `any` | Item to add |
 
-```json
-["array/prepend", [2, 3], 1] // => [1, 2, 3]
+```lolo
+(array/prepend [2 3] 1) // => [1, 2, 3]
 ```
 
 ### `array/insert`
@@ -157,8 +157,8 @@ Insert item at index (returns new array)
 | `index` | `number` | Index to insert at |
 | `item` | `any` | Item to insert |
 
-```json
-["array/insert", [1, 3], 1, 2] // => [1, 2, 3]
+```lolo
+(array/insert [1 3] 1 2) // => [1, 2, 3]
 ```
 
 ### `array/remove`
@@ -172,8 +172,8 @@ Remove item at index (returns new array)
 | `arr` | `array` | The array |
 | `index` | `number` | Index to remove |
 
-```json
-["array/remove", [1, 2, 3], 1] // => [1, 3]
+```lolo
+(array/remove [1 2 3] 1) // => [1, 3]
 ```
 
 ### `array/removeItem`
@@ -187,8 +187,8 @@ Remove first matching item (returns new array)
 | `arr` | `array` | The array |
 | `item` | `any` | Item to remove |
 
-```json
-["array/removeItem", [1, 2, 3, 2], 2] // => [1, 3, 2]
+```lolo
+(array/removeItem [1 2 3 2] 2) // => [1, 3, 2]
 ```
 
 ### `array/reverse`
@@ -201,8 +201,8 @@ Reverse array order (returns new array)
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/reverse", [1, 2, 3]] // => [3, 2, 1]
+```lolo
+(array/reverse [1 2 3]) // => [3, 2, 1]
 ```
 
 ### `array/sort`
@@ -217,8 +217,8 @@ Sort array (returns new array)
 | `key` | `string` | Field to sort by (for objects) |
 | `dir` | `string` | "asc" or "desc" |
 
-```json
-["array/sort", "@items", "price", "desc"]
+```lolo
+(array/sort "@items" "price" "desc")
 ```
 
 ### `array/shuffle`
@@ -231,8 +231,8 @@ Randomly shuffle array (returns new array)
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/shuffle", [1, 2, 3, 4, 5]]
+```lolo
+(array/shuffle [1 2 3 4 5])
 ```
 
 ### `array/unique`
@@ -245,8 +245,8 @@ Remove duplicates (returns new array)
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/unique", [1, 2, 2, 3, 1]] // => [1, 2, 3]
+```lolo
+(array/unique [1 2 2 3 1]) // => [1, 2, 3]
 ```
 
 ### `array/flatten`
@@ -259,8 +259,8 @@ Flatten nested arrays one level
 |-----------|------|-------------|
 | `arr` | `array` | The array |
 
-```json
-["array/flatten", [[1, 2], [3, 4]]] // => [1, 2, 3, 4]
+```lolo
+(array/flatten [[1 2] [3 4]]) // => [1, 2, 3, 4]
 ```
 
 ### `array/zip`
@@ -274,8 +274,8 @@ Pair elements from two arrays
 | `arr1` | `array` | First array |
 | `arr2` | `array` | Second array |
 
-```json
-["array/zip", [1, 2], ["a", "b"]] // => [[1, "a"], [2, "b"]]
+```lolo
+(array/zip [1 2] (a "b")) // => [[1, "a"], [2, "b"]]
 ```
 
 ### `array/includes`
@@ -289,8 +289,8 @@ Check if array contains item
 | `arr` | `array` | The array |
 | `item` | `any` | Item to find |
 
-```json
-["array/includes", [1, 2, 3], 2] // => true
+```lolo
+(array/includes [1 2 3] 2) // => true
 ```
 
 ### `array/indexOf`
@@ -304,8 +304,8 @@ Find index of item (-1 if not found)
 | `arr` | `array` | The array |
 | `item` | `any` | Item to find |
 
-```json
-["array/indexOf", [1, 2, 3], 2] // => 1
+```lolo
+(array/indexOf [1 2 3] 2) // => 1
 ```
 
 ### `array/find`
@@ -319,8 +319,8 @@ Find first element matching predicate
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/find", "@items", ["fn", "x", ["=", "@x.status", "active"]]]
+```lolo
+(array/find "@items" (fn "x" (= "@x.status" "active")))
 ```
 
 ### `array/findIndex`
@@ -334,8 +334,8 @@ Find index of first element matching predicate (-1 if none)
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/findIndex", "@items", ["fn", "x", ["=", "@x.status", "active"]]]
+```lolo
+(array/findIndex "@items" (fn "x" (= "@x.status" "active")))
 ```
 
 ### `array/filter`
@@ -349,8 +349,8 @@ Keep elements matching predicate
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/filter", "@items", ["fn", "x", [">", "@x.price", 100]]]
+```lolo
+(array/filter "@items" (fn "x" (> "@x.price" 100)))
 ```
 
 ### `array/reject`
@@ -364,8 +364,8 @@ Remove elements matching predicate
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/reject", "@items", ["fn", "x", ["=", "@x.status", "deleted"]]]
+```lolo
+(array/reject "@items" (fn "x" (= "@x.status" "deleted")))
 ```
 
 ### `array/map`
@@ -379,8 +379,8 @@ Transform each element
 | `arr` | `array` | The array |
 | `fn` | `lambda` | Transform function |
 
-```json
-["array/map", "@items", ["fn", "x", ["*", "@x.price", 1.1]]]
+```lolo
+(array/map "@items" (fn "x" (* "@x.price" 1.1)))
 ```
 
 ### `array/reduce`
@@ -395,8 +395,8 @@ Reduce array to single value
 | `fn` | `lambda` | Reducer function (acc, item) =&gt; newAcc |
 | `init` | `any` | Initial accumulator value |
 
-```json
-["array/reduce", "@items", ["fn", ["acc", "x"], ["+", "@acc", "@x.price"]], 0]
+```lolo
+(array/reduce "@items" (fn (acc "x") (+ "@acc" "@x.price")) 0)
 ```
 
 ### `array/every`
@@ -410,8 +410,8 @@ Check if all elements match predicate
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/every", "@items", ["fn", "x", [">", "@x.price", 0]]]
+```lolo
+(array/every "@items" (fn "x" (> "@x.price" 0)))
 ```
 
 ### `array/some`
@@ -425,8 +425,8 @@ Check if any element matches predicate
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/some", "@items", ["fn", "x", ["=", "@x.status", "active"]]]
+```lolo
+(array/some "@items" (fn "x" (= "@x.status" "active")))
 ```
 
 ### `array/count`
@@ -440,8 +440,8 @@ Count elements (optionally matching predicate)
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/count", "@tasks", ["fn", "t", ["=", "@t.status", "done"]]]
+```lolo
+(array/count "@tasks" (fn "t" (= "@t.status" "done")))
 ```
 
 ### `array/sum`
@@ -455,8 +455,8 @@ Sum values (optionally by field)
 | `arr` | `array` | The array |
 | `key` | `string` | Field to sum |
 
-```json
-["array/sum", "@cart.items", "price"]
+```lolo
+(array/sum "@cart.items" "price")
 ```
 
 ### `array/avg`
@@ -470,8 +470,8 @@ Average of values (optionally by field)
 | `arr` | `array` | The array |
 | `key` | `string` | Field to average |
 
-```json
-["array/avg", "@ratings", "score"]
+```lolo
+(array/avg "@ratings" "score")
 ```
 
 ### `array/min`
@@ -485,8 +485,8 @@ Minimum value (optionally by field)
 | `arr` | `array` | The array |
 | `key` | `string` | Field to compare |
 
-```json
-["array/min", "@products", "price"]
+```lolo
+(array/min "@products" "price")
 ```
 
 ### `array/max`
@@ -500,8 +500,8 @@ Maximum value (optionally by field)
 | `arr` | `array` | The array |
 | `key` | `string` | Field to compare |
 
-```json
-["array/max", "@products", "price"]
+```lolo
+(array/max "@products" "price")
 ```
 
 ### `array/groupBy`
@@ -515,8 +515,8 @@ Group elements by field value
 | `arr` | `array` | The array |
 | `key` | `string` | Field to group by |
 
-```json
-["array/groupBy", "@orders", "status"]
+```lolo
+(array/groupBy "@orders" "status")
 ```
 
 ### `array/partition`
@@ -530,8 +530,8 @@ Split array by predicate into [matches, nonMatches]
 | `arr` | `array` | The array |
 | `pred` | `lambda` | Predicate function |
 
-```json
-["array/partition", "@items", ["fn", "x", [">", "@x.price", 50]]]
+```lolo
+(array/partition "@items" (fn "x" (> "@x.price" 50)))
 ```
 
 ### `array/take`
@@ -545,8 +545,8 @@ Take first n elements
 | `arr` | `array` | The array |
 | `n` | `number` | Number of elements |
 
-```json
-["array/take", "@items", 5]
+```lolo
+(array/take "@items" 5)
 ```
 
 ### `array/drop`
@@ -560,8 +560,8 @@ Skip first n elements
 | `arr` | `array` | The array |
 | `n` | `number` | Number of elements to skip |
 
-```json
-["array/drop", "@items", 5]
+```lolo
+(array/drop "@items" 5)
 ```
 
 ### `array/takeLast`
@@ -575,8 +575,8 @@ Take last n elements
 | `arr` | `array` | The array |
 | `n` | `number` | Number of elements |
 
-```json
-["array/takeLast", "@items", 3]
+```lolo
+(array/takeLast "@items" 3)
 ```
 
 ### `array/dropLast`
@@ -590,6 +590,6 @@ Skip last n elements
 | `arr` | `array` | The array |
 | `n` | `number` | Number of elements to skip |
 
-```json
-["array/dropLast", "@items", 2]
+```lolo
+(array/dropLast "@items" 2)
 ```

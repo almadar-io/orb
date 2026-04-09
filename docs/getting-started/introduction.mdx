@@ -37,18 +37,15 @@ Application = a set of Orbitals communicating through events
 
 An Entity defines a data shape with typed fields, persistence rules, and defaults.
 
-```json
-{
-  "name": "Order",
-  "persistence": "persistent",
-  "collection": "orders",
-  "fields": [
-    { "name": "id", "type": "string", "primaryKey": true },
-    { "name": "status", "type": "string", "values": ["draft", "submitted", "fulfilled", "cancelled"] },
-    { "name": "total", "type": "number", "default": 0 },
-    { "name": "items", "type": "array", "items": { "type": "object" } },
-    { "name": "customerId", "type": "string", "required": true }
-  ]
+```lolo
+type OrderStatus = draft | submitted | fulfilled | cancelled
+
+entity Order [persistent: orders] {
+  id         : string!
+  status     : OrderStatus = "draft"
+  total      : number = 0
+  items      : [object]
+  customerId : string!
 }
 ```
 
@@ -64,82 +61,31 @@ Persistence controls scope and lifespan:
 
 A Trait is a **state machine**. It defines the states an entity can be in, the events that trigger transitions between states, the guards that control whether a transition is allowed, and the effects that execute when a transition fires.
 
-```json
-{
-  "name": "OrderFulfillment",
-  "linkedEntity": "Order",
-  "category": "interaction",
-  "stateMachine": {
-    "states": [
-      { "name": "browsing", "isInitial": true },
-      { "name": "reviewing" },
-      { "name": "submitting" },
-      { "name": "fulfilled" }
-    ],
-    "events": [
-      { "key": "INIT", "name": "Initialize" },
-      { "key": "SELECT", "name": "Select Order", "payload": [
-        { "name": "id", "type": "string", "required": true }
-      ]},
-      { "key": "SUBMIT", "name": "Submit Order" },
-      { "key": "CONFIRM", "name": "Confirm Fulfillment" }
-    ],
-    "transitions": [
-      {
-        "from": "browsing",
-        "to": "browsing",
-        "event": "INIT",
-        "effects": [
-          ["fetch", "Order"],
-          ["render-ui", "main", {
-            "type": "data-table",
-            "entity": "Order",
-            "columns": ["status", "total", "customerId"],
-            "itemActions": [
-              { "event": "SELECT", "label": "View" }
-            ]
-          }]
-        ]
-      },
-      {
-        "from": "browsing",
-        "to": "reviewing",
-        "event": "SELECT",
-        "effects": [
-          ["render-ui", "main", {
-            "type": "detail-card",
-            "entity": "Order",
-            "fields": ["status", "total", "items"]
-          }]
-        ]
-      },
-      {
-        "from": "reviewing",
-        "to": "submitting",
-        "event": "SUBMIT",
-        "guard": ["and",
-          [">", ["count", "@entity.items"], 0],
-          ["=", "@entity.status", "draft"]
-        ],
-        "effects": [
-          ["set", "@entity.status", "submitted"],
-          ["persist", "update", "Order", "@entity"],
-          ["emit", "ORDER_SUBMITTED"],
-          ["notify", "success", "Order submitted"]
-        ]
-      },
-      {
-        "from": "submitting",
-        "to": "fulfilled",
-        "event": "CONFIRM",
-        "guard": ["=", "@entity.status", "submitted"],
-        "effects": [
-          ["set", "@entity.status", "fulfilled"],
-          ["persist", "update", "Order", "@entity"]
-        ]
-      }
-    ]
+```lolo
+trait OrderFulfillment -> Order [interaction] {
+  initial: browsing
+  state browsing {
+    INIT -> browsing
+      (fetch Order)
+      (render-ui main { type: "data-table", entity: "Order", columns: ["status", "total", "customerId"], itemActions: [{ event: "SELECT", label: "View" }] })
+    SELECT -> reviewing
+      (render-ui main { type: "detail-card", entity: "Order", fields: ["status", "total", "items"] })
   }
+  state reviewing {
+    SUBMIT -> submitting
+      when (and (> (count @entity.items) 0) (= @entity.status "draft"))
+      (set @entity.status "submitted")
+      (persist update Order @entity)
+      (emit ORDER_SUBMITTED)
+      (notify "Order submitted" success)
+  }
+  state submitting {
+    CONFIRM -> fulfilled
+      when (= @entity.status "submitted")
+      (set @entity.status "fulfilled")
+      (persist update Order @entity)
+  }
+  state fulfilled { ... }
 }
 ```
 
@@ -233,32 +179,26 @@ Every transition has three stages:
 
 A Page binds traits to a URL route. When a user navigates to that route, the page initializes its traits and renders their UI.
 
-```json
-{
-  "name": "OrdersPage",
-  "path": "/orders",
-  "traits": [
-    { "ref": "OrderFulfillment" }
-  ]
-}
+```lolo
+page "/orders" -> OrderFulfillment
 ```
 
 ## Guards: logic as expressions
 
-All logic in Orb is written as **S-expressions** (arrays where the first element is the operator). This gives you a composable, inspectable expression language inside JSON.
+All logic in Orb is written as **S-expressions** — prefix notation where the operator comes first. Guards follow a transition with the `when` keyword.
 
-```json
-["and",
-  ["!=", "@payload.email", ""],
-  [">=", "@entity.balance", "@payload.amount"],
-  ["or",
-    ["=", "@user.role", "admin"],
-    ["=", "@entity.ownerId", "@user.id"]
-  ]
-]
+```lolo
+WITHDRAW -> active
+  when (and
+    (!= ?email "")
+    (>= @entity.balance @payload.amount)
+    (or
+      (= @user.role "admin")
+      (= @entity.ownerId @user.id)))
+  (set @entity.balance (- @entity.balance @payload.amount))
 ```
 
-Bindings like `@entity.field`, `@payload.data`, `@user.id`, and `@state` reference live runtime values. The compiler verifies that every binding points to a real field.
+Bindings like `@entity.field`, `@payload.data`, `@user.id`, and `@state` reference live runtime values. Payload parameters use `?fieldName`. The compiler verifies that every binding points to a real field.
 
 Orb ships with **280+ operators** across modules: math, string, array, object, time, validation, formatting, async, and probability. These aren't decorative. The `prob/*` operators do Bayesian inference. The `async/*` operators handle races, debouncing, and parallel execution.
 
@@ -266,25 +206,25 @@ Orb ships with **280+ operators** across modules: math, string, array, object, t
 
 Effects are the actions that fire when a transition succeeds. They're tuples.
 
-```json
-["render-ui", "main", { "type": "data-list", "entity": "Task" }]
-["render-ui", "modal", { "type": "form", "fields": ["name", "email"] }]
-["render-ui", "modal", null]
+```lolo
+(render-ui main { type: "data-list", entity: "Task" })
+(render-ui modal { type: "form", fields: ["name", "email"] })
+(render-ui modal null)
 
-["persist", "create", "Order", "@payload.data"]
-["persist", "update", "Order", "@entity"]
-["persist", "delete", "Order", "@entity.id"]
+(persist create Order @payload.data)
+(persist update Order @entity)
+(persist delete Order @entity.id)
 
-["fetch", "Order", { "where": ["=", "@field.status", "active"] }]
+(fetch Order { where: (= @field.status "active") })
 
-["set", "@entity.status", "fulfilled"]
+(set @entity.status "fulfilled")
 
-["emit", "ORDER_SUBMITTED", { "orderId": "@entity.id" }]
+(emit ORDER_SUBMITTED { orderId: @entity.id })
 
-["call-service", "stripe", "createPayment", { "amount": "@entity.total" }]
+(call-service stripe createPayment { amount: @entity.total })
 
-["notify", "success", "Saved"]
-["navigate", "/orders"]
+(notify "Saved" success)
+(navigate "/orders")
 ```
 
 Effects execute on both client and server simultaneously. The client handles `render-ui` and `navigate`. The server handles `persist`, `fetch`, and `call-service`. Both handle `emit` and `set`. The compiler generates the right code for each side.
@@ -330,34 +270,32 @@ Orbitals are isolated. They don't call each other's functions or read each other
 
 A trait declares the events it emits:
 
-```json
-{
-  "name": "CartCheckout",
-  "emits": ["ORDER_PLACED"],
-  "stateMachine": {
-    "transitions": [
-      {
-        "from": "confirming",
-        "to": "complete",
-        "event": "CONFIRM",
-        "effects": [
-          ["persist", "create", "Order", "@payload"],
-          ["emit", "ORDER_PLACED", { "orderId": "@entity.id" }]
-        ]
-      }
-    ]
+```lolo
+trait CartCheckout -> Cart [interaction] {
+  ...
+  state confirming {
+    CONFIRM -> complete
+      (persist create Order @payload)
+      (emit ORDER_PLACED { orderId: @entity.id })
+  }
+  emits {
+    ORDER_PLACED external { orderId: string }
   }
 }
 ```
 
 Another trait, possibly in a different orbital, declares it listens:
 
-```json
-{
-  "name": "InventoryTracker",
-  "listens": [
-    { "event": "ORDER_PLACED", "triggers": "UPDATE_STOCK" }
-  ]
+```lolo
+trait InventoryTracker -> Inventory [interaction] {
+  ...
+  listens {
+    * ORDER_PLACED -> undefined
+  }
+  state idle {
+    ORDER_PLACED -> updating
+      (persist update Inventory @entity)
+  }
 }
 ```
 

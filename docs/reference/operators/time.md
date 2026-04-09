@@ -20,8 +20,8 @@ Work with dates, times, durations, and timestamps.
 
 Current timestamp
 
-```json
-["time/now"] // => 1705593600000
+```lolo
+(time/now) // => 1705593600000
 ```
 
 ### `time/today`
@@ -30,8 +30,8 @@ Current timestamp
 
 Today at midnight (local time)
 
-```json
-["time/today"]
+```lolo
+(time/today)
 ```
 
 ### `time/parse`
@@ -45,8 +45,8 @@ Parse string to timestamp
 | `str` | `string` | Date string |
 | `format` | `string` | Format pattern |
 
-```json
-["time/parse", "2024-01-18", "YYYY-MM-DD"]
+```lolo
+(time/parse "2024-01-18" "YYYY-MM-DD")
 ```
 
 ### `time/format`
@@ -60,8 +60,8 @@ Format timestamp to string
 | `date` | `number` | Timestamp |
 | `format` | `string` | Format pattern |
 
-```json
-["time/format", "@entity.createdAt", "MMM DD, YYYY"]
+```lolo
+(time/format "@entity.createdAt" "MMM DD, YYYY")
 ```
 
 ### `time/year`
@@ -74,8 +74,8 @@ Get year from timestamp
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/year", "@entity.createdAt"] // => 2024
+```lolo
+(time/year "@entity.createdAt") // => 2024
 ```
 
 ### `time/month`
@@ -88,8 +88,8 @@ Get month from timestamp (1-12)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/month", "@entity.createdAt"] // => 1
+```lolo
+(time/month "@entity.createdAt") // => 1
 ```
 
 ### `time/day`
@@ -102,8 +102,8 @@ Get day of month from timestamp (1-31)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/day", "@entity.createdAt"] // => 18
+```lolo
+(time/day "@entity.createdAt") // => 18
 ```
 
 ### `time/weekday`
@@ -116,8 +116,8 @@ Get day of week (0=Sunday, 6=Saturday)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/weekday", "@entity.createdAt"] // => 4 (Thursday)
+```lolo
+(time/weekday "@entity.createdAt") // => 4 (Thursday)
 ```
 
 ### `time/hour`
@@ -130,8 +130,8 @@ Get hour from timestamp (0-23)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/hour", "@entity.createdAt"] // => 14
+```lolo
+(time/hour "@entity.createdAt") // => 14
 ```
 
 ### `time/minute`
@@ -144,8 +144,8 @@ Get minute from timestamp (0-59)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/minute", "@entity.createdAt"] // => 30
+```lolo
+(time/minute "@entity.createdAt") // => 30
 ```
 
 ### `time/second`
@@ -158,8 +158,8 @@ Get second from timestamp (0-59)
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/second", "@entity.createdAt"] // => 45
+```lolo
+(time/second "@entity.createdAt") // => 45
 ```
 
 ### `time/add`
@@ -174,8 +174,8 @@ Add time to timestamp
 | `amount` | `number` | Amount to add |
 | `unit` | `string` | Time unit (year/month/week/day/hour/minute/second/ms) |
 
-```json
-["time/add", ["time/now"], 7, "day"]
+```lolo
+(time/add (time/now) 7 "day")
 ```
 
 ### `time/subtract`
@@ -190,8 +190,8 @@ Subtract time from timestamp
 | `amount` | `number` | Amount to subtract |
 | `unit` | `string` | Time unit |
 
-```json
-["time/subtract", ["time/now"], 1, "hour"]
+```lolo
+(time/subtract (time/now) 1 "hour")
 ```
 
 ### `time/diff`
@@ -206,8 +206,8 @@ Difference between timestamps
 | `b` | `number` | Second timestamp |
 | `unit` | `string` | Result unit |
 
-```json
-["time/diff", "@entity.birthDate", ["time/now"], "year"]
+```lolo
+(time/diff "@entity.birthDate" (time/now) "year")
 ```
 
 ### `time/startOf`
@@ -221,8 +221,8 @@ Get start of time period
 | `date` | `number` | Timestamp |
 | `unit` | `string` | Time unit (year/month/week/day/hour/minute) |
 
-```json
-["time/startOf", ["time/now"], "month"]
+```lolo
+(time/startOf (time/now) "month")
 ```
 
 ### `time/endOf`
@@ -236,8 +236,8 @@ Get end of time period
 | `date` | `number` | Timestamp |
 | `unit` | `string` | Time unit |
 
-```json
-["time/endOf", ["time/now"], "month"]
+```lolo
+(time/endOf (time/now) "month")
 ```
 
 ### `time/isBefore`
@@ -251,8 +251,8 @@ Check if a is before b
 | `a` | `number` | First timestamp |
 | `b` | `number` | Second timestamp |
 
-```json
-["time/isBefore", "@entity.startDate", "@entity.endDate"]
+```lolo
+(time/isBefore "@entity.startDate" "@entity.endDate")
 ```
 
 ### `time/isAfter`
@@ -266,8 +266,8 @@ Check if a is after b
 | `a` | `number` | First timestamp |
 | `b` | `number` | Second timestamp |
 
-```json
-["time/isAfter", ["time/now"], "@entity.deadline"]
+```lolo
+(time/isAfter (time/now) "@entity.deadline")
 ```
 
 ### `time/isBetween`
@@ -282,8 +282,8 @@ Check if date is between start and end
 | `start` | `number` | Range start |
 | `end` | `number` | Range end |
 
-```json
-["time/isBetween", ["time/now"], "@entity.startDate", "@entity.endDate"]
+```lolo
+(time/isBetween (time/now) "@entity.startDate" "@entity.endDate")
 ```
 
 ### `time/isSame`
@@ -298,8 +298,8 @@ Check if timestamps are same (optionally by unit)
 | `b` | `number` | Second timestamp |
 | `unit` | `string` | Comparison unit |
 
-```json
-["time/isSame", "@a", "@b", "day"]
+```lolo
+(time/isSame "@a" "@b" "day")
 ```
 
 ### `time/isPast`
@@ -312,8 +312,8 @@ Check if timestamp is in the past
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/isPast", "@entity.expiresAt"]
+```lolo
+(time/isPast "@entity.expiresAt")
 ```
 
 ### `time/isFuture`
@@ -326,8 +326,8 @@ Check if timestamp is in the future
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/isFuture", "@entity.scheduledAt"]
+```lolo
+(time/isFuture "@entity.scheduledAt")
 ```
 
 ### `time/isToday`
@@ -340,8 +340,8 @@ Check if timestamp is today
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/isToday", "@entity.createdAt"]
+```lolo
+(time/isToday "@entity.createdAt")
 ```
 
 ### `time/relative`
@@ -354,8 +354,8 @@ Format as relative time ("2 hours ago", "in 3 days")
 |-----------|------|-------------|
 | `date` | `number` | Timestamp |
 
-```json
-["time/relative", "@entity.lastActivityAt"] // => "2 hours ago"
+```lolo
+(time/relative "@entity.lastActivityAt") // => "2 hours ago"
 ```
 
 ### `time/duration`
@@ -368,6 +368,6 @@ Format milliseconds as duration ("2h 30m")
 |-----------|------|-------------|
 | `ms` | `number` | Duration in milliseconds |
 
-```json
-["time/duration", 9000000] // => "2h 30m"
+```lolo
+(time/duration 9000000) // => "2h 30m"
 ```

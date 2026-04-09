@@ -24,8 +24,8 @@ Get object keys as array
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/keys", {"a": 1, "b": 2}] // => ["a", "b"]
+```lolo
+(object/keys {"a": 1 "b": 2}) // => ["a", "b"]
 ```
 
 ### `object/values`
@@ -38,8 +38,8 @@ Get object values as array
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/values", {"a": 1, "b": 2}] // => [1, 2]
+```lolo
+(object/values {"a": 1 "b": 2}) // => [1, 2]
 ```
 
 ### `object/entries`
@@ -52,8 +52,8 @@ Get [key, value] pairs as array
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/entries", {"a": 1}] // => [["a", 1]]
+```lolo
+(object/entries {"a": 1}) // => [["a", 1]]
 ```
 
 ### `object/fromEntries`
@@ -66,8 +66,8 @@ Create object from [key, value] pairs
 |-----------|------|-------------|
 | `entries` | `array` | Array of [key, value] pairs |
 
-```json
-["object/fromEntries", [["a", 1], ["b", 2]]] // => {"a": 1, "b": 2}
+```lolo
+(object/fromEntries [["a" 1] ["b" 2]]) // => {"a": 1, "b": 2}
 ```
 
 ### `object/get`
@@ -82,8 +82,8 @@ Get nested value by path
 | `path` | `string` | Dot-separated path (e.g., "user.name") |
 | `default` | `any` | Default if path not found |
 
-```json
-["object/get", "@user", "profile.name", "Anonymous"]
+```lolo
+(object/get "@user" "profile.name" "Anonymous")
 ```
 
 ### `object/set`
@@ -98,8 +98,8 @@ Set nested value by path (returns new object)
 | `path` | `string` | Dot-separated path |
 | `value` | `any` | Value to set |
 
-```json
-["object/set", "@user", "profile.name", "John"]
+```lolo
+(object/set "@user" "profile.name" "John")
 ```
 
 ### `object/has`
@@ -113,8 +113,8 @@ Check if path exists
 | `obj` | `object` | The object |
 | `path` | `string` | Dot-separated path |
 
-```json
-["object/has", "@user", "profile.name"]
+```lolo
+(object/has "@user" "profile.name")
 ```
 
 ### `object/merge`
@@ -127,8 +127,8 @@ Shallow merge objects (later wins)
 |-----------|------|-------------|
 | `...objs` | `object[]` | Objects to merge |
 
-```json
-["object/merge", {"a": 1}, {"b": 2}] // => {"a": 1, "b": 2}
+```lolo
+(object/merge {"a": 1} {"b": 2}) // => {"a": 1, "b": 2}
 ```
 
 ### `object/deepMerge`
@@ -141,8 +141,8 @@ Deep merge objects (later wins)
 |-----------|------|-------------|
 | `...objs` | `object[]` | Objects to merge |
 
-```json
-["object/deepMerge", {"a": {"b": 1}}, {"a": {"c": 2}}]
+```lolo
+(object/deepMerge {"a": {"b": 1}} {"a": {"c": 2}})
 ```
 
 ### `object/pick`
@@ -156,8 +156,8 @@ Select only specified keys
 | `obj` | `object` | The object |
 | `keys` | `array` | Keys to keep |
 
-```json
-["object/pick", "@entity", ["name", "email"]]
+```lolo
+(object/pick "@entity" (name "email"))
 ```
 
 ### `object/omit`
@@ -171,8 +171,8 @@ Exclude specified keys
 | `obj` | `object` | The object |
 | `keys` | `array` | Keys to exclude |
 
-```json
-["object/omit", "@entity", ["password", "secret"]]
+```lolo
+(object/omit "@entity" (password "secret"))
 ```
 
 ### `object/mapValues`
@@ -186,8 +186,8 @@ Transform all values
 | `obj` | `object` | The object |
 | `fn` | `lambda` | Transform function |
 
-```json
-["object/mapValues", "@stats", ["fn", "v", ["*", "@v", 100]]]
+```lolo
+(object/mapValues "@stats" (fn "v" (* "@v" 100)))
 ```
 
 ### `object/mapKeys`
@@ -201,8 +201,8 @@ Transform all keys
 | `obj` | `object` | The object |
 | `fn` | `lambda` | Transform function |
 
-```json
-["object/mapKeys", "@data", ["fn", "k", ["str/upper", "@k"]]]
+```lolo
+(object/mapKeys "@data" (fn "k" (str/upper "@k")))
 ```
 
 ### `object/filter`
@@ -216,8 +216,8 @@ Filter entries by predicate
 | `obj` | `object` | The object |
 | `pred` | `lambda` | Predicate (key, value) =&gt; boolean |
 
-```json
-["object/filter", "@data", ["fn", ["k", "v"], ["!=", "@v", null]]]
+```lolo
+(object/filter "@data" (fn (k "v") (!= "@v" null)))
 ```
 
 ### `object/empty?`
@@ -230,8 +230,8 @@ Check if object has no keys
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/empty?", {}] // => true
+```lolo
+(object/empty? {}) // => true
 ```
 
 ### `object/equals`
@@ -245,8 +245,8 @@ Deep equality check
 | `a` | `object` | First object |
 | `b` | `object` | Second object |
 
-```json
-["object/equals", {"a": 1}, {"a": 1}] // => true
+```lolo
+(object/equals {"a": 1} {"a": 1}) // => true
 ```
 
 ### `object/clone`
@@ -259,8 +259,8 @@ Shallow clone object
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/clone", "@entity"]
+```lolo
+(object/clone "@entity")
 ```
 
 ### `object/deepClone`
@@ -273,6 +273,6 @@ Deep clone object
 |-----------|------|-------------|
 | `obj` | `object` | The object |
 
-```json
-["object/deepClone", "@entity"]
+```lolo
+(object/deepClone "@entity")
 ```

@@ -25,8 +25,8 @@ Wait for specified milliseconds
 |-----------|------|-------------|
 | `ms` | `number` | Milliseconds to wait |
 
-```json
-["async/delay", 2000] // Wait 2 seconds
+```lolo
+(async/delay 2000) // Wait 2 seconds
 ```
 
 ### `async/timeout`
@@ -41,8 +41,8 @@ Add timeout to an effect
 | `effect` | `expression` | Effect to execute |
 | `ms` | `number` | Timeout in milliseconds |
 
-```json
-["async/timeout", ["call", "api", "fetchData"], 5000]
+```lolo
+(async/timeout (call "api" "fetchData") 5000)
 ```
 
 ### `async/debounce`
@@ -57,8 +57,8 @@ Debounce an event (wait for pause in events)
 | `event` | `string` | Event name to emit |
 | `ms` | `number` | Debounce delay in milliseconds |
 
-```json
-["async/debounce", "SEARCH", 300]
+```lolo
+(async/debounce "SEARCH" 300)
 ```
 
 ### `async/throttle`
@@ -73,8 +73,8 @@ Throttle an event (emit at most once per interval)
 | `event` | `string` | Event name to emit |
 | `ms` | `number` | Throttle interval in milliseconds |
 
-```json
-["async/throttle", "SCROLL", 100]
+```lolo
+(async/throttle "SCROLL" 100)
 ```
 
 ### `async/retry`
@@ -89,9 +89,9 @@ Retry an effect with configurable backoff
 | `effect` | `expression` | Effect to retry |
 | `opts` | `object` | &#123; attempts, backoff, baseDelay &#125; |
 
-```json
-["async/retry",
-  ["call", "api", "fetchData", { "id": "@entity.id" }],
+```lolo
+(async/retry)
+  (call "api" "fetchData" { "id": "@entity.id" })
   { "attempts": 3, "backoff": "exponential", "baseDelay": 1000 }]
 ```
 
@@ -106,8 +106,8 @@ Execute effects in parallel, return first to complete
 |-----------|------|-------------|
 | `...effects` | `expression[]` | Effects to race |
 
-```json
-["async/race", ["call", "api1"], ["call", "api2"]]
+```lolo
+(async/race (call "api1") (call "api2"))
 ```
 
 ### `async/all`
@@ -121,8 +121,8 @@ Execute effects in parallel, wait for all to complete
 |-----------|------|-------------|
 | `...effects` | `expression[]` | Effects to execute |
 
-```json
-["async/all", ["call", "api1"], ["call", "api2"]]
+```lolo
+(async/all (call "api1") (call "api2"))
 ```
 
 ### `async/sequence`
@@ -136,6 +136,6 @@ Execute effects in sequence (one after another)
 |-----------|------|-------------|
 | `...effects` | `expression[]` | Effects to execute in order |
 
-```json
-["async/sequence", ["call", "validate"], ["call", "save"]]
+```lolo
+(async/sequence (call "validate") (call "save"))
 ```

@@ -22,49 +22,32 @@ import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 
-const EXAMPLE_CODE = `{
-  "name": "TaskApp",
-  "orbitals": [{
-    "name": "TaskOrbital",
-    "entity": {
-      "name": "Task",
-      "persistence": "persistent",
-      "collection": "tasks",
-      "fields": [
-        { "name": "id", "type": "string" },
-        { "name": "title", "type": "string" },
-        { "name": "status", "type": "string", "default": "pending" }
-      ]
-    },
-    "traits": [{
-      "name": "TaskManager",
-      "linkedEntity": "Task",
-      "category": "interaction",
-      "stateMachine": {
-        "states": [
-          { "name": "viewing", "isInitial": true },
-          { "name": "adding" }
-        ],
-        "events": [
-          { "key": "INIT", "name": "Initialize" },
-          { "key": "ADD", "name": "Add Task" },
-          { "key": "SAVE", "name": "Save" },
-          { "key": "CANCEL", "name": "Cancel" }
-        ],
-        "transitions": [
-          { "from": "viewing", "to": "viewing", "event": "INIT",
-            "effects": [["fetch", "Task"],
-              ["render-ui", "main", { "type": "entity-table", "entity": "Task" }]] },
-          { "from": "viewing", "to": "adding", "event": "ADD",
-            "effects": [["render-ui", "modal", { "type": "form", "entity": "Task" }]] },
-          { "from": "adding", "to": "viewing", "event": "SAVE",
-            "effects": [["persist", "create", "Task", "@payload"]] },
-          { "from": "adding", "to": "viewing", "event": "CANCEL" }
-        ]
-      }
-    }],
-    "pages": [{ "name": "Tasks", "path": "/tasks" }]
-  }]
+const EXAMPLE_CODE = `type TaskStatus = pending | in-progress | done
+
+orbital TaskApp {
+  entity Task [persistent: tasks] {
+    id     : string!
+    title  : string!
+    status : TaskStatus = "pending"
+  }
+
+  trait TaskManager -> Task [interaction] {
+    initial: viewing
+    state viewing {
+      INIT -> viewing
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task" })
+      ADD -> adding
+        (render-ui modal { type: "form", entity: "Task" })
+    }
+    state adding {
+      SAVE -> viewing
+        (persist create Task @payload)
+      CANCEL -> viewing
+    }
+  }
+
+  page "/tasks" -> TaskManager
 }`;
 
 const WHY_FEATURES = [
@@ -126,13 +109,13 @@ export default function OrbHome(): ReactNode {
               <Box className="flex-1">
                 <VStack gap="md">
                   <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
-                  <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. The compiler generates frontend, backend, database, and API." })}</Typography>
+                  <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. Entity, state machine, UI — all in one place. The compiler generates frontend, backend, and database." })}</Typography>
                 </VStack>
               </Box>
             </AnimatedReveal>
             <AnimatedReveal animation="fade-left">
               <Box className="flex-1 lg:flex-[2]">
-                <CodeBlock language="orb" title="task-manager.orb">
+                <CodeBlock language="lolo" title="task-manager.orb">
                   {EXAMPLE_CODE}
                 </CodeBlock>
               </Box>

@@ -24,8 +24,8 @@ Absolute value
 |-----------|------|-------------|
 | `n` | `number` | The number |
 
-```json
-["math/abs", -5] // => 5
+```lolo
+(math/abs -5) // => 5
 ```
 
 ### `math/min`
@@ -38,8 +38,8 @@ Minimum of values
 |-----------|------|-------------|
 | `...nums` | `number[]` | Numbers to compare |
 
-```json
-["math/min", 3, 1, 4] // => 1
+```lolo
+(math/min 3 1 4) // => 1
 ```
 
 ### `math/max`
@@ -52,8 +52,8 @@ Maximum of values
 |-----------|------|-------------|
 | `...nums` | `number[]` | Numbers to compare |
 
-```json
-["math/max", 3, 1, 4] // => 4
+```lolo
+(math/max 3 1 4) // => 4
 ```
 
 ### `math/clamp`
@@ -68,8 +68,8 @@ Constrain value to range [min, max]
 | `min` | `number` | Minimum bound |
 | `max` | `number` | Maximum bound |
 
-```json
-["math/clamp", 150, 0, 100] // => 100
+```lolo
+(math/clamp 150 0 100) // => 100
 ```
 
 ### `math/floor`
@@ -82,8 +82,8 @@ Round down to integer
 |-----------|------|-------------|
 | `n` | `number` | The number |
 
-```json
-["math/floor", 3.7] // => 3
+```lolo
+(math/floor 3.7) // => 3
 ```
 
 ### `math/ceil`
@@ -96,8 +96,8 @@ Round up to integer
 |-----------|------|-------------|
 | `n` | `number` | The number |
 
-```json
-["math/ceil", 3.2] // => 4
+```lolo
+(math/ceil 3.2) // => 4
 ```
 
 ### `math/round`
@@ -111,8 +111,8 @@ Round to nearest integer or specified decimals
 | `n` | `number` | The number |
 | `decimals` | `number` | Decimal places |
 
-```json
-["math/round", 3.456, 2] // => 3.46
+```lolo
+(math/round 3.456 2) // => 3.46
 ```
 
 ### `math/pow`
@@ -126,8 +126,8 @@ Exponentiation (base^exp)
 | `base` | `number` | The base |
 | `exp` | `number` | The exponent |
 
-```json
-["math/pow", 2, 8] // => 256
+```lolo
+(math/pow 2 8) // => 256
 ```
 
 ### `math/sqrt`
@@ -140,8 +140,8 @@ Square root
 |-----------|------|-------------|
 | `n` | `number` | The number |
 
-```json
-["math/sqrt", 16] // => 4
+```lolo
+(math/sqrt 16) // => 4
 ```
 
 ### `math/mod`
@@ -155,8 +155,8 @@ Modulo (remainder)
 | `a` | `number` | Dividend |
 | `b` | `number` | Divisor |
 
-```json
-["math/mod", 7, 3] // => 1
+```lolo
+(math/mod 7 3) // => 1
 ```
 
 ### `math/sign`
@@ -169,8 +169,8 @@ Returns -1, 0, or 1 indicating sign
 |-----------|------|-------------|
 | `n` | `number` | The number |
 
-```json
-["math/sign", -42] // => -1
+```lolo
+(math/sign -42) // => -1
 ```
 
 ### `math/lerp`
@@ -185,8 +185,8 @@ Linear interpolation between a and b by factor t
 | `b` | `number` | End value |
 | `t` | `number` | Interpolation factor (0-1) |
 
-```json
-["math/lerp", 0, 100, 0.5] // => 50
+```lolo
+(math/lerp 0 100 0.5) // => 50
 ```
 
 ### `math/map`
@@ -203,8 +203,8 @@ Map value from one range to another
 | `outMin` | `number` | Output range minimum |
 | `outMax` | `number` | Output range maximum |
 
-```json
-["math/map", 5, 0, 10, 0, 100] // => 50
+```lolo
+(math/map 5 0 10 0 100) // => 50
 ```
 
 ### `math/random`
@@ -213,8 +213,8 @@ Map value from one range to another
 
 Random number between 0 (inclusive) and 1 (exclusive)
 
-```json
-["math/random"] // => 0.7234...
+```lolo
+(math/random) // => 0.7234...
 ```
 
 ### `math/randomInt`
@@ -228,8 +228,8 @@ Random integer in range [min, max] (inclusive)
 | `min` | `number` | Minimum (inclusive) |
 | `max` | `number` | Maximum (inclusive) |
 
-```json
-["math/randomInt", 1, 6] // => 4
+```lolo
+(math/randomInt 1 6) // => 4
 ```
 
 ### `math/default`
@@ -243,6 +243,6 @@ Return default if value is null, undefined, or NaN
 | `n` | `number \| null` | The value |
 | `default` | `number` | Default value |
 
-```json
-["math/default", null, 0] // => 0
+```lolo
+(math/default null 0) // => 0
 ```

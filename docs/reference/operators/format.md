@@ -25,8 +25,8 @@ Format number with locale-aware separators
 | `n` | `number` | Number to format |
 | `opts` | `object` | Format options (decimals, locale) |
 
-```json
-["format/number", 1234567.89] // => "1,234,567.89"
+```lolo
+(format/number 1234567.89) // => "1,234,567.89"
 ```
 
 ### `format/currency`
@@ -41,8 +41,8 @@ Format as currency
 | `currency` | `string` | Currency code (USD, EUR, etc.) |
 | `locale` | `string` | Locale |
 
-```json
-["format/currency", 1234.56, "USD"] // => "$1,234.56"
+```lolo
+(format/currency 1234.56 "USD") // => "$1,234.56"
 ```
 
 ### `format/percent`
@@ -56,8 +56,8 @@ Format as percentage
 | `n` | `number` | Number (0.5 = 50%) |
 | `decimals` | `number` | Decimal places |
 
-```json
-["format/percent", 0.856, 1] // => "85.6%"
+```lolo
+(format/percent 0.856 1) // => "85.6%"
 ```
 
 ### `format/bytes`
@@ -70,8 +70,8 @@ Format bytes as human-readable size
 |-----------|------|-------------|
 | `n` | `number` | Bytes |
 
-```json
-["format/bytes", 2500000] // => "2.4 MB"
+```lolo
+(format/bytes 2500000) // => "2.4 MB"
 ```
 
 ### `format/ordinal`
@@ -84,8 +84,8 @@ Format number as ordinal (1st, 2nd, 3rd)
 |-----------|------|-------------|
 | `n` | `number` | Number |
 
-```json
-["format/ordinal", 42] // => "42nd"
+```lolo
+(format/ordinal 42) // => "42nd"
 ```
 
 ### `format/plural`
@@ -100,8 +100,8 @@ Format count with singular/plural word
 | `singular` | `string` | Singular form |
 | `plural` | `string` | Plural form |
 
-```json
-["format/plural", 5, "item", "items"] // => "5 items"
+```lolo
+(format/plural 5 "item" "items") // => "5 items"
 ```
 
 ### `format/list`
@@ -115,8 +115,8 @@ Format array as natural language list
 | `arr` | `array` | Array of strings |
 | `style` | `string` | "and" or "or" |
 
-```json
-["format/list", ["Alice", "Bob", "Charlie"], "and"] // => "Alice, Bob, and Charlie"
+```lolo
+(format/list (Alice "Bob" "Charlie") "and") // => "Alice, Bob, and Charlie"
 ```
 
 ### `format/phone`
@@ -130,8 +130,8 @@ Format phone number
 | `str` | `string` | Phone number digits |
 | `format` | `string` | Format pattern |
 
-```json
-["format/phone", "5551234567"] // => "(555) 123-4567"
+```lolo
+(format/phone "5551234567") // => "(555) 123-4567"
 ```
 
 ### `format/creditCard`
@@ -144,6 +144,6 @@ Format credit card with masked digits
 |-----------|------|-------------|
 | `str` | `string` | Card number |
 
-```json
-["format/creditCard", "4111111111111234"] // => "•••• •••• •••• 1234"
+```lolo
+(format/creditCard "4111111111111234") // => "•••• •••• •••• 1234"
 ```

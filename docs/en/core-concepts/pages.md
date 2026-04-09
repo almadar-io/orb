@@ -175,6 +175,7 @@ orbital BrowseItemOrbital {
 <OrbPreviewBlock schema={JSON.stringify(pagesSchema)} showCode={false} />
 
 The page definition is minimal. It maps the path `/browseitems` to the `BrowseItemBrowse` trait. When a user navigates to that URL, the runtime initializes the trait's state machine, fires `INIT`, and the resulting `render-ui` effects populate the page with the data grid.
+
 ---
 
 ## Validation

@@ -24,8 +24,8 @@ Check if value is not null, undefined, or empty string
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/required", "@payload.name"]
+```lolo
+(validate/required "@payload.name")
 ```
 
 ### `validate/string`
@@ -38,8 +38,8 @@ Check if value is a string
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/string", "@payload.name"]
+```lolo
+(validate/string "@payload.name")
 ```
 
 ### `validate/number`
@@ -52,8 +52,8 @@ Check if value is a number
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/number", "@payload.age"]
+```lolo
+(validate/number "@payload.age")
 ```
 
 ### `validate/boolean`
@@ -66,8 +66,8 @@ Check if value is a boolean
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/boolean", "@payload.active"]
+```lolo
+(validate/boolean "@payload.active")
 ```
 
 ### `validate/array`
@@ -80,8 +80,8 @@ Check if value is an array
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/array", "@payload.items"]
+```lolo
+(validate/array "@payload.items")
 ```
 
 ### `validate/object`
@@ -94,8 +94,8 @@ Check if value is an object
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/object", "@payload.data"]
+```lolo
+(validate/object "@payload.data")
 ```
 
 ### `validate/email`
@@ -108,8 +108,8 @@ Check if value is a valid email format
 |-----------|------|-------------|
 | `value` | `string` | Email to validate |
 
-```json
-["validate/email", "@payload.email"]
+```lolo
+(validate/email "@payload.email")
 ```
 
 ### `validate/url`
@@ -122,8 +122,8 @@ Check if value is a valid URL format
 |-----------|------|-------------|
 | `value` | `string` | URL to validate |
 
-```json
-["validate/url", "@payload.website"]
+```lolo
+(validate/url "@payload.website")
 ```
 
 ### `validate/uuid`
@@ -136,8 +136,8 @@ Check if value is a valid UUID
 |-----------|------|-------------|
 | `value` | `string` | UUID to validate |
 
-```json
-["validate/uuid", "@payload.id"]
+```lolo
+(validate/uuid "@payload.id")
 ```
 
 ### `validate/phone`
@@ -150,8 +150,8 @@ Check if value is a valid phone number
 |-----------|------|-------------|
 | `value` | `string` | Phone number to validate |
 
-```json
-["validate/phone", "@payload.phone"]
+```lolo
+(validate/phone "@payload.phone")
 ```
 
 ### `validate/creditCard`
@@ -164,8 +164,8 @@ Check if value is a valid credit card number (Luhn algorithm)
 |-----------|------|-------------|
 | `value` | `string` | Card number to validate |
 
-```json
-["validate/creditCard", "@payload.cardNumber"]
+```lolo
+(validate/creditCard "@payload.cardNumber")
 ```
 
 ### `validate/date`
@@ -178,8 +178,8 @@ Check if value is a valid date
 |-----------|------|-------------|
 | `value` | `any` | Value to check |
 
-```json
-["validate/date", "@payload.birthDate"]
+```lolo
+(validate/date "@payload.birthDate")
 ```
 
 ### `validate/minLength`
@@ -193,8 +193,8 @@ Check if string/array has minimum length
 | `value` | `string \| array` | Value to check |
 | `min` | `number` | Minimum length |
 
-```json
-["validate/minLength", "@payload.password", 8]
+```lolo
+(validate/minLength "@payload.password" 8)
 ```
 
 ### `validate/maxLength`
@@ -208,8 +208,8 @@ Check if string/array has maximum length
 | `value` | `string \| array` | Value to check |
 | `max` | `number` | Maximum length |
 
-```json
-["validate/maxLength", "@payload.name", 50]
+```lolo
+(validate/maxLength "@payload.name" 50)
 ```
 
 ### `validate/length`
@@ -223,8 +223,8 @@ Check if string/array has exact length
 | `value` | `string \| array` | Value to check |
 | `exact` | `number` | Required length |
 
-```json
-["validate/length", "@payload.code", 6]
+```lolo
+(validate/length "@payload.code" 6)
 ```
 
 ### `validate/min`
@@ -238,8 +238,8 @@ Check if number is &gt;= minimum
 | `value` | `number` | Number to check |
 | `min` | `number` | Minimum value |
 
-```json
-["validate/min", "@payload.age", 18]
+```lolo
+(validate/min "@payload.age" 18)
 ```
 
 ### `validate/max`
@@ -253,8 +253,8 @@ Check if number is &lt;= maximum
 | `value` | `number` | Number to check |
 | `max` | `number` | Maximum value |
 
-```json
-["validate/max", "@payload.quantity", 100]
+```lolo
+(validate/max "@payload.quantity" 100)
 ```
 
 ### `validate/range`
@@ -269,8 +269,8 @@ Check if number is within range [min, max]
 | `min` | `number` | Minimum value |
 | `max` | `number` | Maximum value |
 
-```json
-["validate/range", "@payload.rating", 1, 5]
+```lolo
+(validate/range "@payload.rating" 1 5)
 ```
 
 ### `validate/pattern`
@@ -284,8 +284,8 @@ Check if string matches regex pattern
 | `value` | `string` | String to check |
 | `regex` | `string` | Regex pattern |
 
-```json
-["validate/pattern", "@payload.code", "^[A-Z]{3}[0-9]{3}$"]
+```lolo
+(validate/pattern "@payload.code" "^[A-Z]{3}[0-9]{3}$")
 ```
 
 ### `validate/oneOf`
@@ -299,8 +299,8 @@ Check if value is in list of allowed values
 | `value` | `any` | Value to check |
 | `options` | `array` | Allowed values |
 
-```json
-["validate/oneOf", "@payload.role", ["admin", "user", "guest"]]
+```lolo
+(validate/oneOf "@payload.role" (admin "user" "guest"))
 ```
 
 ### `validate/noneOf`
@@ -314,8 +314,8 @@ Check if value is not in list of disallowed values
 | `value` | `any` | Value to check |
 | `options` | `array` | Disallowed values |
 
-```json
-["validate/noneOf", "@payload.username", ["admin", "root", "system"]]
+```lolo
+(validate/noneOf "@payload.username" (admin "root" "system"))
 ```
 
 ### `validate/equals`
@@ -329,8 +329,8 @@ Deep equality check
 | `a` | `any` | First value |
 | `b` | `any` | Second value |
 
-```json
-["validate/equals", "@payload.password", "@payload.confirmPassword"]
+```lolo
+(validate/equals "@payload.password" "@payload.confirmPassword")
 ```
 
 ### `validate/check`
@@ -344,8 +344,8 @@ Run multiple validation rules, return &#123; valid, errors &#125;
 | `value` | `any` | Value or object to validate |
 | `rules` | `object` | Validation rules by field |
 
-```json
-["validate/check", "@payload.data", {
+```lolo
+(validate/check "@payload.data")
   "name": [["required"], ["minLength", 2], ["maxLength", 50]],
   "email": [["required"], ["email"]],
   "age": [["number"], ["min", 18]]
