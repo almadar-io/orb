@@ -210,4 +210,4 @@ chmod +x /usr/local/bin/orb
 
 ---
 
-*تحتاج مساعدة؟ انضم إلى [Discord](https://discord.gg/almadar) أو افتح [مشكلة](https://github.com/almadar-io/almadar/issues).*
+*تحتاج مساعدة؟ انضم إلى [Discord](https://discord.gg/almadar) أو افتح [مشكلة](https://github.com/almadar-io/orb/issues).*

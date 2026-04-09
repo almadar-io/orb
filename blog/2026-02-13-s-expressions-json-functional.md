@@ -159,4 +159,4 @@ In .orb:
 
 Declarative, composable, safe. No arbitrary code execution, no injection risk, no eval.
 
-S-expressions are not a Lisp curiosity. They are a practical, 65-year-old solution to "how do you put logic in data?" that actually works. Explore the full operator list in the [standard library](https://orb.almadar.io/docs/stdlib).
+S-expressions are not a Lisp curiosity. They are a practical, 65-year-old solution to "how do you put logic in data?" that actually works. Explore the full operator list in the [standard library](https://orb.almadar.io/playground).

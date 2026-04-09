@@ -313,4 +313,4 @@ Dajejo vam:
 
 Naslednjič, ko vas bo zamikalo uporabiti `eval()` ali string templates za dinamično logiko, pomnite: obstaja 60 let stara rešitev, ki dejansko deluje.
 
-Želite raziskati več? Preverite [standardne knjižnične operatorje](https://orb.almadar.io/docs/stdlib).
+Želite raziskati več? Preverite [standardne knjižnične operatorje](https://orb.almadar.io/playground).

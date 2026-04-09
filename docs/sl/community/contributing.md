@@ -131,7 +131,7 @@ Prispevovalci so prepoznani v:
 ## Pridobivanje pomoci
 
 - **Discord**: [Priduzite se nasemu strezniku](https://discord.gg/almadar)
-- **GitHub Discussions**: [Postavite vprasanja](https://github.com/almadar-io/almadar/discussions)
+- **GitHub Discussions**: [Postavite vprasanja](https://github.com/almadar-io/orb/discussions)
 - **E-posta**: community@almadar.io
 
 ---

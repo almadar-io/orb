@@ -152,7 +152,7 @@ orb skill install almadar-fixing --pro
 
 ## Ustvarjanje prilagojenih vescerin
 
-Zelite ustvariti lastne vescerine Orb? Kontaktirajte ekipo na support@almadar.io ali obisCite [razprave skupnosti](https://github.com/almadar-io/almadar/discussions) za vodenje.
+Zelite ustvariti lastne vescerine Orb? Kontaktirajte ekipo na support@almadar.io ali obisCite [razprave skupnosti](https://github.com/almadar-io/orb/discussions) za vodenje.
 
 ---
 

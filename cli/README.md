@@ -1,76 +1,94 @@
-# Almadar CLI
+# Orb CLI
 
-The command-line interface for Almadar.
+The command-line interface for Orb.
 
 ## Installation
 
 ```bash
-# npm (recommended)
-npm install -g @almadar/cli
+# curl installer (recommended)
+curl -fsSL https://orb.almadar.io/install.sh | sh
+
+# npm
+npm install -g @almadar/orb
 
 # Or use npx
-npx @almadar/cli validate schema.orb
+npx @almadar/orb validate app.orb
 
 # Homebrew (macOS/Linux)
-brew install almadar/tap/almadar
+brew install almadar-io/tap/orb
 
-# Cargo (Rust developers)
-cargo install almadar-cli
-
-# Windows
-winget install Almadar.CLI
+# Windows PowerShell
+irm https://orb.almadar.io/install.ps1 | iex
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `almadar new <name>` | Create a new project with @almadar/* dependencies |
-| `almadar validate <file>` | Validate a schema |
-| `almadar compile <file>` | Compile to target shell |
-| `almadar dev <file>` | Start development server |
-| `almadar test <file>` | Run state machine tests |
-| `almadar format <file>` | Format a schema |
+| `orbital new <name>` | Create a new project |
+| `orbital validate <file>` | Validate an .orb file (0 errors, 0 warnings required) |
+| `orbital compile <file>` | Compile to target shell |
+| `orbital emit-orb <file>` | Lower .lolo source to .orb JSON (stdout) |
+| `orbital dev <file>` | Start development server |
+| `orbital test <file>` | Run state machine tests |
 
 ## Usage
 
 ```bash
-# Create a new project (sets up package.json with @almadar/* dependencies)
-almadar new my-app
+# Create a new project
+orbital new my-app
 cd my-app
-npm install
 
-# Validate a schema
-almadar validate schema.orb
+# Write your orbital in .lolo syntax
+cat app.orb
+```
 
-# Compile to TypeScript
-almadar compile schema.orb --shell typescript --output ./generated
+```lolo
+orbital TaskApp {
+  entity Task [persistent: tasks] {
+    id     : string!
+    title  : string!
+    status : string = "pending"
+  }
+
+  trait TaskBrowser -> Task [interaction] {
+    state browsing {
+      INIT -> browsing
+        (fetch Task)
+        (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"] })
+    }
+  }
+
+  page "/tasks" -> TaskBrowser
+}
+```
+
+```bash
+# Validate (must produce 0 errors, 0 warnings)
+orbital validate app.orb
+
+# Compile to TypeScript shell
+orbital compile app.orb --shell typescript --output ./app
 
 # Start dev server
-almadar dev schema.orb
+orbital dev app.orb
 ```
 
 ## Project Structure
 
-When you run `almadar new my-app`, you get:
+When you run `orbital new my-app`, you get:
 
 ```
 my-app/
-├── package.json       # Has @almadar/* dependencies
-├── schema.orb         # Your schema file
+├── app.orb            # Your orbital (write in .lolo syntax)
+├── package.json
 └── README.md
 ```
 
-After `npm install`, all @almadar/* packages are available:
-- `@almadar/core` - Core types
-- `@almadar/std` - Standard library operators
-- `@almadar/patterns` - UI patterns
-- `@almadar/validation` - Schema validation
-
 ## Documentation
 
-See [CLI Reference](https://almadar.io/docs/en/reference/cli) for full documentation.
+See [orb.almadar.io/docs](https://orb.almadar.io/docs/getting-started/introduction) for full documentation.
 
 ## License
 
-BSL 1.1 - See [LICENSE](../LICENSE) for details.
+BSL 1.1 — See [LICENSE](../LICENSE) for details.

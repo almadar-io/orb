@@ -4,7 +4,7 @@ title: "AVL: Almadar Visual Language"
 ---
 
 import { AvlEntity, AvlOrbital, AvlTrait, AvlPage, AvlState, AvlTransition, AvlEvent, AvlGuard, AvlEffect, AvlField, AvlFieldType, AvlBinding, AvlPersistence, AvlOperator, AvlSExpr, AvlLiteral, AvlBindingRef, AvlStateMachine, AvlOrbitalUnit, AvlClosedCircuit, AvlEmitListen, AvlSlotMap, AvlExprTree } from '@almadar/ui/illustrations';
-import OrbCosmicZoom from '@shared/OrbCosmicZoom';
+import OrbOrbitalsCosmicZoom from '@shared/OrbOrbitalsCosmicZoom';
 
 # AVL: Almadar Visual Language
 
@@ -259,53 +259,28 @@ S-expression operators are color-coded by namespace:
 
 The AVL Cosmic Zoom lets you explore an entire application interactively. Click orbitals to zoom into their traits, click traits to see their state machines, click transitions to see effect trees.
 
-<OrbCosmicZoom schema={`{
-  "name": "TaskManager",
-  "orbitals": [{
-    "name": "TaskOrbital",
-    "entity": {
-      "name": "Task",
-      "persistence": "persistent",
-      "fields": [
-        { "name": "id", "type": "string" },
-        { "name": "title", "type": "string" },
-        { "name": "status", "type": "string", "default": "pending" },
-        { "name": "assignee", "type": "string" }
-      ]
+<OrbOrbitalsCosmicZoom schema={`{
+  "name": "eCommerce",
+  "orbitals": [
+    {
+      "name": "OrderOrbital",
+      "entity": { "name": "Order", "persistence": "persistent", "fields": [{ "name": "id", "type": "string" }, { "name": "status", "type": "string" }, { "name": "total", "type": "number" }, { "name": "customerId", "type": "string" }] },
+      "traits": [{ "name": "OrderLifecycle", "linkedEntity": "Order", "category": "lifecycle", "emits": [{ "event": "ORDER_PLACED", "scope": "external" }, { "event": "ORDER_SHIPPED", "scope": "external" }], "stateMachine": { "states": [{ "name": "pending", "isInitial": true }, { "name": "confirmed" }, { "name": "shipped" }], "transitions": [], "events": [] } }],
+      "pages": [{ "name": "/orders", "path": "/orders" }]
     },
-    "traits": [{
-      "name": "TaskCrud",
-      "linkedEntity": "Task",
-      "category": "interaction",
-      "stateMachine": {
-        "states": [
-          { "name": "Listing", "isInitial": true },
-          { "name": "Creating" },
-          { "name": "Editing" }
-        ],
-        "events": [
-          { "key": "INIT", "name": "Initialize" },
-          { "key": "CREATE", "name": "Create" },
-          { "key": "EDIT", "name": "Edit" },
-          { "key": "SAVE", "name": "Save" },
-          { "key": "CANCEL", "name": "Cancel" }
-        ],
-        "transitions": [
-          { "from": "Listing", "to": "Listing", "event": "INIT", "effects": [["fetch", "Task"], ["render-ui", "main", { "type": "stack" }]] },
-          { "from": "Listing", "to": "Creating", "event": "CREATE", "effects": [["render-ui", "modal", { "type": "form" }]] },
-          { "from": "Creating", "to": "Listing", "event": "SAVE", "effects": [["persist", "create", "Task"]] },
-          { "from": "Creating", "to": "Listing", "event": "CANCEL" },
-          { "from": "Listing", "to": "Editing", "event": "EDIT", "effects": [["render-ui", "modal", { "type": "form" }]] },
-          { "from": "Editing", "to": "Listing", "event": "SAVE", "effects": [["persist", "update", "Task"]] },
-          { "from": "Editing", "to": "Listing", "event": "CANCEL" }
-        ]
-      }
-    }],
-    "pages": [
-      { "name": "TaskList", "path": "/tasks" },
-      { "name": "TaskDetail", "path": "/tasks/:id" }
-    ]
-  }]
+    {
+      "name": "InventoryOrbital",
+      "entity": { "name": "InventoryItem", "persistence": "persistent", "fields": [{ "name": "id", "type": "string" }, { "name": "sku", "type": "string" }, { "name": "quantity", "type": "number" }] },
+      "traits": [{ "name": "InventoryManager", "linkedEntity": "InventoryItem", "category": "interaction", "listens": [{ "event": "ORDER_PLACED" }], "emits": [{ "event": "STOCK_UPDATED", "scope": "external" }], "stateMachine": { "states": [{ "name": "idle", "isInitial": true }], "transitions": [], "events": [] } }],
+      "pages": [{ "name": "/inventory", "path": "/inventory" }]
+    },
+    {
+      "name": "NotificationOrbital",
+      "entity": { "name": "Notification", "persistence": "runtime", "fields": [{ "name": "id", "type": "string" }, { "name": "message", "type": "string" }] },
+      "traits": [{ "name": "NotificationHandler", "linkedEntity": "Notification", "category": "notification", "listens": [{ "event": "ORDER_SHIPPED" }, { "event": "STOCK_UPDATED" }], "stateMachine": { "states": [{ "name": "idle", "isInitial": true }, { "name": "active" }], "transitions": [], "events": [] } }],
+      "pages": []
+    }
+  ]
 }`} height="500px" />
 
 ---

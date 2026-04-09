@@ -149,7 +149,7 @@ docs/
 ## الحصول على المساعدة
 
 - **Discord**: [انضم لخادمنا](https://discord.gg/almadar)
-- **مناقشات GitHub**: [اطرح الأسئلة](https://github.com/almadar-io/almadar/discussions)
+- **مناقشات GitHub**: [اطرح الأسئلة](https://github.com/almadar-io/orb/discussions)
 - **البريد الإلكتروني**: community@almadar.io
 
 ---

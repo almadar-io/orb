@@ -99,7 +99,7 @@ Like planets in orbit around a star, application components in Orb follow predic
 ## Community
 
 - [Discord](https://discord.gg/YtWJCpnk) - Real-time chat and support
-- [GitHub Discussions](https://github.com/almadar-io/almadar/discussions) - Technical discussions
+- [GitHub Discussions](https://github.com/almadar-io/orb/discussions) - Technical discussions
 - [LinkedIn](https://www.linkedin.com/company/almadar-io) - Updates and announcements
 
 ---

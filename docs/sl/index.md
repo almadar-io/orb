@@ -99,7 +99,7 @@ Tako kot planeti v orbiti okoli zvezde, komponente aplikacij v Orb sledijo predv
 ## Skupnost
 
 - [Discord](https://discord.gg/YtWJCpnk) - Klepet in podpora v realnem casu
-- [GitHub Discussions](https://github.com/almadar-io/almadar/discussions) - Tehnicne razprave
+- [GitHub Discussions](https://github.com/almadar-io/orb/discussions) - Tehnicne razprave
 - [LinkedIn](https://www.linkedin.com/company/almadar-io) - Novosti in obvestila
 
 ---

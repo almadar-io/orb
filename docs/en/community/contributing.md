@@ -131,7 +131,7 @@ Contributors are recognized in:
 ## Getting Help
 
 - **Discord**: [Join our server](https://discord.gg/almadar)
-- **GitHub Discussions**: [Ask questions](https://github.com/almadar-io/almadar/discussions)
+- **GitHub Discussions**: [Ask questions](https://github.com/almadar-io/orb/discussions)
 - **Email**: community@almadar.io
 
 ---

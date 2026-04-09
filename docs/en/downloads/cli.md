@@ -257,4 +257,4 @@ The orb.exe binary is signed but may trigger Windows Defender on first run. Clic
 
 ---
 
-*Need help? Join our [Discord](https://discord.gg/almadar) or open an [issue](https://github.com/almadar-io/almadar/issues).*
+*Need help? Join our [Discord](https://discord.gg/almadar) or open an [issue](https://github.com/almadar-io/orb/issues).*

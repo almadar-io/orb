@@ -137,17 +137,11 @@ Encode business logic, compliance requirements, or game mechanics in a formal mo
 
 Define your data models:
 
-```json
-{
-  "entity": {
-    "name": "Task",
-    "collection": "tasks",
-    "fields": [
-      { "name": "id", "type": "string", "primaryKey": true },
-      { "name": "title", "type": "string", "required": true },
-      { "name": "status", "type": "enum", "values": ["pending", "done"] }
-    ]
-  }
+```lolo
+entity Task [persistent: tasks] {
+  id     : string!
+  title  : string!
+  status : string = "pending"
 }
 ```
 
@@ -157,28 +151,22 @@ Define your data models:
 
 Define behavior with states, events, and transitions:
 
-```json
-{
-  "trait": {
-    "name": "TaskBrowser",
-    "linkedEntity": "Task",
-    "stateMachine": {
-      "states": [
-        { "name": "Browsing", "isInitial": true },
-        { "name": "Creating" }
-      ],
-      "events": ["INIT", "CREATE", "SAVE", "CANCEL"],
-      "transitions": [
-        {
-          "from": "Browsing",
-          "to": "Browsing",
-          "event": "INIT",
-          "effects": [
-            ["render-ui", "main", { "type": "entity-table", "entity": "Task" }]
-          ]
-        }
-      ]
-    }
+```lolo
+trait TaskBrowser -> Task [interaction] {
+  state browsing {
+    INIT -> browsing
+      (fetch Task)
+      (render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"] })
+    CREATE -> creating
+      (render-ui modal { type: "modal", isOpen: true, title: "New Task",
+        children: [{ type: "form-section", entity: "Task", fields: ["title", "status"], mode: "create" }] })
+  }
+  state creating {
+    SAVE -> browsing
+      (persist create Task @payload.data)
+      (render-ui modal null)
+    CANCEL -> browsing
+      (render-ui modal null)
   }
 }
 ```
@@ -187,26 +175,30 @@ Define behavior with states, events, and transitions:
 
 ### 3. Patterns & UI
 
-Patterns bridge schemas to UI components:
+Patterns bridge schemas to UI components — declared inline in effects:
 
-```json
-["render-ui", "main", {
-  "type": "entity-table",
-  "entity": "Task",
-  "columns": ["title", "status"]
-}]
+```lolo
+(render-ui main { type: "entity-table", entity: "Task", fields: ["title", "status"] })
 ```
 
 📚 [Patterns Documentation](https://orb.almadar.io/docs/core-concepts/patterns)
 
 ### 4. Standard Library
 
-Reuse pre-built behaviors:
+Reuse pre-built behaviors with `uses`:
 
-```json
-{
-  "uses": [{ "from": "std/behaviors/crud", "as": "CRUD" }],
-  "traits": [{ "name": "TaskCRUD", "uses": ["CRUD"] }]
+```lolo
+orbital TaskOrbital {
+  uses Browse from "std/behaviors/std-browse"
+
+  entity Task [persistent: tasks] {
+    id    : string!
+    title : string!
+  }
+
+  trait TaskBrowse = Browse.traits.BrowseItemBrowse -> Task {}
+
+  page "/tasks" -> TaskBrowse
 }
 ```
 
@@ -292,18 +284,18 @@ The Orb language ecosystem is published to [npm](https://www.npmjs.com/org/almad
 
 When something breaks, follow this order:
 
-1. **Fix schema first** — 99% of issues are schema problems
+1. **Fix `.lolo` first** — 99% of issues are in the lolo source
 2. **Update shell components** — Component bugs
 3. **Modify compiler** — LAST RESORT (ask first!)
 
 ### Typical Flow
 
 ```
-1. Edit Schema (.orb)
+1. Edit .orb (write in .lolo syntax)
         ↓
-2. Validate: orb validate schema.orb
+2. Validate: orb validate app.orb
         ↓
-3. Compile: orb compile schema.orb --shell typescript
+3. Compile: orb compile app.orb --shell typescript
         ↓
 4. Test generated code
         ↓

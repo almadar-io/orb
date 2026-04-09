@@ -241,4 +241,4 @@ guard: user.roleLevel >= 3 and entity.amount < 10000
 
 لأن أفضل صياغة قد تكون تلك التي تعرفها بالفعل.
 
-استكشف [الـ standard library للـ S-expressions](https://orb.almadar.io/docs/stdlib) لرؤية جميع العوامل المتاحة.
+استكشف [الـ standard library للـ S-expressions](https://orb.almadar.io/playground) لرؤية جميع العوامل المتاحة.

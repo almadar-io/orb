@@ -48,5 +48,5 @@ orb dev
 
 ## More Information
 
-- [GitHub Repository](https://github.com/almadar-io/almadar)
+- [GitHub Repository](https://github.com/almadar-io/orb)
 - [Documentation](/)

@@ -241,4 +241,4 @@ Rezultat je Turing-complete jezik, ki:
 
 Ker je najboljša sintaksa morda tista, ki jo že poznate.
 
-Raziščite [S-expression standardno knjižnico](https://orb.almadar.io/docs/stdlib) za vse razpoložljive operatorje.
+Raziščite [S-expression standardno knjižnico](https://orb.almadar.io/playground) za vse razpoložljive operatorje.

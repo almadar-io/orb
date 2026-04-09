@@ -237,4 +237,4 @@ Binarna datoteka orb.exe je podpisana, a lahko sprozi Windows Defender ob prvem 
 
 ---
 
-*Potrebujete pomoc? Priduzite se nasemu [Discord](https://discord.gg/almadar) ali odprite [tezavo](https://github.com/almadar-io/almadar/issues).*
+*Potrebujete pomoc? Priduzite se nasemu [Discord](https://discord.gg/almadar) ali odprite [tezavo](https://github.com/almadar-io/orb/issues).*

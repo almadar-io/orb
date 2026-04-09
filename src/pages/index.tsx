@@ -93,7 +93,7 @@ export default function OrbHome(): ReactNode {
               <Link to="/docs/getting-started/introduction">
                 <Button variant="primary" size="lg">{translate({ id: "orb.hero.cta1", message: "Get Started" })}</Button>
               </Link>
-              <Link to="/stdlib">
+              <Link to="/playground">
                 <Button variant="secondary" size="lg">{translate({ id: "orb.hero.cta2", message: "Standard Library" })}</Button>
               </Link>
             </HStack>

@@ -25,9 +25,9 @@ We welcome contributions from the community!
 
 ## Community
 
-- [GitHub Discussions](https://github.com/almadar-io/almadar/discussions)
+- [GitHub Discussions](https://github.com/almadar-io/orb/discussions)
 - [Discord](https://discord.gg/almadar)
 
 ## Code of Conduct
 
-Please read our [Code of Conduct](https://github.com/almadar-io/almadar/blob/main/CODE_OF_CONDUCT.md).
+Please read our [Code of Conduct](https://github.com/almadar-io/orb/blob/main/CODE_OF_CONDUCT.md).

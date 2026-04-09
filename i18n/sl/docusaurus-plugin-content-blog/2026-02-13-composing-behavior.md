@@ -257,4 +257,4 @@ Orbitali vam dajejo:
 
 Naslednjič, ko oblikujete sistem, ne začnite z "koliko servisov?" Začnite z "katera vedênja potrebujem in kako se komponirajo?"
 
-Več o [cross-orbital dogodkih](https://orb.almadar.io/docs/traits) in [standardni knjižnici](https://orb.almadar.io/docs/stdlib).
+Več o [cross-orbital dogodkih](https://orb.almadar.io/docs/traits) in [standardni knjižnici](https://orb.almadar.io/playground).

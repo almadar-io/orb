@@ -257,4 +257,4 @@ OrderOrbital         PaymentOrbital         InventoryOrbital
 
 لا تبدأ بـ "كم عدد الخدمات؟" في المرة القادمة التي تصمم فيها نظامًا. بل ابدأ بـ "ما السلوكيات التي أحتاجها، وكيف تتركب؟"
 
-تعرف على المزيد حول [الأحداث عبر الـ orbitals](https://orb.almadar.io/docs/traits) و[الـ standard library](https://orb.almadar.io/docs/stdlib).
+تعرف على المزيد حول [الأحداث عبر الـ orbitals](https://orb.almadar.io/docs/traits) و[الـ standard library](https://orb.almadar.io/playground).

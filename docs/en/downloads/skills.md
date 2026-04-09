@@ -152,7 +152,7 @@ orb skill install almadar-fixing --pro
 
 ## Creating Custom Skills
 
-Want to create your own Orb skills? Contact the team at support@almadar.io or visit the [community discussions](https://github.com/almadar-io/almadar/discussions) for guidance.
+Want to create your own Orb skills? Contact the team at support@almadar.io or visit the [community discussions](https://github.com/almadar-io/orb/discussions) for guidance.
 
 ---
 

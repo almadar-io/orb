@@ -140,4 +140,4 @@ New operators are additive. Adding `geo-distance` to the evaluator does not requ
 
 If the evaluator knows the operator, it runs. If not, it returns a clear error. This extensibility model kept Lisp alive for 65 years.
 
-Explore the full operator list in the [S-expression standard library](https://orb.almadar.io/docs/stdlib).
+Explore the full operator list in the [S-expression standard library](https://orb.almadar.io/playground).

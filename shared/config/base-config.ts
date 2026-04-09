@@ -209,7 +209,7 @@ export function createConfig(opts: SiteConfig): Config {
         items: [
           ...(opts.navbarItems || []),
           buildProductsDropdown(opts.site),
-          { href: "https://github.com/almadar-io/services", label: "GitHub", position: "right" as const },
+          { href: "https://github.com/almadar-io/orb", label: "GitHub", position: "right" as const },
           { href: "https://discord.gg/q83VjPJx", label: "Discord", position: "right" as const },
           { type: "localeDropdown" as const, position: "right" as const },
         ],
@@ -230,7 +230,7 @@ export function createConfig(opts: SiteConfig): Config {
             title: "Community",
             items: [
               { label: "Discord", href: "https://discord.gg/q83VjPJx" },
-              { label: "GitHub", href: "https://github.com/almadar-io/services" },
+              { label: "GitHub", href: "https://github.com/almadar-io/orb" },
               { label: "LinkedIn", href: "https://www.linkedin.com/company/almadar-io" },
             ],
           },
