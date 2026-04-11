@@ -23,27 +23,29 @@ This is not a recommendation. The compiler rejects programs where the circuit is
 
 ```lolo
 orbital TaskOrbital {
-  entity Task [persistent: tasks] {
-    id     : string!
-    title  : string!
+  entity Task [runtime] {
+    id     : string
+    title  : string
     status : string
   }
 
   trait TaskBrowser -> Task [interaction] {
+    initial: browsing
     state browsing {
       INIT -> browsing
         (fetch Task)
-        (render-ui main { type: "entity-table", entity: "Task", columns: ["title", "status"] })
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Tasks", variant: "h2" }, { type: "button", label: "New Task", event: "CREATE", variant: "primary" }, { type: "divider" }, { type: "data-list", entity: "Task", fields: ["title", "status"] }] })
       CREATE -> creating
-        (render-ui modal { type: "form-section", entity: "Task", fields: ["title", "status"], submitEvent: "SAVE", cancelEvent: "CANCEL" })
+        (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "New Task", variant: "h3" }, { type: "input", label: "Title", placeholder: "Enter title" }, { type: "stack", direction: "horizontal", gap: "md", children: [{ type: "button", label: "Save", event: "SAVE", variant: "primary" }, { type: "button", label: "Cancel", event: "CANCEL", variant: "secondary" }] }] })
     }
     state creating {
       SAVE -> browsing
-        (persist create Task @payload.data)
         (render-ui modal null)
-        (emit INIT)
+        (fetch Task)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Tasks", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Task", fields: ["title", "status"] }] })
       CANCEL -> browsing
         (render-ui modal null)
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Tasks", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Task", fields: ["title", "status"] }] })
     }
   }
 
@@ -55,7 +57,7 @@ Two states. Four transitions. Every modal opens and closes. Every event has a ha
 
 ## The Closed Circuit
 
-Remove the `CANCEL` transition and run `orbital validate`:
+Remove the `CANCEL` transition and run `orb validate`:
 
 ```
 Error: CIRCUIT_NO_OVERLAY_EXIT

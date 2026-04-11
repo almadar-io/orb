@@ -5,13 +5,13 @@ authors: [osamah]
 tags: [compiler, state-machines]
 ---
 
-`orbital validate` proves structural properties. `orbital test` goes further — it walks every edge of every state machine, fires every event from every state, and verifies that guards block and allow correctly. You write zero test code. The graph is the test plan.
+`orb validate` proves structural properties. `orb test` goes further — it walks every edge of every state machine, fires every event from every state, and verifies that guards block and allow correctly. You write zero test code. The graph is the test plan.
 
 <!-- truncate -->
 
 ## Four Categories of Tests
 
-The compiler already knows every state, every transition, and every guard. `orbital test` uses that graph to generate tests automatically:
+The compiler already knows every state, every transition, and every guard. `orb test` uses that graph to generate tests automatically:
 
 1. **Transition matrix** — fire every valid `(state, event)` pair, assert the target state.
 2. **Guard enforcement** — for each guarded transition, synthesize a payload that satisfies the guard (should pass) and an empty payload (should block).
@@ -24,43 +24,55 @@ Each test includes a `setup_path`: the shortest route from the initial state to 
 
 ```lolo
 orbital OrderOrbital {
-  entity Order [persistent: orders] {
-    id     : string!
+  entity Order [runtime] {
+    id     : string
     status : string
-    amount : int
+    amount : number
   }
 
   trait OrderLifecycle -> Order [interaction] {
+    initial: pending
     state pending {
-      APPROVE -> approved
-        when (>= @entity.amount 0)
+      INIT -> pending
+        (fetch Order)
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Order", variant: "h2" }, { type: "typography", content: "@entity.status", variant: "body" }, { type: "button", label: "Approve", event: "APPROVE", variant: "primary" }, { type: "button", label: "Cancel", event: "CANCEL", variant: "secondary" }] })
+      APPROVE -> approved when (>= @entity.amount 0)
         (set @status "approved")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Approved", variant: "h2" }, { type: "button", label: "Ship", event: "SHIP", variant: "primary" }] })
       CANCEL -> cancelled
         (set @status "cancelled")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Cancelled", variant: "h2" }] })
     }
     state approved {
       SHIP -> shipped
         (set @status "shipped")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Shipped", variant: "h2" }, { type: "button", label: "Deliver", event: "DELIVER", variant: "primary" }] })
     }
     state shipped {
       DELIVER -> delivered
         (set @status "delivered")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Delivered", variant: "h2" }] })
     }
-    state delivered {}
-    state cancelled {}
+    state delivered {
+    }
+    state cancelled {
+    }
   }
+
+  page "/order" -> OrderLifecycle
 }
 ```
 
-Five states. One guard. Run `orbital test`:
+Five states. One guard on `APPROVE`. Run `orb test`:
 
 ```
-$ orbital test order.lolo --execute
+$ orb test order.lolo --execute
 
 Trait: OrderLifecycle
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  transition (4 tests):
+  transition (5 tests):
+    ✓ pending + INIT → pending
     ✓ pending + APPROVE → approved
     ✓ pending + CANCEL → cancelled
     ✓ approved + SHIP → shipped
@@ -72,18 +84,15 @@ Trait: OrderLifecycle
   guard_allow (1 test):
     ✓ guard allows APPROVE (valid payload)
 
-  invalid (6 tests):
-    ✓ approved + CANCEL (invalid)
-    ✓ shipped + APPROVE (invalid)
-    ✓ delivered + SHIP (invalid)
-    ✓ delivered + APPROVE (invalid)
-    ✓ cancelled + APPROVE (invalid)
-    ✓ cancelled + SHIP (invalid)
+  invalid (invalid pairs):
+    ✓ approved + CANCEL (stays in approved)
+    ✓ shipped + APPROVE (stays in shipped)
+    ...
 
   journey (1 test):
     ✓ full journey: APPROVE → SHIP → DELIVER
 
-Total: 1 trait, 13 test cases — 13 passed, 0 failed
+Total: 1 trait — all tests passed
 ```
 
 ## How Guard Tests Work

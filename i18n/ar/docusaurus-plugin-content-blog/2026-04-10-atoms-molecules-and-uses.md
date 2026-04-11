@@ -11,7 +11,7 @@ tags: [architecture, composition]
 
 ## الذرّات تملك الطوبولوجيا
 
-سلوك معياري مثل `std-modal` يُعرّف آلة حالة كاملة: خامل ← مفتوح ← حفظ ← خامل، مع مسارات إلغاء وخطأ. هذه الطوبولوجيا ثابتة. لا يمكن لأي جزيء إضافة أو حذف حالات منها.
+سلوك معياري مثل `std-modal` يُعرّف آلة حالة كاملة: مغلق ← مفتوح ← مغلق، مع مسارات حفظ وإلغاء. هذه الطوبولوجيا ثابتة. لا يمكن لأي جزيء إضافة أو حذف حالات منها.
 
 ما يمكن للجزيئات تعديله:
 
@@ -19,7 +19,7 @@ tags: [architecture, composition]
 |---|---|
 | `linkedEntity` | يُعيد ربط السمة بكيانك |
 | `events` | يُعيد تسمية الأحداث (`OPEN` ← `ADD_ITEM`) |
-| `effects` | يستبدل مصفوفات التأثيرات لكل حدث |
+| `on EVENT { ... }` | يستبدل التأثيرات لكل حدث |
 | `emitsScope` | يُحدّد `internal` أو `external` |
 
 ## التأليف عملياً
@@ -29,8 +29,8 @@ orbital InventoryOrbital {
   uses Modal from "std/behaviors/std-modal"
   uses Browse from "std/behaviors/std-browse"
 
-  entity Item [persistent] {
-    id   : string!
+  entity Item [runtime] {
+    id   : string
     name : string
     sku  : string
   }
@@ -38,7 +38,7 @@ orbital InventoryOrbital {
   trait ItemBrowse = Browse.traits.BrowseItemBrowse -> Item {
     on INIT {
       (ref Item)
-      (render-ui main { type: "data-grid", entity: "Item" })
+      (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Inventory", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Item", fields: ["name", "sku"] }] })
     }
   }
 
@@ -46,15 +46,16 @@ orbital InventoryOrbital {
     events { OPEN: ADD_ITEM }
     on ADD_ITEM {
       (fetch Item)
-      (render-ui modal { type: "form-section", entity: "Item", mode: "create" })
+      (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "New Item", variant: "h3" }, { type: "input", label: "Name" }, { type: "button", label: "Save", event: "SAVE", variant: "primary" }] })
     }
     on SAVE {
-      (persist create Item @payload.data)
       (render-ui modal null)
+      (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Inventory", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Item", fields: ["name", "sku"] }] })
     }
+    emitsScope internal
   }
 
-  page "/inventory" = Modal.pages.ModalRecordModalPage -> ItemBrowse, ItemAdd
+  page "/inventory" -> ItemBrowse, ItemAdd
 }
 ```
 

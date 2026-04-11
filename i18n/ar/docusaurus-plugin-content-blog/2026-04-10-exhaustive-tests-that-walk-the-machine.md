@@ -5,13 +5,13 @@ authors: [osamah]
 tags: [compiler, state-machines]
 ---
 
-`orbital validate` يُثبت الخصائص البنيوية. `orbital test` يذهب أبعد — يمشي على كل حافة في كل آلة حالة، ويُطلق كل حدث من كل حالة، ويتحقق أن الحرّاس يمنعون ويسمحون بشكل صحيح. لا تكتب أي شيفرة اختبار. الرسم البياني هو خطة الاختبار.
+`orb validate` يُثبت الخصائص البنيوية. `orb test` يذهب أبعد — يمشي على كل حافة في كل آلة حالة، ويُطلق كل حدث من كل حالة، ويتحقق أن الحرّاس يمنعون ويسمحون بشكل صحيح. لا تكتب أي شيفرة اختبار. الرسم البياني هو خطة الاختبار.
 
 <!-- truncate -->
 
 ## أربع فئات من الاختبارات
 
-المترجم يعرف مسبقاً كل حالة، وكل تحوّل، وكل حارس. `orbital test` يستخدم هذا الرسم لتوليد الاختبارات تلقائياً:
+المترجم يعرف مسبقاً كل حالة، وكل تحوّل، وكل حارس. `orb test` يستخدم هذا الرسم لتوليد الاختبارات تلقائياً:
 
 1. **مصفوفة التحوّلات** — إطلاق كل زوج `(حالة, حدث)` صالح، والتأكد من الحالة الهدف.
 2. **فرض الحرّاس** — لكل تحوّل محمي، توليد حمولة تُرضي الحارس (يجب أن تمر) وحمولة فارغة (يجب أن تُمنع).
@@ -24,43 +24,55 @@ tags: [compiler, state-machines]
 
 ```lolo
 orbital OrderOrbital {
-  entity Order [persistent: orders] {
-    id     : string!
+  entity Order [runtime] {
+    id     : string
     status : string
-    amount : int
+    amount : number
   }
 
   trait OrderLifecycle -> Order [interaction] {
+    initial: pending
     state pending {
-      APPROVE -> approved
-        when (>= @entity.amount 0)
+      INIT -> pending
+        (fetch Order)
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Order", variant: "h2" }, { type: "typography", content: "@entity.status", variant: "body" }, { type: "button", label: "Approve", event: "APPROVE", variant: "primary" }, { type: "button", label: "Cancel", event: "CANCEL", variant: "secondary" }] })
+      APPROVE -> approved when (>= @entity.amount 0)
         (set @status "approved")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Approved", variant: "h2" }, { type: "button", label: "Ship", event: "SHIP", variant: "primary" }] })
       CANCEL -> cancelled
         (set @status "cancelled")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Cancelled", variant: "h2" }] })
     }
     state approved {
       SHIP -> shipped
         (set @status "shipped")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Shipped", variant: "h2" }, { type: "button", label: "Deliver", event: "DELIVER", variant: "primary" }] })
     }
     state shipped {
       DELIVER -> delivered
         (set @status "delivered")
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "Delivered", variant: "h2" }] })
     }
-    state delivered {}
-    state cancelled {}
+    state delivered {
+    }
+    state cancelled {
+    }
   }
+
+  page "/order" -> OrderLifecycle
 }
 ```
 
-خمس حالات. حارس واحد. شغّل `orbital test`:
+خمس حالات. حارس واحد على `APPROVE`. شغّل `orb test`:
 
 ```
-$ orbital test order.lolo --execute
+$ orb test order.lolo --execute
 
 Trait: OrderLifecycle
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  transition (4 tests):
+  transition (5 tests):
+    ✓ pending + INIT → pending
     ✓ pending + APPROVE → approved
     ✓ pending + CANCEL → cancelled
     ✓ approved + SHIP → shipped
@@ -72,18 +84,15 @@ Trait: OrderLifecycle
   guard_allow (1 test):
     ✓ guard allows APPROVE (valid payload)
 
-  invalid (6 tests):
-    ✓ approved + CANCEL (invalid)
-    ✓ shipped + APPROVE (invalid)
-    ✓ delivered + SHIP (invalid)
-    ✓ delivered + APPROVE (invalid)
-    ✓ cancelled + APPROVE (invalid)
-    ✓ cancelled + SHIP (invalid)
+  invalid (invalid pairs):
+    ✓ approved + CANCEL (stays in approved)
+    ✓ shipped + APPROVE (stays in shipped)
+    ...
 
   journey (1 test):
     ✓ full journey: APPROVE → SHIP → DELIVER
 
-Total: 1 trait, 13 test cases — 13 passed, 0 failed
+Total: 1 trait — all tests passed
 ```
 
 ## كيف تعمل اختبارات الحرّاس

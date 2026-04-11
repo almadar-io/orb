@@ -11,7 +11,7 @@ Orb follows atomic design for behavior, not just UI. Standard behaviors are atom
 
 ## Atoms Own Topology
 
-A standard behavior like `std-modal` defines a complete state machine: idle → open → saving → idle, with cancel and error paths. This topology is fixed. No molecule can add or remove states from it.
+A standard behavior like `std-modal` defines a complete state machine: closed → open → closed, with save and cancel paths. This topology is fixed. No molecule can add or remove states from it.
 
 What molecules *can* override:
 
@@ -19,7 +19,7 @@ What molecules *can* override:
 |---|---|
 | `linkedEntity` | Rebinds the trait to your entity |
 | `events` | Renames events (`OPEN` → `ADD_ITEM`) |
-| `effects` | Replaces effect arrays per event |
+| `on EVENT { ... }` | Replaces the effects for each event |
 | `emitsScope` | Sets `internal` or `external` |
 
 ## Composition in Practice
@@ -29,8 +29,8 @@ orbital InventoryOrbital {
   uses Modal from "std/behaviors/std-modal"
   uses Browse from "std/behaviors/std-browse"
 
-  entity Item [persistent] {
-    id   : string!
+  entity Item [runtime] {
+    id   : string
     name : string
     sku  : string
   }
@@ -38,7 +38,7 @@ orbital InventoryOrbital {
   trait ItemBrowse = Browse.traits.BrowseItemBrowse -> Item {
     on INIT {
       (ref Item)
-      (render-ui main { type: "data-grid", entity: "Item" })
+      (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Inventory", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Item", fields: ["name", "sku"] }] })
     }
   }
 
@@ -46,15 +46,16 @@ orbital InventoryOrbital {
     events { OPEN: ADD_ITEM }
     on ADD_ITEM {
       (fetch Item)
-      (render-ui modal { type: "form-section", entity: "Item", mode: "create" })
+      (render-ui modal { type: "stack", direction: "vertical", gap: "md", children: [{ type: "typography", content: "New Item", variant: "h3" }, { type: "input", label: "Name" }, { type: "button", label: "Save", event: "SAVE", variant: "primary" }] })
     }
     on SAVE {
-      (persist create Item @payload.data)
       (render-ui modal null)
+      (render-ui main { type: "stack", direction: "vertical", gap: "lg", children: [{ type: "typography", content: "Inventory", variant: "h2" }, { type: "divider" }, { type: "data-list", entity: "Item", fields: ["name", "sku"] }] })
     }
+    emitsScope internal
   }
 
-  page "/inventory" = Modal.pages.ModalRecordModalPage -> ItemBrowse, ItemAdd
+  page "/inventory" -> ItemBrowse, ItemAdd
 }
 ```
 
