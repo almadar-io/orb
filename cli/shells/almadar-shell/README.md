@@ -2,7 +2,7 @@
 
 > Minimal full-stack shell template for Almadar applications
 
-Part of the [Almadar](https://github.com/almadar-io/orb) platform.
+Part of the [Almadar](https://github.com/almadar-io/almadar) platform.
 
 ## Installation
 
