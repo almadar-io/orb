@@ -1,0 +1,128 @@
+name: Publish to npm
+
+# Triggered by kflow.ai's build-almadar-cli workflow after syncing binaries.
+# Publishes @almadar/orb (wrapper) + @almadar/orb-{platform} (binary) packages.
+
+on:
+  repository_dispatch:
+    types: [orb-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g., v5.3.0)"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish npm packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${{ github.event.client_payload.version }}"
+          fi
+          # Strip leading 'v' for npm version
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "Publishing version: ${VERSION#v}"
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          ROOT_DIR="$(pwd)"
+
+          declare -A PLATFORMS=(
+            ["linux-x64"]="linux x64"
+            ["linux-arm64"]="linux arm64"
+            ["darwin-x64"]="darwin x64"
+            ["darwin-arm64"]="darwin arm64"
+            ["windows-x64"]="win32 x64"
+          )
+
+          for platform in "${!PLATFORMS[@]}"; do
+            read os cpu <<< "${PLATFORMS[$platform]}"
+
+            DIST_DIR="cli/dist/${platform}"
+            if [ ! -d "$DIST_DIR" ]; then
+              echo "Skipping $platform — no binaries at $DIST_DIR"
+              continue
+            fi
+
+            PKG_DIR="${ROOT_DIR}/npm-packages/@almadar/orb-${platform}"
+            mkdir -p "$PKG_DIR"
+
+            # Copy the binary
+            if [ "$platform" = "windows-x64" ]; then
+              cp "$DIST_DIR/orb.exe" "$PKG_DIR/" 2>/dev/null || true
+            else
+              cp "$DIST_DIR/orb" "$PKG_DIR/" 2>/dev/null || true
+              chmod +x "$PKG_DIR/orb" 2>/dev/null || true
+            fi
+
+            cat > "$PKG_DIR/package.json" << EOF
+          {
+            "name": "@almadar/orb-${platform}",
+            "version": "${VERSION}",
+            "description": "Orb CLI binary for ${platform}",
+            "license": "BSL-1.1",
+            "repository": { "type": "git", "url": "https://github.com/almadar-io/orb.git" },
+            "os": ["${os}"],
+            "cpu": ["${cpu}"]
+          }
+          EOF
+
+            echo "Publishing @almadar/orb-${platform}@${VERSION}..."
+            cd "$PKG_DIR"
+            npm publish --access public || echo "Failed to publish @almadar/orb-${platform}"
+            cd "$ROOT_DIR"
+          done
+
+      - name: Publish main wrapper package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          ROOT_DIR="$(pwd)"
+
+          # Source of truth: cli/npm/ in this repo
+          if [ ! -d "cli/npm" ]; then
+            echo "ERROR: cli/npm not found"
+            exit 1
+          fi
+
+          PKG_DIR="${ROOT_DIR}/npm-packages/@almadar/orb"
+          mkdir -p "$PKG_DIR"
+          cp -r cli/npm/* "$PKG_DIR/"
+
+          # Copy shell templates if available
+          if [ -d "cli/shells" ]; then
+            echo "Copying shell templates..."
+            mkdir -p "$PKG_DIR/shells"
+            for shell_dir in cli/shells/*/; do
+              [ -d "$shell_dir" ] || continue
+              shell_name=$(basename "$shell_dir")
+              echo "  Copying $shell_name..."
+              mkdir -p "$PKG_DIR/shells/$shell_name"
+              rsync -a --exclude='node_modules' --exclude='.git' --exclude='generated' --exclude='dist' \
+                "$shell_dir" "$PKG_DIR/shells/$shell_name/"
+            done
+          fi
+
+          cd "$PKG_DIR"
+          # Stamp version + align optionalDependencies versions
+          jq --arg v "$VERSION" '.version = $v | .optionalDependencies |= with_entries(.value = $v)' package.json > tmp.json && mv tmp.json package.json
+          echo "Publishing @almadar/orb@${VERSION}..."
+          npm publish --access public || echo "Failed to publish @almadar/orb"
