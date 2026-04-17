@@ -253,13 +253,13 @@ const shop = stdEcommerce({
 
 ### كملفات `.orb` ذهبية
 
-كل سلوك يُصدَّر أيضاً كملف `.orb` في `@almadar/std/behaviors/exports/`:
+كل سلوك يُصدَّر أيضاً كملف `.orb` في `@almadar/std/behaviors/registry/`:
 
 ```bash
 # عرض جميع السلوكيات المتاحة
-ls node_modules/@almadar/std/behaviors/exports/atoms/
-ls node_modules/@almadar/std/behaviors/exports/molecules/
-ls node_modules/@almadar/std/behaviors/exports/organisms/
+ls node_modules/@almadar/std/behaviors/registry/atoms/
+ls node_modules/@almadar/std/behaviors/registry/molecules/
+ls node_modules/@almadar/std/behaviors/registry/organisms/
 ```
 
 هذه الملفات الذهبية تُستخدم بواسطة:

@@ -253,13 +253,13 @@ const shop = stdEcommerce({
 
 ### Kot zlati .orb programi
 
-Vsako obnasanje je tudi izvozeno kot `.orb` datoteka v `@almadar/std/behaviors/exports/`:
+Vsako obnasanje je tudi izvozeno kot `.orb` datoteka v `@almadar/std/behaviors/registry/`:
 
 ```bash
 # Seznam vseh razpolozljivih obnasanj
-ls node_modules/@almadar/std/behaviors/exports/atoms/
-ls node_modules/@almadar/std/behaviors/exports/molecules/
-ls node_modules/@almadar/std/behaviors/exports/organisms/
+ls node_modules/@almadar/std/behaviors/registry/atoms/
+ls node_modules/@almadar/std/behaviors/registry/molecules/
+ls node_modules/@almadar/std/behaviors/registry/organisms/
 ```
 
 Ti zlati programi jih uporabljajo:
