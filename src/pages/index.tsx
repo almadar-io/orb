@@ -180,21 +180,17 @@ export default function OrbHome(): ReactNode {
       {/* Split: One File, Full Application */}
       <Box className="w-full">
         <Box className="site-container py-24">
-          <HStack gap="xl" className="flex-col lg:flex-row items-start">
-            <AnimatedReveal animation="fade-right">
-              <Box className="flex-1">
-                <VStack gap="md">
-                  <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
-                  <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. Entity, state machine, UI — all in one place. The compiler generates frontend, backend, and database." })}</Typography>
-                </VStack>
-              </Box>
+          <HStack gap="xl" className="flex-col lg:flex-row items-start w-full">
+            <AnimatedReveal animation="fade-right" className="flex-1 min-w-0 w-full">
+              <VStack gap="md">
+                <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
+                <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. Entity, state machine, UI — all in one place. The compiler generates frontend, backend, and database." })}</Typography>
+              </VStack>
             </AnimatedReveal>
-            <AnimatedReveal animation="fade-left">
-              <Box className="flex-1 lg:flex-[2]">
-                <CodeBlock language="lolo" title="task-manager.orb">
-                  {EXAMPLE_CODE}
-                </CodeBlock>
-              </Box>
+            <AnimatedReveal animation="fade-left" className="flex-1 lg:flex-[2] min-w-0 w-full [&_pre]:!whitespace-pre-wrap [&_pre]:!break-words [&_code]:!whitespace-pre-wrap [&_code]:!break-words">
+              <CodeBlock language="lolo" title="task-manager.orb">
+                {EXAMPLE_CODE}
+              </CodeBlock>
             </AnimatedReveal>
           </HStack>
         </Box>
