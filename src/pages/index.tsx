@@ -22,32 +22,108 @@ import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 
-const EXAMPLE_CODE = `type TaskStatus = pending | in-progress | done
+const EXAMPLE_CODE = `app std-todo "1.0.0"
+"Todo list with Add (modal) and Remove (confirmation) flows, closed-circuit fetch + persist"
 
-orbital TaskApp {
-  entity Task [persistent: tasks] {
-    id     : string!
-    title  : string!
-    status : TaskStatus = "pending"
+orbital TodoOrbital {
+  uses Confirmation from "std/behaviors/std-confirmation"
+  uses Modal        from "std/behaviors/std-modal"
+
+  entity Todo [persistent: todos] {
+    id          : string!
+    name        : string!
+    description : string
+    status      : "active" | "inactive" | "pending" = "active"
+    createdAt   : string
+    pendingId   : string = ""
   }
 
-  trait TaskManager -> Task [interaction] {
-    initial: viewing
-    state viewing {
-      INIT -> viewing
-        (fetch Task)
-        (render-ui main { type: "entity-table", entity: "Task" })
-      ADD -> adding
-        (render-ui modal { type: "form", entity: "Task" })
+  type TodoLoaded     = Event { data : [Todo] }                    "Fired when the Todo collection finishes loading"
+  type TodoLoadFailed = Event { error : string, code : string }    "Fired when the Todo collection fails to load"
+
+  trait TodoBrowse -> Todo [interaction, collection] {
+    initial: loading
+    state loading {
+      INIT -> loading
+        (fetch Todo { emit: { success: "TodoLoaded", failure: "TodoLoadFailed" } })
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", align: "center", className: "py-12", children: [{ type: "spinner" }, { type: "typography", variant: "caption", color: "muted", content: "Loading todos…" }] })
+      TodoLoaded -> browsing
+        (render-ui main { type: "stack", direction: "vertical", gap: "lg", className: "max-w-5xl mx-auto w-full", children: [{ type: "stack", direction: "horizontal", gap: "md", justify: "between", children: [{ type: "stack", direction: "horizontal", gap: "md", children: [{ type: "icon", name: "list-checks" }, { type: "typography", content: "Todos", variant: "h2" }] }, { type: "button", label: "Add Todo", action: "ADD_TODO", variant: "primary", icon: "plus" }] }, { type: "divider" }, { type: "data-grid", entity: @payload.data, itemActions: [{ label: "Remove", event: "REMOVE_TODO", variant: "danger" }], fields: [{ name: "name", label: "Name", variant: "h4", icon: "check-square" }, { name: "description", label: "Description", variant: "caption" }, { name: "status", label: "Status", variant: "badge" }] }] })
+      TodoLoadFailed -> error
+        (render-ui main { type: "stack", direction: "vertical", gap: "md", align: "center", className: "py-12", children: [{ type: "icon", name: "alert-triangle", color: "destructive" }, { type: "typography", variant: "h3", content: "Failed to load todos" }, { type: "typography", variant: "body", color: "muted", content: "@payload.error" }, { type: "button", label: "Retry", action: "INIT", variant: "primary", icon: "rotate-ccw" }] })
     }
-    state adding {
-      SAVE -> viewing
-        (persist create Task @payload)
-      CANCEL -> viewing
+    state browsing {
+      INIT -> loading
+        (fetch Todo { emit: { success: "TodoLoaded", failure: "TodoLoadFailed" } })
+        (render-ui main { type: "spinner" })
+    }
+    state error {
+      INIT -> loading
+        (fetch Todo { emit: { success: "TodoLoaded", failure: "TodoLoadFailed" } })
+        (render-ui main { type: "spinner" })
+    }
+    emits: [TodoLoaded, TodoLoadFailed]
+    listens {
+      TodoLoadFailed { error : string, code : string }
+      TodoPersistor TODO_ADDED   -> INIT
+      TodoPersistor TODO_REMOVED -> INIT
     }
   }
 
-  page "/tasks" -> TaskManager
+  ;; Add: configured via \`config\`, no effects overrides.
+  trait TodoAdd = Modal.traits.ModalRecordModal -> Todo {
+    config: {
+      icon:   "plus-circle",
+      title:  "Add Todo",
+      fields: ["name", "description", "status"],
+      mode:   "create"
+    }
+    events {
+      OPEN: ADD_TODO
+      SAVE: TODO_ADDED
+    }
+  }
+
+  ;; Remove: confirmation dialog.
+  trait TodoRemove = Confirmation.traits.ConfirmActionConfirmation -> Todo {
+    config: {
+      icon:         "alert-triangle",
+      title:        "Remove Todo",
+      alertMessage: "Are you sure you want to remove this todo? This cannot be undone.",
+      confirmLabel: "Remove"
+    }
+    events {
+      REQUEST: REMOVE_TODO
+      CONFIRM: TODO_REMOVED
+    }
+  }
+
+  ;; Coordinator: side-effects for Add / Remove. Listens to the bound atoms'
+  ;; emits and runs the actual persist calls.
+  trait TodoPersistor -> Todo [lifecycle, instance] {
+    initial: idle
+    state idle {
+      INIT -> idle
+      DO_ADD -> idle
+        (persist create Todo @payload.data)
+        (emit TODO_ADDED { id: "@payload.data.id" })
+      DO_REMOVE -> idle
+        (persist delete Todo @payload.id)
+        (emit TODO_REMOVED { id: "@payload.id" })
+    }
+    emits {
+      TODO_ADDED   external { id : string! }
+      TODO_REMOVED external { id : string! }
+    }
+    listens {
+      DO_ADD    { data : Todo }
+      DO_REMOVE { id   : string! }
+      TodoAdd    TODO_ADDED   -> DO_ADD
+      TodoRemove TODO_REMOVED -> DO_REMOVE
+    }
+  }
+
+  page "/todos" as TodoPage -> TodoBrowse, TodoAdd, TodoRemove, TodoPersistor
 }`;
 
 const WHY_FEATURES = [
