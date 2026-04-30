@@ -60,7 +60,7 @@ export default function Downloads(): ReactNode {
                   ].map((platform) => (
                     <Card key={platform.name} className="p-4 flex-1">
                       <VStack gap="xs" align="center">
-                        <Icon name={platform.icon} size={24} className="text-primary" />
+                        <Icon name={platform.icon} size="lg" className="text-primary" />
                         <Typography variant="body2">{platform.name}</Typography>
                       </VStack>
                     </Card>

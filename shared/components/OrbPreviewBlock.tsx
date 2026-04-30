@@ -69,8 +69,9 @@ export default function OrbPreviewBlock({
         >
           {() => {
             // Dynamic require keeps @almadar/ui/runtime out of the SSR bundle.
-            const { OrbPreview } = require('@almadar/ui/runtime') as typeof import('@almadar/ui/runtime');
-            return <OrbPreview schema={schema} autoMock height={height} />;
+            const { BrowserPlayground } = require('@almadar/ui/runtime') as typeof import('@almadar/ui/runtime');
+            const parsed = JSON.parse(schema) as Parameters<typeof BrowserPlayground>[0]['schema'];
+            return <BrowserPlayground schema={parsed} mode="mock" height={height} />;
           }}
         </BrowserOnly>
       </div>

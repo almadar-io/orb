@@ -210,7 +210,7 @@ export default function OrbHome(): ReactNode {
                 <AnimatedReveal key={f.title} animation="fade-up" delay={i * 100} className="h-full">
                   <Card className="p-6 h-full">
                     <VStack gap="sm">
-                      <Icon name={f.icon} size={28} className="text-[var(--color-primary)]" />
+                      <Icon name={f.icon} size="lg" className="text-[var(--color-primary)]" />
                       <Typography variant="h4">{f.title}</Typography>
                       <Typography variant="body2" color="muted">{f.description}</Typography>
                     </VStack>

@@ -11,9 +11,9 @@ import './orb-syntax.css';
 if (typeof window !== 'undefined') {
   // Dynamic import to avoid SSR issues
   import('@almadar/syntax').then(({ registerOrbLanguage }) => {
-    const Prism = (window as Record<string, unknown>).Prism;
+    const Prism = (window as unknown as { Prism?: Record<string, unknown> }).Prism;
     if (Prism) {
-      registerOrbLanguage(Prism as Record<string, unknown>);
+      registerOrbLanguage(Prism);
     }
   }).catch(() => {
     // Silently fail if @almadar/syntax isn't available yet

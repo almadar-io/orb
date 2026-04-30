@@ -19,7 +19,7 @@ interface CodeBlockProps {
 
 function extractCode(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
-  if (isValidElement(children) && typeof children.props.children === 'string') {
+  if (isValidElement<{ children?: React.ReactNode }>(children) && typeof children.props.children === 'string') {
     return children.props.children;
   }
   return '';

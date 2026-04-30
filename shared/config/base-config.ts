@@ -121,11 +121,23 @@ export function createConfig(opts: SiteConfig): Config {
                   'react-router': path.dirname(require.resolve('react-router/package.json')),
                   'react-router-dom': path.dirname(require.resolve('react-router-dom/package.json')),
                 },
-                // Node core modules are not available in the browser; stub them out
-                // (almadar-runtime pulls in fs/path for its Node-side external loader)
+                // Node core modules are not available in the browser; stub them
+                // out. `@almadar/runtime`'s `OrbitalServerRuntime` guards every
+                // Node-only call site with `isNodeEnv()` at runtime, but the
+                // static imports for `LocalPersistenceAdapter`, `createOsHandlers`,
+                // and the express `Router` still resolve their transitive deps
+                // (fs/path/net/child_process/express). Setting them to false
+                // tells webpack to emit empty modules for the dead branches —
+                // the runtime never reaches those code paths in the browser
+                // because mock mode uses `MockPersistenceAdapter` and
+                // `BrowserPlayground`'s in-process transport bypasses the
+                // express Router entirely.
                 fallback: {
                   fs: false,
                   path: false,
+                  net: false,
+                  child_process: false,
+                  express: false,
                 },
               },
               plugins: [

@@ -68,7 +68,10 @@ function extractVisualizationData(schema?: OrbitalSchema) {
     return false;
   });
 
-  if (statefulTraitRef && typeof statefulTraitRef === "object" && "name" in statefulTraitRef) {
+  if (statefulTraitRef && typeof statefulTraitRef === "object" && "stateMachine" in statefulTraitRef) {
+    // Inline Trait variant — has stateMachine + name. The TraitRef union also
+    // admits a ref-object variant ({ ref, config, ... }) without stateMachine,
+    // hence the narrowing on stateMachine here.
     traitName = statefulTraitRef.name;
     if (statefulTraitRef.stateMachine) {
       states = statefulTraitRef.stateMachine.states;

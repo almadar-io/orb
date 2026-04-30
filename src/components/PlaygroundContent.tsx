@@ -17,6 +17,8 @@ import {
 import { BEHAVIOR_CATALOG, type BehaviorEntry } from "../data/behavior-catalog";
 import { MODULE_CATALOG } from "../data/module-catalog";
 import type { SExpr } from "@almadar/evaluator";
+import { isInlineTrait } from "@almadar/core";
+import type { OrbitalSchema, Trait, OrbitalEntity } from "@almadar/core";
 
 // ─── Lolo s-expression parser (for module evaluator) ─────────────────────────
 
@@ -84,7 +86,7 @@ import {
   Card,
 } from "@almadar/ui";
 import type { TabItem } from "@almadar/ui";
-import { OrbPreview } from "@almadar/ui/runtime";
+import { BrowserPlayground } from "@almadar/ui/runtime";
 
 // Load all theme CSS so data-theme attributes resolve to actual variables
 import "@almadar/ui/themes/index.css";
@@ -181,41 +183,49 @@ const THEME_OPTIONS = [
 
 // ─── Glyph helper ─────────────────────────────────────────────────────────────
 
+function inlineTraits(schema: OrbitalSchema): Trait[] {
+  return (schema.orbitals[0]?.traits ?? []).filter(isInlineTrait);
+}
+
+function inlineEntity(schema: OrbitalSchema): OrbitalEntity | undefined {
+  const entity = schema.orbitals[0]?.entity;
+  return entity && typeof entity === "object" && "fields" in entity
+    ? (entity as OrbitalEntity)
+    : undefined;
+}
+
 function schemaToGlyphProps(entry: BehaviorEntry) {
-  const schema = entry.schema as Record<string, unknown>;
-  const orbital = (schema?.orbitals as Record<string, unknown>[])?.[0];
-  const entity = orbital?.entity as Record<string, unknown> | undefined;
-  const fields = (entity?.fields as unknown[])?.length ?? 0;
-  const traits = (orbital?.traits as Record<string, unknown>[]) ?? [];
+  const entity = inlineEntity(entry.schema);
+  const traits = inlineTraits(entry.schema);
   let stateCount = 0;
   const effectTypes: string[] = [];
   for (const trait of traits) {
-    const sm = trait.stateMachine as Record<string, unknown> | undefined;
-    stateCount += ((sm?.states as unknown[])?.length ?? 0);
-    for (const t of ((sm?.transitions as Record<string, unknown>[]) ?? [])) {
-      for (const eff of ((t.effects as unknown[][]) ?? [])) {
-        const effType = (eff as string[])?.[0];
+    stateCount += trait.stateMachine?.states.length ?? 0;
+    for (const t of trait.stateMachine?.transitions ?? []) {
+      for (const eff of t.effects ?? []) {
+        const effType = Array.isArray(eff) ? (eff[0] as string | undefined) : undefined;
         if (effType && !effectTypes.includes(effType)) effectTypes.push(effType);
       }
     }
   }
-  const persistence = (entity?.persistence as string) ?? "persistent";
-  return { fieldCount: fields, stateCount, effectTypes, persistence, level: entry.level };
+  return {
+    fieldCount: entity?.fields?.length ?? 0,
+    stateCount,
+    effectTypes,
+    persistence: entity?.persistence ?? "persistent",
+    level: entry.level,
+  };
 }
 
 // ─── State machine extraction ─────────────────────────────────────────────────
 
-function extractStateMachineInfo(schema: Record<string, unknown>): { stateCount: number; eventCount: number } {
-  const orbital = (schema.orbitals as Record<string, unknown>[])?.[0];
-  const traits = (orbital?.traits as Record<string, unknown>[]) ?? [];
+function extractStateMachineInfo(schema: OrbitalSchema): { stateCount: number; eventCount: number } {
   let stateCount = 0;
   const events: string[] = [];
-  for (const trait of traits) {
-    const sm = trait.stateMachine as Record<string, unknown> | undefined;
-    stateCount += ((sm?.states as unknown[])?.length ?? 0);
-    for (const t of (sm?.transitions as Record<string, unknown>[]) ?? []) {
-      const ev = t.event as string;
-      if (ev && !events.includes(ev)) events.push(ev);
+  for (const trait of inlineTraits(schema)) {
+    stateCount += trait.stateMachine?.states.length ?? 0;
+    for (const t of trait.stateMachine?.transitions ?? []) {
+      if (t.event && !events.includes(t.event)) events.push(t.event);
     }
   }
   return { stateCount, eventCount: events.length };
@@ -236,17 +246,38 @@ const LEVEL_LABELS: Record<string, string> = {
   organism: "ORGANISMS",
 };
 
-// Order: organisms first, then molecules, then atoms
-const LEVEL_ORDER: Record<string, number> = {
-  ORGANISMS: 0,
-  MOLECULES: 1,
-  ATOMS: 2,
+// Behaviors group primarily by topic (Phase 10 std layout introduced
+// behaviors/registry/<topic>/<tier>/std-X.orb where <topic> ∈ core | agent
+// | game | service | app | probes). Level is preserved as a per-item glyph
+// + secondary sort key inside each topic group.
+const TOPIC_LABELS: Record<string, string> = {
+  core: "CORE",
+  agent: "AGENT",
+  app: "APP",
+  game: "GAME",
+  service: "SERVICE",
+  probes: "PROBES",
+};
+
+const TOPIC_ORDER: Record<string, number> = {
+  CORE: 0,
+  AGENT: 1,
+  APP: 2,
+  GAME: 3,
+  SERVICE: 4,
+  PROBES: 5,
+};
+
+const LEVEL_SUB_ORDER: Record<string, number> = {
+  organism: 0,
+  molecule: 1,
+  atom: 2,
 };
 
 function getBehaviorCategory(name: string): string {
   const entry = BEHAVIOR_CATALOG[name];
-  if (!entry) return "Other";
-  return LEVEL_LABELS[entry.level] ?? "Other";
+  if (!entry) return "OTHER";
+  return TOPIC_LABELS[entry.topic] ?? "OTHER";
 }
 
 
@@ -415,8 +446,21 @@ function BehaviorBrowser({
     (byCategory[cat] ||= []).push(b);
   }
   const sortedCategories = Object.keys(byCategory).sort(
-    (a, b) => (LEVEL_ORDER[a] ?? 99) - (LEVEL_ORDER[b] ?? 99)
+    (a, b) => (TOPIC_ORDER[a] ?? 99) - (TOPIC_ORDER[b] ?? 99)
   );
+
+  // Within each topic, surface organisms first, then molecules, then atoms —
+  // mirrors the old level-only ordering inside the new topic groups.
+  for (const cat of sortedCategories) {
+    byCategory[cat].sort((a, b) => {
+      const la = BEHAVIOR_CATALOG[a.name]?.level ?? 'atom';
+      const lb = BEHAVIOR_CATALOG[b.name]?.level ?? 'atom';
+      const da = LEVEL_SUB_ORDER[la] ?? 99;
+      const db = LEVEL_SUB_ORDER[lb] ?? 99;
+      if (da !== db) return da - db;
+      return a.name.localeCompare(b.name);
+    });
+  }
 
   const toggleSection = (cat: string) => {
     setCollapsedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -549,11 +593,8 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
   const [viewMode, setViewMode] = useState<"preview" | "composition">("preview");
 
   const entry = BEHAVIOR_CATALOG[selected] ?? null;
-  const schema = (entry?.schema as Record<string, unknown>) ?? null;
-  // Stringify at the boundary so OrbPreview parses + validates the JSON.
-  // Using the string overload avoids any unsafe shape cast.
-  const schemaJson = useMemo(() => (schema ? JSON.stringify(schema) : null), [schema]);
-  const smInfo = schema ? extractStateMachineInfo(schema) : null;
+  const previewSchema = entry?.schema ?? null;
+  const smInfo = previewSchema ? extractStateMachineInfo(previewSchema) : null;
 
   const appliedTheme = `${selectedTheme}-${selectedMode}`;
 
@@ -689,11 +730,11 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
               style={{ position: "relative", zIndex: 9999, pointerEvents: "none" }}
               data-theme={appliedTheme}
             />
-            {schemaJson ? (
-              <OrbPreview
+            {previewSchema ? (
+              <BrowserPlayground
                 key={previewKey}
-                schema={schemaJson}
-                autoMock
+                schema={previewSchema}
+                mode="mock"
                 height="100%"
                 className="border-0 rounded-none"
               />
@@ -720,8 +761,8 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
               </Typography>
               {smBarExpanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
             </Box>
-            {smBarExpanded && schema && (
-              <StateMachineDetail schema={schema} />
+            {smBarExpanded && previewSchema && (
+              <StateMachineDetail schema={previewSchema} />
             )}
           </Box>
         )}
@@ -732,17 +773,15 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
 
 // ─── State Machine Detail (expanded) ──────────────────────────────────────────
 
-function StateMachineDetail({ schema }: { schema: Record<string, unknown> }) {
-  const orbital = (schema.orbitals as Record<string, unknown>[])?.[0];
-  const traits = (orbital?.traits as Record<string, unknown>[]) ?? [];
+function StateMachineDetail({ schema }: { schema: OrbitalSchema }) {
   const states: string[] = [];
   const events: string[] = [];
-  for (const trait of traits) {
-    const sm = trait.stateMachine as Record<string, unknown> | undefined;
-    for (const s of (sm?.states as Record<string, unknown>[]) ?? []) states.push(s.name as string);
-    for (const t of (sm?.transitions as Record<string, unknown>[]) ?? []) {
-      const ev = t.event as string;
-      if (ev && !events.includes(ev)) events.push(ev);
+  for (const trait of inlineTraits(schema)) {
+    for (const s of trait.stateMachine?.states ?? []) {
+      if (s.name) states.push(s.name);
+    }
+    for (const t of trait.stateMachine?.transitions ?? []) {
+      if (t.event && !events.includes(t.event)) events.push(t.event);
     }
   }
   return (
