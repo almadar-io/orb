@@ -1,13 +1,10 @@
 /**
- * CodeBlock swizzle — delegates to the default Docusaurus CodeBlock.
+ * CodeBlock swizzle — re-export the default Docusaurus CodeBlock unchanged.
  *
- * The original custom CodeBlock bypassed Prism tokenization entirely.
- * This wrapper uses @theme-original/CodeBlock which includes
- * prism-react-renderer for proper syntax highlighting.
+ * Wrapping it in a function component breaks docusaurus's internal ref
+ * forwarding to the underlying <pre>. `useCodeWordWrap` then destructures
+ * `scrollWidth` from a null ref when its ResizeObserver fires, throwing
+ * `Cannot destructure property 'scrollWidth' of 'codeBlockRef.current'
+ * as it is null` on every page that renders a code fence.
  */
-import React from 'react';
-import CodeBlock from '@theme-original/CodeBlock';
-
-export default function CodeBlockWrapper(props: Record<string, unknown>): React.ReactElement {
-  return <CodeBlock {...props} />;
-}
+export { default } from '@theme-original/CodeBlock';
