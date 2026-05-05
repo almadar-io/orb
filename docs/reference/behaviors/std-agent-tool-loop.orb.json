@@ -1,0 +1,5074 @@
+{
+  "name": "std-agent-tool-loop",
+  "version": "1.0.0",
+  "description": "std-agent-tool-loop as a Function",
+  "orbitals": [
+    {
+      "name": "AgentToolLoopOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-agent-completion",
+          "as": "AgentCompletion"
+        },
+        {
+          "from": "std/behaviors/std-agent-context-window",
+          "as": "AgentContextWindow"
+        },
+        {
+          "from": "std/behaviors/std-agent-step-progress",
+          "as": "AgentStepProgress"
+        },
+        {
+          "from": "std/behaviors/std-agent-tool-call",
+          "as": "AgentToolCall"
+        }
+      ],
+      "entity": {
+        "name": "AgentToolLoop",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "task",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "plan",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "iterations",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "maxIterations",
+            "type": "number",
+            "default": 10
+          },
+          {
+            "name": "result",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "currentTool",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "lastToolResult",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "currentStep",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "totalSteps",
+            "type": "number",
+            "default": 4
+          },
+          {
+            "name": "steps",
+            "type": "string",
+            "default": "Plan,Execute,Check,Complete"
+          },
+          {
+            "name": "toolName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "args",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "response",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "provider",
+            "type": "string",
+            "default": "anthropic"
+          },
+          {
+            "name": "model",
+            "type": "string",
+            "default": "claude-sonnet-4-20250514"
+          },
+          {
+            "name": "tokenCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "maxTokens",
+            "type": "number",
+            "default": 200000
+          },
+          {
+            "name": "usage",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "max",
+            "type": "number",
+            "default": 200000
+          },
+          {
+            "name": "threshold",
+            "type": "number",
+            "default": 0.85
+          },
+          {
+            "name": "lastCompactedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "action",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "detail",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "timestamp",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "notificationType",
+            "type": "string",
+            "default": "info",
+            "values": [
+              "info",
+              "success",
+              "warning",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "AgentToolLoopLoop",
+          "category": "interaction",
+          "linkedEntity": "AgentToolLoop",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "planning"
+              },
+              {
+                "name": "executing"
+              },
+              {
+                "name": "checking"
+              },
+              {
+                "name": "completed"
+              },
+              {
+                "name": "failed"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "EXECUTE",
+                "name": "Execute"
+              },
+              {
+                "key": "PLAN_GENERATED",
+                "name": "Plan Generated",
+                "payloadSchema": [
+                  {
+                    "name": "plan",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "toolName",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "toolArgs",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TOOL_RESULT",
+                "name": "Tool Result",
+                "payloadSchema": [
+                  {
+                    "name": "output",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CHECK_PASSED",
+                "name": "Check Passed",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CHECK_NEEDS_MORE",
+                "name": "Check Needs More",
+                "payloadSchema": [
+                  {
+                    "name": "toolName",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "toolArgs",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "MAX_ITERATIONS",
+                "name": "Max Iterations",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.maxIterations",
+                    10
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "align": "center",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "repeat",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Tool Execution Loop",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "Describe the task to execute with tools"
+                                },
+                                {
+                                  "type": "form-section",
+                                  "entity": "@entity",
+                                  "submitEvent": "EXECUTE",
+                                  "fields": [
+                                    "task"
+                                  ],
+                                  "mode": "edit"
+                                }
+                              ],
+                              "gap": "md",
+                              "type": "stack",
+                              "direction": "vertical"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "planning",
+                "event": "EXECUTE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "planning"
+                  ],
+                  [
+                    "set",
+                    "@entity.iterations",
+                    0
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Task: ",
+                      "@entity.task",
+                      "\n\nAvailable tools: ",
+                      [
+                        "str/join",
+                        [
+                          "agent/tools"
+                        ],
+                        ", "
+                      ],
+                      "\n\nGenerate a step-by-step plan. Return the first tool to call and its arguments."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "name": "brain",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Planning execution...",
+                          "type": "typography",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "caption",
+                          "content": "@entity.task"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "planning",
+                "to": "executing",
+                "event": "PLAN_GENERATED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.plan",
+                    "@payload.plan"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentTool",
+                    "@payload.toolName"
+                  ],
+                  [
+                    "set",
+                    "@entity.iterations",
+                    [
+                      "+",
+                      "@entity.iterations",
+                      1
+                    ]
+                  ],
+                  [
+                    "agent/invoke",
+                    "@payload.toolName",
+                    "@payload.toolArgs"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "align": "center",
+                          "justify": "between",
+                          "children": [
+                            {
+                              "align": "center",
+                              "gap": "sm",
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "tool"
+                                },
+                                {
+                                  "content": "Executing Tool",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "label": "@entity.maxIterations",
+                              "type": "badge"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "type": "stack",
+                              "direction": "vertical",
+                              "children": [
+                                {
+                                  "variant": "caption",
+                                  "content": "Current Tool",
+                                  "type": "typography"
+                                },
+                                {
+                                  "variant": "h4",
+                                  "content": "@entity.currentTool",
+                                  "type": "typography"
+                                },
+                                {
+                                  "type": "spinner"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "direction": "vertical",
+                              "children": [
+                                {
+                                  "content": "Plan",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "variant": "body",
+                                  "content": "@entity.plan",
+                                  "type": "typography"
+                                }
+                              ],
+                              "type": "stack"
+                            }
+                          ]
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "planning",
+                "to": "failed",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "name": "x-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "h2",
+                          "content": "Loop Failed"
+                        },
+                        {
+                          "message": "@entity.error",
+                          "variant": "error",
+                          "type": "alert"
+                        },
+                        {
+                          "children": [
+                            {
+                              "value": "@entity.iterations",
+                              "label": "Iterations Used",
+                              "icon": "repeat",
+                              "type": "stat-display"
+                            },
+                            {
+                              "value": "@entity.maxIterations",
+                              "type": "stat-display",
+                              "icon": "shield",
+                              "label": "Max Allowed"
+                            }
+                          ],
+                          "type": "simple-grid",
+                          "cols": 2
+                        },
+                        {
+                          "label": "Retry",
+                          "variant": "primary",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "action": "RESET"
+                        }
+                      ],
+                      "align": "center",
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "executing",
+                "to": "checking",
+                "event": "TOOL_RESULT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.lastToolResult",
+                    "@payload.output"
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Task: ",
+                      "@entity.task",
+                      "\nPlan: ",
+                      "@entity.plan",
+                      "\nTool output: ",
+                      "@payload.output",
+                      "\n\nIs the task complete? If yes, provide the final result. If no, specify the next tool and arguments."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "name": "eye",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Checking result...",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "badge",
+                          "label": "@entity.iterations"
+                        }
+                      ],
+                      "type": "stack",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "executing",
+                "to": "failed",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "name": "x-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "h2",
+                          "content": "Loop Failed"
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "@entity.error"
+                        },
+                        {
+                          "type": "simple-grid",
+                          "cols": 2,
+                          "children": [
+                            {
+                              "value": "@entity.iterations",
+                              "type": "stat-display",
+                              "icon": "repeat",
+                              "label": "Iterations Used"
+                            },
+                            {
+                              "value": "@entity.maxIterations",
+                              "type": "stat-display",
+                              "icon": "shield",
+                              "label": "Max Allowed"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "button",
+                          "action": "RESET",
+                          "variant": "primary",
+                          "label": "Retry",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "checking",
+                "to": "completed",
+                "event": "CHECK_PASSED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.result",
+                    "@payload.result"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "completed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "name": "check-circle",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Loop Complete"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "button",
+                              "icon": "rotate-ccw",
+                              "label": "New Task",
+                              "action": "RESET",
+                              "variant": "ghost"
+                            }
+                          ],
+                          "justify": "between",
+                          "gap": "sm",
+                          "align": "center",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "cols": 2,
+                          "type": "simple-grid",
+                          "children": [
+                            {
+                              "value": "@entity.iterations",
+                              "type": "stat-display",
+                              "label": "Iterations",
+                              "icon": "repeat"
+                            },
+                            {
+                              "label": "Status",
+                              "type": "stat-display",
+                              "icon": "check",
+                              "value": "@entity.status"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "gap": "md",
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "content": "Task",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "content": "@entity.task",
+                                  "type": "typography",
+                                  "variant": "body"
+                                },
+                                {
+                                  "type": "divider"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Result"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "body",
+                                  "content": "@entity.result"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "checking",
+                "to": "executing",
+                "event": "CHECK_NEEDS_MORE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentTool",
+                    "@payload.toolName"
+                  ],
+                  [
+                    "set",
+                    "@entity.iterations",
+                    [
+                      "+",
+                      "@entity.iterations",
+                      1
+                    ]
+                  ],
+                  [
+                    "if",
+                    [
+                      ">=",
+                      [
+                        "agent/context-usage"
+                      ],
+                      0.8
+                    ],
+                    [
+                      "agent/compact",
+                      "hybrid"
+                    ],
+                    [
+                      "log",
+                      "Context below compact threshold"
+                    ]
+                  ],
+                  [
+                    "agent/invoke",
+                    "@payload.toolName",
+                    "@payload.toolArgs"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "align": "center",
+                              "children": [
+                                {
+                                  "name": "tool",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Executing Tool"
+                                }
+                              ]
+                            },
+                            {
+                              "label": "@entity.maxIterations",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "align": "center",
+                          "justify": "between",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Current Tool"
+                                },
+                                {
+                                  "content": "@entity.currentTool",
+                                  "type": "typography",
+                                  "variant": "h4"
+                                },
+                                {
+                                  "type": "spinner"
+                                }
+                              ],
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "type": "stack"
+                            }
+                          ],
+                          "type": "card"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "type": "stack",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Plan"
+                                },
+                                {
+                                  "content": "@entity.plan",
+                                  "variant": "body",
+                                  "type": "typography"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "checking",
+                "to": "failed",
+                "event": "MAX_ITERATIONS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "x-circle"
+                        },
+                        {
+                          "variant": "h2",
+                          "type": "typography",
+                          "content": "Loop Failed"
+                        },
+                        {
+                          "message": "@entity.error",
+                          "variant": "error",
+                          "type": "alert"
+                        },
+                        {
+                          "cols": 2,
+                          "type": "simple-grid",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "icon": "repeat",
+                              "label": "Iterations Used",
+                              "value": "@entity.iterations"
+                            },
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.maxIterations",
+                              "icon": "shield",
+                              "label": "Max Allowed"
+                            }
+                          ]
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "action": "RESET",
+                          "label": "Retry",
+                          "type": "button",
+                          "variant": "primary"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "completed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.task",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.plan",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.result",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.currentTool",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.lastToolResult",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.iterations",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "repeat"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Tool Execution Loop",
+                              "type": "typography"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "Describe the task to execute with tools"
+                                },
+                                {
+                                  "fields": [
+                                    "task"
+                                  ],
+                                  "submitEvent": "EXECUTE",
+                                  "type": "form-section",
+                                  "mode": "edit",
+                                  "entity": "@entity"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "failed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.task",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.plan",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.result",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.currentTool",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.lastToolResult",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.iterations",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "repeat",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "Tool Execution Loop"
+                            }
+                          ],
+                          "type": "stack",
+                          "align": "center",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "content": "Describe the task to execute with tools",
+                                  "variant": "body"
+                                },
+                                {
+                                  "submitEvent": "EXECUTE",
+                                  "fields": [
+                                    "task"
+                                  ],
+                                  "entity": "@entity",
+                                  "type": "form-section",
+                                  "mode": "edit"
+                                }
+                              ],
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "vertical"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "ToolLoopStepProgress",
+          "category": "interaction",
+          "linkedEntity": "AgentToolLoop",
+          "emits": [
+            {
+              "event": "AgentStepProgressLoaded",
+              "description": "Fired when AgentStepProgress finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "currentStep",
+                  "type": "number"
+                },
+                {
+                  "name": "totalSteps",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "AgentStepProgressLoadFailed",
+              "description": "Fired when AgentStepProgress fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "in_progress"
+              },
+              {
+                "name": "completed"
+              },
+              {
+                "name": "failed"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "START",
+                "name": "Start"
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "ADVANCE",
+                "name": "Advance"
+              },
+              {
+                "key": "COMPLETE",
+                "name": "Complete"
+              },
+              {
+                "key": "FAIL",
+                "name": "Fail"
+              },
+              {
+                "key": "AgentStepProgressLoaded",
+                "name": "AgentStepProgress loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentStep",
+                    "type": "number"
+                  },
+                  {
+                    "name": "totalSteps",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "AgentStepProgressLoadFailed",
+                "name": "AgentStepProgress load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.totalSteps",
+                    4
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentStepProgressLoadFailed",
+                        "success": "AgentStepProgressLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "list-ordered",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "default",
+                              "label": "Idle"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ],
+                          "currentStep": "@entity.currentStep"
+                        },
+                        {
+                          "variant": "primary",
+                          "action": "START",
+                          "type": "button",
+                          "label": "Start",
+                          "icon": "play"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "in_progress",
+                "event": "START",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "in_progress"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "align": "center",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "loader",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "warning",
+                              "label": "In Progress"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ],
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep"
+                        },
+                        {
+                          "align": "center",
+                          "children": [
+                            {
+                              "value": "@entity.currentStep",
+                              "type": "stat-display",
+                              "label": "Current Step"
+                            },
+                            {
+                              "value": "@entity.totalSteps",
+                              "label": "Total Steps",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "action": "ADVANCE",
+                              "label": "Advance",
+                              "icon": "chevron-right"
+                            },
+                            {
+                              "action": "RESET",
+                              "variant": "ghost",
+                              "label": "Reset",
+                              "icon": "rotate-ccw",
+                              "type": "button"
+                            }
+                          ]
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "list-ordered"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "label": "Idle",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "align": "center",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "icon": "play",
+                          "action": "START",
+                          "variant": "primary",
+                          "type": "button",
+                          "label": "Start"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "in_progress",
+                "event": "ADVANCE",
+                "guard": [
+                  "<",
+                  "@entity.currentStep",
+                  "@entity.totalSteps"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    [
+                      "+",
+                      "@entity.currentStep",
+                      1
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "loader"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "label": "In Progress",
+                              "type": "badge",
+                              "variant": "warning"
+                            }
+                          ],
+                          "type": "stack",
+                          "align": "center",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ],
+                          "type": "wizard-progress"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "value": "@entity.currentStep",
+                              "label": "Current Step",
+                              "type": "stat-display"
+                            },
+                            {
+                              "type": "stat-display",
+                              "label": "Total Steps",
+                              "value": "@entity.totalSteps"
+                            }
+                          ],
+                          "align": "center"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "label": "Advance",
+                              "variant": "primary",
+                              "action": "ADVANCE",
+                              "type": "button",
+                              "icon": "chevron-right"
+                            },
+                            {
+                              "label": "Reset",
+                              "variant": "ghost",
+                              "icon": "rotate-ccw",
+                              "type": "button",
+                              "action": "RESET"
+                            }
+                          ],
+                          "type": "stack"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "completed",
+                "event": "COMPLETE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "completed"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    "@entity.totalSteps"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "align": "center",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "check-circle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "AgentStepProgress"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "success",
+                              "label": "Completed"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ],
+                          "currentStep": "@entity.totalSteps",
+                          "type": "wizard-progress"
+                        },
+                        {
+                          "variant": "success",
+                          "type": "alert",
+                          "message": "All steps completed successfully."
+                        },
+                        {
+                          "action": "RESET",
+                          "type": "button",
+                          "variant": "ghost",
+                          "icon": "rotate-ccw",
+                          "label": "Reset"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "failed",
+                "event": "FAIL",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "x-circle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "AgentStepProgress"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Failed",
+                              "variant": "danger"
+                            }
+                          ],
+                          "gap": "sm",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "alert",
+                          "message": "Pipeline failed at the current step.",
+                          "variant": "error"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "value": "@entity.currentStep",
+                              "label": "Failed At Step",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "label": "Reset",
+                          "type": "button",
+                          "variant": "ghost",
+                          "action": "RESET"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "list-ordered",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "AgentStepProgress"
+                            },
+                            {
+                              "label": "Idle",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "align": "center",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "icon": "play",
+                          "variant": "primary",
+                          "action": "START",
+                          "label": "Start",
+                          "type": "button"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "completed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "list-ordered",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "default",
+                              "label": "Idle"
+                            }
+                          ],
+                          "align": "center",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "label": "Start",
+                          "icon": "play",
+                          "action": "START"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "failed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "list-ordered",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "AgentStepProgress",
+                              "type": "typography"
+                            },
+                            {
+                              "variant": "default",
+                              "type": "badge",
+                              "label": "Idle"
+                            }
+                          ],
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "variant": "primary",
+                          "action": "START",
+                          "type": "button",
+                          "icon": "play",
+                          "label": "Start"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ToolLoopCompletionFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentToolLoop",
+          "emits": [
+            {
+              "event": "GENERATED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoaded",
+              "description": "Fired when AgentCompletion finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "response",
+                  "type": "string"
+                },
+                {
+                  "name": "provider",
+                  "type": "string"
+                },
+                {
+                  "name": "model",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoadFailed",
+              "description": "Fired when AgentCompletion fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GENERATED",
+                "name": "Generated"
+              },
+              {
+                "key": "AgentCompletionLoaded",
+                "name": "AgentCompletion loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "prompt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "response",
+                    "type": "string"
+                  },
+                  {
+                    "name": "provider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "model",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionLoadFailed",
+                "name": "AgentCompletion load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaved",
+                "name": "AgentCompletion saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaveFailed",
+                "name": "AgentCompletion save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.model",
+                    "claude-sonnet-4-20250514"
+                  ],
+                  [
+                    "set",
+                    "@entity.provider",
+                    "anthropic"
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "h2",
+                                  "content": "AgentCompletion"
+                                }
+                              ],
+                              "gap": "md",
+                              "type": "stack"
+                            },
+                            {
+                              "icon": "sparkles",
+                              "type": "button",
+                              "variant": "primary",
+                              "label": "Open",
+                              "action": "GENERATE"
+                            }
+                          ],
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "type": "empty-state",
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay."
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "sparkles"
+                            },
+                            {
+                              "variant": "h3",
+                              "type": "typography",
+                              "content": "AgentCompletion"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.provider"
+                            },
+                            {
+                              "label": "@entity.model",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "cancelEvent": "CLOSE",
+                          "mode": "create",
+                          "type": "form-section",
+                          "fields": [
+                            "prompt"
+                          ],
+                          "submitEvent": "SAVE"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "content": "AgentCompletion",
+                                  "variant": "h2",
+                                  "type": "typography"
+                                }
+                              ],
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "icon": "sparkles",
+                              "label": "Open",
+                              "variant": "primary",
+                              "type": "button",
+                              "action": "GENERATE"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "type": "empty-state",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "sparkles"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentToolLoop",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionSaved",
+                        "failure": "AgentCompletionSaveFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "GENERATED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionLoaded",
+                        "failure": "AgentCompletionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "content": "AgentCompletion",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "direction": "horizontal"
+                            },
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "sparkles",
+                              "action": "GENERATE",
+                              "label": "Open"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "sparkles",
+                          "type": "empty-state"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ToolLoopToolCallFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentToolLoop",
+          "emits": [
+            {
+              "event": "INVOKED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoaded",
+              "description": "Fired when AgentToolCall finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "toolName",
+                  "type": "string"
+                },
+                {
+                  "name": "args",
+                  "type": "string"
+                },
+                {
+                  "name": "result",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "duration",
+                  "type": "number"
+                },
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "detail",
+                  "type": "string"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoadFailed",
+              "description": "Fired when AgentToolCall fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "INVOKE",
+                "name": "Invoke"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "INVOKED",
+                "name": "Invoked"
+              },
+              {
+                "key": "AgentToolCallLoaded",
+                "name": "AgentToolCall loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "toolName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "args",
+                    "type": "string"
+                  },
+                  {
+                    "name": "result",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "duration",
+                    "type": "number"
+                  },
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "detail",
+                    "type": "string"
+                  },
+                  {
+                    "name": "timestamp",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallLoadFailed",
+                "name": "AgentToolCall load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaved",
+                "name": "AgentToolCall saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaveFailed",
+                "name": "AgentToolCall save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "Invoke Tool",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "label": "Open",
+                              "variant": "primary",
+                              "icon": "wrench",
+                              "type": "button",
+                              "action": "INVOKE"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open",
+                          "type": "empty-state",
+                          "icon": "wrench"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "INVOKE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "wrench",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h3",
+                              "type": "typography",
+                              "content": "Invoke Tool"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            "toolName",
+                            "args"
+                          ],
+                          "type": "form-section",
+                          "submitEvent": "SAVE",
+                          "cancelEvent": "CLOSE",
+                          "mode": "create"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "wrench"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "content": "Invoke Tool",
+                                  "type": "typography"
+                                }
+                              ],
+                              "direction": "horizontal",
+                              "type": "stack"
+                            },
+                            {
+                              "type": "button",
+                              "icon": "wrench",
+                              "variant": "primary",
+                              "label": "Open",
+                              "action": "INVOKE"
+                            }
+                          ],
+                          "gap": "md",
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "title": "Nothing open",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "wrench"
+                        }
+                      ],
+                      "gap": "lg",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentToolLoop",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallSaveFailed",
+                        "success": "AgentToolCallSaved"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "INVOKED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallLoadFailed",
+                        "success": "AgentToolCallLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "content": "Invoke Tool",
+                                  "type": "typography"
+                                }
+                              ]
+                            },
+                            {
+                              "variant": "primary",
+                              "label": "Open",
+                              "action": "INVOKE",
+                              "icon": "wrench",
+                              "type": "button"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "title": "Nothing open",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "wrench"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ToolLoopContextMonitor",
+          "category": "interaction",
+          "linkedEntity": "AgentToolLoop",
+          "emits": [
+            {
+              "event": "COMPACT",
+              "scope": "internal"
+            },
+            {
+              "event": "AgentContextWindowLoaded",
+              "description": "Fired when AgentContextWindow finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "tokenCount",
+                  "type": "number"
+                },
+                {
+                  "name": "maxTokens",
+                  "type": "number"
+                },
+                {
+                  "name": "usage",
+                  "type": "number"
+                },
+                {
+                  "name": "lastCompactedAt",
+                  "type": "string"
+                },
+                {
+                  "name": "current",
+                  "type": "number"
+                },
+                {
+                  "name": "max",
+                  "type": "number"
+                },
+                {
+                  "name": "threshold",
+                  "type": "number"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentContextWindowLoadFailed",
+              "description": "Fired when AgentContextWindow fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "normal",
+                "isInitial": true
+              },
+              {
+                "name": "warning"
+              },
+              {
+                "name": "critical"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "UPDATE",
+                "name": "Update",
+                "payloadSchema": [
+                  {
+                    "name": "current",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "COMPACT",
+                "name": "Compact"
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "AgentContextWindowLoaded",
+                "name": "AgentContextWindow loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "tokenCount",
+                    "type": "number"
+                  },
+                  {
+                    "name": "maxTokens",
+                    "type": "number"
+                  },
+                  {
+                    "name": "usage",
+                    "type": "number"
+                  },
+                  {
+                    "name": "lastCompactedAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "current",
+                    "type": "number"
+                  },
+                  {
+                    "name": "max",
+                    "type": "number"
+                  },
+                  {
+                    "name": "threshold",
+                    "type": "number"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentContextWindowLoadFailed",
+                "name": "AgentContextWindow load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "normal",
+                "to": "normal",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.max",
+                    200000
+                  ],
+                  [
+                    "fetch",
+                    "AgentToolLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentContextWindowLoadFailed",
+                        "success": "AgentContextWindowLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "gauge",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Token Usage",
+                              "type": "typography"
+                            },
+                            {
+                              "variant": "default",
+                              "label": "Normal",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "progress-bar",
+                          "max": "@entity.max",
+                          "value": "@entity.current"
+                        },
+                        {
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "label": "Tokens Used",
+                              "type": "stat-display",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "type": "stat-display",
+                              "value": "@entity.max"
+                            }
+                          ]
+                        },
+                        {
+                          "action": "RESET",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "label": "Reset",
+                          "variant": "ghost"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "normal",
+                "to": "normal",
+                "event": "UPDATE",
+                "guard": [
+                  "<",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.85
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "gauge",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "Token Usage"
+                            },
+                            {
+                              "label": "Normal",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "children": [
+                            {
+                              "label": "Tokens Used",
+                              "value": "@entity.current",
+                              "type": "stat-display"
+                            },
+                            {
+                              "value": "@entity.max",
+                              "type": "stat-display",
+                              "label": "Max Tokens"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "variant": "ghost",
+                          "action": "RESET",
+                          "label": "Reset",
+                          "icon": "rotate-ccw",
+                          "type": "button"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "normal",
+                "to": "warning",
+                "event": "UPDATE",
+                "guard": [
+                  "and",
+                  [
+                    ">=",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.85
+                  ],
+                  [
+                    "<",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.95
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "alert-triangle"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Warning",
+                              "variant": "warning"
+                            }
+                          ],
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "warning",
+                          "message": "Token usage approaching limit. Consider compacting.",
+                          "type": "alert"
+                        },
+                        {
+                          "type": "progress-bar",
+                          "value": "@entity.current",
+                          "max": "@entity.max"
+                        },
+                        {
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Tokens Used",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.max",
+                              "label": "Max Tokens"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "children": [
+                            {
+                              "label": "Compact",
+                              "type": "button",
+                              "action": "COMPACT",
+                              "variant": "primary",
+                              "icon": "minimize-2"
+                            },
+                            {
+                              "icon": "rotate-ccw",
+                              "type": "button",
+                              "action": "RESET",
+                              "label": "Reset",
+                              "variant": "ghost"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm"
+                        }
+                      ],
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "normal",
+                "to": "critical",
+                "event": "UPDATE",
+                "guard": [
+                  ">=",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.95
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "alert-octagon",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "danger",
+                              "label": "Critical"
+                            }
+                          ],
+                          "align": "center",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "message": "Token usage critical. Compact immediately to avoid truncation.",
+                          "variant": "error",
+                          "type": "alert"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "type": "progress-bar",
+                          "max": "@entity.max"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "type": "stat-display",
+                              "label": "Tokens Used"
+                            },
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.max",
+                              "label": "Max Tokens"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "icon": "minimize-2",
+                              "label": "Compact Now",
+                              "type": "button",
+                              "variant": "primary",
+                              "action": "COMPACT"
+                            },
+                            {
+                              "variant": "ghost",
+                              "label": "Reset",
+                              "type": "button",
+                              "action": "RESET",
+                              "icon": "rotate-ccw"
+                            }
+                          ]
+                        }
+                      ],
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "normal",
+                "to": "normal",
+                "event": "COMPACT",
+                "effects": [
+                  [
+                    "agent/compact"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastCompactedAt",
+                    "@now"
+                  ],
+                  [
+                    "agent/token-count"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "align": "center",
+                          "children": [
+                            {
+                              "name": "gauge",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Token Usage",
+                              "variant": "h2"
+                            },
+                            {
+                              "variant": "default",
+                              "label": "Normal",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "gap": "md",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "type": "stat-display",
+                              "label": "Tokens Used"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "value": "@entity.max",
+                              "type": "stat-display"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "button",
+                          "action": "RESET",
+                          "variant": "ghost",
+                          "label": "Reset",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "normal",
+                "to": "normal",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "gauge",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Normal",
+                              "variant": "default"
+                            }
+                          ],
+                          "align": "center",
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "label": "Tokens Used",
+                              "type": "stat-display"
+                            },
+                            {
+                              "value": "@entity.max",
+                              "type": "stat-display",
+                              "label": "Max Tokens"
+                            }
+                          ],
+                          "gap": "md",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "variant": "ghost",
+                          "icon": "rotate-ccw",
+                          "label": "Reset",
+                          "type": "button",
+                          "action": "RESET"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "warning",
+                "to": "warning",
+                "event": "UPDATE",
+                "guard": [
+                  "and",
+                  [
+                    ">=",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.85
+                  ],
+                  [
+                    "<",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.95
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "alert-triangle"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "Token Usage"
+                            },
+                            {
+                              "variant": "warning",
+                              "type": "badge",
+                              "label": "Warning"
+                            }
+                          ],
+                          "align": "center",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "warning",
+                          "message": "Token usage approaching limit. Consider compacting.",
+                          "type": "alert"
+                        },
+                        {
+                          "max": "@entity.max",
+                          "type": "progress-bar",
+                          "value": "@entity.current"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "type": "stat-display",
+                              "label": "Tokens Used"
+                            },
+                            {
+                              "type": "stat-display",
+                              "label": "Max Tokens",
+                              "value": "@entity.max"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "label": "Compact",
+                              "icon": "minimize-2",
+                              "action": "COMPACT"
+                            },
+                            {
+                              "type": "button",
+                              "label": "Reset",
+                              "icon": "rotate-ccw",
+                              "action": "RESET",
+                              "variant": "ghost"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "warning",
+                "to": "critical",
+                "event": "UPDATE",
+                "guard": [
+                  ">=",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.95
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "align": "center",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "alert-octagon"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "Token Usage"
+                            },
+                            {
+                              "variant": "danger",
+                              "label": "Critical",
+                              "type": "badge"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "message": "Token usage critical. Compact immediately to avoid truncation.",
+                          "variant": "error",
+                          "type": "alert"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "label": "Tokens Used",
+                              "type": "stat-display"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "value": "@entity.max",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "label": "Compact Now",
+                              "action": "COMPACT",
+                              "icon": "minimize-2"
+                            },
+                            {
+                              "action": "RESET",
+                              "label": "Reset",
+                              "variant": "ghost",
+                              "icon": "rotate-ccw",
+                              "type": "button"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "warning",
+                "to": "normal",
+                "event": "UPDATE",
+                "guard": [
+                  "<",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.85
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "gauge",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Token Usage",
+                              "variant": "h2"
+                            },
+                            {
+                              "label": "Normal",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "gap": "sm",
+                          "align": "center",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "progress-bar",
+                          "value": "@entity.current",
+                          "max": "@entity.max"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "type": "stat-display",
+                              "label": "Tokens Used"
+                            },
+                            {
+                              "value": "@entity.max",
+                              "label": "Max Tokens",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "gap": "md",
+                          "type": "stack"
+                        },
+                        {
+                          "action": "RESET",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "variant": "ghost",
+                          "label": "Reset"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "warning",
+                "to": "normal",
+                "event": "COMPACT",
+                "effects": [
+                  [
+                    "agent/compact"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastCompactedAt",
+                    "@now"
+                  ],
+                  [
+                    "agent/token-count"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "gauge"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "Token Usage"
+                            },
+                            {
+                              "label": "Normal",
+                              "variant": "default",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "progress-bar",
+                          "max": "@entity.max",
+                          "value": "@entity.current"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Tokens Used",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "value": "@entity.max",
+                              "label": "Max Tokens",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "action": "RESET",
+                          "variant": "ghost",
+                          "label": "Reset",
+                          "icon": "rotate-ccw",
+                          "type": "button"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "warning",
+                "to": "normal",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "gauge"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Token Usage",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Normal",
+                              "variant": "default"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "type": "progress-bar",
+                          "max": "@entity.max"
+                        },
+                        {
+                          "children": [
+                            {
+                              "value": "@entity.current",
+                              "label": "Tokens Used",
+                              "type": "stat-display"
+                            },
+                            {
+                              "type": "stat-display",
+                              "label": "Max Tokens",
+                              "value": "@entity.max"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "button",
+                          "action": "RESET",
+                          "variant": "ghost",
+                          "icon": "rotate-ccw",
+                          "label": "Reset"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "critical",
+                "to": "critical",
+                "event": "UPDATE",
+                "guard": [
+                  ">=",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.95
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "align": "center",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "alert-octagon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Token Usage",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "danger",
+                              "label": "Critical"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "error",
+                          "message": "Token usage critical. Compact immediately to avoid truncation.",
+                          "type": "alert"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Tokens Used",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "type": "stat-display",
+                              "value": "@entity.max"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "variant": "primary",
+                              "icon": "minimize-2",
+                              "action": "COMPACT",
+                              "label": "Compact Now",
+                              "type": "button"
+                            },
+                            {
+                              "type": "button",
+                              "icon": "rotate-ccw",
+                              "variant": "ghost",
+                              "label": "Reset",
+                              "action": "RESET"
+                            }
+                          ]
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "critical",
+                "to": "warning",
+                "event": "UPDATE",
+                "guard": [
+                  "and",
+                  [
+                    ">=",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.85
+                  ],
+                  [
+                    "<",
+                    [
+                      "/",
+                      "@payload.current",
+                      "@entity.max"
+                    ],
+                    0.95
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "align": "center",
+                          "children": [
+                            {
+                              "name": "alert-triangle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "Token Usage"
+                            },
+                            {
+                              "label": "Warning",
+                              "variant": "warning",
+                              "type": "badge"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "warning",
+                          "type": "alert",
+                          "message": "Token usage approaching limit. Consider compacting."
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "label": "Tokens Used",
+                              "value": "@entity.current",
+                              "type": "stat-display"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "type": "stat-display",
+                              "value": "@entity.max"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "icon": "minimize-2",
+                              "type": "button",
+                              "action": "COMPACT",
+                              "variant": "primary",
+                              "label": "Compact"
+                            },
+                            {
+                              "action": "RESET",
+                              "label": "Reset",
+                              "variant": "ghost",
+                              "type": "button",
+                              "icon": "rotate-ccw"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "critical",
+                "to": "normal",
+                "event": "UPDATE",
+                "guard": [
+                  "<",
+                  [
+                    "/",
+                    "@payload.current",
+                    "@entity.max"
+                  ],
+                  0.85
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    "@payload.current"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "gauge"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Normal",
+                              "variant": "default"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "max": "@entity.max",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Tokens Used",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "value": "@entity.max",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "button",
+                          "action": "RESET",
+                          "icon": "rotate-ccw",
+                          "variant": "ghost",
+                          "label": "Reset"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "critical",
+                "to": "normal",
+                "event": "COMPACT",
+                "effects": [
+                  [
+                    "agent/compact"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastCompactedAt",
+                    "@now"
+                  ],
+                  [
+                    "agent/token-count"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "gauge"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Normal",
+                              "variant": "default"
+                            }
+                          ],
+                          "type": "stack",
+                          "align": "center",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "max": "@entity.max",
+                          "value": "@entity.current",
+                          "type": "progress-bar"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Tokens Used",
+                              "value": "@entity.current"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "type": "stat-display",
+                              "value": "@entity.max"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "action": "RESET",
+                          "label": "Reset",
+                          "type": "button",
+                          "variant": "ghost"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "critical",
+                "to": "normal",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.current",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "gauge"
+                            },
+                            {
+                              "content": "Token Usage",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "variant": "default",
+                              "type": "badge",
+                              "label": "Normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.current",
+                          "type": "progress-bar",
+                          "max": "@entity.max"
+                        },
+                        {
+                          "gap": "md",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.current",
+                              "label": "Tokens Used"
+                            },
+                            {
+                              "label": "Max Tokens",
+                              "type": "stat-display",
+                              "value": "@entity.max"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "button",
+                          "action": "RESET",
+                          "variant": "ghost",
+                          "icon": "rotate-ccw",
+                          "label": "Reset"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "AgentToolLoopPage",
+          "path": "/agenttoolloops",
+          "traits": [
+            {
+              "ref": "AgentToolLoopLoop"
+            },
+            {
+              "ref": "ToolLoopStepProgress"
+            },
+            {
+              "ref": "ToolLoopCompletionFlow"
+            },
+            {
+              "ref": "ToolLoopToolCallFlow"
+            },
+            {
+              "ref": "ToolLoopContextMonitor"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

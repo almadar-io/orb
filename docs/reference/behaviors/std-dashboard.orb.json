@@ -1,0 +1,1804 @@
+{
+  "name": "std-dashboard",
+  "version": "1.0.0",
+  "description": "std-dashboard — molecule composing std-stats + std-graphs + std-browse (stat cards top, charts middle, data list bottom). Browse is the data hub; Stats and Graphs listen for `BrowseItemLoaded -> ITEMS_LOADED`.",
+  "orbitals": [
+    {
+      "name": "DashboardItemOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-stats",
+          "as": "Stats"
+        },
+        {
+          "from": "std/behaviors/std-graphs",
+          "as": "Graphs"
+        },
+        {
+          "from": "std/behaviors/std-browse",
+          "as": "Browse"
+        }
+      ],
+      "entity": {
+        "name": "DashboardItem",
+        "collection": "dashboarditems",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "units",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "auxiliaryEntities": [
+        {
+          "name": "StatsItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "cards",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "suffix": {
+                    "name": "suffix",
+                    "type": "string"
+                  },
+                  "icon": {
+                    "name": "icon",
+                    "type": "string"
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string"
+                  },
+                  "target": {
+                    "name": "target",
+                    "type": "number"
+                  },
+                  "trend": {
+                    "name": "trend",
+                    "type": "number"
+                  },
+                  "max": {
+                    "name": "max",
+                    "type": "number"
+                  },
+                  "value": {
+                    "name": "value",
+                    "type": "number"
+                  },
+                  "format": {
+                    "name": "format",
+                    "type": "string",
+                    "values": [
+                      "number",
+                      "currency",
+                      "percent"
+                    ]
+                  },
+                  "prefix": {
+                    "name": "prefix",
+                    "type": "string"
+                  },
+                  "variant": {
+                    "name": "variant",
+                    "type": "string",
+                    "values": [
+                      "default",
+                      "primary",
+                      "success",
+                      "warning",
+                      "error",
+                      "info"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "GraphItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "chartData",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "name": "label",
+                    "type": "string"
+                  },
+                  "value": {
+                    "name": "value",
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "traits": [
+        {
+          "name": "DashboardSummary",
+          "category": "interaction",
+          "linkedEntity": "StatsItem",
+          "listens": [
+            {
+              "event": "BrowseItemLoaded",
+              "triggers": "ITEMS_LOADED",
+              "source": {
+                "kind": "trait",
+                "trait": "DashboardItemBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "ITEMS_LOADED",
+                "name": "Items Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.cards",
+                    [
+                      "array/map",
+                      [
+                        {
+                          "variant": "primary",
+                          "label": "Total Items",
+                          "icon": "list",
+                          "format": "number",
+                          "aggregation": "count"
+                        },
+                        {
+                          "variant": "success",
+                          "aggregation": "count",
+                          "filter": [
+                            "fn",
+                            "row",
+                            [
+                              "=",
+                              "@row.status",
+                              "active"
+                            ]
+                          ],
+                          "format": "number",
+                          "icon": "check-circle",
+                          "label": "Active"
+                        },
+                        {
+                          "label": "Total Revenue",
+                          "field": "amount",
+                          "aggregation": "sum",
+                          "target": 10000,
+                          "variant": "info",
+                          "icon": "dollar-sign",
+                          "format": "currency"
+                        },
+                        {
+                          "aggregation": "avg",
+                          "suffix": " units",
+                          "icon": "trending-up",
+                          "variant": "default",
+                          "label": "Avg Units",
+                          "format": "number",
+                          "field": "units"
+                        }
+                      ],
+                      [
+                        "fn",
+                        "metric",
+                        {
+                          "target": [
+                            "object/get",
+                            "@metric",
+                            "target",
+                            0
+                          ],
+                          "variant": [
+                            "object/get",
+                            "@metric",
+                            "variant",
+                            "default"
+                          ],
+                          "trend": [
+                            "object/get",
+                            "@metric",
+                            "trend",
+                            0
+                          ],
+                          "suffix": [
+                            "object/get",
+                            "@metric",
+                            "suffix",
+                            ""
+                          ],
+                          "label": [
+                            "object/get",
+                            "@metric",
+                            "label"
+                          ],
+                          "prefix": [
+                            "object/get",
+                            "@metric",
+                            "prefix",
+                            ""
+                          ],
+                          "max": [
+                            "object/get",
+                            "@metric",
+                            "max",
+                            0
+                          ],
+                          "format": [
+                            "object/get",
+                            "@metric",
+                            "format",
+                            "number"
+                          ],
+                          "value": 0,
+                          "icon": [
+                            "object/get",
+                            "@metric",
+                            "icon",
+                            ""
+                          ]
+                        }
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "data-grid",
+                      "renderItem": [
+                        "fn",
+                        "card",
+                        {
+                          "type": "stat-display",
+                          "value": "@card.value",
+                          "format": "@card.format",
+                          "label": "@card.label",
+                          "variant": "@card.variant",
+                          "max": "@card.max",
+                          "icon": "@card.icon"
+                        }
+                      ],
+                      "fields": [],
+                      "entity": "@entity.cards"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ITEMS_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.cards",
+                    [
+                      "array/map",
+                      [
+                        {
+                          "variant": "primary",
+                          "label": "Total Items",
+                          "icon": "list",
+                          "format": "number",
+                          "aggregation": "count"
+                        },
+                        {
+                          "variant": "success",
+                          "aggregation": "count",
+                          "filter": [
+                            "fn",
+                            "row",
+                            [
+                              "=",
+                              "@row.status",
+                              "active"
+                            ]
+                          ],
+                          "format": "number",
+                          "icon": "check-circle",
+                          "label": "Active"
+                        },
+                        {
+                          "label": "Total Revenue",
+                          "field": "amount",
+                          "aggregation": "sum",
+                          "target": 10000,
+                          "variant": "info",
+                          "icon": "dollar-sign",
+                          "format": "currency"
+                        },
+                        {
+                          "aggregation": "avg",
+                          "suffix": " units",
+                          "icon": "trending-up",
+                          "variant": "default",
+                          "label": "Avg Units",
+                          "format": "number",
+                          "field": "units"
+                        }
+                      ],
+                      [
+                        "fn",
+                        "metric",
+                        {
+                          "value": [
+                            "if",
+                            [
+                              "=",
+                              [
+                                "object/get",
+                                "@metric",
+                                "aggregation",
+                                "count"
+                              ],
+                              "sum"
+                            ],
+                            [
+                              "array/sum",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "object/get",
+                                  "@metric",
+                                  "filter",
+                                  true
+                                ]
+                              ],
+                              [
+                                "object/get",
+                                "@metric",
+                                "field",
+                                ""
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "=",
+                                [
+                                  "object/get",
+                                  "@metric",
+                                  "aggregation",
+                                  "count"
+                                ],
+                                "avg"
+                              ],
+                              [
+                                "array/avg",
+                                [
+                                  "array/filter",
+                                  "@payload.data",
+                                  [
+                                    "object/get",
+                                    "@metric",
+                                    "filter",
+                                    true
+                                  ]
+                                ],
+                                [
+                                  "object/get",
+                                  "@metric",
+                                  "field",
+                                  ""
+                                ]
+                              ],
+                              [
+                                "if",
+                                [
+                                  "=",
+                                  [
+                                    "object/get",
+                                    "@metric",
+                                    "aggregation",
+                                    "count"
+                                  ],
+                                  "min"
+                                ],
+                                [
+                                  "array/min",
+                                  [
+                                    "array/filter",
+                                    "@payload.data",
+                                    [
+                                      "object/get",
+                                      "@metric",
+                                      "filter",
+                                      true
+                                    ]
+                                  ],
+                                  [
+                                    "object/get",
+                                    "@metric",
+                                    "field",
+                                    ""
+                                  ]
+                                ],
+                                [
+                                  "if",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@metric",
+                                      "aggregation",
+                                      "count"
+                                    ],
+                                    "max"
+                                  ],
+                                  [
+                                    "array/max",
+                                    [
+                                      "array/filter",
+                                      "@payload.data",
+                                      [
+                                        "object/get",
+                                        "@metric",
+                                        "filter",
+                                        true
+                                      ]
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@metric",
+                                      "field",
+                                      ""
+                                    ]
+                                  ],
+                                  [
+                                    "array/len",
+                                    [
+                                      "array/filter",
+                                      "@payload.data",
+                                      [
+                                        "object/get",
+                                        "@metric",
+                                        "filter",
+                                        true
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ],
+                          "target": [
+                            "object/get",
+                            "@metric",
+                            "target",
+                            0
+                          ],
+                          "variant": [
+                            "object/get",
+                            "@metric",
+                            "variant",
+                            "default"
+                          ],
+                          "trend": [
+                            "object/get",
+                            "@metric",
+                            "trend",
+                            0
+                          ],
+                          "format": [
+                            "object/get",
+                            "@metric",
+                            "format",
+                            "number"
+                          ],
+                          "icon": [
+                            "object/get",
+                            "@metric",
+                            "icon",
+                            ""
+                          ],
+                          "suffix": [
+                            "object/get",
+                            "@metric",
+                            "suffix",
+                            ""
+                          ],
+                          "label": [
+                            "object/get",
+                            "@metric",
+                            "label"
+                          ],
+                          "prefix": [
+                            "object/get",
+                            "@metric",
+                            "prefix",
+                            ""
+                          ],
+                          "max": [
+                            "object/get",
+                            "@metric",
+                            "max",
+                            0
+                          ]
+                        }
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "entity": "@entity.cards",
+                      "fields": [],
+                      "type": "data-list",
+                      "renderItem": [
+                        "fn",
+                        "card",
+                        {
+                          "icon": "@card.icon",
+                          "value": "@card.value",
+                          "max": "@card.max",
+                          "target": "@card.target",
+                          "prefix": "@card.prefix",
+                          "type": "stat-display",
+                          "format": "@card.format",
+                          "label": "@card.label",
+                          "variant": "@card.variant",
+                          "trend": "@card.trend",
+                          "suffix": "@card.suffix"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Summary"
+            },
+            "metrics": {
+              "type": "[object]",
+              "default": [
+                {
+                  "label": "Total Items",
+                  "format": "number",
+                  "variant": "primary",
+                  "icon": "list",
+                  "aggregation": "count"
+                },
+                {
+                  "format": "number",
+                  "variant": "success",
+                  "aggregation": "count",
+                  "icon": "check-circle",
+                  "label": "Active"
+                },
+                {
+                  "aggregation": "avg",
+                  "format": "number",
+                  "label": "Avg Value",
+                  "variant": "info",
+                  "icon": "trending-up",
+                  "field": "value"
+                }
+              ]
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "DashboardCategoryChart",
+          "category": "interaction",
+          "linkedEntity": "GraphItem",
+          "listens": [
+            {
+              "event": "BrowseItemLoaded",
+              "triggers": "ITEMS_LOADED",
+              "source": {
+                "kind": "trait",
+                "trait": "DashboardItemBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "ITEMS_LOADED",
+                "name": "Items Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.chartData",
+                    [
+                      {
+                        "value": 6,
+                        "label": "Active"
+                      },
+                      {
+                        "label": "Pending",
+                        "value": 3
+                      },
+                      {
+                        "label": "Inactive",
+                        "value": 1
+                      }
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "showLegend": false,
+                      "type": "chart",
+                      "chartType": "bar",
+                      "subtitle": "Count across categories",
+                      "title": "Items by Category",
+                      "data": "@entity.chartData",
+                      "height": 280,
+                      "showValues": false
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ITEMS_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.chartData",
+                    [
+                      "array/map",
+                      [
+                        "object/entries",
+                        [
+                          "array/groupBy",
+                          "@payload.data",
+                          "category"
+                        ]
+                      ],
+                      [
+                        "fn",
+                        "entry",
+                        {
+                          "label": [
+                            "object/get",
+                            "@entry",
+                            "0"
+                          ],
+                          "value": [
+                            "if",
+                            [
+                              "=",
+                              "count",
+                              "sum"
+                            ],
+                            [
+                              "array/sum",
+                              [
+                                "object/get",
+                                "@entry",
+                                "1"
+                              ],
+                              ""
+                            ],
+                            [
+                              "if",
+                              [
+                                "=",
+                                "count",
+                                "avg"
+                              ],
+                              [
+                                "array/avg",
+                                [
+                                  "object/get",
+                                  "@entry",
+                                  "1"
+                                ],
+                                ""
+                              ],
+                              [
+                                "if",
+                                [
+                                  "=",
+                                  "count",
+                                  "min"
+                                ],
+                                [
+                                  "array/min",
+                                  [
+                                    "object/get",
+                                    "@entry",
+                                    "1"
+                                  ],
+                                  ""
+                                ],
+                                [
+                                  "if",
+                                  [
+                                    "=",
+                                    "count",
+                                    "max"
+                                  ],
+                                  [
+                                    "array/max",
+                                    [
+                                      "object/get",
+                                      "@entry",
+                                      "1"
+                                    ],
+                                    ""
+                                  ],
+                                  [
+                                    "array/len",
+                                    [
+                                      "object/get",
+                                      "@entry",
+                                      "1"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        }
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "data": "@entity.chartData",
+                      "height": 280,
+                      "subtitle": "Count across categories",
+                      "title": "Items by Category",
+                      "chartType": "bar",
+                      "type": "chart",
+                      "showLegend": false,
+                      "showValues": false
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "chartType": {
+              "type": "string",
+              "default": "bar",
+              "values": [
+                "bar",
+                "line",
+                "pie",
+                "area",
+                "donut"
+              ]
+            },
+            "showLegend": {
+              "type": "boolean",
+              "default": true
+            },
+            "showValues": {
+              "type": "boolean",
+              "default": false
+            },
+            "categoryField": {
+              "type": "string",
+              "default": "status"
+            },
+            "height": {
+              "type": "number",
+              "default": 280
+            },
+            "aggregation": {
+              "type": "string",
+              "default": "count",
+              "values": [
+                "count",
+                "sum",
+                "avg",
+                "min",
+                "max"
+              ]
+            },
+            "valueField": {
+              "type": "string",
+              "default": ""
+            },
+            "subtitle": {
+              "type": "string",
+              "default": "Counts per category"
+            },
+            "title": {
+              "type": "string",
+              "default": "Distribution"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "DashboardStatusChart",
+          "category": "interaction",
+          "linkedEntity": "GraphItem",
+          "listens": [
+            {
+              "event": "BrowseItemLoaded",
+              "triggers": "ITEMS_LOADED",
+              "source": {
+                "kind": "trait",
+                "trait": "DashboardItemBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "ITEMS_LOADED",
+                "name": "Items Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.chartData",
+                    [
+                      {
+                        "value": 6,
+                        "label": "Active"
+                      },
+                      {
+                        "label": "Pending",
+                        "value": 3
+                      },
+                      {
+                        "label": "Inactive",
+                        "value": 1
+                      }
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "showLegend": true,
+                      "type": "chart",
+                      "chartType": "donut",
+                      "subtitle": "Counts per category",
+                      "title": "Status Mix",
+                      "data": "@entity.chartData",
+                      "height": 280,
+                      "showValues": false
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ITEMS_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.chartData",
+                    [
+                      "array/map",
+                      [
+                        "object/entries",
+                        [
+                          "array/groupBy",
+                          "@payload.data",
+                          "status"
+                        ]
+                      ],
+                      [
+                        "fn",
+                        "entry",
+                        {
+                          "label": [
+                            "object/get",
+                            "@entry",
+                            "0"
+                          ],
+                          "value": [
+                            "if",
+                            [
+                              "=",
+                              "count",
+                              "sum"
+                            ],
+                            [
+                              "array/sum",
+                              [
+                                "object/get",
+                                "@entry",
+                                "1"
+                              ],
+                              ""
+                            ],
+                            [
+                              "if",
+                              [
+                                "=",
+                                "count",
+                                "avg"
+                              ],
+                              [
+                                "array/avg",
+                                [
+                                  "object/get",
+                                  "@entry",
+                                  "1"
+                                ],
+                                ""
+                              ],
+                              [
+                                "if",
+                                [
+                                  "=",
+                                  "count",
+                                  "min"
+                                ],
+                                [
+                                  "array/min",
+                                  [
+                                    "object/get",
+                                    "@entry",
+                                    "1"
+                                  ],
+                                  ""
+                                ],
+                                [
+                                  "if",
+                                  [
+                                    "=",
+                                    "count",
+                                    "max"
+                                  ],
+                                  [
+                                    "array/max",
+                                    [
+                                      "object/get",
+                                      "@entry",
+                                      "1"
+                                    ],
+                                    ""
+                                  ],
+                                  [
+                                    "array/len",
+                                    [
+                                      "object/get",
+                                      "@entry",
+                                      "1"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        }
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "data": "@entity.chartData",
+                      "height": 280,
+                      "subtitle": "Counts per category",
+                      "title": "Status Mix",
+                      "chartType": "donut",
+                      "type": "chart",
+                      "showLegend": true,
+                      "showValues": false
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "chartType": {
+              "type": "string",
+              "default": "bar",
+              "values": [
+                "bar",
+                "line",
+                "pie",
+                "area",
+                "donut"
+              ]
+            },
+            "showLegend": {
+              "type": "boolean",
+              "default": true
+            },
+            "showValues": {
+              "type": "boolean",
+              "default": false
+            },
+            "categoryField": {
+              "type": "string",
+              "default": "status"
+            },
+            "height": {
+              "type": "number",
+              "default": 280
+            },
+            "aggregation": {
+              "type": "string",
+              "default": "count",
+              "values": [
+                "count",
+                "sum",
+                "avg",
+                "min",
+                "max"
+              ]
+            },
+            "valueField": {
+              "type": "string",
+              "default": ""
+            },
+            "subtitle": {
+              "type": "string",
+              "default": "Counts per category"
+            },
+            "title": {
+              "type": "string",
+              "default": "Distribution"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "DashboardItemBrowse",
+          "category": "interaction",
+          "linkedEntity": "DashboardItem",
+          "emits": [
+            {
+              "event": "BrowseItemLoaded",
+              "description": "Fired when the BrowseItem collection finishes loading; payload.data holds the (possibly paginated) slice and totalCount holds the unsliced filter total. totalCount is optional so compiled-path emitters that haven't been migrated yet still validate",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[BrowseItem]"
+                },
+                {
+                  "name": "totalCount",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "BrowseItemLoadFailed",
+              "description": "Fired when the BrowseItem collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "BrowseItemLoaded",
+                "name": "BrowseItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[BrowseItem]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "BrowseItemLoadFailed",
+                "name": "BrowseItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_QUERY",
+                "name": "Refetch Query",
+                "payloadSchema": [
+                  {
+                    "name": "searchTerm",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_FILTER",
+                "name": "Refetch Filter",
+                "payloadSchema": [
+                  {
+                    "name": "field",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_PAGE",
+                "name": "Refetch Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "limit": 100,
+                      "offset": 0,
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "label": "Category",
+                              "name": "category",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Status",
+                              "variant": "badge",
+                              "name": "status"
+                            },
+                            {
+                              "label": "Amount",
+                              "name": "amount",
+                              "variant": "caption"
+                            }
+                          ],
+                          "pageSize": 5,
+                          "type": "data-grid",
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "BrowseItemLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "caption",
+                      "color": "error",
+                      "content": "@payload.error",
+                      "type": "typography"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "limit": 100
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_QUERY",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "limit": 100,
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.searchTerm",
+                          ""
+                        ],
+                        [
+                          "str/includes",
+                          [
+                            "object/get",
+                            "@entity",
+                            "name"
+                          ],
+                          "@payload.searchTerm"
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_FILTER",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "limit": 100,
+                      "offset": 0,
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.value",
+                          ""
+                        ],
+                        [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "@payload.field"
+                          ],
+                          "@payload.value"
+                        ]
+                      ],
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_PAGE",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "limit": 100,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "offset": [
+                        "*",
+                        [
+                          "-",
+                          "@payload.page",
+                          1
+                        ],
+                        100
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "entity": "@payload.data",
+                          "pageSize": 5,
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "label": "Category",
+                              "name": "category",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Status",
+                              "variant": "badge",
+                              "name": "status"
+                            },
+                            {
+                              "label": "Amount",
+                              "name": "amount",
+                              "variant": "caption"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "limit": 100
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "displayPageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "fields": {
+              "type": "[object]",
+              "default": [
+                {
+                  "label": "Name",
+                  "variant": "h4",
+                  "name": "name"
+                },
+                {
+                  "variant": "caption",
+                  "name": "description",
+                  "label": "Description"
+                },
+                {
+                  "variant": "badge",
+                  "name": "status",
+                  "label": "Status"
+                }
+              ]
+            },
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            }
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "DashboardLayout",
+          "category": "interaction",
+          "linkedEntity": "DashboardItem",
+          "emits": [
+            {
+              "event": "DashboardItemLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[DashboardItem]"
+                }
+              ]
+            },
+            {
+              "event": "DashboardItemLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "composing",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DashboardItemLoaded",
+                "name": "DashboardItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[DashboardItem]"
+                  }
+                ]
+              },
+              {
+                "key": "DashboardItemLoadFailed",
+                "name": "DashboardItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "composing",
+                "to": "composing",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DashboardItem",
+                    {
+                      "emit": {
+                        "failure": "DashboardItemLoadFailed",
+                        "success": "DashboardItemLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "bar-chart-2",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Dashboard",
+                              "variant": "h2"
+                            }
+                          ],
+                          "gap": "sm",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        "@trait.DashboardSummary",
+                        {
+                          "children": [
+                            "@trait.DashboardCategoryChart",
+                            "@trait.DashboardStatusChart"
+                          ],
+                          "cols": 2,
+                          "gap": "md",
+                          "type": "simple-grid"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "h3",
+                          "content": "Recent Items",
+                          "type": "typography"
+                        },
+                        "@trait.DashboardItemBrowse"
+                      ],
+                      "type": "stack",
+                      "className": "max-w-6xl mx-auto w-full p-4",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "Dashboard",
+          "path": "/dashboard",
+          "traits": [
+            {
+              "ref": "DashboardLayout"
+            },
+            {
+              "ref": "DashboardSummary"
+            },
+            {
+              "ref": "DashboardCategoryChart"
+            },
+            {
+              "ref": "DashboardStatusChart"
+            },
+            {
+              "ref": "DashboardItemBrowse"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2907 @@
+{
+  "name": "std-agent-planner",
+  "version": "1.0.0",
+  "description": "std-agent-planner as a Function",
+  "orbitals": [
+    {
+      "name": "AgentPlannerOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-agent-classifier",
+          "as": "AgentClassifier"
+        },
+        {
+          "from": "std/behaviors/std-agent-completion",
+          "as": "AgentCompletion"
+        },
+        {
+          "from": "std/behaviors/std-agent-memory",
+          "as": "AgentMemory"
+        },
+        {
+          "from": "std/behaviors/std-modal",
+          "as": "Modal"
+        }
+      ],
+      "entity": {
+        "name": "AgentPlanner",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "task",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "steps",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "confidence",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "relevantMemories",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "memoryCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "input",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "response",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "provider",
+            "type": "string",
+            "default": "anthropic"
+          },
+          {
+            "name": "model",
+            "type": "string",
+            "default": "claude-sonnet-4-20250514"
+          },
+          {
+            "name": "content",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "scope",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "strength",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "name": "pinned",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "action",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "detail",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "timestamp",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "icon",
+            "type": "string",
+            "default": "circle"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "notificationType",
+            "type": "string",
+            "default": "info",
+            "values": [
+              "info",
+              "success",
+              "warning",
+              "error"
+            ]
+          },
+          {
+            "name": "lastAccessedAt",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "AgentPlannerPlanner",
+          "category": "interaction",
+          "linkedEntity": "AgentPlanner",
+          "emits": [
+            {
+              "event": "PLAN_READY",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "plan",
+                  "type": "string"
+                },
+                {
+                  "name": "category",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "PLAN_READY",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentPlannerPlanner"
+              }
+            },
+            {
+              "event": "PLAN",
+              "triggers": "PLAN",
+              "source": {
+                "kind": "trait",
+                "trait": "PlannerTaskInput"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "classifying"
+              },
+              {
+                "name": "recalling"
+              },
+              {
+                "name": "planning"
+              },
+              {
+                "name": "ready"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PLAN",
+                "name": "Plan"
+              },
+              {
+                "key": "CLASSIFIED",
+                "name": "Classified",
+                "payloadSchema": [
+                  {
+                    "name": "category",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "MEMORIES_LOADED",
+                "name": "Memories Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "memories",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "count",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "PLAN_GENERATED",
+                "name": "Plan Generated",
+                "payloadSchema": [
+                  {
+                    "name": "steps",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "confidence",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "PLAN_READY",
+                "name": "Plan Ready"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "map",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Task Planner",
+                              "type": "typography"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "content": "Describe the task to plan",
+                                  "variant": "body",
+                                  "type": "typography"
+                                },
+                                {
+                                  "entity": "@entity",
+                                  "submitEvent": "PLAN",
+                                  "fields": [
+                                    "task"
+                                  ],
+                                  "type": "form-section",
+                                  "mode": "edit"
+                                }
+                              ],
+                              "direction": "vertical",
+                              "gap": "md",
+                              "type": "stack"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "classifying",
+                "event": "PLAN",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "classifying"
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Classify this task into exactly one category.\n",
+                      "Categories: ",
+                      "code, schema, design, debug, deploy",
+                      "\n",
+                      "Task: ",
+                      "@entity.task",
+                      "\n",
+                      "Return only the category name."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "tag"
+                        },
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Classifying task..."
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "@entity.task",
+                          "variant": "caption"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "classifying",
+                "to": "recalling",
+                "event": "CLASSIFIED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.category",
+                    "@payload.category"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "recalling"
+                  ],
+                  [
+                    "agent/recall",
+                    [
+                      "str/concat",
+                      "@entity.category",
+                      " ",
+                      "@entity.task"
+                    ],
+                    5
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "align": "center",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "brain"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Recalling relevant experience...",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "badge",
+                          "label": "@entity.category"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "classifying",
+                "to": "idle",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "alert-triangle"
+                        },
+                        {
+                          "variant": "h2",
+                          "content": "Planning Failed",
+                          "type": "typography"
+                        },
+                        {
+                          "message": "@entity.error",
+                          "type": "alert",
+                          "variant": "error"
+                        },
+                        {
+                          "action": "RESET",
+                          "variant": "primary",
+                          "label": "Try Again",
+                          "icon": "rotate-ccw",
+                          "type": "button"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "recalling",
+                "to": "planning",
+                "event": "MEMORIES_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.relevantMemories",
+                    "@payload.memories"
+                  ],
+                  [
+                    "set",
+                    "@entity.memoryCount",
+                    "@payload.count"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "planning"
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Task: ",
+                      "@entity.task",
+                      "\n",
+                      "Category: ",
+                      "@entity.category",
+                      "\n",
+                      "Relevant experience:\n",
+                      "@entity.relevantMemories",
+                      "\n\n",
+                      "Generate a numbered step-by-step execution plan. ",
+                      "Include a confidence score (0-100) for how likely this plan will succeed."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "align": "center",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "cpu"
+                        },
+                        {
+                          "variant": "h3",
+                          "content": "Generating plan...",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.category"
+                            },
+                            {
+                              "label": "@entity.memoryCount",
+                              "type": "badge"
+                            }
+                          ],
+                          "justify": "center",
+                          "gap": "md"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "recalling",
+                "to": "idle",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "align": "center",
+                      "children": [
+                        {
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Planning Failed",
+                          "type": "typography",
+                          "variant": "h2"
+                        },
+                        {
+                          "type": "alert",
+                          "message": "@entity.error",
+                          "variant": "error"
+                        },
+                        {
+                          "action": "RESET",
+                          "label": "Try Again",
+                          "type": "button",
+                          "variant": "primary",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "planning",
+                "to": "ready",
+                "event": "PLAN_GENERATED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.steps",
+                    "@payload.steps"
+                  ],
+                  [
+                    "set",
+                    "@entity.confidence",
+                    "@payload.confidence"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "ready"
+                  ],
+                  [
+                    "agent/memorize",
+                    [
+                      "str/concat",
+                      "Plan for ",
+                      "@entity.category",
+                      " task: ",
+                      "@entity.task"
+                    ],
+                    "pattern-affinity"
+                  ],
+                  [
+                    "emit",
+                    "PLAN_READY"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "align": "center",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "check-circle",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Plan Ready"
+                                }
+                              ],
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "type": "stack",
+                              "align": "center"
+                            },
+                            {
+                              "label": "New Plan",
+                              "action": "RESET",
+                              "icon": "rotate-ccw",
+                              "variant": "ghost",
+                              "type": "button"
+                            }
+                          ],
+                          "justify": "between",
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "icon": "tag",
+                              "value": "@entity.category",
+                              "label": "Category",
+                              "type": "stat-display"
+                            },
+                            {
+                              "type": "stat-display",
+                              "icon": "target",
+                              "label": "Confidence",
+                              "value": "@entity.confidence"
+                            },
+                            {
+                              "icon": "brain",
+                              "type": "stat-display",
+                              "label": "Memories Used",
+                              "value": "@entity.memoryCount"
+                            }
+                          ],
+                          "cols": 3,
+                          "type": "simple-grid"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "type": "stack",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "variant": "caption",
+                                  "type": "typography",
+                                  "content": "Task"
+                                },
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "@entity.task"
+                                },
+                                {
+                                  "type": "divider"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Execution Plan"
+                                },
+                                {
+                                  "content": "@entity.steps",
+                                  "type": "typography",
+                                  "variant": "body"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "card"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Relevant Memories"
+                                },
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "@entity.relevantMemories"
+                                }
+                              ],
+                              "gap": "sm"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "planning",
+                "to": "idle",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Planning Failed",
+                          "variant": "h2",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "alert",
+                          "message": "@entity.error",
+                          "variant": "error"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "action": "RESET",
+                          "type": "button",
+                          "label": "Try Again",
+                          "variant": "primary"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "ready",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.task",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.category",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.steps",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.confidence",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.relevantMemories",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.memoryCount",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "map"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Task Planner",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "content": "Describe the task to plan",
+                                  "type": "typography"
+                                },
+                                {
+                                  "submitEvent": "PLAN",
+                                  "entity": "@entity",
+                                  "type": "form-section",
+                                  "fields": [
+                                    "task"
+                                  ],
+                                  "mode": "edit"
+                                }
+                              ],
+                              "gap": "md"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "PlannerTaskInput",
+          "category": "interaction",
+          "linkedEntity": "AgentPlanner",
+          "emits": [
+            {
+              "event": "PLAN",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CLOSE"
+            },
+            {
+              "event": "ModalRecordLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ModalRecordLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ModalRecord]"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "NEW_TASK",
+                "name": "Open",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "row",
+                    "type": "ModalRecord"
+                  }
+                ]
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "PLAN",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoadFailed",
+                "name": "ModalRecord load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoaded",
+                "name": "ModalRecord loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ModalRecord]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "success": "ModalRecordLoaded",
+                        "failure": "ModalRecordLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "NEW_TASK",
+                "guard": [
+                  "or",
+                  [
+                    "=",
+                    "create",
+                    "create"
+                  ],
+                  "@payload.row"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "plus-circle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h3",
+                              "content": "New Task"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "mode": "create",
+                          "fields": [
+                            "task"
+                          ],
+                          "type": "form-section",
+                          "entity": "@payload.row",
+                          "submitEvent": "PLAN",
+                          "cancelEvent": "CLOSE"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "PLAN",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "icon": {
+              "type": "string",
+              "default": "layout-panel-top"
+            },
+            "fields": {
+              "type": "[string]",
+              "default": []
+            },
+            "title": {
+              "type": "string",
+              "default": "Details"
+            },
+            "mode": {
+              "type": "string",
+              "default": "create"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "PlannerClassifierFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentPlanner",
+          "emits": [
+            {
+              "event": "CLASSIFIED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentClassifierLoaded",
+              "description": "Fired when AgentClassifier finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "input",
+                  "type": "string"
+                },
+                {
+                  "name": "category",
+                  "type": "string"
+                },
+                {
+                  "name": "confidence",
+                  "type": "number"
+                },
+                {
+                  "name": "model",
+                  "type": "string"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentClassifierLoadFailed",
+              "description": "Fired when AgentClassifier fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentClassifierSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentClassifierSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CLASSIFY",
+                "name": "Classify"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CLASSIFIED",
+                "name": "Classified"
+              },
+              {
+                "key": "AgentClassifierLoaded",
+                "name": "AgentClassifier loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "input",
+                    "type": "string"
+                  },
+                  {
+                    "name": "category",
+                    "type": "string"
+                  },
+                  {
+                    "name": "confidence",
+                    "type": "number"
+                  },
+                  {
+                    "name": "model",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentClassifierLoadFailed",
+                "name": "AgentClassifier load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentClassifierSaved",
+                "name": "AgentClassifier saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentClassifierSaveFailed",
+                "name": "AgentClassifier save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "failure": "AgentClassifierLoadFailed",
+                        "success": "AgentClassifierLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "tag"
+                                },
+                                {
+                                  "content": "AgentClassifier",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "type": "stack"
+                            },
+                            {
+                              "label": "Open",
+                              "variant": "primary",
+                              "action": "CLASSIFY",
+                              "type": "button",
+                              "icon": "tag"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "tag",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state",
+                          "title": "Nothing open"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "CLASSIFY",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "tag"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "AgentClassifier",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "typography",
+                              "variant": "caption",
+                              "content": "Categories:"
+                            },
+                            {
+                              "variant": "secondary",
+                              "type": "badge",
+                              "label": "positive"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "negative",
+                              "variant": "secondary"
+                            },
+                            {
+                              "variant": "secondary",
+                              "type": "badge",
+                              "label": "neutral"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "cancelEvent": "CLOSE",
+                          "type": "form-section",
+                          "mode": "create",
+                          "submitEvent": "SAVE",
+                          "fields": [
+                            "input"
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "failure": "AgentClassifierLoadFailed",
+                        "success": "AgentClassifierLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "tag"
+                                },
+                                {
+                                  "content": "AgentClassifier",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ]
+                            },
+                            {
+                              "action": "CLASSIFY",
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "tag",
+                              "label": "Open"
+                            }
+                          ],
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "type": "empty-state",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "tag"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentPlanner",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "AgentClassifierSaveFailed",
+                        "success": "AgentClassifierSaved"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "CLASSIFIED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "success": "AgentClassifierLoaded",
+                        "failure": "AgentClassifierLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "justify": "between",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "tag",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "AgentClassifier",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "type": "stack"
+                            },
+                            {
+                              "label": "Open",
+                              "action": "CLASSIFY",
+                              "variant": "primary",
+                              "icon": "tag",
+                              "type": "button"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state",
+                          "icon": "tag"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "PlannerCompletionFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentPlanner",
+          "emits": [
+            {
+              "event": "GENERATED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoaded",
+              "description": "Fired when AgentCompletion finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "response",
+                  "type": "string"
+                },
+                {
+                  "name": "provider",
+                  "type": "string"
+                },
+                {
+                  "name": "model",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoadFailed",
+              "description": "Fired when AgentCompletion fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GENERATED",
+                "name": "Generated"
+              },
+              {
+                "key": "AgentCompletionLoaded",
+                "name": "AgentCompletion loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "prompt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "response",
+                    "type": "string"
+                  },
+                  {
+                    "name": "provider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "model",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionLoadFailed",
+                "name": "AgentCompletion load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaved",
+                "name": "AgentCompletion saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaveFailed",
+                "name": "AgentCompletion save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.model",
+                    "claude-sonnet-4-20250514"
+                  ],
+                  [
+                    "set",
+                    "@entity.provider",
+                    "anthropic"
+                  ],
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "AgentCompletion"
+                                }
+                              ],
+                              "gap": "md",
+                              "type": "stack",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "type": "button",
+                              "action": "GENERATE",
+                              "variant": "primary",
+                              "icon": "sparkles",
+                              "label": "Open"
+                            }
+                          ],
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "justify": "between",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open",
+                          "icon": "sparkles"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "sparkles",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h3",
+                              "type": "typography",
+                              "content": "AgentCompletion"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "label": "@entity.provider",
+                              "type": "badge"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "@entity.model"
+                            }
+                          ]
+                        },
+                        {
+                          "cancelEvent": "CLOSE",
+                          "type": "form-section",
+                          "mode": "create",
+                          "fields": [
+                            "prompt"
+                          ],
+                          "submitEvent": "SAVE"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionLoaded",
+                        "failure": "AgentCompletionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "AgentCompletion",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "variant": "primary",
+                              "action": "GENERATE",
+                              "icon": "sparkles",
+                              "type": "button",
+                              "label": "Open"
+                            }
+                          ],
+                          "justify": "between",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "sparkles",
+                          "type": "empty-state",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentPlanner",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionSaved",
+                        "failure": "AgentCompletionSaveFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "GENERATED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "md",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "content": "AgentCompletion",
+                                  "type": "typography"
+                                }
+                              ],
+                              "gap": "md",
+                              "type": "stack",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "label": "Open",
+                              "type": "button",
+                              "action": "GENERATE",
+                              "icon": "sparkles",
+                              "variant": "primary"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "PlannerMemoryLifecycle",
+          "category": "interaction",
+          "linkedEntity": "AgentPlanner",
+          "emits": [
+            {
+              "event": "MEMORIZE",
+              "scope": "internal"
+            },
+            {
+              "event": "RECALL",
+              "scope": "internal"
+            },
+            {
+              "event": "DECAY",
+              "scope": "internal"
+            },
+            {
+              "event": "PIN",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "REINFORCE",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FORGET",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentMemoryLoaded",
+              "description": "Fired when the AgentMemory collection finishes loading; payload.data holds the list",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AgentMemory]"
+                }
+              ]
+            },
+            {
+              "event": "AgentMemoryLoadFailed",
+              "description": "Fired when the AgentMemory collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "AgentMemoryLoaded",
+                "name": "AgentMemory loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentMemory]"
+                  }
+                ]
+              },
+              {
+                "key": "AgentMemoryLoadFailed",
+                "name": "AgentMemory load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "MEMORIZE",
+                "name": "Memorize"
+              },
+              {
+                "key": "RECALL",
+                "name": "Recall"
+              },
+              {
+                "key": "DECAY",
+                "name": "Decay"
+              },
+              {
+                "key": "PIN",
+                "name": "Pin",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              },
+              {
+                "key": "REINFORCE",
+                "name": "Reinforce",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              },
+              {
+                "key": "FORGET",
+                "name": "Forget",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "failure": "AgentMemoryLoadFailed",
+                        "success": "AgentMemoryLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "type": "typography",
+                          "color": "muted",
+                          "content": "Loading memories…"
+                        }
+                      ],
+                      "gap": "md",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "AgentMemoryLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "className": "max-w-5xl mx-auto w-full",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "align": "center",
+                          "type": "stack",
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "brain"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "h2",
+                                  "content": "AgentMemory Manager"
+                                }
+                              ],
+                              "direction": "horizontal",
+                              "gap": "sm",
+                              "type": "stack",
+                              "align": "center"
+                            },
+                            {
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "type": "button",
+                                  "label": "Memorize",
+                                  "action": "MEMORIZE",
+                                  "variant": "primary",
+                                  "icon": "plus"
+                                },
+                                {
+                                  "action": "RECALL",
+                                  "variant": "secondary",
+                                  "type": "button",
+                                  "label": "Recall",
+                                  "icon": "search"
+                                },
+                                {
+                                  "variant": "ghost",
+                                  "type": "button",
+                                  "label": "Decay All",
+                                  "action": "DECAY",
+                                  "icon": "clock"
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "horizontal"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "name": "content",
+                              "icon": "brain",
+                              "variant": "h4",
+                              "label": "Content"
+                            },
+                            {
+                              "name": "category",
+                              "label": "Category",
+                              "variant": "badge"
+                            },
+                            {
+                              "name": "strength",
+                              "label": "Strength",
+                              "variant": "caption"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "event": "PIN",
+                              "label": "Pin",
+                              "variant": "ghost"
+                            },
+                            {
+                              "event": "REINFORCE",
+                              "label": "Reinforce",
+                              "variant": "ghost"
+                            },
+                            {
+                              "event": "FORGET",
+                              "variant": "danger",
+                              "label": "Forget"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "entity": "@payload.data"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "AgentMemoryLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "align": "center",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "color": "destructive",
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "h3",
+                          "content": "Failed to load memories"
+                        },
+                        {
+                          "content": "@payload.error",
+                          "variant": "body",
+                          "type": "typography",
+                          "color": "muted"
+                        },
+                        {
+                          "variant": "primary",
+                          "label": "Retry",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "action": "INIT"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "success": "AgentMemoryLoaded",
+                        "failure": "AgentMemoryLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentPlanner",
+                    {
+                      "emit": {
+                        "success": "AgentMemoryLoaded",
+                        "failure": "AgentMemoryLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "AgentPlannerPage",
+          "path": "/agentplanners",
+          "traits": [
+            {
+              "ref": "AgentPlannerPlanner"
+            },
+            {
+              "ref": "PlannerTaskInput"
+            },
+            {
+              "ref": "PlannerClassifierFlow"
+            },
+            {
+              "ref": "PlannerCompletionFlow"
+            },
+            {
+              "ref": "PlannerMemoryLifecycle"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

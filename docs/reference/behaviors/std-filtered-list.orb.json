@@ -1,0 +1,1225 @@
+{
+  "name": "std-filtered-list",
+  "version": "1.0.0",
+  "description": "std-filtered-list — molecule composing slim Search/Filter/Browse/Pagination atoms",
+  "orbitals": [
+    {
+      "name": "FilteredListItemOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-search",
+          "as": "Search"
+        },
+        {
+          "from": "std/behaviors/std-filter",
+          "as": "Filter"
+        },
+        {
+          "from": "std/behaviors/std-browse",
+          "as": "Browse"
+        },
+        {
+          "from": "std/behaviors/std-pagination",
+          "as": "Pagination"
+        }
+      ],
+      "entity": {
+        "name": "FilteredListItem",
+        "collection": "filteredlistitems",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "auxiliaryEntities": [
+        {
+          "name": "SearchResult",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "searchTerm",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "FilterTarget",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "field",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "PagedItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "currentPage",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "totalPages",
+              "type": "number",
+              "default": 1
+            }
+          ]
+        }
+      ],
+      "traits": [
+        {
+          "name": "FilteredItemSearch",
+          "category": "interaction",
+          "linkedEntity": "SearchResult",
+          "emits": [
+            {
+              "event": "SEARCH",
+              "payloadSchema": [
+                {
+                  "name": "searchTerm",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SEARCH",
+                "name": "Search",
+                "payloadSchema": [
+                  {
+                    "name": "searchTerm",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "event": "SEARCH",
+                      "placeholder": "Search filtered items…",
+                      "type": "search-input"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "SEARCH",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.searchTerm",
+                    "@payload.searchTerm"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "placeholder": "Search filtered items…",
+                      "event": "SEARCH",
+                      "type": "search-input"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "placeholder": {
+              "type": "string",
+              "default": "Search…"
+            },
+            "event": {
+              "type": "string",
+              "default": "SEARCH"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FilteredItemFilter",
+          "category": "interaction",
+          "linkedEntity": "FilterTarget",
+          "emits": [
+            {
+              "event": "FILTER",
+              "payloadSchema": [
+                {
+                  "name": "field",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "FILTER",
+                "name": "Filter",
+                "payloadSchema": [
+                  {
+                    "name": "field",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CLEAR_FILTERS",
+                "name": "Clear Filters"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilterTarget",
+                    {}
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "filter-group",
+                      "filters": [
+                        {
+                          "label": "Status",
+                          "field": "status",
+                          "filterType": "select",
+                          "options": [
+                            "active",
+                            "inactive",
+                            "pending"
+                          ]
+                        }
+                      ],
+                      "entity": "FilterTarget"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "FILTER",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.field",
+                    "@payload.field"
+                  ],
+                  [
+                    "set",
+                    "@entity.value",
+                    "@payload.value"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "entity": "FilterTarget",
+                      "filters": [
+                        {
+                          "label": "Status",
+                          "field": "status",
+                          "filterType": "select",
+                          "options": [
+                            "active",
+                            "inactive",
+                            "pending"
+                          ]
+                        }
+                      ],
+                      "type": "filter-group"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "CLEAR_FILTERS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.field",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.value",
+                    ""
+                  ],
+                  [
+                    "emit",
+                    "FILTER",
+                    {
+                      "value": "",
+                      "field": ""
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "entity": "FilterTarget",
+                      "filters": [
+                        {
+                          "label": "Status",
+                          "field": "status",
+                          "filterType": "select",
+                          "options": [
+                            "active",
+                            "inactive",
+                            "pending"
+                          ]
+                        }
+                      ],
+                      "type": "filter-group"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "filters": {
+              "type": "[object]",
+              "default": [
+                {
+                  "filterType": "select",
+                  "options": [
+                    "active",
+                    "inactive",
+                    "pending"
+                  ],
+                  "label": "Status",
+                  "field": "status"
+                }
+              ]
+            },
+            "event": {
+              "type": "string",
+              "default": "FILTER"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FilteredItemBrowse",
+          "category": "interaction",
+          "linkedEntity": "FilteredListItem",
+          "emits": [
+            {
+              "event": "BrowseItemLoaded",
+              "description": "Fired when the BrowseItem collection finishes loading; payload.data holds the (possibly paginated) slice and totalCount holds the unsliced filter total. totalCount is optional so compiled-path emitters that haven't been migrated yet still validate",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[BrowseItem]"
+                },
+                {
+                  "name": "totalCount",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "BrowseItemLoadFailed",
+              "description": "Fired when the BrowseItem collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "SEARCH",
+              "triggers": "REFETCH_QUERY",
+              "source": {
+                "kind": "trait",
+                "trait": "FilteredItemSearch"
+              }
+            },
+            {
+              "event": "FILTER",
+              "triggers": "REFETCH_FILTER",
+              "source": {
+                "kind": "trait",
+                "trait": "FilteredItemFilter"
+              }
+            },
+            {
+              "event": "PAGE",
+              "triggers": "REFETCH_PAGE",
+              "source": {
+                "kind": "trait",
+                "trait": "FilteredItemPagination"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "BrowseItemLoaded",
+                "name": "BrowseItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[BrowseItem]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "BrowseItemLoadFailed",
+                "name": "BrowseItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_QUERY",
+                "name": "Refetch Query",
+                "payloadSchema": [
+                  {
+                    "name": "searchTerm",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_FILTER",
+                "name": "Refetch Filter",
+                "payloadSchema": [
+                  {
+                    "name": "field",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_PAGE",
+                "name": "Refetch Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "limit": 3,
+                      "offset": 0
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "pageSize": 10,
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "name": "name",
+                              "variant": "h4"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Description",
+                              "name": "description"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "status",
+                              "label": "Status"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "BrowseItemLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "content": "@payload.error",
+                      "type": "typography",
+                      "color": "error",
+                      "variant": "caption"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "limit": 3,
+                      "offset": 0,
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_QUERY",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.searchTerm",
+                          ""
+                        ],
+                        [
+                          "str/includes",
+                          [
+                            "object/get",
+                            "@entity",
+                            "name"
+                          ],
+                          "@payload.searchTerm"
+                        ]
+                      ],
+                      "limit": 3,
+                      "offset": 0,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_FILTER",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "limit": 3,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "offset": 0,
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.value",
+                          ""
+                        ],
+                        [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "@payload.field"
+                          ],
+                          "@payload.value"
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_PAGE",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "offset": [
+                        "*",
+                        [
+                          "-",
+                          "@payload.page",
+                          1
+                        ],
+                        3
+                      ],
+                      "limit": 3
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "pageSize": 10,
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "name": "name",
+                              "variant": "h4"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Description",
+                              "name": "description"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "status",
+                              "label": "Status"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "limit": 3
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "displayPageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "fields": {
+              "type": "[object]",
+              "default": [
+                {
+                  "variant": "h4",
+                  "name": "name",
+                  "label": "Name"
+                },
+                {
+                  "variant": "caption",
+                  "name": "description",
+                  "label": "Description"
+                },
+                {
+                  "label": "Status",
+                  "name": "status",
+                  "variant": "badge"
+                }
+              ]
+            }
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "FilteredItemPagination",
+          "category": "interaction",
+          "linkedEntity": "PagedItem",
+          "emits": [
+            {
+              "event": "PAGE",
+              "payloadSchema": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "PagedItemLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[PagedItem]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "BrowseItemLoaded",
+              "triggers": "ITEMS_LOADED",
+              "source": {
+                "kind": "trait",
+                "trait": "FilteredItemBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PagedItemLoaded",
+                "name": "PagedItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[PagedItem]"
+                  }
+                ]
+              },
+              {
+                "key": "PAGE",
+                "name": "Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ITEMS_LOADED",
+                "name": "Items Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentPage",
+                    1
+                  ],
+                  [
+                    "set",
+                    "@entity.totalPages",
+                    1
+                  ],
+                  [
+                    "fetch",
+                    "PagedItem",
+                    {
+                      "emit": {
+                        "success": "PagedItemLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "currentPage": "@entity.currentPage",
+                      "totalPages": "@entity.totalPages",
+                      "pageChangeEvent": "PAGE",
+                      "showPageSize": false,
+                      "type": "pagination"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "PagedItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "pageChangeEvent": "PAGE",
+                      "totalPages": "@entity.totalPages",
+                      "type": "pagination",
+                      "currentPage": "@entity.currentPage",
+                      "showPageSize": false
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "PAGE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentPage",
+                    "@payload.page"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "totalPages": "@entity.totalPages",
+                      "currentPage": "@entity.currentPage",
+                      "type": "pagination",
+                      "showPageSize": false,
+                      "pageChangeEvent": "PAGE"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ITEMS_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.totalPages",
+                    [
+                      "math/ceil",
+                      [
+                        "/",
+                        "@payload.totalCount",
+                        3
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "totalPages": "@entity.totalPages",
+                      "currentPage": "@entity.currentPage",
+                      "showPageSize": false,
+                      "pageChangeEvent": "PAGE",
+                      "type": "pagination"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "event": {
+              "type": "string",
+              "default": "PAGE"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FilteredListLayout",
+          "category": "interaction",
+          "linkedEntity": "FilteredListItem",
+          "emits": [
+            {
+              "event": "FilteredListItemLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FilteredListItemLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[FilteredListItem]"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "composing",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "FilteredListItemLoadFailed",
+                "name": "FilteredListItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "FilteredListItemLoaded",
+                "name": "FilteredListItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[FilteredListItem]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "composing",
+                "to": "composing",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "FilteredListItem",
+                    {
+                      "emit": {
+                        "success": "FilteredListItemLoaded",
+                        "failure": "FilteredListItemLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "max-w-5xl mx-auto w-full",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "align": "center",
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "list",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Filtered List",
+                              "type": "typography"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            "@trait.FilteredItemSearch",
+                            "@trait.FilteredItemFilter"
+                          ],
+                          "direction": "horizontal"
+                        },
+                        "@trait.FilteredItemBrowse",
+                        "@trait.FilteredItemPagination"
+                      ],
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "FilteredList",
+          "path": "/filtered-list",
+          "traits": [
+            {
+              "ref": "FilteredListLayout"
+            },
+            {
+              "ref": "FilteredItemSearch"
+            },
+            {
+              "ref": "FilteredItemFilter"
+            },
+            {
+              "ref": "FilteredItemBrowse"
+            },
+            {
+              "ref": "FilteredItemPagination"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

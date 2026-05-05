@@ -1,5 +1,7 @@
 {
-  "name": "ConfirmActionOrbital",
+  "name": "std-confirmation",
+  "version": "1.0.0",
+  "description": "std-confirmation as a Function",
   "orbitals": [
     {
       "name": "ConfirmActionOrbital",
@@ -21,7 +23,13 @@
           },
           {
             "name": "status",
-            "type": "string"
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
           },
           {
             "name": "createdAt",
@@ -29,7 +37,8 @@
           },
           {
             "name": "pendingId",
-            "type": "string"
+            "type": "string",
+            "default": ""
           }
         ]
       },
@@ -38,6 +47,44 @@
           "name": "ConfirmActionConfirmation",
           "category": "interaction",
           "linkedEntity": "ConfirmAction",
+          "emits": [
+            {
+              "event": "CONFIRM",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CANCEL"
+            },
+            {
+              "event": "ConfirmActionLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ConfirmActionLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ConfirmAction]"
+                }
+              ]
+            }
+          ],
           "stateMachine": {
             "states": [
               {
@@ -50,19 +97,59 @@
             ],
             "events": [
               {
-                "key": "INIT"
+                "key": "INIT",
+                "name": "Initialize"
               },
               {
-                "key": "REQUEST"
+                "key": "REQUEST",
+                "name": "Request",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "ConfirmAction"
+                  }
+                ]
               },
               {
-                "key": "CONFIRM"
+                "key": "CONFIRM",
+                "name": "Confirm"
               },
               {
-                "key": "CANCEL"
+                "key": "CANCEL",
+                "name": "Cancel"
               },
               {
-                "key": "CLOSE"
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "ConfirmActionLoadFailed",
+                "name": "ConfirmAction load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ConfirmActionLoaded",
+                "name": "ConfirmAction loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ConfirmAction]"
+                  }
+                ]
               }
             ],
             "transitions": [
@@ -73,68 +160,12 @@
                 "effects": [
                   [
                     "fetch",
-                    "ConfirmAction"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
+                    "ConfirmAction",
                     {
-                      "direction": "vertical",
-                      "children": [
-                        {
-                          "align": "center",
-                          "direction": "horizontal",
-                          "gap": "md",
-                          "type": "stack",
-                          "children": [
-                            {
-                              "size": "lg",
-                              "name": "shield-check",
-                              "type": "icon"
-                            },
-                            {
-                              "variant": "h2",
-                              "content": "ConfirmActions",
-                              "type": "typography"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "itemActions": [
-                            {
-                              "event": "REQUEST",
-                              "label": "Confirm Action",
-                              "variant": "danger"
-                            }
-                          ],
-                          "type": "data-grid",
-                          "emptyIcon": "inbox",
-                          "entity": "ConfirmAction",
-                          "emptyTitle": "No confirmactions yet",
-                          "emptyDescription": "Items will appear here.",
-                          "renderItem": [
-                            "fn",
-                            "item",
-                            {
-                              "direction": "vertical",
-                              "children": [
-                                {
-                                  "type": "typography",
-                                  "variant": "h4",
-                                  "content": "@item.name"
-                                }
-                              ],
-                              "type": "stack",
-                              "gap": "sm"
-                            }
-                          ]
-                        }
-                      ],
-                      "type": "stack",
-                      "gap": "lg"
+                      "emit": {
+                        "failure": "ConfirmActionLoadFailed",
+                        "success": "ConfirmActionLoaded"
+                      }
                     }
                   ]
                 ]
@@ -143,6 +174,7 @@
                 "from": "idle",
                 "to": "confirming",
                 "event": "REQUEST",
+                "guard": "@payload.row",
                 "effects": [
                   [
                     "set",
@@ -150,65 +182,76 @@
                     "@payload.id"
                   ],
                   [
-                    "fetch",
-                    "ConfirmAction",
-                    {
-                      "id": "@payload.id"
-                    }
+                    "set",
+                    "@entity.name",
+                    "@payload.row.name"
                   ],
                   [
                     "render-ui",
                     "modal",
                     {
-                      "type": "stack",
                       "gap": "md",
+                      "type": "stack",
                       "direction": "vertical",
                       "children": [
                         {
                           "align": "center",
-                          "gap": "sm",
-                          "type": "stack",
-                          "direction": "horizontal",
                           "children": [
                             {
                               "type": "icon",
-                              "name": "alert-triangle",
-                              "size": "md"
+                              "name": "alert-triangle"
                             },
                             {
-                              "type": "typography",
                               "variant": "h3",
+                              "type": "typography",
                               "content": "Confirm Action"
                             }
-                          ]
+                          ],
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal"
                         },
                         {
                           "type": "divider"
                         },
                         {
-                          "variant": "danger",
                           "message": "Are you sure?",
-                          "type": "alert"
+                          "type": "alert",
+                          "variant": "error"
+                        },
+                        {
+                          "content": "@entity.name",
+                          "type": "typography",
+                          "variant": "h4"
+                        },
+                        {
+                          "content": "@entity.pendingId",
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "caption"
                         },
                         {
                           "children": [
                             {
-                              "variant": "ghost",
+                              "action": "CANCEL",
                               "type": "button",
-                              "label": "Cancel",
-                              "event": "CANCEL"
+                              "variant": "ghost",
+                              "label": "Cancel"
                             },
                             {
-                              "type": "button",
+                              "icon": "check",
                               "label": "Confirm",
-                              "variant": "danger",
-                              "event": "CONFIRM",
-                              "icon": "check"
+                              "actionPayload": {
+                                "id": "@payload.id"
+                              },
+                              "action": "CONFIRM",
+                              "type": "button",
+                              "variant": "danger"
                             }
                           ],
+                          "gap": "sm",
                           "direction": "horizontal",
                           "type": "stack",
-                          "gap": "sm",
                           "justify": "end"
                         }
                       ]
@@ -225,72 +268,6 @@
                     "render-ui",
                     "modal",
                     null
-                  ],
-                  [
-                    "fetch",
-                    "ConfirmAction"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "gap": "lg",
-                      "direction": "vertical",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "name": "shield-check",
-                              "size": "lg"
-                            },
-                            {
-                              "content": "ConfirmActions",
-                              "type": "typography",
-                              "variant": "h2"
-                            }
-                          ],
-                          "align": "center",
-                          "gap": "md",
-                          "type": "stack"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "itemActions": [
-                            {
-                              "label": "Confirm Action",
-                              "event": "REQUEST",
-                              "variant": "danger"
-                            }
-                          ],
-                          "renderItem": [
-                            "fn",
-                            "item",
-                            {
-                              "children": [
-                                {
-                                  "type": "typography",
-                                  "variant": "h4",
-                                  "content": "@item.name"
-                                }
-                              ],
-                              "type": "stack",
-                              "direction": "vertical",
-                              "gap": "sm"
-                            }
-                          ],
-                          "emptyDescription": "Items will appear here.",
-                          "entity": "ConfirmAction",
-                          "type": "data-grid",
-                          "emptyIcon": "inbox",
-                          "emptyTitle": "No confirmactions yet"
-                        }
-                      ]
-                    }
                   ]
                 ]
               },
@@ -303,72 +280,6 @@
                     "render-ui",
                     "modal",
                     null
-                  ],
-                  [
-                    "fetch",
-                    "ConfirmAction"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "type": "stack",
-                      "gap": "lg",
-                      "children": [
-                        {
-                          "type": "stack",
-                          "gap": "md",
-                          "direction": "horizontal",
-                          "align": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "name": "shield-check",
-                              "size": "lg"
-                            },
-                            {
-                              "content": "ConfirmActions",
-                              "variant": "h2",
-                              "type": "typography"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "emptyDescription": "Items will appear here.",
-                          "itemActions": [
-                            {
-                              "label": "Confirm Action",
-                              "event": "REQUEST",
-                              "variant": "danger"
-                            }
-                          ],
-                          "renderItem": [
-                            "fn",
-                            "item",
-                            {
-                              "children": [
-                                {
-                                  "type": "typography",
-                                  "variant": "h4",
-                                  "content": "@item.name"
-                                }
-                              ],
-                              "type": "stack",
-                              "direction": "vertical",
-                              "gap": "sm"
-                            }
-                          ],
-                          "entity": "ConfirmAction",
-                          "emptyIcon": "inbox",
-                          "type": "data-grid",
-                          "emptyTitle": "No confirmactions yet"
-                        }
-                      ],
-                      "direction": "vertical"
-                    }
                   ]
                 ]
               },
@@ -381,82 +292,35 @@
                     "render-ui",
                     "modal",
                     null
-                  ],
-                  [
-                    "fetch",
-                    "ConfirmAction"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "direction": "vertical",
-                      "children": [
-                        {
-                          "gap": "md",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "size": "lg",
-                              "name": "shield-check"
-                            },
-                            {
-                              "type": "typography",
-                              "content": "ConfirmActions",
-                              "variant": "h2"
-                            }
-                          ],
-                          "direction": "horizontal",
-                          "type": "stack",
-                          "align": "center"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "itemActions": [
-                            {
-                              "event": "REQUEST",
-                              "variant": "danger",
-                              "label": "Confirm Action"
-                            }
-                          ],
-                          "emptyIcon": "inbox",
-                          "type": "data-grid",
-                          "renderItem": [
-                            "fn",
-                            "item",
-                            {
-                              "gap": "sm",
-                              "type": "stack",
-                              "children": [
-                                {
-                                  "type": "typography",
-                                  "variant": "h4",
-                                  "content": "@item.name"
-                                }
-                              ],
-                              "direction": "vertical"
-                            }
-                          ],
-                          "entity": "ConfirmAction",
-                          "emptyTitle": "No confirmactions yet",
-                          "emptyDescription": "Items will appear here."
-                        }
-                      ],
-                      "type": "stack",
-                      "gap": "lg"
-                    }
                   ]
                 ]
               }
             ]
-          }
+          },
+          "config": {
+            "confirmLabel": {
+              "type": "string",
+              "default": "Confirm"
+            },
+            "title": {
+              "type": "string",
+              "default": "Confirm Action"
+            },
+            "alertMessage": {
+              "type": "string",
+              "default": "Are you sure?"
+            },
+            "icon": {
+              "type": "string",
+              "default": "alert-triangle"
+            }
+          },
+          "scope": "instance"
         }
       ],
       "pages": [
         {
-          "name": "ConfirmactionsConfirm",
+          "name": "ConfirmActionConfirmPage",
           "path": "/confirmactions/confirm",
           "traits": [
             {

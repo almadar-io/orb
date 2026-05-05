@@ -1,5 +1,7 @@
 {
-  "name": "PagedItemOrbital",
+  "name": "std-pagination",
+  "version": "1.0.0",
+  "description": "std-pagination — single primitive: pagination control. PAGE accepts the Pagination component's `{page}` emit; ITEMS_LOADED accepts an upstream `{data:[object]}` payload and derives totalPages = ceil(len/pageSize). Molecules wire `BrowseItemLoaded -> ITEMS_LOADED` to keep it in lockstep with the data hub.",
   "orbitals": [
     {
       "name": "PagedItemOrbital",
@@ -9,23 +11,18 @@
         "fields": [
           {
             "name": "id",
-            "type": "string"
+            "type": "string",
+            "required": true
           },
           {
-            "name": "name",
-            "type": "string"
+            "name": "currentPage",
+            "type": "number",
+            "default": 1
           },
           {
-            "name": "description",
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "createdAt",
-            "type": "string"
+            "name": "totalPages",
+            "type": "number",
+            "default": 1
           }
         ]
       },
@@ -34,6 +31,27 @@
           "name": "PagedItemPagination",
           "category": "interaction",
           "linkedEntity": "PagedItem",
+          "emits": [
+            {
+              "event": "PAGE",
+              "payloadSchema": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "PagedItemLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[PagedItem]"
+                }
+              ]
+            }
+          ],
           "stateMachine": {
             "states": [
               {
@@ -43,10 +61,43 @@
             ],
             "events": [
               {
-                "key": "INIT"
+                "key": "INIT",
+                "name": "Initialize"
               },
               {
-                "key": "PAGE"
+                "key": "PagedItemLoaded",
+                "name": "PagedItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[PagedItem]"
+                  }
+                ]
+              },
+              {
+                "key": "PAGE",
+                "name": "Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ITEMS_LOADED",
+                "name": "Items Loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
               }
             ],
             "transitions": [
@@ -56,83 +107,51 @@
                 "event": "INIT",
                 "effects": [
                   [
+                    "set",
+                    "@entity.currentPage",
+                    1
+                  ],
+                  [
+                    "set",
+                    "@entity.totalPages",
+                    1
+                  ],
+                  [
                     "fetch",
-                    "PagedItem"
+                    "PagedItem",
+                    {
+                      "emit": {
+                        "success": "PagedItemLoaded"
+                      }
+                    }
                   ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "gap": "lg",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "gap": "sm",
-                          "justify": "space-between",
-                          "children": [
-                            {
-                              "align": "center",
-                              "children": [
-                                {
-                                  "name": "list",
-                                  "size": "lg",
-                                  "type": "icon"
-                                },
-                                {
-                                  "variant": "h2",
-                                  "content": "PagedItems",
-                                  "type": "typography"
-                                }
-                              ],
-                              "direction": "horizontal",
-                              "type": "stack",
-                              "gap": "sm"
-                            }
-                          ],
-                          "direction": "horizontal",
-                          "type": "stack",
-                          "align": "center"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "emptyDescription": "Add pageditems to see them here.",
-                          "entity": "PagedItem",
-                          "type": "data-grid",
-                          "emptyTitle": "No pageditems yet",
-                          "columns": [
-                            {
-                              "label": "Name",
-                              "variant": "h4",
-                              "name": "name"
-                            },
-                            {
-                              "name": "description",
-                              "label": "Description",
-                              "variant": "caption"
-                            },
-                            {
-                              "variant": "badge",
-                              "name": "status",
-                              "label": "Status"
-                            }
-                          ],
-                          "emptyIcon": "inbox"
-                        },
-                        {
-                          "showPageSize": false,
-                          "currentPage": 1.0,
-                          "type": "pagination",
-                          "onPageChange": "PAGE",
-                          "totalPages": 10.0
-                        },
-                        {
-                          "type": "infinite-scroll-sentinel",
-                          "loadMoreEvent": "PAGE"
-                        }
-                      ],
-                      "direction": "vertical"
+                      "pageChangeEvent": "PAGE",
+                      "totalPages": "@entity.totalPages",
+                      "type": "pagination",
+                      "showPageSize": false,
+                      "currentPage": "@entity.currentPage"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "PagedItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "totalPages": "@entity.totalPages",
+                      "pageChangeEvent": "PAGE",
+                      "type": "pagination",
+                      "currentPage": "@entity.currentPage",
+                      "showPageSize": false
                     }
                   ]
                 ]
@@ -143,90 +162,71 @@
                 "event": "PAGE",
                 "effects": [
                   [
-                    "fetch",
-                    "PagedItem"
+                    "set",
+                    "@entity.currentPage",
+                    "@payload.page"
                   ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "direction": "vertical",
-                      "gap": "lg",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "align": "center",
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "name": "list",
-                                  "size": "lg"
-                                },
-                                {
-                                  "type": "typography",
-                                  "variant": "h2",
-                                  "content": "PagedItems"
-                                }
-                              ],
-                              "type": "stack",
-                              "gap": "sm",
-                              "direction": "horizontal",
-                              "align": "center"
-                            }
-                          ],
-                          "justify": "space-between",
-                          "type": "stack",
-                          "gap": "sm"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "emptyTitle": "No pageditems yet",
-                          "entity": "PagedItem",
-                          "emptyDescription": "Add pageditems to see them here.",
-                          "type": "data-grid",
-                          "emptyIcon": "inbox",
-                          "columns": [
-                            {
-                              "label": "Name",
-                              "name": "name",
-                              "variant": "h4"
-                            },
-                            {
-                              "name": "description",
-                              "variant": "caption",
-                              "label": "Description"
-                            },
-                            {
-                              "name": "status",
-                              "label": "Status",
-                              "variant": "badge"
-                            }
-                          ]
-                        },
-                        {
-                          "onPageChange": "PAGE",
-                          "type": "pagination",
-                          "showPageSize": false,
-                          "totalPages": 10.0,
-                          "currentPage": "@payload.page"
-                        }
+                      "pageChangeEvent": "PAGE",
+                      "currentPage": "@entity.currentPage",
+                      "totalPages": "@entity.totalPages",
+                      "type": "pagination",
+                      "showPageSize": false
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ITEMS_LOADED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.totalPages",
+                    [
+                      "math/ceil",
+                      [
+                        "/",
+                        "@payload.totalCount",
+                        10
                       ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "currentPage": "@entity.currentPage",
+                      "totalPages": "@entity.totalPages",
+                      "showPageSize": false,
+                      "pageChangeEvent": "PAGE",
+                      "type": "pagination"
                     }
                   ]
                 ]
               }
             ]
-          }
+          },
+          "config": {
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "event": {
+              "type": "string",
+              "default": "PAGE"
+            }
+          },
+          "scope": "instance"
         }
       ],
       "pages": [
         {
-          "name": "PageditemsPaginated",
+          "name": "PagedItemPaginationPage",
           "path": "/pageditems/paginated",
           "traits": [
             {

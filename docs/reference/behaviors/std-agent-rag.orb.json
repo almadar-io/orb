@@ -1,0 +1,2479 @@
+{
+  "name": "std-agent-rag",
+  "version": "1.0.0",
+  "description": "std-agent-rag as a Function",
+  "orbitals": [
+    {
+      "name": "AgentRagOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-agent-completion",
+          "as": "AgentCompletion"
+        },
+        {
+          "from": "std/behaviors/std-agent-memory",
+          "as": "AgentMemory"
+        },
+        {
+          "from": "std/behaviors/std-agent-search",
+          "as": "AgentSearch"
+        },
+        {
+          "from": "std/behaviors/std-tabs",
+          "as": "Tabs"
+        }
+      ],
+      "entity": {
+        "name": "AgentRag",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "context",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "response",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "memoryHits",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "searchHits",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "content",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "scope",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "strength",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "name": "pinned",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "language",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "resultCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "results",
+            "type": "string",
+            "default": "[]"
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "provider",
+            "type": "string",
+            "default": "anthropic"
+          },
+          {
+            "name": "model",
+            "type": "string",
+            "default": "claude-sonnet-4-20250514"
+          },
+          {
+            "name": "activeTab",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "items",
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "lastAccessedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "notificationType",
+            "type": "string",
+            "default": "info",
+            "values": [
+              "info",
+              "success",
+              "warning",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "AgentRagRag",
+          "category": "interaction",
+          "linkedEntity": "AgentRag",
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "retrieving"
+              },
+              {
+                "name": "generating"
+              },
+              {
+                "name": "completed"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              },
+              {
+                "key": "RETRIEVAL_DONE",
+                "name": "Retrieval Done",
+                "payloadSchema": [
+                  {
+                    "name": "context",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "memoryHits",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "searchHits",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GENERATION_DONE",
+                "name": "Generation Done",
+                "payloadSchema": [
+                  {
+                    "name": "response",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.query",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "brain"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "RAG Pipeline",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "gap": "md",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "Enter a query to retrieve context and generate a response"
+                                },
+                                {
+                                  "submitEvent": "GENERATE",
+                                  "entity": "@entity",
+                                  "fields": [
+                                    "query"
+                                  ],
+                                  "mode": "edit",
+                                  "type": "form-section"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "retrieving",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "retrieving"
+                  ],
+                  [
+                    "agent/recall",
+                    "@entity.query",
+                    5
+                  ],
+                  [
+                    "agent/search-code",
+                    "@entity.query"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "search"
+                        },
+                        {
+                          "content": "Retrieving context...",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "justify": "center",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "Recalling memories"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Searching code"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "retrieving",
+                "to": "generating",
+                "event": "RETRIEVAL_DONE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.context",
+                    "@payload.context"
+                  ],
+                  [
+                    "set",
+                    "@entity.memoryHits",
+                    "@payload.memoryHits"
+                  ],
+                  [
+                    "set",
+                    "@entity.searchHits",
+                    "@payload.searchHits"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "generating"
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Context:\n",
+                      "@entity.context",
+                      "\n\nQuery: ",
+                      "@entity.query",
+                      "\n\nProvide a comprehensive answer based on the retrieved context."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "cpu"
+                        },
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Generating response..."
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.memoryHits"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "@entity.searchHits"
+                            }
+                          ],
+                          "gap": "md",
+                          "justify": "center",
+                          "type": "stack"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "retrieving",
+                "to": "idle",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "alert-triangle"
+                        },
+                        {
+                          "content": "RAG Pipeline Error",
+                          "type": "typography",
+                          "variant": "h2"
+                        },
+                        {
+                          "message": "@entity.error",
+                          "type": "alert",
+                          "variant": "error"
+                        },
+                        {
+                          "label": "Try Again",
+                          "icon": "rotate-ccw",
+                          "variant": "primary",
+                          "action": "RESET",
+                          "type": "button"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "generating",
+                "to": "completed",
+                "event": "GENERATION_DONE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.response",
+                    "@payload.response"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "completed"
+                  ],
+                  [
+                    "agent/memorize",
+                    [
+                      "str/concat",
+                      "RAG query: ",
+                      "@entity.query"
+                    ],
+                    "pattern-affinity"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "align": "center",
+                          "justify": "between",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "check-circle",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "RAG Complete",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "align": "center",
+                              "type": "stack"
+                            },
+                            {
+                              "type": "button",
+                              "label": "New Query",
+                              "action": "RESET",
+                              "variant": "ghost",
+                              "icon": "rotate-ccw"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "simple-grid",
+                          "cols": 2,
+                          "children": [
+                            {
+                              "label": "Memory Hits",
+                              "value": "@entity.memoryHits",
+                              "type": "stat-display",
+                              "icon": "brain"
+                            },
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.searchHits",
+                              "icon": "code",
+                              "label": "Code Hits"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "variant": "caption",
+                                  "content": "Query",
+                                  "type": "typography"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "@entity.query",
+                                  "variant": "body"
+                                },
+                                {
+                                  "type": "divider"
+                                },
+                                {
+                                  "content": "Response",
+                                  "variant": "caption",
+                                  "type": "typography"
+                                },
+                                {
+                                  "content": "@entity.response",
+                                  "variant": "body",
+                                  "type": "typography"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "content": "Retrieved Context",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "content": "@entity.context",
+                                  "variant": "body",
+                                  "type": "typography"
+                                }
+                              ],
+                              "gap": "sm"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "generating",
+                "to": "idle",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "variant": "h2",
+                          "type": "typography",
+                          "content": "RAG Pipeline Error"
+                        },
+                        {
+                          "variant": "error",
+                          "message": "@entity.error",
+                          "type": "alert"
+                        },
+                        {
+                          "action": "RESET",
+                          "variant": "primary",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "label": "Try Again"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "align": "center",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "completed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.response",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.context",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.memoryHits",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.searchHits",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "align": "center",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "brain",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "RAG Pipeline",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "body",
+                                  "content": "Enter a query to retrieve context and generate a response"
+                                },
+                                {
+                                  "fields": [
+                                    "query"
+                                  ],
+                                  "entity": "@entity",
+                                  "submitEvent": "GENERATE",
+                                  "type": "form-section",
+                                  "mode": "edit"
+                                }
+                              ],
+                              "gap": "md",
+                              "direction": "vertical"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "RagTabs",
+          "category": "interaction",
+          "linkedEntity": "AgentRag",
+          "emits": [
+            {
+              "event": "TAB_CHANGED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "tabId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TAB_CHANGED",
+                "name": "Tab Changed",
+                "payloadSchema": [
+                  {
+                    "name": "tabId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.items",
+                    [
+                      {
+                        "id": "overview",
+                        "icon": "info",
+                        "label": "Overview"
+                      },
+                      {
+                        "icon": "list",
+                        "id": "details",
+                        "label": "Details"
+                      },
+                      {
+                        "id": "settings",
+                        "label": "Settings",
+                        "icon": "settings"
+                      }
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.activeTab",
+                    "overview"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "items": "@entity.items",
+                      "variant": "default",
+                      "type": "tabs",
+                      "activeTab": "@entity.activeTab",
+                      "orientation": "horizontal",
+                      "tabChangeEvent": "TAB_CHANGED"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "TAB_CHANGED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.items",
+                    [
+                      {
+                        "id": "overview",
+                        "icon": "info",
+                        "label": "Overview"
+                      },
+                      {
+                        "icon": "list",
+                        "id": "details",
+                        "label": "Details"
+                      },
+                      {
+                        "id": "settings",
+                        "label": "Settings",
+                        "icon": "settings"
+                      }
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.activeTab",
+                    "@payload.tabId"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "tabs",
+                      "orientation": "horizontal",
+                      "variant": "default",
+                      "tabChangeEvent": "TAB_CHANGED",
+                      "items": "@entity.items",
+                      "activeTab": "@entity.activeTab"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "variant": {
+              "type": "string",
+              "default": "default",
+              "values": [
+                "default",
+                "pills",
+                "underline"
+              ]
+            },
+            "orientation": {
+              "type": "string",
+              "default": "horizontal",
+              "values": [
+                "horizontal",
+                "vertical"
+              ]
+            },
+            "defaultTab": {
+              "type": "string",
+              "default": "overview"
+            },
+            "tabs": {
+              "type": "[object]",
+              "default": [
+                {
+                  "id": "overview",
+                  "icon": "info",
+                  "label": "Overview"
+                },
+                {
+                  "icon": "list",
+                  "id": "details",
+                  "label": "Details"
+                },
+                {
+                  "id": "settings",
+                  "label": "Settings",
+                  "icon": "settings"
+                }
+              ]
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "RagMemoryLifecycle",
+          "category": "interaction",
+          "linkedEntity": "AgentRag",
+          "emits": [
+            {
+              "event": "MEMORIZE",
+              "scope": "internal"
+            },
+            {
+              "event": "RECALL",
+              "scope": "internal"
+            },
+            {
+              "event": "DECAY",
+              "scope": "internal"
+            },
+            {
+              "event": "PIN",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "REINFORCE",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FORGET",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string"
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.content",
+                  "type": "string"
+                },
+                {
+                  "name": "row.category",
+                  "type": "string"
+                },
+                {
+                  "name": "row.strength",
+                  "type": "number"
+                },
+                {
+                  "name": "row.pinned",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.scope",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastAccessedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentMemoryLoaded",
+              "description": "Fired when the AgentMemory collection finishes loading; payload.data holds the list",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AgentMemory]"
+                }
+              ]
+            },
+            {
+              "event": "AgentMemoryLoadFailed",
+              "description": "Fired when the AgentMemory collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "AgentMemoryLoaded",
+                "name": "AgentMemory loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentMemory]"
+                  }
+                ]
+              },
+              {
+                "key": "AgentMemoryLoadFailed",
+                "name": "AgentMemory load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "MEMORIZE",
+                "name": "Memorize"
+              },
+              {
+                "key": "RECALL",
+                "name": "Recall"
+              },
+              {
+                "key": "DECAY",
+                "name": "Decay"
+              },
+              {
+                "key": "PIN",
+                "name": "Pin",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              },
+              {
+                "key": "REINFORCE",
+                "name": "Reinforce",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              },
+              {
+                "key": "FORGET",
+                "name": "Forget",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentMemory"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "failure": "AgentMemoryLoadFailed",
+                        "success": "AgentMemoryLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "variant": "caption",
+                          "content": "Loading memories…",
+                          "type": "typography"
+                        }
+                      ],
+                      "className": "py-12",
+                      "gap": "md",
+                      "align": "center",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "AgentMemoryLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "lg",
+                      "className": "max-w-5xl mx-auto w-full",
+                      "children": [
+                        {
+                          "justify": "between",
+                          "gap": "md",
+                          "type": "stack",
+                          "align": "center",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "brain",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "AgentMemory Manager"
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "align": "center",
+                              "gap": "sm"
+                            },
+                            {
+                              "type": "stack",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "variant": "primary",
+                                  "label": "Memorize",
+                                  "icon": "plus",
+                                  "type": "button",
+                                  "action": "MEMORIZE"
+                                },
+                                {
+                                  "label": "Recall",
+                                  "icon": "search",
+                                  "type": "button",
+                                  "variant": "secondary",
+                                  "action": "RECALL"
+                                },
+                                {
+                                  "variant": "ghost",
+                                  "action": "DECAY",
+                                  "label": "Decay All",
+                                  "icon": "clock",
+                                  "type": "button"
+                                }
+                              ],
+                              "direction": "horizontal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "icon": "brain",
+                              "variant": "h4",
+                              "label": "Content",
+                              "name": "content"
+                            },
+                            {
+                              "name": "category",
+                              "variant": "badge",
+                              "label": "Category"
+                            },
+                            {
+                              "label": "Strength",
+                              "variant": "caption",
+                              "name": "strength"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "variant": "ghost",
+                              "label": "Pin",
+                              "event": "PIN"
+                            },
+                            {
+                              "variant": "ghost",
+                              "event": "REINFORCE",
+                              "label": "Reinforce"
+                            },
+                            {
+                              "label": "Forget",
+                              "event": "FORGET",
+                              "variant": "danger"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "AgentMemoryLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "align": "center",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "name": "alert-triangle",
+                          "color": "destructive",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Failed to load memories",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "variant": "body",
+                          "type": "typography",
+                          "content": "@payload.error",
+                          "color": "muted"
+                        },
+                        {
+                          "action": "INIT",
+                          "type": "button",
+                          "icon": "rotate-ccw",
+                          "label": "Retry",
+                          "variant": "primary"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "failure": "AgentMemoryLoadFailed",
+                        "success": "AgentMemoryLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "success": "AgentMemoryLoaded",
+                        "failure": "AgentMemoryLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "RagSearchLifecycle",
+          "category": "interaction",
+          "linkedEntity": "AgentRag",
+          "emits": [
+            {
+              "event": "SEARCH",
+              "scope": "internal"
+            },
+            {
+              "event": "CLEAR",
+              "scope": "internal"
+            },
+            {
+              "event": "AgentSearchLoaded",
+              "description": "Fired when AgentSearch finishes loading; payload.data holds the list",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AgentSearch]"
+                }
+              ]
+            },
+            {
+              "event": "AgentSearchLoadFailed",
+              "description": "Fired when AgentSearch fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "AgentSearchLoaded",
+                "name": "AgentSearch loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentSearch]"
+                  }
+                ]
+              },
+              {
+                "key": "AgentSearchLoadFailed",
+                "name": "AgentSearch load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SEARCH",
+                "name": "Search"
+              },
+              {
+                "key": "CLEAR",
+                "name": "Clear"
+              },
+              {
+                "key": "VIEW",
+                "name": "View",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentSearch"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "success": "AgentSearchLoaded",
+                        "failure": "AgentSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "md",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "content": "Loading searches…",
+                          "variant": "caption",
+                          "type": "typography"
+                        }
+                      ],
+                      "align": "center",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "AgentSearchLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "max-w-5xl mx-auto w-full",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "name": "search",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "AgentSearch",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "type": "stack",
+                              "align": "center",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "direction": "horizontal",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "action": "SEARCH",
+                                  "type": "button",
+                                  "label": "Search",
+                                  "icon": "search",
+                                  "variant": "primary"
+                                },
+                                {
+                                  "variant": "ghost",
+                                  "icon": "x",
+                                  "type": "button",
+                                  "label": "Clear",
+                                  "action": "CLEAR"
+                                }
+                              ],
+                              "gap": "sm"
+                            }
+                          ],
+                          "align": "center",
+                          "type": "stack",
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "label": "Query",
+                              "icon": "search",
+                              "variant": "h4",
+                              "name": "query"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "language",
+                              "colorMap": {
+                                "archived": "neutral",
+                                "done": "success",
+                                "completed": "success",
+                                "draft": "warning",
+                                "active": "success",
+                                "pending": "warning",
+                                "error": "destructive",
+                                "cancelled": "destructive",
+                                "disabled": "neutral",
+                                "failed": "destructive",
+                                "inactive": "neutral",
+                                "scheduled": "warning"
+                              },
+                              "label": "Language"
+                            },
+                            {
+                              "label": "Result Count",
+                              "variant": "caption",
+                              "name": "resultCount"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "event": "VIEW",
+                              "variant": "ghost",
+                              "label": "View"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "AgentSearchLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "className": "py-12",
+                      "type": "stack",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "color": "destructive",
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "h3",
+                          "content": "Failed to load searches"
+                        },
+                        {
+                          "content": "@payload.error",
+                          "color": "muted",
+                          "variant": "body",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "icon": "rotate-ccw",
+                          "action": "INIT",
+                          "label": "Retry"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "failure": "AgentSearchLoadFailed",
+                        "success": "AgentSearchLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "success": "AgentSearchLoaded",
+                        "failure": "AgentSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "RagCompletionFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentRag",
+          "emits": [
+            {
+              "event": "GENERATED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoaded",
+              "description": "Fired when AgentCompletion finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "response",
+                  "type": "string"
+                },
+                {
+                  "name": "provider",
+                  "type": "string"
+                },
+                {
+                  "name": "model",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoadFailed",
+              "description": "Fired when AgentCompletion fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GENERATED",
+                "name": "Generated"
+              },
+              {
+                "key": "AgentCompletionLoaded",
+                "name": "AgentCompletion loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "prompt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "response",
+                    "type": "string"
+                  },
+                  {
+                    "name": "provider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "model",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionLoadFailed",
+                "name": "AgentCompletion load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaved",
+                "name": "AgentCompletion saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaveFailed",
+                "name": "AgentCompletion save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.model",
+                    "claude-sonnet-4-20250514"
+                  ],
+                  [
+                    "set",
+                    "@entity.provider",
+                    "anthropic"
+                  ],
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "children": [
+                            {
+                              "direction": "horizontal",
+                              "gap": "md",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "AgentCompletion",
+                                  "variant": "h2",
+                                  "type": "typography"
+                                }
+                              ]
+                            },
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "icon": "sparkles",
+                              "action": "GENERATE",
+                              "label": "Open"
+                            }
+                          ],
+                          "gap": "md",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state",
+                          "title": "Nothing open"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "sparkles"
+                            },
+                            {
+                              "content": "AgentCompletion",
+                              "type": "typography",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.provider"
+                            },
+                            {
+                              "label": "@entity.model",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "fields": [
+                            "prompt"
+                          ],
+                          "submitEvent": "SAVE",
+                          "cancelEvent": "CLOSE",
+                          "mode": "create",
+                          "type": "form-section"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionLoaded",
+                        "failure": "AgentCompletionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "AgentCompletion"
+                                }
+                              ]
+                            },
+                            {
+                              "variant": "primary",
+                              "action": "GENERATE",
+                              "icon": "sparkles",
+                              "label": "Open",
+                              "type": "button"
+                            }
+                          ],
+                          "gap": "md",
+                          "justify": "between",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "type": "empty-state",
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay."
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentRag",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionSaved",
+                        "failure": "AgentCompletionSaveFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "GENERATED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentRag",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "AgentCompletion",
+                                  "variant": "h2",
+                                  "type": "typography"
+                                }
+                              ],
+                              "gap": "md",
+                              "direction": "horizontal"
+                            },
+                            {
+                              "type": "button",
+                              "icon": "sparkles",
+                              "action": "GENERATE",
+                              "label": "Open",
+                              "variant": "primary"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "AgentRagPage",
+          "path": "/agentrags",
+          "traits": [
+            {
+              "ref": "AgentRagRag"
+            },
+            {
+              "ref": "RagTabs"
+            },
+            {
+              "ref": "RagMemoryLifecycle"
+            },
+            {
+              "ref": "RagSearchLifecycle"
+            },
+            {
+              "ref": "RagCompletionFlow"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

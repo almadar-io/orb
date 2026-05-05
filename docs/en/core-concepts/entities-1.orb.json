@@ -1,5 +1,7 @@
 {
-  "name": "BrowseItemOrbital",
+  "name": "std-browse",
+  "version": "1.0.0",
+  "description": "std-browse as a Function — single primitive: data-grid",
   "orbitals": [
     {
       "name": "BrowseItemOrbital",
@@ -9,11 +11,13 @@
         "fields": [
           {
             "name": "id",
-            "type": "string"
+            "type": "string",
+            "required": true
           },
           {
             "name": "name",
-            "type": "string"
+            "type": "string",
+            "required": true
           },
           {
             "name": "description",
@@ -21,7 +25,13 @@
           },
           {
             "name": "status",
-            "type": "string"
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
           },
           {
             "name": "createdAt",
@@ -34,125 +44,437 @@
           "name": "BrowseItemBrowse",
           "category": "interaction",
           "linkedEntity": "BrowseItem",
+          "emits": [
+            {
+              "event": "BrowseItemLoaded",
+              "description": "Fired when the BrowseItem collection finishes loading; payload.data holds the (possibly paginated) slice and totalCount holds the unsliced filter total. totalCount is optional so compiled-path emitters that haven't been migrated yet still validate",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[BrowseItem]"
+                },
+                {
+                  "name": "totalCount",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "BrowseItemLoadFailed",
+              "description": "Fired when the BrowseItem collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
           "stateMachine": {
             "states": [
               {
-                "name": "browsing",
+                "name": "loading",
                 "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
               }
             ],
             "events": [
               {
-                "key": "INIT"
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "BrowseItemLoaded",
+                "name": "BrowseItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[BrowseItem]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "BrowseItemLoadFailed",
+                "name": "BrowseItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_QUERY",
+                "name": "Refetch Query",
+                "payloadSchema": [
+                  {
+                    "name": "searchTerm",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_FILTER",
+                "name": "Refetch Filter",
+                "payloadSchema": [
+                  {
+                    "name": "field",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_PAGE",
+                "name": "Refetch Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
               }
             ],
             "transitions": [
               {
-                "from": "browsing",
-                "to": "browsing",
+                "from": "loading",
+                "to": "loading",
                 "event": "INIT",
                 "effects": [
                   [
-                    "ref",
-                    "BrowseItem"
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "offset": 0,
+                      "limit": 10,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      }
+                    }
                   ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "className": "max-w-5xl mx-auto w-full",
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
                       "type": "stack",
-                      "gap": "lg",
                       "direction": "vertical",
                       "children": [
                         {
-                          "align": "center",
-                          "gap": "md",
-                          "justify": "space-between",
-                          "children": [
+                          "pageSize": 10,
+                          "fields": [
                             {
-                              "type": "stack",
-                              "align": "center",
-                              "gap": "sm",
-                              "children": [
-                                {
-                                  "size": "lg",
-                                  "name": "list",
-                                  "type": "icon"
-                                },
-                                {
-                                  "variant": "h2",
-                                  "type": "typography",
-                                  "content": "BrowseItems"
-                                }
-                              ],
-                              "direction": "horizontal"
-                            }
-                          ],
-                          "direction": "horizontal",
-                          "type": "stack"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "emptyIcon": "inbox",
-                          "emptyTitle": "No browseitems yet",
-                          "columns": [
-                            {
-                              "icon": "list",
-                              "name": "name",
                               "variant": "h4",
-                              "label": "Name"
+                              "label": "Name",
+                              "name": "name"
                             },
                             {
-                              "label": "Description",
-                              "colorMap": {
-                                "archived": "neutral",
-                                "completed": "success",
-                                "draft": "warning",
-                                "disabled": "neutral",
-                                "failed": "destructive",
-                                "done": "success",
-                                "error": "destructive",
-                                "scheduled": "warning",
-                                "inactive": "neutral",
-                                "pending": "warning",
-                                "cancelled": "destructive",
-                                "active": "success"
-                              },
+                              "variant": "caption",
+                              "name": "description",
+                              "label": "Description"
+                            },
+                            {
                               "variant": "badge",
-                              "name": "description"
-                            },
-                            {
-                              "name": "status",
                               "label": "Status",
-                              "variant": "caption"
+                              "name": "status"
                             }
                           ],
-                          "emptyDescription": "Create your first browseitem to get started.",
-                          "type": "data-grid",
-                          "entity": "BrowseItem"
-                        },
-                        {
-                          "icon": "plus",
-                          "event": "INIT",
-                          "type": "floating-action-button",
-                          "tooltip": "Create",
-                          "label": "Create"
+                          "entity": "@payload.data",
+                          "type": "data-grid"
                         }
                       ]
                     }
                   ]
                 ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "BrowseItemLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "typography",
+                      "content": "@payload.error",
+                      "color": "error",
+                      "variant": "caption"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "limit": 10,
+                      "offset": 0
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_QUERY",
+                "effects": [
+                  [
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.searchTerm",
+                          ""
+                        ],
+                        [
+                          "str/includes",
+                          [
+                            "object/get",
+                            "@entity",
+                            "name"
+                          ],
+                          "@payload.searchTerm"
+                        ]
+                      ],
+                      "limit": 10
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_FILTER",
+                "effects": [
+                  [
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.value",
+                          ""
+                        ],
+                        [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "@payload.field"
+                          ],
+                          "@payload.value"
+                        ]
+                      ],
+                      "limit": 10,
+                      "offset": 0
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_PAGE",
+                "effects": [
+                  [
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "limit": 10,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "offset": [
+                        "*",
+                        [
+                          "-",
+                          "@payload.page",
+                          1
+                        ],
+                        10
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "data-grid",
+                          "pageSize": 10,
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "label": "Name",
+                              "name": "name"
+                            },
+                            {
+                              "variant": "caption",
+                              "name": "description",
+                              "label": "Description"
+                            },
+                            {
+                              "variant": "badge",
+                              "label": "Status",
+                              "name": "status"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BrowseItem",
+                    {
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "limit": 10,
+                      "offset": 0
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
               }
             ]
-          }
+          },
+          "config": {
+            "fields": {
+              "type": "[object]",
+              "default": [
+                {
+                  "variant": "h4",
+                  "label": "Name",
+                  "name": "name"
+                },
+                {
+                  "variant": "caption",
+                  "name": "description",
+                  "label": "Description"
+                },
+                {
+                  "variant": "badge",
+                  "label": "Status",
+                  "name": "status"
+                }
+              ]
+            },
+            "displayPageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            }
+          },
+          "scope": "collection"
         }
       ],
       "pages": [
         {
-          "name": "Browseitems",
+          "name": "BrowseItemPage",
           "path": "/browseitems",
           "traits": [
             {

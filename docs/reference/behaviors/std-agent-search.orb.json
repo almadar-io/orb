@@ -1,0 +1,661 @@
+{
+  "name": "std-agent-search",
+  "version": "1.0.0",
+  "description": "std-agent-search as a Function",
+  "orbitals": [
+    {
+      "name": "AgentSearchOrbital",
+      "entity": {
+        "name": "AgentSearch",
+        "collection": "agentsearchs",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "results",
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "resultCount",
+            "type": "number",
+            "default": 0
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "AgentSearchBrowse",
+          "category": "interaction",
+          "linkedEntity": "AgentSearch",
+          "emits": [
+            {
+              "event": "SEARCH"
+            },
+            {
+              "event": "CLEAR"
+            },
+            {
+              "event": "AgentSearchLoaded",
+              "description": "Fired when AgentSearch finishes loading; payload.data holds the list",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AgentSearch]"
+                }
+              ]
+            },
+            {
+              "event": "AgentSearchLoadFailed",
+              "description": "Fired when AgentSearch fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "SEARCHED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentSearchAgent"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "AgentSearchLoaded",
+                "name": "AgentSearch loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentSearch]"
+                  }
+                ]
+              },
+              {
+                "key": "AgentSearchLoadFailed",
+                "name": "AgentSearch load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SEARCH",
+                "name": "Search"
+              },
+              {
+                "key": "CLEAR",
+                "name": "Clear"
+              },
+              {
+                "key": "VIEW",
+                "name": "View",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "AgentSearch"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentSearch",
+                    {
+                      "emit": {
+                        "failure": "AgentSearchLoadFailed",
+                        "success": "AgentSearchLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading searches…",
+                          "color": "muted",
+                          "variant": "caption",
+                          "type": "typography"
+                        }
+                      ],
+                      "type": "stack",
+                      "className": "py-12",
+                      "align": "center",
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "AgentSearchLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "max-w-5xl mx-auto w-full",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "search"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "AgentSearch"
+                                }
+                              ],
+                              "type": "stack",
+                              "align": "center"
+                            },
+                            {
+                              "direction": "horizontal",
+                              "type": "stack",
+                              "gap": "sm",
+                              "children": [
+                                {
+                                  "label": "Search",
+                                  "icon": "search",
+                                  "action": "SEARCH",
+                                  "variant": "primary",
+                                  "type": "button"
+                                },
+                                {
+                                  "icon": "x",
+                                  "action": "CLEAR",
+                                  "type": "button",
+                                  "variant": "ghost",
+                                  "label": "Clear"
+                                }
+                              ]
+                            }
+                          ],
+                          "align": "center",
+                          "gap": "md",
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "icon": "search",
+                              "label": "Query",
+                              "name": "query"
+                            },
+                            {
+                              "colorMap": {
+                                "active": "success",
+                                "pending": "warning",
+                                "done": "success",
+                                "inactive": "neutral",
+                                "scheduled": "warning",
+                                "cancelled": "destructive",
+                                "error": "destructive",
+                                "completed": "success",
+                                "draft": "warning",
+                                "disabled": "neutral",
+                                "archived": "neutral",
+                                "failed": "destructive"
+                              },
+                              "name": "language",
+                              "variant": "badge",
+                              "label": "Language"
+                            },
+                            {
+                              "label": "Result Count",
+                              "name": "resultCount",
+                              "variant": "caption"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "label": "View",
+                              "variant": "ghost",
+                              "event": "VIEW"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "AgentSearchLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "direction": "vertical",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "color": "destructive",
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Failed to load searches",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "color": "muted",
+                          "variant": "body",
+                          "content": "@payload.error",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "button",
+                          "label": "Retry",
+                          "variant": "primary",
+                          "action": "INIT",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentSearch",
+                    {
+                      "emit": {
+                        "success": "AgentSearchLoaded",
+                        "failure": "AgentSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentSearch",
+                    {
+                      "emit": {
+                        "failure": "AgentSearchLoadFailed",
+                        "success": "AgentSearchLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "AgentSearchAgent",
+          "category": "interaction",
+          "linkedEntity": "AgentSearch",
+          "emits": [
+            {
+              "event": "SEARCHED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "query",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "resultCount",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "AgentSearchLoaded",
+              "description": "Fired when AgentSearch finishes loading; payload.data holds the list",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AgentSearch]"
+                }
+              ]
+            },
+            {
+              "event": "AgentSearchLoadFailed",
+              "description": "Fired when AgentSearch fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "SEARCH",
+              "triggers": "SEARCH",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentSearchBrowse"
+              }
+            },
+            {
+              "event": "CLEAR",
+              "triggers": "CLEAR",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentSearchBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "searching"
+              },
+              {
+                "name": "results"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SEARCH",
+                "name": "Search",
+                "payloadSchema": [
+                  {
+                    "name": "query",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "language",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CLEAR",
+                "name": "Clear"
+              },
+              {
+                "key": "SEARCHED",
+                "name": "Searched"
+              },
+              {
+                "key": "AgentSearchLoaded",
+                "name": "AgentSearch loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentSearch]"
+                  }
+                ]
+              },
+              {
+                "key": "AgentSearchLoadFailed",
+                "name": "AgentSearch load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentSearch",
+                    {
+                      "emit": {
+                        "success": "AgentSearchLoaded",
+                        "failure": "AgentSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "icon": "search",
+                      "description": "Code Search is ready",
+                      "title": "Code Search",
+                      "type": "empty-state"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "searching",
+                "event": "SEARCH",
+                "effects": [
+                  [
+                    "agent/search-code",
+                    "@payload.query",
+                    "@payload.language"
+                  ]
+                ]
+              },
+              {
+                "from": "searching",
+                "to": "results",
+                "event": "SEARCH",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentSearch",
+                    {
+                      "emit": {
+                        "success": "AgentSearchLoaded",
+                        "failure": "AgentSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "emit",
+                    "SEARCHED",
+                    {
+                      "query": "@payload.query",
+                      "resultCount": 0
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "results",
+                "to": "searching",
+                "event": "SEARCH",
+                "effects": [
+                  [
+                    "agent/search-code",
+                    "@payload.query",
+                    "@payload.language"
+                  ]
+                ]
+              },
+              {
+                "from": "results",
+                "to": "idle",
+                "event": "CLEAR"
+              }
+            ]
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "AgentSearchPage",
+          "path": "/agentsearchs",
+          "traits": [
+            {
+              "ref": "AgentSearchBrowse"
+            },
+            {
+              "ref": "AgentSearchAgent"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

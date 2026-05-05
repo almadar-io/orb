@@ -1,0 +1,4332 @@
+{
+  "name": "std-agent-fix-loop",
+  "version": "1.0.0",
+  "description": "std-agent-fix-loop as a Function",
+  "orbitals": [
+    {
+      "name": "AgentFixLoopOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-agent-completion",
+          "as": "AgentCompletion"
+        },
+        {
+          "from": "std/behaviors/std-agent-step-progress",
+          "as": "AgentStepProgress"
+        },
+        {
+          "from": "std/behaviors/std-agent-tool-call",
+          "as": "AgentToolCall"
+        },
+        {
+          "from": "std/behaviors/std-browse",
+          "as": "Browse"
+        }
+      ],
+      "entity": {
+        "name": "AgentFixLoop",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "target",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "validationErrors",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "fixAttempts",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "maxAttempts",
+            "type": "number",
+            "default": 5
+          },
+          {
+            "name": "currentFix",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "errorCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "currentStep",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "totalSteps",
+            "type": "number",
+            "default": 4
+          },
+          {
+            "name": "steps",
+            "type": "string",
+            "default": "Validate,Analyze,Fix,Re-validate"
+          },
+          {
+            "name": "toolName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "args",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "result",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "response",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "provider",
+            "type": "string",
+            "default": "anthropic"
+          },
+          {
+            "name": "model",
+            "type": "string",
+            "default": "claude-sonnet-4-20250514"
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "action",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "detail",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "timestamp",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "notificationType",
+            "type": "string",
+            "default": "info",
+            "values": [
+              "info",
+              "success",
+              "warning",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "AgentFixLoopCycle",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "FIX_SUCCEEDED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "target",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FIX_FAILED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "target",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "FIX_SUCCEEDED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentFixLoopCycle"
+              }
+            },
+            {
+              "event": "FIX_FAILED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "AgentFixLoopCycle"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "validating"
+              },
+              {
+                "name": "fixing"
+              },
+              {
+                "name": "applying"
+              },
+              {
+                "name": "succeeded"
+              },
+              {
+                "name": "failed"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "FIX",
+                "name": "Fix"
+              },
+              {
+                "key": "VALIDATION_PASSED",
+                "name": "Validation Passed"
+              },
+              {
+                "key": "VALIDATION_ERRORS",
+                "name": "Validation Errors",
+                "payloadSchema": [
+                  {
+                    "name": "errors",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "count",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "EXCEEDED_ATTEMPTS",
+                "name": "Exceeded Attempts",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FIX_GENERATED",
+                "name": "Fix Generated",
+                "payloadSchema": [
+                  {
+                    "name": "fix",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FIX_APPLIED",
+                "name": "Fix Applied"
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "FIX_SUCCEEDED",
+                "name": "Fix Succeeded"
+              },
+              {
+                "key": "FIX_FAILED",
+                "name": "Fix Failed"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.maxAttempts",
+                    5
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "wrench",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Validation-Fix Loop",
+                              "variant": "h2"
+                            }
+                          ],
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "vertical",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "content": "Enter the target to validate and auto-fix",
+                                  "variant": "body"
+                                },
+                                {
+                                  "entity": "@entity",
+                                  "mode": "edit",
+                                  "fields": [
+                                    "target"
+                                  ],
+                                  "type": "form-section",
+                                  "submitEvent": "FIX"
+                                }
+                              ],
+                              "gap": "md"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "validating",
+                "event": "FIX",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "validating"
+                  ],
+                  [
+                    "set",
+                    "@entity.fixAttempts",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.validationErrors",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.errorCount",
+                    0
+                  ],
+                  [
+                    "agent/invoke",
+                    "validate-schema",
+                    {
+                      "target": "@entity.target"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "shield-check"
+                        },
+                        {
+                          "content": "Validating...",
+                          "type": "typography",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "gap": "md",
+                          "justify": "center",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.target"
+                            },
+                            {
+                              "label": "@entity.maxAttempts",
+                              "type": "badge"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "validating",
+                "to": "succeeded",
+                "event": "VALIDATION_PASSED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "emit",
+                    "FIX_SUCCEEDED"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "check-circle"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Validation Passed"
+                                }
+                              ],
+                              "align": "center",
+                              "gap": "sm"
+                            },
+                            {
+                              "label": "New Target",
+                              "action": "RESET",
+                              "type": "button",
+                              "variant": "ghost",
+                              "icon": "rotate-ccw"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "cols": 2,
+                          "children": [
+                            {
+                              "label": "Fix Attempts",
+                              "icon": "wrench",
+                              "value": "@entity.fixAttempts",
+                              "type": "stat-display"
+                            },
+                            {
+                              "icon": "check",
+                              "value": "Passed",
+                              "label": "Status",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "type": "simple-grid"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "content": "Target",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "@entity.target",
+                                  "variant": "body"
+                                }
+                              ],
+                              "direction": "vertical",
+                              "gap": "sm",
+                              "type": "stack"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "validating",
+                "to": "fixing",
+                "event": "VALIDATION_ERRORS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.validationErrors",
+                    "@payload.errors"
+                  ],
+                  [
+                    "set",
+                    "@entity.errorCount",
+                    "@payload.count"
+                  ],
+                  [
+                    "set",
+                    "@entity.fixAttempts",
+                    [
+                      "+",
+                      "@entity.fixAttempts",
+                      1
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "fixing"
+                  ],
+                  [
+                    "agent/generate",
+                    [
+                      "str/concat",
+                      "Target: ",
+                      "@entity.target",
+                      "\n\nValidation errors:\n",
+                      "@payload.errors",
+                      "\n\nGenerate a fix that resolves these errors. Return only the fix content."
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "justify": "between",
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "cpu"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Generating fix..."
+                                }
+                              ],
+                              "align": "center",
+                              "type": "stack"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "@entity.fixAttempts"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "variant": "caption",
+                                  "type": "typography",
+                                  "content": "Validation Errors"
+                                },
+                                {
+                                  "message": "@entity.validationErrors",
+                                  "type": "alert",
+                                  "variant": "error"
+                                }
+                              ],
+                              "gap": "sm",
+                              "type": "stack",
+                              "direction": "vertical"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spinner"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "validating",
+                "to": "failed",
+                "event": "EXCEEDED_ATTEMPTS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "emit",
+                    "FIX_FAILED"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "x-circle"
+                        },
+                        {
+                          "variant": "h2",
+                          "type": "typography",
+                          "content": "Fix Loop Failed"
+                        },
+                        {
+                          "variant": "error",
+                          "message": "@entity.error",
+                          "type": "alert"
+                        },
+                        {
+                          "type": "simple-grid",
+                          "children": [
+                            {
+                              "label": "Attempts Used",
+                              "value": "@entity.fixAttempts",
+                              "icon": "wrench",
+                              "type": "stat-display"
+                            },
+                            {
+                              "value": "@entity.errorCount",
+                              "icon": "alert-triangle",
+                              "type": "stat-display",
+                              "label": "Remaining Errors"
+                            }
+                          ],
+                          "cols": 2
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "gap": "sm",
+                              "direction": "vertical",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "type": "typography",
+                                  "variant": "caption",
+                                  "content": "Last Validation Errors"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "@entity.validationErrors",
+                                  "variant": "body"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "icon": "rotate-ccw",
+                          "action": "RESET",
+                          "label": "Retry"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "fixing",
+                "to": "applying",
+                "event": "FIX_GENERATED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentFix",
+                    "@payload.fix"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "applying"
+                  ],
+                  [
+                    "agent/invoke",
+                    "apply-fix",
+                    {
+                      "fix": "@payload.fix",
+                      "target": "@entity.target"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "tool"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Applying fix...",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "content": "Proposed Fix",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "@entity.currentFix"
+                                }
+                              ],
+                              "direction": "vertical",
+                              "type": "stack",
+                              "gap": "sm"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "fixing",
+                "to": "failed",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "emit",
+                    "FIX_FAILED"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "name": "x-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "h2",
+                          "content": "Fix Loop Failed"
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "@entity.error"
+                        },
+                        {
+                          "type": "simple-grid",
+                          "cols": 2,
+                          "children": [
+                            {
+                              "value": "@entity.fixAttempts",
+                              "type": "stat-display",
+                              "icon": "wrench",
+                              "label": "Attempts Used"
+                            },
+                            {
+                              "value": "@entity.errorCount",
+                              "label": "Remaining Errors",
+                              "icon": "alert-triangle",
+                              "type": "stat-display"
+                            }
+                          ]
+                        },
+                        {
+                          "children": [
+                            {
+                              "direction": "vertical",
+                              "children": [
+                                {
+                                  "content": "Last Validation Errors",
+                                  "variant": "caption",
+                                  "type": "typography"
+                                },
+                                {
+                                  "variant": "body",
+                                  "content": "@entity.validationErrors",
+                                  "type": "typography"
+                                }
+                              ],
+                              "type": "stack",
+                              "gap": "sm"
+                            }
+                          ],
+                          "type": "card"
+                        },
+                        {
+                          "label": "Retry",
+                          "variant": "primary",
+                          "type": "button",
+                          "action": "RESET",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "applying",
+                "to": "validating",
+                "event": "FIX_APPLIED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "validating"
+                  ],
+                  [
+                    "agent/invoke",
+                    "validate-schema",
+                    {
+                      "target": "@entity.target"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "shield-check"
+                        },
+                        {
+                          "content": "Validating...",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "label": "@entity.target",
+                              "type": "badge"
+                            },
+                            {
+                              "label": "@entity.maxAttempts",
+                              "type": "badge"
+                            }
+                          ],
+                          "justify": "center",
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "applying",
+                "to": "failed",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "emit",
+                    "FIX_FAILED"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "align": "center",
+                      "children": [
+                        {
+                          "name": "x-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Fix Loop Failed",
+                          "variant": "h2",
+                          "type": "typography"
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "@entity.error"
+                        },
+                        {
+                          "children": [
+                            {
+                              "value": "@entity.fixAttempts",
+                              "label": "Attempts Used",
+                              "icon": "wrench",
+                              "type": "stat-display"
+                            },
+                            {
+                              "label": "Remaining Errors",
+                              "type": "stat-display",
+                              "value": "@entity.errorCount",
+                              "icon": "alert-triangle"
+                            }
+                          ],
+                          "type": "simple-grid",
+                          "cols": 2
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "content": "Last Validation Errors",
+                                  "type": "typography",
+                                  "variant": "caption"
+                                },
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "@entity.validationErrors"
+                                }
+                              ],
+                              "gap": "sm",
+                              "direction": "vertical",
+                              "type": "stack"
+                            }
+                          ]
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "action": "RESET",
+                          "type": "button",
+                          "variant": "primary",
+                          "label": "Retry"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.target",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.validationErrors",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.currentFix",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.fixAttempts",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.errorCount",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "wrench",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Validation-Fix Loop",
+                              "variant": "h2"
+                            }
+                          ],
+                          "align": "center",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "card",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "content": "Enter the target to validate and auto-fix",
+                                  "type": "typography"
+                                },
+                                {
+                                  "type": "form-section",
+                                  "submitEvent": "FIX",
+                                  "entity": "@entity",
+                                  "mode": "edit",
+                                  "fields": [
+                                    "target"
+                                  ]
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "vertical"
+                            }
+                          ]
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "failed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.target",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.validationErrors",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.currentFix",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.fixAttempts",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.errorCount",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.error",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "wrench"
+                            },
+                            {
+                              "content": "Validation-Fix Loop",
+                              "variant": "h2",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "variant": "body",
+                                  "type": "typography",
+                                  "content": "Enter the target to validate and auto-fix"
+                                },
+                                {
+                                  "mode": "edit",
+                                  "fields": [
+                                    "target"
+                                  ],
+                                  "submitEvent": "FIX",
+                                  "type": "form-section",
+                                  "entity": "@entity"
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "vertical"
+                            }
+                          ],
+                          "type": "card"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "FixLoopStepProgress",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "AgentStepProgressLoaded",
+              "description": "Fired when AgentStepProgress finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "currentStep",
+                  "type": "number"
+                },
+                {
+                  "name": "totalSteps",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "AgentStepProgressLoadFailed",
+              "description": "Fired when AgentStepProgress fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "in_progress"
+              },
+              {
+                "name": "completed"
+              },
+              {
+                "name": "failed"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "START",
+                "name": "Start"
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "ADVANCE",
+                "name": "Advance"
+              },
+              {
+                "key": "COMPLETE",
+                "name": "Complete"
+              },
+              {
+                "key": "FAIL",
+                "name": "Fail"
+              },
+              {
+                "key": "AgentStepProgressLoaded",
+                "name": "AgentStepProgress loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentStep",
+                    "type": "number"
+                  },
+                  {
+                    "name": "totalSteps",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "AgentStepProgressLoadFailed",
+                "name": "AgentStepProgress load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.totalSteps",
+                    4
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentStepProgressLoaded",
+                        "failure": "AgentStepProgressLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "align": "center",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "list-ordered"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "variant": "h2",
+                              "type": "typography"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Idle",
+                              "variant": "default"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ],
+                          "currentStep": "@entity.currentStep"
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "label": "Start",
+                          "action": "START",
+                          "icon": "play"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "in_progress",
+                "event": "START",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "in_progress"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "align": "center",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "loader"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "AgentStepProgress",
+                              "variant": "h2"
+                            },
+                            {
+                              "variant": "warning",
+                              "type": "badge",
+                              "label": "In Progress"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ],
+                          "type": "wizard-progress"
+                        },
+                        {
+                          "gap": "sm",
+                          "align": "center",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "value": "@entity.currentStep",
+                              "type": "stat-display",
+                              "label": "Current Step"
+                            },
+                            {
+                              "type": "stat-display",
+                              "value": "@entity.totalSteps",
+                              "label": "Total Steps"
+                            }
+                          ]
+                        },
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "icon": "chevron-right",
+                              "type": "button",
+                              "variant": "primary",
+                              "label": "Advance",
+                              "action": "ADVANCE"
+                            },
+                            {
+                              "variant": "ghost",
+                              "icon": "rotate-ccw",
+                              "label": "Reset",
+                              "action": "RESET",
+                              "type": "button"
+                            }
+                          ]
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "list-ordered",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "AgentStepProgress",
+                              "variant": "h2"
+                            },
+                            {
+                              "type": "badge",
+                              "variant": "default",
+                              "label": "Idle"
+                            }
+                          ],
+                          "align": "center",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ],
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep"
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "icon": "play",
+                          "action": "START",
+                          "label": "Start"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "in_progress",
+                "event": "ADVANCE",
+                "guard": [
+                  "<",
+                  "@entity.currentStep",
+                  "@entity.totalSteps"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    [
+                      "+",
+                      "@entity.currentStep",
+                      1
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "loader"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "AgentStepProgress",
+                              "variant": "h2"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "In Progress",
+                              "variant": "warning"
+                            }
+                          ],
+                          "type": "stack",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ],
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep"
+                        },
+                        {
+                          "align": "center",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "label": "Current Step",
+                              "type": "stat-display",
+                              "value": "@entity.currentStep"
+                            },
+                            {
+                              "label": "Total Steps",
+                              "value": "@entity.totalSteps",
+                              "type": "stat-display"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "children": [
+                            {
+                              "icon": "chevron-right",
+                              "label": "Advance",
+                              "action": "ADVANCE",
+                              "type": "button",
+                              "variant": "primary"
+                            },
+                            {
+                              "icon": "rotate-ccw",
+                              "label": "Reset",
+                              "type": "button",
+                              "action": "RESET",
+                              "variant": "ghost"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "completed",
+                "event": "COMPLETE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "completed"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    "@entity.totalSteps"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check-circle"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "variant": "success",
+                              "type": "badge",
+                              "label": "Completed"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.totalSteps",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ],
+                          "type": "wizard-progress"
+                        },
+                        {
+                          "message": "All steps completed successfully.",
+                          "variant": "success",
+                          "type": "alert"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "variant": "ghost",
+                          "action": "RESET",
+                          "type": "button",
+                          "label": "Reset"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "failed",
+                "event": "FAIL",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "failed"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "align": "center",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "x-circle"
+                            },
+                            {
+                              "variant": "h2",
+                              "type": "typography",
+                              "content": "AgentStepProgress"
+                            },
+                            {
+                              "type": "badge",
+                              "label": "Failed",
+                              "variant": "danger"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "title": "Initialize",
+                              "id": "0"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "id": "2",
+                              "title": "Validate"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "Pipeline failed at the current step."
+                        },
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stat-display",
+                              "label": "Failed At Step",
+                              "value": "@entity.currentStep"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "type": "button",
+                          "action": "RESET",
+                          "label": "Reset",
+                          "variant": "ghost"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "in_progress",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "list-ordered"
+                            },
+                            {
+                              "content": "AgentStepProgress",
+                              "type": "typography",
+                              "variant": "h2"
+                            },
+                            {
+                              "label": "Idle",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "type": "stack",
+                          "align": "center",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "action": "START",
+                          "label": "Start",
+                          "variant": "primary",
+                          "type": "button",
+                          "icon": "play"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "completed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "list-ordered"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "AgentStepProgress"
+                            },
+                            {
+                              "label": "Idle",
+                              "type": "badge",
+                              "variant": "default"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "wizard-progress",
+                          "currentStep": "@entity.currentStep",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "id": "1",
+                              "title": "Process"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "id": "3",
+                              "title": "Complete"
+                            }
+                          ]
+                        },
+                        {
+                          "action": "START",
+                          "variant": "primary",
+                          "icon": "play",
+                          "label": "Start",
+                          "type": "button"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "failed",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentStep",
+                    0
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "list-ordered"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "AgentStepProgress",
+                              "type": "typography"
+                            },
+                            {
+                              "variant": "default",
+                              "label": "Idle",
+                              "type": "badge"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "currentStep": "@entity.currentStep",
+                          "type": "wizard-progress",
+                          "steps": [
+                            {
+                              "id": "0",
+                              "title": "Initialize"
+                            },
+                            {
+                              "title": "Process",
+                              "id": "1"
+                            },
+                            {
+                              "title": "Validate",
+                              "id": "2"
+                            },
+                            {
+                              "title": "Complete",
+                              "id": "3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "button",
+                          "icon": "play",
+                          "variant": "primary",
+                          "action": "START",
+                          "label": "Start"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FixLoopErrorsBrowse",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "BrowseItemLoaded",
+              "description": "Fired when the BrowseItem collection finishes loading; payload.data holds the (possibly paginated) slice and totalCount holds the unsliced filter total. totalCount is optional so compiled-path emitters that haven't been migrated yet still validate",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[BrowseItem]"
+                },
+                {
+                  "name": "totalCount",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "BrowseItemLoadFailed",
+              "description": "Fired when the BrowseItem collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "BrowseItemLoaded",
+                "name": "BrowseItem loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[BrowseItem]"
+                  },
+                  {
+                    "name": "totalCount",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "BrowseItemLoadFailed",
+                "name": "BrowseItem load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_QUERY",
+                "name": "Refetch Query",
+                "payloadSchema": [
+                  {
+                    "name": "searchTerm",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_FILTER",
+                "name": "Refetch Filter",
+                "payloadSchema": [
+                  {
+                    "name": "field",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REFETCH_PAGE",
+                "name": "Refetch Page",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "offset": 0,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "limit": 10
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Description",
+                              "name": "description"
+                            },
+                            {
+                              "name": "status",
+                              "label": "Status",
+                              "variant": "badge"
+                            }
+                          ],
+                          "pageSize": 10,
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "BrowseItemLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "caption",
+                      "type": "typography",
+                      "color": "error",
+                      "content": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "limit": 10,
+                      "offset": 0
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_QUERY",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "BrowseItemLoaded",
+                        "failure": "BrowseItemLoadFailed"
+                      },
+                      "offset": 0,
+                      "limit": 10,
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.searchTerm",
+                          ""
+                        ],
+                        [
+                          "str/includes",
+                          [
+                            "object/get",
+                            "@entity",
+                            "name"
+                          ],
+                          "@payload.searchTerm"
+                        ]
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_FILTER",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "limit": 10,
+                      "offset": 0,
+                      "filter": [
+                        "or",
+                        [
+                          "=",
+                          "@payload.value",
+                          ""
+                        ],
+                        [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "@payload.field"
+                          ],
+                          "@payload.value"
+                        ]
+                      ],
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REFETCH_PAGE",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "offset": [
+                        "*",
+                        [
+                          "-",
+                          "@payload.page",
+                          1
+                        ],
+                        10
+                      ],
+                      "limit": 10,
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "BrowseItemLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "pageSize": 10,
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Description",
+                              "name": "description"
+                            },
+                            {
+                              "name": "status",
+                              "label": "Status",
+                              "variant": "badge"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "failure": "BrowseItemLoadFailed",
+                        "success": "BrowseItemLoaded"
+                      },
+                      "offset": 0,
+                      "limit": 10
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "pageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "displayPageSize": {
+              "type": "number",
+              "default": 10
+            },
+            "fields": {
+              "type": "[object]",
+              "default": [
+                {
+                  "variant": "h4",
+                  "name": "name",
+                  "label": "Name"
+                },
+                {
+                  "variant": "caption",
+                  "label": "Description",
+                  "name": "description"
+                },
+                {
+                  "name": "status",
+                  "label": "Status",
+                  "variant": "badge"
+                }
+              ]
+            }
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "FixLoopValidateCall",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "INVOKED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoaded",
+              "description": "Fired when AgentToolCall finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "toolName",
+                  "type": "string"
+                },
+                {
+                  "name": "args",
+                  "type": "string"
+                },
+                {
+                  "name": "result",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "duration",
+                  "type": "number"
+                },
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "detail",
+                  "type": "string"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoadFailed",
+              "description": "Fired when AgentToolCall fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "INVOKE",
+                "name": "Invoke"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "INVOKED",
+                "name": "Invoked"
+              },
+              {
+                "key": "AgentToolCallLoaded",
+                "name": "AgentToolCall loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "toolName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "args",
+                    "type": "string"
+                  },
+                  {
+                    "name": "result",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "duration",
+                    "type": "number"
+                  },
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "detail",
+                    "type": "string"
+                  },
+                  {
+                    "name": "timestamp",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallLoadFailed",
+                "name": "AgentToolCall load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaved",
+                "name": "AgentToolCall saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaveFailed",
+                "name": "AgentToolCall save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "Invoke Tool",
+                                  "variant": "h2",
+                                  "type": "typography"
+                                }
+                              ]
+                            },
+                            {
+                              "action": "INVOKE",
+                              "label": "Open",
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "wrench"
+                            }
+                          ],
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "wrench",
+                          "title": "Nothing open",
+                          "type": "empty-state"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "INVOKE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "wrench",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Invoke Tool",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "form-section",
+                          "fields": [
+                            "toolName",
+                            "args"
+                          ],
+                          "submitEvent": "SAVE",
+                          "cancelEvent": "CLOSE",
+                          "mode": "create"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "Invoke Tool",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "direction": "horizontal"
+                            },
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "action": "INVOKE",
+                              "label": "Open",
+                              "icon": "wrench"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "wrench",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state",
+                          "title": "Nothing open"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentFixLoop",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallSaveFailed",
+                        "success": "AgentToolCallSaved"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "INVOKED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallLoadFailed",
+                        "success": "AgentToolCallLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "justify": "between",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "Invoke Tool",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "gap": "md"
+                            },
+                            {
+                              "label": "Open",
+                              "action": "INVOKE",
+                              "icon": "wrench",
+                              "type": "button",
+                              "variant": "primary"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "title": "Nothing open",
+                          "icon": "wrench",
+                          "description": "Click Open to view details in a modal overlay."
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FixLoopFixCall",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "INVOKED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoaded",
+              "description": "Fired when AgentToolCall finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "toolName",
+                  "type": "string"
+                },
+                {
+                  "name": "args",
+                  "type": "string"
+                },
+                {
+                  "name": "result",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "duration",
+                  "type": "number"
+                },
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "detail",
+                  "type": "string"
+                },
+                {
+                  "name": "timestamp",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallLoadFailed",
+              "description": "Fired when AgentToolCall fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentToolCallSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "INVOKE",
+                "name": "Invoke"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "INVOKED",
+                "name": "Invoked"
+              },
+              {
+                "key": "AgentToolCallLoaded",
+                "name": "AgentToolCall loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "toolName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "args",
+                    "type": "string"
+                  },
+                  {
+                    "name": "result",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "duration",
+                    "type": "number"
+                  },
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "detail",
+                    "type": "string"
+                  },
+                  {
+                    "name": "timestamp",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallLoadFailed",
+                "name": "AgentToolCall load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaved",
+                "name": "AgentToolCall saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentToolCallSaveFailed",
+                "name": "AgentToolCall save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "Invoke Tool",
+                                  "variant": "h2",
+                                  "type": "typography"
+                                }
+                              ]
+                            },
+                            {
+                              "action": "INVOKE",
+                              "label": "Open",
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "wrench"
+                            }
+                          ],
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "description": "Click Open to view details in a modal overlay.",
+                          "icon": "wrench",
+                          "title": "Nothing open",
+                          "type": "empty-state"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "INVOKE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "wrench",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Invoke Tool",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "form-section",
+                          "fields": [
+                            "toolName",
+                            "args"
+                          ],
+                          "submitEvent": "SAVE",
+                          "cancelEvent": "CLOSE",
+                          "mode": "create"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentToolCallLoaded",
+                        "failure": "AgentToolCallLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "Invoke Tool",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "direction": "horizontal"
+                            },
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "action": "INVOKE",
+                              "label": "Open",
+                              "icon": "wrench"
+                            }
+                          ],
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "wrench",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state",
+                          "title": "Nothing open"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentFixLoop",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallSaveFailed",
+                        "success": "AgentToolCallSaved"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "INVOKED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentToolCallLoadFailed",
+                        "success": "AgentToolCallLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "justify": "between",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "name": "wrench",
+                                  "type": "icon"
+                                },
+                                {
+                                  "type": "typography",
+                                  "content": "Invoke Tool",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "gap": "md"
+                            },
+                            {
+                              "label": "Open",
+                              "action": "INVOKE",
+                              "icon": "wrench",
+                              "type": "button",
+                              "variant": "primary"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "empty-state",
+                          "title": "Nothing open",
+                          "icon": "wrench",
+                          "description": "Click Open to view details in a modal overlay."
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "FixLoopCompletionFlow",
+          "category": "interaction",
+          "linkedEntity": "AgentFixLoop",
+          "emits": [
+            {
+              "event": "GENERATED",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoaded",
+              "description": "Fired when AgentCompletion finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "prompt",
+                  "type": "string"
+                },
+                {
+                  "name": "response",
+                  "type": "string"
+                },
+                {
+                  "name": "provider",
+                  "type": "string"
+                },
+                {
+                  "name": "model",
+                  "type": "string"
+                },
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "notificationType",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionLoadFailed",
+              "description": "Fired when AgentCompletion fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaved",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AgentCompletionSaveFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GENERATED",
+                "name": "Generated"
+              },
+              {
+                "key": "AgentCompletionLoaded",
+                "name": "AgentCompletion loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "prompt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "response",
+                    "type": "string"
+                  },
+                  {
+                    "name": "provider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "model",
+                    "type": "string"
+                  },
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionLoadFailed",
+                "name": "AgentCompletion load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaved",
+                "name": "AgentCompletion saved",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AgentCompletionSaveFailed",
+                "name": "AgentCompletion save failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.model",
+                    "claude-sonnet-4-20250514"
+                  ],
+                  [
+                    "set",
+                    "@entity.provider",
+                    "anthropic"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionLoadFailed",
+                        "success": "AgentCompletionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "gap": "md",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "AgentCompletion"
+                                }
+                              ],
+                              "type": "stack",
+                              "direction": "horizontal",
+                              "gap": "md"
+                            },
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "action": "GENERATE",
+                              "icon": "sparkles",
+                              "label": "Open"
+                            }
+                          ],
+                          "justify": "between",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "sparkles",
+                          "type": "empty-state",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "sparkles"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "AgentCompletion",
+                              "variant": "h3"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "type": "badge",
+                              "label": "@entity.provider"
+                            },
+                            {
+                              "label": "@entity.model",
+                              "type": "badge"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "cancelEvent": "CLOSE",
+                          "type": "form-section",
+                          "submitEvent": "SAVE",
+                          "mode": "create",
+                          "fields": [
+                            "prompt"
+                          ]
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionLoaded",
+                        "failure": "AgentCompletionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "stack",
+                          "justify": "between",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "name": "sparkles",
+                                  "type": "icon"
+                                },
+                                {
+                                  "content": "AgentCompletion",
+                                  "type": "typography",
+                                  "variant": "h2"
+                                }
+                              ],
+                              "direction": "horizontal",
+                              "gap": "md",
+                              "type": "stack"
+                            },
+                            {
+                              "action": "GENERATE",
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "sparkles",
+                              "label": "Open"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "title": "Nothing open",
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "type": "empty-state"
+                        }
+                      ],
+                      "gap": "lg",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "AgentFixLoop",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "AgentCompletionSaveFailed",
+                        "success": "AgentCompletionSaved"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "emit",
+                    "GENERATED"
+                  ],
+                  [
+                    "fetch",
+                    "AgentFixLoop",
+                    {
+                      "emit": {
+                        "success": "AgentCompletionLoaded",
+                        "failure": "AgentCompletionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "stack",
+                              "gap": "md",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sparkles"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "h2",
+                                  "content": "AgentCompletion"
+                                }
+                              ],
+                              "direction": "horizontal"
+                            },
+                            {
+                              "action": "GENERATE",
+                              "variant": "primary",
+                              "type": "button",
+                              "label": "Open",
+                              "icon": "sparkles"
+                            }
+                          ],
+                          "justify": "between",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "icon": "sparkles",
+                          "description": "Click Open to view details in a modal overlay.",
+                          "title": "Nothing open",
+                          "type": "empty-state"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "AgentFixLoopPage",
+          "path": "/agentfixloops",
+          "traits": [
+            {
+              "ref": "AgentFixLoopCycle"
+            },
+            {
+              "ref": "FixLoopStepProgress"
+            },
+            {
+              "ref": "FixLoopErrorsBrowse"
+            },
+            {
+              "ref": "FixLoopValidateCall"
+            },
+            {
+              "ref": "FixLoopFixCall"
+            },
+            {
+              "ref": "FixLoopCompletionFlow"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
