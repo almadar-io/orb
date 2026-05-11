@@ -1,34 +1,55 @@
 /**
  * LiveUIRenderer - Renders Almadar UI patterns from S-expressions
- * 
- * This component evaluates S-expressions and renders actual @almadar/ui components
- * instead of just showing JSON output. It uses mock data (no server required).
+ *
+ * Evaluates S-expressions and renders actual @almadar/ui components using
+ * the shared @almadar/patterns registry — no hand-curated component list.
+ * Any pattern present in patterns + component-mapping is renderable here.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { OrbitalSchema, SExpr } from '@almadar/core';
-
-// Import @almadar/ui components that can be rendered
-// These are the patterns supported by render-ui
+import React, { useState, useEffect, useCallback } from 'react';
+import type { SExpr } from '@almadar/core';
+import * as AlmadarUI from '@almadar/ui';
 import {
-  Badge,
-  ProgressBar,
-  Alert,
+  Box,
   Heading,
   Text,
-  Button,
-  Card,
+  Spinner,
   VStack,
   HStack,
-  Box,
-  Input,
-  Select,
-  Checkbox,
-  Spinner,
-  Avatar,
-  Icon,
-  Divider,
 } from '@almadar/ui';
+import {
+  initializePatterns,
+  getPatternMapping,
+  getKnownPatterns,
+} from '@almadar/ui/renderer';
+
+// Initialize the shared pattern resolver once with @almadar/patterns data.
+// initializePatterns() is idempotent — re-calls just overwrite the same maps.
+let resolverReady = false;
+function ensureResolverInitialized(): void {
+  if (resolverReady) return;
+  initializePatterns();
+  resolverReady = true;
+}
+
+// Resolve `pattern type` (e.g. "vote-stack") → React component by routing
+// through the component-mapping registry, then looking the resolved
+// `component` name (e.g. "VoteStack") up on the @almadar/ui namespace.
+// The cast to ComponentType<any> is intentional — pattern props are typed
+// at the .lolo / runtime boundary, not in this lookup. Returns null when
+// either the mapping is missing or the named component isn't exported.
+function resolvePatternComponent(
+  pattern: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): React.ComponentType<any> | null {
+  const mapping = getPatternMapping(pattern);
+  if (!mapping) return null;
+  const ui = AlmadarUI as Record<string, unknown>;
+  const candidate = ui[mapping.component];
+  if (typeof candidate !== 'function' && typeof candidate !== 'object') return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return candidate as React.ComponentType<any>;
+}
 
 // Type for render-ui effect calls
 interface RenderUICall {
@@ -50,28 +71,6 @@ interface LiveUIRendererProps {
   /** Callback when evaluation completes */
   onEvaluated?: (calls: RenderUICall[], error: string | null) => void;
 }
-
-// Pattern component registry (typed as any for flexibility)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PATTERN_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  'badge': Badge,
-  'progress-bar': ProgressBar,
-  'alert': Alert,
-  'heading': Heading,
-  'text': Text,
-  'button': Button,
-  'card': Card,
-  'vstack': VStack,
-  'hstack': HStack,
-  'box': Box,
-  'input': Input,
-  'select': Select,
-  'checkbox': Checkbox,
-  'spinner': Spinner,
-  'avatar': Avatar,
-  'icon': Icon,
-  'divider': Divider,
-};
 
 /**
  * Evaluate S-expression and extract render-ui calls
@@ -138,28 +137,35 @@ async function evaluateAndExtractRenders(
 /**
  * Render a pattern component with props
  */
-function PatternComponent({ 
-  pattern, 
-  props 
-}: { 
-  pattern: string; 
-  props: Record<string, unknown> 
+function PatternComponent({
+  pattern,
+  props
+}: {
+  pattern: string;
+  props: Record<string, unknown>
 }): React.ReactElement {
-  const Component = PATTERN_COMPONENTS[pattern];
-  
+  ensureResolverInitialized();
+  const Component = resolvePatternComponent(pattern);
+
   if (!Component) {
+    const known = getKnownPatterns();
+    const message = known.length === 0
+      ? `Unknown pattern: "${pattern}" — patterns registry not loaded`
+      : `Unknown pattern: "${pattern}"`;
     return (
-      <Box 
-        style={{ 
-          padding: '1rem', 
-          background: '#fef2f2', 
+      <Box
+        style={{
+          padding: '1rem',
+          background: '#fef2f2',
           border: '1px solid #fecaca',
           borderRadius: '8px',
           color: '#dc2626'
         }}
       >
-        <Text>Unknown pattern: "{pattern}"</Text>
-        <Text variant="body2">Available: {Object.keys(PATTERN_COMPONENTS).join(', ')}</Text>
+        <Text>{message}</Text>
+        <Text variant="body2">
+          {known.length} patterns registered. First few: {known.slice(0, 12).join(', ')}{known.length > 12 ? '…' : ''}
+        </Text>
       </Box>
     );
   }
