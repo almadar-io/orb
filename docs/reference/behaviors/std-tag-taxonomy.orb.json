@@ -1,0 +1,571 @@
+{
+  "name": "std-tag-taxonomy",
+  "version": "1.0.0",
+  "description": "std-tag-taxonomy — hierarchical category tag tree (parent/child). TagBrowse fetches Tag rows on INIT, renders the active level via data-grid, and on SELECT_TAG drills into a tag's children by binding @entity.id to the chosen parent.",
+  "orbitals": [
+    {
+      "name": "TagTaxonomyOrbital",
+      "entity": {
+        "name": "Tag",
+        "collection": "tags",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "parentId",
+            "type": "string"
+          },
+          {
+            "name": "slug",
+            "type": "string"
+          },
+          {
+            "name": "color",
+            "type": "string"
+          },
+          {
+            "name": "count",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "TagBrowse",
+          "category": "interaction",
+          "linkedEntity": "Tag",
+          "emits": [
+            {
+              "event": "SELECT_TAG",
+              "payloadSchema": [
+                {
+                  "name": "tagId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TagLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Tag]"
+                }
+              ]
+            },
+            {
+              "event": "TagLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "TagSelected",
+              "payloadSchema": [
+                {
+                  "name": "tagId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "editing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TagLoaded",
+                "name": "Tag loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Tag]"
+                  }
+                ]
+              },
+              {
+                "key": "TagLoadFailed",
+                "name": "Tag load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SELECT_TAG",
+                "name": "Select Tag",
+                "payloadSchema": [
+                  {
+                    "name": "tagId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TagSelected",
+                "name": "Tag selected",
+                "payloadSchema": [
+                  {
+                    "name": "tagId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Tag",
+                    {
+                      "emit": {
+                        "success": "TagLoaded",
+                        "failure": "TagLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading categories…",
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "caption"
+                        }
+                      ],
+                      "type": "stack",
+                      "align": "center",
+                      "className": "py-12",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "TagLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "content": "Categories",
+                          "type": "typography"
+                        },
+                        {
+                          "itemActions": [
+                            {
+                              "event": "SELECT_TAG",
+                              "icon": "chevron-right",
+                              "label": "Open"
+                            }
+                          ],
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "name": "name"
+                            },
+                            {
+                              "label": "Items",
+                              "name": "count"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "TagLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "@payload.error",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "editing",
+                "event": "SELECT_TAG",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.tagId"
+                  ],
+                  [
+                    "emit",
+                    "TagSelected",
+                    {
+                      "tagId": "@payload.tagId"
+                    }
+                  ],
+                  [
+                    "fetch",
+                    "Tag",
+                    {
+                      "emit": {
+                        "failure": "TagLoadFailed",
+                        "success": "TagLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "align": "center",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading children…",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TagLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "content": "Categories",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "name": "name"
+                            },
+                            {
+                              "name": "count",
+                              "label": "Items"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "itemActions": [
+                            {
+                              "event": "SELECT_TAG",
+                              "icon": "chevron-right",
+                              "label": "Open"
+                            }
+                          ],
+                          "type": "data-grid"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "error",
+                "event": "TagLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Tag",
+                    {
+                      "emit": {
+                        "success": "TagLoaded",
+                        "failure": "TagLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "content": "Loading categories…",
+                          "variant": "caption",
+                          "type": "typography"
+                        }
+                      ],
+                      "className": "py-12",
+                      "align": "center",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "editing",
+                "event": "SELECT_TAG",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.tagId"
+                  ],
+                  [
+                    "emit",
+                    "TagSelected",
+                    {
+                      "tagId": "@payload.tagId"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "editing",
+                "event": "TagSelected",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.tagId"
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "browsing",
+                "event": "TagLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Categories"
+                        },
+                        {
+                          "entity": "@payload.data",
+                          "itemActions": [
+                            {
+                              "event": "SELECT_TAG",
+                              "icon": "chevron-right",
+                              "label": "Open"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "label": "Items",
+                              "name": "count"
+                            }
+                          ]
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "error",
+                "event": "TagLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "variant": "error",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Tag",
+                    {
+                      "emit": {
+                        "failure": "TagLoadFailed",
+                        "success": "TagLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading categories…",
+                          "variant": "caption",
+                          "color": "muted"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "md",
+                      "className": "py-12",
+                      "align": "center",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Categories"
+            },
+            "allowEdit": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "TagBrowsePage",
+          "path": "/tags/browse",
+          "traits": [
+            {
+              "ref": "TagBrowse"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

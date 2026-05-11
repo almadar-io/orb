@@ -1,0 +1,418 @@
+{
+  "name": "std-donation-receipt",
+  "version": "1.0.0",
+  "description": "std-donation-receipt — tax-deductible donation receipt atom. Owns a DonationReceipt entity with IRS-compliance fields (taxYear, taxDeductible, nonprofitEin). Browses receipts in a data-grid with Email / Void actions.",
+  "orbitals": [
+    {
+      "name": "DonationReceiptOrbital",
+      "entity": {
+        "name": "DonationReceipt",
+        "collection": "donationreceipts",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "receiptNumber",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "donorId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "donorName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "campaignId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "amount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "donationDate",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "taxYear",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "taxDeductible",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "nonprofitEin",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "isEmailed",
+            "type": "boolean",
+            "default": false
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "DonationReceiptIssuer",
+          "category": "interaction",
+          "linkedEntity": "DonationReceipt",
+          "emits": [
+            {
+              "event": "EMAIL_RECEIPT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "VOID_RECEIPT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "DonationReceiptLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[DonationReceipt]"
+                }
+              ]
+            },
+            {
+              "event": "DonationReceiptLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DonationReceiptLoaded",
+                "name": "DonationReceipt loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[DonationReceipt]"
+                  }
+                ]
+              },
+              {
+                "key": "DonationReceiptLoadFailed",
+                "name": "DonationReceipt load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "EMAIL_RECEIPT",
+                "name": "Email Receipt",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "VOID_RECEIPT",
+                "name": "Void Receipt",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DonationReceipt",
+                    {
+                      "emit": {
+                        "success": "DonationReceiptLoaded",
+                        "failure": "DonationReceiptLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "content": "Loading donation receipts…",
+                          "type": "typography",
+                          "color": "muted"
+                        }
+                      ],
+                      "className": "py-12",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "DonationReceiptLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "receipt",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h3",
+                              "type": "typography",
+                              "content": "Donation Receipts"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "sm",
+                          "type": "data-grid",
+                          "cols": 1,
+                          "itemActions": [
+                            {
+                              "event": "EMAIL_RECEIPT",
+                              "label": "Email",
+                              "variant": "primary"
+                            },
+                            {
+                              "event": "VOID_RECEIPT",
+                              "variant": "danger",
+                              "label": "Void"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "fields": [
+                            {
+                              "label": "Receipt #",
+                              "variant": "caption",
+                              "name": "receiptNumber"
+                            },
+                            {
+                              "name": "donorName",
+                              "variant": "caption",
+                              "label": "Donor"
+                            },
+                            {
+                              "label": "Amount",
+                              "variant": "caption",
+                              "name": "amount"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Date",
+                              "name": "donationDate"
+                            },
+                            {
+                              "label": "Tax Year",
+                              "variant": "caption",
+                              "name": "taxYear"
+                            },
+                            {
+                              "label": "Emailed",
+                              "name": "isEmailed",
+                              "variant": "badge"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "DonationReceiptLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "error",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "EMAIL_RECEIPT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Receipt emailed",
+                      "variant": "success",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "VOID_RECEIPT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "Receipt voided",
+                      "variant": "info"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DonationReceipt",
+                    {
+                      "emit": {
+                        "success": "DonationReceiptLoaded",
+                        "failure": "DonationReceiptLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Donation Receipts"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "DonationReceiptPage",
+          "path": "/donation-receipts",
+          "traits": [
+            {
+              "ref": "DonationReceiptIssuer"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

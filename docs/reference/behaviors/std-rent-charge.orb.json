@@ -1,0 +1,405 @@
+{
+  "name": "std-rent-charge",
+  "version": "1.0.0",
+  "description": "Rent charge ledger: monthly rent owed by a tenant (tenant-pays semantics).",
+  "orbitals": [
+    {
+      "name": "RentChargeOrbital",
+      "entity": {
+        "name": "RentCharge",
+        "collection": "rentcharges",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tenantId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "leaseId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "amount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "dueDate",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "paidAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "unpaid",
+            "values": [
+              "unpaid",
+              "paid",
+              "overdue",
+              "waived"
+            ]
+          },
+          {
+            "name": "lateFee",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "RentChargeLedger",
+          "category": "interaction",
+          "linkedEntity": "RentCharge",
+          "emits": [
+            {
+              "event": "MARK_PAID",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "ASSESS_LATE_FEE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "WAIVE_CHARGE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "RentChargeLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[RentCharge]"
+                }
+              ]
+            },
+            {
+              "event": "RentChargeLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "RentChargeLoaded",
+                "name": "RentCharge loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[RentCharge]"
+                  }
+                ]
+              },
+              {
+                "key": "RentChargeLoadFailed",
+                "name": "RentCharge load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "MARK_PAID",
+                "name": "Mark Paid",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ASSESS_LATE_FEE",
+                "name": "Assess Late Fee",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "WAIVE_CHARGE",
+                "name": "Waive Charge",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "RentCharge",
+                    {
+                      "emit": {
+                        "failure": "RentChargeLoadFailed",
+                        "success": "RentChargeLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "RentChargeLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "entity": "@payload.data",
+                      "fields": [
+                        {
+                          "label": "Tenant",
+                          "variant": "caption",
+                          "name": "tenantId"
+                        },
+                        {
+                          "name": "amount",
+                          "label": "Amount",
+                          "variant": "h4"
+                        },
+                        {
+                          "variant": "caption",
+                          "name": "dueDate",
+                          "label": "Due Date"
+                        },
+                        {
+                          "name": "status",
+                          "label": "Status",
+                          "variant": "badge"
+                        },
+                        {
+                          "variant": "caption",
+                          "name": "paidAt",
+                          "label": "Paid At"
+                        },
+                        {
+                          "variant": "caption",
+                          "label": "Late Fee",
+                          "name": "lateFee"
+                        }
+                      ],
+                      "itemActions": [
+                        {
+                          "label": "Mark Paid",
+                          "event": "MARK_PAID",
+                          "variant": "primary"
+                        },
+                        {
+                          "event": "ASSESS_LATE_FEE",
+                          "variant": "ghost",
+                          "label": "Late Fee"
+                        },
+                        {
+                          "event": "WAIVE_CHARGE",
+                          "label": "Waive",
+                          "variant": "danger"
+                        }
+                      ],
+                      "type": "data-grid"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "RentChargeLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "message": "Failed to load rent charges",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "MARK_PAID",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Rent recorded as paid",
+                    "success"
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ASSESS_LATE_FEE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Late fee assessed",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "WAIVE_CHARGE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Charge waived",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "RentCharge",
+                    {
+                      "emit": {
+                        "failure": "RentChargeLoadFailed",
+                        "success": "RentChargeLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Rent Charges"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "RentChargePage",
+          "path": "/rent-charges",
+          "traits": [
+            {
+              "ref": "RentChargeLedger"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

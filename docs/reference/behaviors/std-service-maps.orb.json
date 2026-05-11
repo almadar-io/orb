@@ -1,0 +1,864 @@
+{
+  "name": "std-service-maps",
+  "version": "1.0.0",
+  "description": "std-service-maps — Maps service for geocoding, reverse-geocoding, and distance via Mapbox/Google. Bind via `uses Maps from \"std/behaviors/std-service-maps\"` and configure `apiKey` / `provider` at the call site. Pass `uiTrait: \"@trait.YourMapsForm\"` to inject your own form; leave unset to render the atom's default geocode form (standalone surface).",
+  "orbitals": [
+    {
+      "name": "ServiceMapsOrbital",
+      "entity": {
+        "name": "ServiceMaps",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "address",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "lat",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "lng",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "formattedAddress",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "distanceKm",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "idle",
+            "values": [
+              "idle",
+              "geocoding",
+              "succeeded",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ServiceMapsDefaultForm",
+          "category": "interaction",
+          "emits": [
+            {
+              "event": "GEOCODE",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "address",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "ready",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GEOCODE",
+                "name": "Geocode"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "ready",
+                "to": "ready",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "align": "center",
+                          "children": [
+                            {
+                              "name": "map-pin",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Maps",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "placeholder": "Enter an address...",
+                          "type": "input",
+                          "inputType": "text"
+                        },
+                        {
+                          "type": "button",
+                          "label": "Geocode",
+                          "variant": "primary",
+                          "action": "GEOCODE",
+                          "icon": "search"
+                        }
+                      ],
+                      "gap": "lg",
+                      "align": "stretch",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ServiceMapsMaps",
+          "category": "interaction",
+          "linkedEntity": "ServiceMaps",
+          "emits": [
+            {
+              "event": "ServiceMapsLoaded",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServiceMapsLoadFailed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "GEOCODED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "lat",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "lng",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "formattedAddress",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "REVERSE_GEOCODED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "address",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "DISTANCE_COMPUTED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "distanceKm",
+                  "type": "number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "FAILED",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "GEOCODE",
+              "triggers": "GEOCODE",
+              "source": {
+                "kind": "trait",
+                "trait": "ServiceMapsDefaultForm"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "geocoding"
+              },
+              {
+                "name": "succeeded"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GEOCODE",
+                "name": "Geocode",
+                "payloadSchema": [
+                  {
+                    "name": "address",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REVERSE_GEOCODE",
+                "name": "Reverse Geocode",
+                "payloadSchema": [
+                  {
+                    "name": "lat",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "lng",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "DISTANCE",
+                "name": "Distance",
+                "payloadSchema": [
+                  {
+                    "name": "fromLat",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "fromLng",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "toLat",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "toLng",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ServiceMapsLoaded",
+                "name": "ServiceMaps loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ServiceMapsLoadFailed",
+                "name": "ServiceMaps load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "GEOCODED",
+                "name": "Geocoded",
+                "payloadSchema": [
+                  {
+                    "name": "lat",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "lng",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "formattedAddress",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REVERSE_GEOCODED",
+                "name": "Reverse Geocoded",
+                "payloadSchema": [
+                  {
+                    "name": "address",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "DISTANCE_COMPUTED",
+                "name": "Distance Computed",
+                "payloadSchema": [
+                  {
+                    "name": "distanceKm",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "RETRY",
+                "name": "Retry"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "ServiceMaps",
+                    {
+                      "emit": {
+                        "failure": "ServiceMapsLoadFailed",
+                        "success": "ServiceMapsLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        "@trait.ServiceMapsDefaultForm"
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "geocoding",
+                "event": "GEOCODE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.address",
+                    "@payload.address"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "geocoding"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Resolving address to coordinates.",
+                      "type": "loading-state",
+                      "title": "Geocoding..."
+                    }
+                  ],
+                  [
+                    "call-service",
+                    "maps",
+                    "geocode",
+                    {
+                      "address": "@payload.address",
+                      "apiKey": "",
+                      "provider": "mapbox"
+                    },
+                    {
+                      "emit": {
+                        "failure": "FAILED",
+                        "success": "GEOCODED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "geocoding",
+                "event": "REVERSE_GEOCODE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.lat",
+                    "@payload.lat"
+                  ],
+                  [
+                    "set",
+                    "@entity.lng",
+                    "@payload.lng"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "geocoding"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "loading-state",
+                      "message": "Resolving coordinates to address.",
+                      "title": "Reverse geocoding..."
+                    }
+                  ],
+                  [
+                    "call-service",
+                    "maps",
+                    "reverseGeocode",
+                    {
+                      "apiKey": "",
+                      "lat": "@payload.lat",
+                      "lng": "@payload.lng",
+                      "provider": "mapbox"
+                    },
+                    {
+                      "emit": {
+                        "success": "REVERSE_GEOCODED",
+                        "failure": "FAILED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "geocoding",
+                "event": "DISTANCE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "geocoding"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Calculating distance between points.",
+                      "title": "Computing distance...",
+                      "type": "loading-state"
+                    }
+                  ],
+                  [
+                    "call-service",
+                    "maps",
+                    "distance",
+                    {
+                      "apiKey": "",
+                      "fromLat": "@payload.fromLat",
+                      "toLng": "@payload.toLng",
+                      "fromLng": "@payload.fromLng",
+                      "toLat": "@payload.toLat",
+                      "provider": "mapbox"
+                    },
+                    {
+                      "emit": {
+                        "success": "DISTANCE_COMPUTED",
+                        "failure": "FAILED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServiceMapsLoaded"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServiceMapsLoadFailed"
+              },
+              {
+                "from": "geocoding",
+                "to": "succeeded",
+                "event": "GEOCODED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.lat",
+                    "@payload.lat"
+                  ],
+                  [
+                    "set",
+                    "@entity.lng",
+                    "@payload.lng"
+                  ],
+                  [
+                    "set",
+                    "@entity.formattedAddress",
+                    "@payload.formattedAddress"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "check-circle"
+                        },
+                        {
+                          "type": "alert",
+                          "variant": "success",
+                          "message": "Address geocoded successfully"
+                        },
+                        {
+                          "color": "muted",
+                          "content": "@entity.formattedAddress",
+                          "variant": "body",
+                          "type": "typography"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "label": "New Lookup",
+                          "type": "button",
+                          "variant": "ghost",
+                          "action": "RESET"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "geocoding",
+                "to": "succeeded",
+                "event": "REVERSE_GEOCODED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.address",
+                    "@payload.address"
+                  ],
+                  [
+                    "set",
+                    "@entity.formattedAddress",
+                    "@payload.address"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "check-circle"
+                        },
+                        {
+                          "message": "Coordinates reverse-geocoded successfully",
+                          "type": "alert",
+                          "variant": "success"
+                        },
+                        {
+                          "color": "muted",
+                          "variant": "body",
+                          "content": "@entity.address",
+                          "type": "typography"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "type": "button",
+                          "action": "RESET",
+                          "label": "New Lookup",
+                          "variant": "ghost"
+                        }
+                      ],
+                      "type": "stack",
+                      "align": "center",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "geocoding",
+                "to": "succeeded",
+                "event": "DISTANCE_COMPUTED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.distanceKm",
+                    "@payload.distanceKm"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "name": "check-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "alert",
+                          "message": "Distance computed successfully",
+                          "variant": "success"
+                        },
+                        {
+                          "color": "muted",
+                          "content": "@entity.distanceKm",
+                          "variant": "body",
+                          "type": "typography"
+                        },
+                        {
+                          "action": "RESET",
+                          "label": "New Lookup",
+                          "variant": "ghost",
+                          "type": "button",
+                          "icon": "rotate-ccw"
+                        }
+                      ],
+                      "gap": "lg"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "geocoding",
+                "to": "error",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "onRetry": "RETRY",
+                      "message": "@entity.error",
+                      "title": "Maps Request Failed",
+                      "type": "error-state"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        "@trait.ServiceMapsDefaultForm"
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RETRY",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        "@trait.ServiceMapsDefaultForm"
+                      ],
+                      "type": "stack",
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        "@trait.ServiceMapsDefaultForm"
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "provider": {
+              "type": "string",
+              "default": "mapbox"
+            },
+            "uiTrait": {
+              "type": "trait",
+              "default": "@trait.ServiceMapsDefaultForm"
+            },
+            "apiKey": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ServiceMapsPage",
+          "path": "/servicemaps",
+          "traits": [
+            {
+              "ref": "ServiceMapsMaps"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

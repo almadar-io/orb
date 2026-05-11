@@ -1,0 +1,409 @@
+{
+  "name": "std-drip-sequence",
+  "version": "1.0.0",
+  "description": "std-drip-sequence — ordered email drip campaign primitive. Owns a DripSequence collection; ACTIVATE flips a sequence live, PAUSE halts it, and load failures surface as alerts. Pure topology atom; downstream coordinators persist status flips.",
+  "orbitals": [
+    {
+      "name": "DripSequenceOrbital",
+      "entity": {
+        "name": "DripSequence",
+        "collection": "dripsequences",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "triggerEvent",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "stepsJson",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "draft",
+            "values": [
+              "draft",
+              "active",
+              "paused",
+              "archived"
+            ]
+          },
+          {
+            "name": "totalEnrolled",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "totalCompleted",
+            "type": "number",
+            "default": 0
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "DripSequenceSequence",
+          "category": "interaction",
+          "linkedEntity": "DripSequence",
+          "emits": [
+            {
+              "event": "ACTIVATE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "PAUSE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "DripSequenceLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[DripSequence]"
+                }
+              ]
+            },
+            {
+              "event": "DripSequenceLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DripSequenceLoaded",
+                "name": "DripSequence loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[DripSequence]"
+                  }
+                ]
+              },
+              {
+                "key": "DripSequenceLoadFailed",
+                "name": "DripSequence load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ACTIVATE",
+                "name": "Activate",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "PAUSE",
+                "name": "Pause",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DripSequence",
+                    {
+                      "emit": {
+                        "success": "DripSequenceLoaded",
+                        "failure": "DripSequenceLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "direction": "vertical",
+                      "className": "py-12",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "variant": "caption",
+                          "type": "typography",
+                          "content": "Loading drip sequences…"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "DripSequenceLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "mail",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Drip Sequences",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "event": "ACTIVATE",
+                              "label": "Activate",
+                              "variant": "primary"
+                            },
+                            {
+                              "variant": "ghost",
+                              "label": "Pause",
+                              "event": "PAUSE"
+                            }
+                          ],
+                          "gap": "sm",
+                          "entity": "@payload.data",
+                          "cols": 1,
+                          "fields": [
+                            {
+                              "name": "name",
+                              "label": "Name",
+                              "variant": "caption"
+                            },
+                            {
+                              "name": "description",
+                              "label": "Description",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Trigger",
+                              "variant": "caption",
+                              "name": "triggerEvent"
+                            },
+                            {
+                              "name": "status",
+                              "variant": "badge",
+                              "label": "Status"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Enrolled",
+                              "name": "totalEnrolled"
+                            },
+                            {
+                              "name": "totalCompleted",
+                              "label": "Completed",
+                              "variant": "caption"
+                            }
+                          ]
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "DripSequenceLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "message": "@payload.error",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ACTIVATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "Drip sequence activated",
+                      "variant": "success"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "PAUSE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "info",
+                      "message": "Drip sequence paused"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "DripSequence",
+                    {
+                      "emit": {
+                        "failure": "DripSequenceLoadFailed",
+                        "success": "DripSequenceLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Drip Sequences"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "DripSequencePage",
+          "path": "/sequences",
+          "traits": [
+            {
+              "ref": "DripSequenceSequence"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

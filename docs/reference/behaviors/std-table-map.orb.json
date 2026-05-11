@@ -1,0 +1,739 @@
+{
+  "name": "std-table-map",
+  "version": "1.0.0",
+  "description": "std-table-map — restaurant POS interactive floor plan: TableNode entities rendered as draggable nodes (round/rectangle/square) with status (empty/seated/ordered/awaiting-bill/cleaning). Owns a TableNode entity and a single manage trait that loads tables, renders them on a TableFloorPlan canvas, and persists select / move / seat / clear actions back to the row.",
+  "orbitals": [
+    {
+      "name": "TableMapOrbital",
+      "entity": {
+        "name": "TableNode",
+        "collection": "tables",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "label",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "x",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "y",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "shape",
+            "type": "string",
+            "default": "round",
+            "values": [
+              "round",
+              "rectangle",
+              "square"
+            ]
+          },
+          {
+            "name": "capacity",
+            "type": "number",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "empty",
+            "values": [
+              "empty",
+              "seated",
+              "ordered",
+              "awaiting-bill",
+              "cleaning"
+            ]
+          },
+          {
+            "name": "partySize",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "serverName",
+            "type": "string"
+          },
+          {
+            "name": "currentOrderId",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "TableManage",
+          "category": "interaction",
+          "linkedEntity": "TableNode",
+          "emits": [
+            {
+              "event": "SELECT_TABLE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "MOVE_TABLE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "x",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "y",
+                  "type": "number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "SEAT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "partySize",
+                  "type": "number"
+                },
+                {
+                  "name": "serverName",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CLEAR_TABLE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TableLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[TableNode]"
+                }
+              ]
+            },
+            {
+              "event": "TableLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "TableSelected",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TableUpdated",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.label",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.x",
+                  "type": "number"
+                },
+                {
+                  "name": "row.y",
+                  "type": "number"
+                },
+                {
+                  "name": "row.shape",
+                  "type": "string"
+                },
+                {
+                  "name": "row.capacity",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.partySize",
+                  "type": "number"
+                },
+                {
+                  "name": "row.serverName",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentOrderId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "TableWriteFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TableLoaded",
+                "name": "Table loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[TableNode]"
+                  }
+                ]
+              },
+              {
+                "key": "TableLoadFailed",
+                "name": "Table load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SELECT_TABLE",
+                "name": "Select Table",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "MOVE_TABLE",
+                "name": "Move Table",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "SEAT",
+                "name": "Seat",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "partySize",
+                    "type": "number"
+                  },
+                  {
+                    "name": "serverName",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CLEAR_TABLE",
+                "name": "Clear Table",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TableUpdated",
+                "name": "Table updated",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "TableNode"
+                  }
+                ]
+              },
+              {
+                "key": "TableSelected",
+                "name": "Table selected",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TableWriteFailed",
+                "name": "Table write failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "TableNode",
+                    {
+                      "emit": {
+                        "failure": "TableLoadFailed",
+                        "success": "TableLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading floor plan…",
+                          "variant": "caption",
+                          "color": "muted",
+                          "type": "typography"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "align": "center",
+                      "gap": "md",
+                      "type": "stack",
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "TableLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "layout-grid"
+                            },
+                            {
+                              "content": "Floor Plan",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "height": 600,
+                          "type": "positioned-canvas",
+                          "selectedId": "@entity.id",
+                          "onSelect": "SELECT_TABLE",
+                          "editable": true,
+                          "items": "@payload.data",
+                          "width": 800,
+                          "onMove": "MOVE_TABLE"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "justify": "end",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "action": "SEAT",
+                              "icon": "users",
+                              "label": "Seat Party"
+                            },
+                            {
+                              "label": "Clear Table",
+                              "variant": "secondary",
+                              "type": "button",
+                              "action": "CLEAR_TABLE",
+                              "icon": "eraser"
+                            }
+                          ],
+                          "type": "stack"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "TableLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "SELECT_TABLE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "emit",
+                    "TableSelected",
+                    {
+                      "id": "@payload.id"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "MOVE_TABLE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.x",
+                    "@payload.x"
+                  ],
+                  [
+                    "set",
+                    "@entity.y",
+                    "@payload.y"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "TableNode",
+                    {
+                      "y": "@payload.y",
+                      "id": "@payload.id",
+                      "x": "@payload.x"
+                    },
+                    {
+                      "emit": {
+                        "failure": "TableWriteFailed",
+                        "success": "TableUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "SEAT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "seated"
+                  ],
+                  [
+                    "set",
+                    "@entity.partySize",
+                    "@payload.partySize"
+                  ],
+                  [
+                    "set",
+                    "@entity.serverName",
+                    "@payload.serverName"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "TableNode",
+                    {
+                      "id": "@payload.id",
+                      "status": "seated",
+                      "serverName": "@payload.serverName",
+                      "partySize": "@payload.partySize"
+                    },
+                    {
+                      "emit": {
+                        "failure": "TableWriteFailed",
+                        "success": "TableUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "CLEAR_TABLE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "empty"
+                  ],
+                  [
+                    "set",
+                    "@entity.partySize",
+                    0
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "TableNode",
+                    {
+                      "status": "empty",
+                      "id": "@payload.id",
+                      "partySize": 0
+                    },
+                    {
+                      "emit": {
+                        "success": "TableUpdated",
+                        "failure": "TableWriteFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "TableUpdated",
+                "effects": [
+                  [
+                    "fetch",
+                    "TableNode",
+                    {
+                      "emit": {
+                        "failure": "TableLoadFailed",
+                        "success": "TableLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TableSelected",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TableWriteFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "TableNode",
+                    {
+                      "emit": {
+                        "failure": "TableLoadFailed",
+                        "success": "TableLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "canvasWidth": {
+              "type": "number",
+              "default": 800
+            },
+            "title": {
+              "type": "string",
+              "default": "Floor Plan"
+            },
+            "canvasHeight": {
+              "type": "number",
+              "default": 600
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "TableManagePage",
+          "path": "/tables/manage",
+          "traits": [
+            {
+              "ref": "TableManage"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,663 @@
+{
+  "name": "std-signature-capture",
+  "version": "1.0.0",
+  "description": "std-signature-capture — proof-of-completion signature capture for field-service jobs and healthcare consent forms. Owns a Signature entity; CHANGE binds @entity.signatureDataUrl; SUBMIT persists @payload.data and emits SignatureSubmitted.",
+  "orbitals": [
+    {
+      "name": "SignatureCaptureOrbital",
+      "entity": {
+        "name": "Signature",
+        "collection": "signatures",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "targetId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "targetType",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "signerName",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "signatureDataUrl",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "signedAt",
+            "type": "string"
+          },
+          {
+            "name": "ipAddress",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "SignatureCapture",
+          "category": "interaction",
+          "linkedEntity": "Signature",
+          "emits": [
+            {
+              "event": "CHANGE",
+              "payloadSchema": [
+                {
+                  "name": "dataUrl",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "SUBMIT",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CLEAR"
+            },
+            {
+              "event": "SignatureLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Signature]"
+                }
+              ]
+            },
+            {
+              "event": "SignatureLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SignatureSubmitted",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.targetId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.targetType",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.signerName",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.signatureDataUrl",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.signedAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.ipAddress",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SignatureSubmitFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "idle"
+              },
+              {
+                "name": "submitting"
+              },
+              {
+                "name": "submitted"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SignatureLoaded",
+                "name": "Signature loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Signature]"
+                  }
+                ]
+              },
+              {
+                "key": "SignatureLoadFailed",
+                "name": "Signature load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CHANGE",
+                "name": "Change",
+                "payloadSchema": [
+                  {
+                    "name": "dataUrl",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CLEAR",
+                "name": "Clear"
+              },
+              {
+                "key": "SUBMIT",
+                "name": "Submit",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "SignatureSubmitted",
+                "name": "Signature submitted",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Signature"
+                  }
+                ]
+              },
+              {
+                "key": "SignatureSubmitFailed",
+                "name": "Signature submit failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Signature",
+                    {
+                      "emit": {
+                        "failure": "SignatureLoadFailed",
+                        "success": "SignatureLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading…",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "className": "py-12",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "idle",
+                "event": "SignatureLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "content": "Sign here",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Use your finger or stylus to sign below",
+                          "variant": "caption",
+                          "color": "muted"
+                        },
+                        {
+                          "type": "signature-pad",
+                          "value": "@entity.signatureDataUrl",
+                          "onChange": "CHANGE"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "icon": "trash",
+                              "label": "Clear",
+                              "variant": "secondary",
+                              "action": "CLEAR",
+                              "type": "button"
+                            },
+                            {
+                              "label": "Submit",
+                              "variant": "primary",
+                              "type": "button",
+                              "icon": "send",
+                              "action": "SUBMIT"
+                            }
+                          ]
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "SignatureLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "CHANGE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.signatureDataUrl",
+                    "@payload.dataUrl"
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "CLEAR",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.signatureDataUrl",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "content": "Sign here",
+                          "type": "typography",
+                          "variant": "h3"
+                        },
+                        {
+                          "content": "Use your finger or stylus to sign below",
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "caption"
+                        },
+                        {
+                          "value": "@entity.signatureDataUrl",
+                          "type": "signature-pad",
+                          "onChange": "CHANGE"
+                        },
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "button",
+                              "icon": "trash",
+                              "label": "Clear",
+                              "action": "CLEAR",
+                              "variant": "secondary"
+                            },
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "label": "Submit",
+                              "icon": "send",
+                              "action": "SUBMIT"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "sm"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "submitting",
+                "event": "SUBMIT",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "Signature",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "SignatureSubmitted",
+                        "failure": "SignatureSubmitFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Submitting your signature…"
+                        }
+                      ],
+                      "type": "stack",
+                      "align": "center",
+                      "direction": "vertical",
+                      "className": "py-12",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "submitted",
+                "event": "SignatureSubmitted",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "name": "check-circle",
+                          "type": "icon",
+                          "color": "success"
+                        },
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Signature recorded. Thank you."
+                        }
+                      ],
+                      "align": "center",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "idle",
+                "event": "SignatureSubmitFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "error",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitted",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.signatureDataUrl",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "content": "Sign here",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Use your finger or stylus to sign below",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "signature-pad",
+                          "value": "@entity.signatureDataUrl",
+                          "onChange": "CHANGE"
+                        },
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "label": "Clear",
+                              "type": "button",
+                              "icon": "trash",
+                              "variant": "secondary",
+                              "action": "CLEAR"
+                            },
+                            {
+                              "type": "button",
+                              "variant": "primary",
+                              "icon": "send",
+                              "action": "SUBMIT",
+                              "label": "Submit"
+                            }
+                          ],
+                          "gap": "sm"
+                        }
+                      ],
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "content": "Sign here",
+                          "type": "typography"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Use your finger or stylus to sign below",
+                          "variant": "caption"
+                        },
+                        {
+                          "type": "signature-pad",
+                          "onChange": "CHANGE",
+                          "value": "@entity.signatureDataUrl"
+                        },
+                        {
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "button",
+                              "action": "CLEAR",
+                              "icon": "trash",
+                              "variant": "secondary",
+                              "label": "Clear"
+                            },
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "label": "Submit",
+                              "icon": "send",
+                              "action": "SUBMIT"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Sign here"
+            },
+            "instructions": {
+              "type": "string",
+              "default": "Use your finger or stylus to sign below"
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "SignatureCapturePage",
+          "path": "/signatures/capture",
+          "traits": [
+            {
+              "ref": "SignatureCapture"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

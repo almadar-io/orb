@@ -1,0 +1,409 @@
+{
+  "name": "std-campaign-goal",
+  "version": "1.0.0",
+  "description": "std-campaign-goal — nonprofit fundraising campaign primitive with a target dollar amount, running raised total, donor count, deadline, and status. Browses campaigns in a data-grid with Launch / End row actions.",
+  "orbitals": [
+    {
+      "name": "CampaignGoalOrbital",
+      "entity": {
+        "name": "CampaignGoal",
+        "collection": "campaigngoals",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "targetAmount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "raisedAmount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "donorCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "startDate",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "endDate",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "draft",
+            "values": [
+              "draft",
+              "active",
+              "achieved",
+              "ended"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "CampaignGoalTracker",
+          "category": "interaction",
+          "linkedEntity": "CampaignGoal",
+          "emits": [
+            {
+              "event": "LAUNCH_CAMPAIGN",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "END_CAMPAIGN",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CampaignGoalLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[CampaignGoal]"
+                }
+              ]
+            },
+            {
+              "event": "CampaignGoalLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CampaignGoalLoaded",
+                "name": "CampaignGoal loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[CampaignGoal]"
+                  }
+                ]
+              },
+              {
+                "key": "CampaignGoalLoadFailed",
+                "name": "CampaignGoal load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "LAUNCH_CAMPAIGN",
+                "name": "Launch Campaign",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "END_CAMPAIGN",
+                "name": "End Campaign",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CampaignGoal",
+                    {
+                      "emit": {
+                        "failure": "CampaignGoalLoadFailed",
+                        "success": "CampaignGoalLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "type": "typography",
+                          "content": "Loading campaigns…",
+                          "color": "muted"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "CampaignGoalLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "target"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Campaigns",
+                              "variant": "h3"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "sm",
+                          "cols": 1,
+                          "itemActions": [
+                            {
+                              "label": "Launch",
+                              "event": "LAUNCH_CAMPAIGN",
+                              "variant": "primary"
+                            },
+                            {
+                              "variant": "danger",
+                              "label": "End",
+                              "event": "END_CAMPAIGN"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "name": "name",
+                              "variant": "caption",
+                              "label": "Name"
+                            },
+                            {
+                              "name": "targetAmount",
+                              "label": "Target",
+                              "variant": "caption"
+                            },
+                            {
+                              "name": "raisedAmount",
+                              "label": "Raised",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Donors",
+                              "name": "donorCount",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Status",
+                              "variant": "badge",
+                              "name": "status"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "CampaignGoalLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "LAUNCH_CAMPAIGN",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "success",
+                      "message": "Campaign launched"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "END_CAMPAIGN",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "info",
+                      "message": "Campaign ended"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CampaignGoal",
+                    {
+                      "emit": {
+                        "success": "CampaignGoalLoaded",
+                        "failure": "CampaignGoalLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Campaigns"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "CampaignGoalPage",
+          "path": "/campaigns",
+          "traits": [
+            {
+              "ref": "CampaignGoalTracker"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

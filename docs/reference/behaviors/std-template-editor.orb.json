@@ -1,0 +1,417 @@
+{
+  "name": "std-template-editor",
+  "version": "1.0.0",
+  "description": "std-template-editor — message template authoring primitive. Edits email/SMS templates with variables like {{firstName}}. Templates are reused across broadcasts and drip sequences.",
+  "orbitals": [
+    {
+      "name": "MessageTemplateOrbital",
+      "entity": {
+        "name": "MessageTemplate",
+        "collection": "messagetemplates",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "default": "email",
+            "values": [
+              "email",
+              "sms"
+            ]
+          },
+          {
+            "name": "subject",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "body",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "variables",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "lastEditedAt",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "MessageTemplateEditor",
+          "category": "interaction",
+          "linkedEntity": "MessageTemplate",
+          "emits": [
+            {
+              "event": "EDIT_TEMPLATE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "SAVE_TEMPLATE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "MessageTemplateLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[MessageTemplate]"
+                }
+              ]
+            },
+            {
+              "event": "MessageTemplateLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "editing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "MessageTemplateLoaded",
+                "name": "MessageTemplate loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[MessageTemplate]"
+                  }
+                ]
+              },
+              {
+                "key": "MessageTemplateLoadFailed",
+                "name": "MessageTemplate load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "EDIT_TEMPLATE",
+                "name": "Edit Template",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "SAVE_TEMPLATE",
+                "name": "Save Template",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "MessageTemplate",
+                    {
+                      "emit": {
+                        "failure": "MessageTemplateLoadFailed",
+                        "success": "MessageTemplateLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading templates…",
+                          "variant": "caption",
+                          "color": "muted"
+                        }
+                      ],
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "MessageTemplateLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "file-text",
+                              "type": "icon"
+                            },
+                            {
+                              "variant": "h3",
+                              "type": "typography",
+                              "content": "Templates"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "variant": "ghost",
+                              "label": "Edit",
+                              "event": "EDIT_TEMPLATE"
+                            }
+                          ],
+                          "fields": [
+                            {
+                              "variant": "caption",
+                              "label": "Name",
+                              "name": "name"
+                            },
+                            {
+                              "label": "Channel",
+                              "name": "channel",
+                              "variant": "badge"
+                            },
+                            {
+                              "label": "Subject",
+                              "variant": "caption",
+                              "name": "subject"
+                            },
+                            {
+                              "name": "lastEditedAt",
+                              "label": "Updated",
+                              "variant": "caption"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "cols": 1,
+                          "gap": "sm"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "MessageTemplateLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "editing",
+                "event": "EDIT_TEMPLATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "card",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "vertical",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "edit"
+                                },
+                                {
+                                  "content": "Edit template",
+                                  "type": "typography",
+                                  "variant": "h3"
+                                }
+                              ],
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "type": "stack"
+                            },
+                            {
+                              "type": "divider"
+                            },
+                            {
+                              "type": "button",
+                              "action": "SAVE_TEMPLATE",
+                              "variant": "primary",
+                              "label": "Save"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "browsing",
+                "event": "SAVE_TEMPLATE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Template saved",
+                      "variant": "success",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "MessageTemplate",
+                    {
+                      "emit": {
+                        "success": "MessageTemplateLoaded",
+                        "failure": "MessageTemplateLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Templates"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "MessageTemplatePage",
+          "path": "/templates",
+          "traits": [
+            {
+              "ref": "MessageTemplateEditor"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

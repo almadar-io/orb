@@ -1,0 +1,1016 @@
+{
+  "name": "std-service-print",
+  "version": "1.0.0",
+  "description": "std-service-print — Receipt / kitchen / label printer service (ESC/POS or web-print API). Bind via `uses Print from \"std/behaviors/std-service-print\"` and configure `defaultPrinter` at the call site. Pass `uiTrait: \"@trait.YourPrintForm\"` to inject your own form; leave unset to render the atom's default textarea + Print button standalone surface.",
+  "orbitals": [
+    {
+      "name": "ServicePrintOrbital",
+      "entity": {
+        "name": "ServicePrint",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "printerName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "content",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "kind",
+            "type": "string",
+            "default": "receipt",
+            "values": [
+              "receipt",
+              "kitchen",
+              "label"
+            ]
+          },
+          {
+            "name": "copies",
+            "type": "number",
+            "default": 1
+          },
+          {
+            "name": "printJobId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "idle",
+            "values": [
+              "idle",
+              "printing",
+              "succeeded",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ServicePrintDefaultForm",
+          "category": "interaction",
+          "emits": [
+            {
+              "event": "PRINT",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "printerName",
+                  "type": "string"
+                },
+                {
+                  "name": "content",
+                  "type": "string"
+                },
+                {
+                  "name": "kind",
+                  "type": "string"
+                },
+                {
+                  "name": "copies",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "event": "CHECK_STATUS",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "jobId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "LIST_PRINTERS",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "ready",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PRINT",
+                "name": "Print"
+              },
+              {
+                "key": "CHECK_STATUS",
+                "name": "Check Status"
+              },
+              {
+                "key": "LIST_PRINTERS",
+                "name": "List Printers"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "ready",
+                "to": "ready",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "printer",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Print",
+                              "variant": "h2"
+                            }
+                          ],
+                          "align": "center",
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "md",
+                          "children": [
+                            {
+                              "placeholder": "Printer name",
+                              "type": "input"
+                            },
+                            {
+                              "placeholder": "Content to print",
+                              "type": "textarea"
+                            },
+                            {
+                              "type": "select",
+                              "options": [
+                                {
+                                  "label": "Receipt",
+                                  "value": "receipt"
+                                },
+                                {
+                                  "value": "kitchen",
+                                  "label": "Kitchen"
+                                },
+                                {
+                                  "value": "label",
+                                  "label": "Label"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "vertical"
+                        },
+                        {
+                          "label": "Print",
+                          "type": "button",
+                          "action": "PRINT",
+                          "icon": "printer",
+                          "variant": "primary"
+                        }
+                      ],
+                      "align": "center"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ServicePrintPrint",
+          "category": "interaction",
+          "linkedEntity": "ServicePrint",
+          "emits": [
+            {
+              "event": "ServicePrintLoaded",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServicePrintLoadFailed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServicePrintPrintQueued",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "jobId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServicePrintPrintFailed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServicePrintPrintersListed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "printers",
+                  "type": "object"
+                }
+              ]
+            },
+            {
+              "event": "PRINT_QUEUED",
+              "payloadSchema": [
+                {
+                  "name": "jobId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "PRINTERS_LISTED",
+              "payloadSchema": [
+                {
+                  "name": "printers",
+                  "type": "object"
+                }
+              ]
+            },
+            {
+              "event": "FAILED",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "PRINT",
+              "triggers": "PRINT",
+              "source": {
+                "kind": "trait",
+                "trait": "ServicePrintDefaultForm"
+              }
+            },
+            {
+              "event": "CHECK_STATUS",
+              "triggers": "CHECK_STATUS",
+              "source": {
+                "kind": "trait",
+                "trait": "ServicePrintDefaultForm"
+              }
+            },
+            {
+              "event": "LIST_PRINTERS",
+              "triggers": "LIST_PRINTERS",
+              "source": {
+                "kind": "trait",
+                "trait": "ServicePrintDefaultForm"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "printing"
+              },
+              {
+                "name": "succeeded"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PRINT",
+                "name": "Print",
+                "payloadSchema": [
+                  {
+                    "name": "printerName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "content",
+                    "type": "string"
+                  },
+                  {
+                    "name": "kind",
+                    "type": "string"
+                  },
+                  {
+                    "name": "copies",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "key": "LIST_PRINTERS",
+                "name": "List Printers",
+                "payloadSchema": [
+                  {
+                    "name": "source",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CHECK_STATUS",
+                "name": "Check Status",
+                "payloadSchema": [
+                  {
+                    "name": "jobId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "PRINTERS_LISTED",
+                "name": "Printers Listed",
+                "payloadSchema": [
+                  {
+                    "name": "printers",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "key": "ServicePrintLoaded",
+                "name": "ServicePrint loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ServicePrintLoadFailed",
+                "name": "ServicePrint load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "PRINT_QUEUED",
+                "name": "Print Queued",
+                "payloadSchema": [
+                  {
+                    "name": "jobId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "ServicePrintPrintQueued",
+                "name": "ServicePrint print queued",
+                "payloadSchema": [
+                  {
+                    "name": "jobId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ServicePrintPrintersListed",
+                "name": "ServicePrint printers listed",
+                "payloadSchema": [
+                  {
+                    "name": "printers",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "key": "ServicePrintPrintFailed",
+                "name": "ServicePrint print failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "RETRY",
+                "name": "Retry"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.printerName",
+                    ""
+                  ],
+                  [
+                    "fetch",
+                    "ServicePrint",
+                    {
+                      "emit": {
+                        "failure": "ServicePrintLoadFailed",
+                        "success": "ServicePrintLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        "@trait.ServicePrintDefaultForm"
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "printing",
+                "event": "PRINT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.printerName",
+                    "@payload.printerName"
+                  ],
+                  [
+                    "set",
+                    "@entity.content",
+                    "@payload.content"
+                  ],
+                  [
+                    "set",
+                    "@entity.kind",
+                    "@payload.kind"
+                  ],
+                  [
+                    "set",
+                    "@entity.copies",
+                    "@payload.copies"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "title": "Printing...",
+                      "message": "Sending job to printer.",
+                      "type": "loading-state"
+                    }
+                  ],
+                  [
+                    "call-service",
+                    "print",
+                    "print",
+                    {
+                      "copies": "@entity.copies",
+                      "content": "@entity.content",
+                      "kind": "@entity.kind",
+                      "printerName": "@entity.printerName"
+                    },
+                    {
+                      "emit": {
+                        "success": "PRINT_QUEUED",
+                        "failure": "FAILED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "LIST_PRINTERS",
+                "effects": [
+                  [
+                    "call-service",
+                    "print",
+                    "listPrinters",
+                    {},
+                    {
+                      "emit": {
+                        "failure": "FAILED",
+                        "success": "PRINTERS_LISTED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "CHECK_STATUS",
+                "effects": [
+                  [
+                    "call-service",
+                    "print",
+                    "status",
+                    {
+                      "jobId": "@payload.jobId"
+                    },
+                    {
+                      "emit": {
+                        "failure": "FAILED",
+                        "success": "PRINT_QUEUED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "PRINTERS_LISTED",
+                "effects": [
+                  [
+                    "emit",
+                    "ServicePrintPrintersListed",
+                    {
+                      "printers": "@payload.printers"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServicePrintLoaded"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServicePrintLoadFailed"
+              },
+              {
+                "from": "printing",
+                "to": "succeeded",
+                "event": "PRINT_QUEUED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.printJobId",
+                    "@payload.jobId"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "emit",
+                    "ServicePrintPrintQueued",
+                    {
+                      "jobId": "@entity.printJobId"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "check-circle"
+                        },
+                        {
+                          "type": "alert",
+                          "variant": "success",
+                          "message": "Print job queued!"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "body",
+                          "content": "@entity.printJobId"
+                        },
+                        {
+                          "variant": "ghost",
+                          "label": "New Print",
+                          "action": "RESET",
+                          "type": "button",
+                          "icon": "rotate-ccw"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "printing",
+                "to": "error",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "emit",
+                    "ServicePrintPrintFailed",
+                    {
+                      "code": "print_failed",
+                      "error": "@entity.error"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@entity.error",
+                      "type": "error-state",
+                      "title": "Print Failed",
+                      "onRetry": "RETRY"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "printer"
+                            },
+                            {
+                              "content": "Print",
+                              "variant": "h2",
+                              "type": "typography"
+                            }
+                          ],
+                          "gap": "md",
+                          "align": "center",
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "direction": "vertical",
+                          "gap": "md",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "placeholder": "Printer name",
+                              "type": "input"
+                            },
+                            {
+                              "placeholder": "Content to print",
+                              "type": "textarea"
+                            },
+                            {
+                              "type": "select",
+                              "options": [
+                                {
+                                  "label": "Receipt",
+                                  "value": "receipt"
+                                },
+                                {
+                                  "value": "kitchen",
+                                  "label": "Kitchen"
+                                },
+                                {
+                                  "label": "Label",
+                                  "value": "label"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "variant": "primary",
+                          "action": "PRINT",
+                          "icon": "printer",
+                          "type": "button",
+                          "label": "Print"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "succeeded",
+                "event": "ServicePrintPrintQueued"
+              },
+              {
+                "from": "succeeded",
+                "to": "succeeded",
+                "event": "ServicePrintPrintersListed"
+              },
+              {
+                "from": "error",
+                "to": "error",
+                "event": "ServicePrintPrintFailed"
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RETRY",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "lg",
+                      "align": "center",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "align": "center",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "printer",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Print",
+                              "variant": "h2",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "md"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "children": [
+                            {
+                              "placeholder": "Printer name",
+                              "type": "input"
+                            },
+                            {
+                              "type": "textarea",
+                              "placeholder": "Content to print"
+                            },
+                            {
+                              "type": "select",
+                              "options": [
+                                {
+                                  "label": "Receipt",
+                                  "value": "receipt"
+                                },
+                                {
+                                  "value": "kitchen",
+                                  "label": "Kitchen"
+                                },
+                                {
+                                  "label": "Label",
+                                  "value": "label"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "vertical"
+                        },
+                        {
+                          "label": "Print",
+                          "type": "button",
+                          "action": "PRINT",
+                          "variant": "primary",
+                          "icon": "printer"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "printer",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Print",
+                              "variant": "h2",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "md",
+                          "align": "center"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "direction": "vertical",
+                          "gap": "md",
+                          "children": [
+                            {
+                              "type": "input",
+                              "placeholder": "Printer name"
+                            },
+                            {
+                              "placeholder": "Content to print",
+                              "type": "textarea"
+                            },
+                            {
+                              "type": "select",
+                              "options": [
+                                {
+                                  "label": "Receipt",
+                                  "value": "receipt"
+                                },
+                                {
+                                  "label": "Kitchen",
+                                  "value": "kitchen"
+                                },
+                                {
+                                  "label": "Label",
+                                  "value": "label"
+                                }
+                              ]
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "icon": "printer",
+                          "type": "button",
+                          "variant": "primary",
+                          "label": "Print",
+                          "action": "PRINT"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "defaultPrinter": {
+              "type": "string",
+              "default": ""
+            },
+            "uiTrait": {
+              "type": "trait",
+              "default": "@trait.ServicePrintDefaultForm"
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ServicePrintPage",
+          "path": "/serviceprints",
+          "traits": [
+            {
+              "ref": "ServicePrintPrint"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "std-service-youtube",
-  "version": "1.0.0",
-  "description": "std-service-youtube as a Function",
+  "version": "2.0.0",
+  "description": "std-service-youtube. YouTube embed service. Bind via `uses Youtube from \"std/behaviors/std-service-youtube\"` and configure `videoId` / `autoplay` / `controls` / `start` at the call site. SPECIAL: the default render IS the embed itself, so passing `uiTrait: \"@trait.YourPlayerSkin\"` OVERRIDES the embed (e.g., a custom player skin) rather than supplements it. Leave `uiTrait` unset to render the atom's default embed.",
   "orbitals": [
     {
       "name": "ServiceYoutubeOrbital",
@@ -15,29 +15,24 @@
             "required": true
           },
           {
-            "name": "query",
+            "name": "videoId",
             "type": "string",
             "default": ""
           },
           {
-            "name": "selectedVideoId",
-            "type": "string",
-            "default": ""
+            "name": "autoplay",
+            "type": "boolean",
+            "default": false
           },
           {
-            "name": "videoTitle",
-            "type": "string",
-            "default": ""
+            "name": "controls",
+            "type": "boolean",
+            "default": true
           },
           {
-            "name": "videoDescription",
-            "type": "string",
-            "default": ""
-          },
-          {
-            "name": "searchStatus",
-            "type": "string",
-            "default": "idle"
+            "name": "start",
+            "type": "number",
+            "default": 0
           },
           {
             "name": "error",
@@ -70,66 +65,142 @@
       },
       "traits": [
         {
+          "name": "ServiceYoutubeDefaultPlayer",
+          "category": "interaction",
+          "emits": [
+            {
+              "event": "PLAY",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "READY",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "ready",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "PLAY",
+                "name": "Play"
+              },
+              {
+                "key": "READY",
+                "name": "Ready"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "ready",
+                "to": "ready",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "video",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "YouTube Video"
+                            },
+                            {
+                              "type": "typography",
+                              "color": "muted",
+                              "variant": "body",
+                              "content": "@config.videoId"
+                            },
+                            {
+                              "type": "stack",
+                              "gap": "sm",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "action": "PLAY",
+                                  "icon": "play",
+                                  "label": "Play",
+                                  "type": "button",
+                                  "variant": "primary"
+                                }
+                              ],
+                              "justify": "center"
+                            }
+                          ],
+                          "align": "center",
+                          "direction": "vertical",
+                          "gap": "md",
+                          "type": "stack"
+                        }
+                      ],
+                      "type": "card"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "ready",
+                "to": "ready",
+                "event": "PLAY",
+                "effects": [
+                  [
+                    "emit",
+                    "PLAY",
+                    {
+                      "source": "default-player"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
           "name": "ServiceYoutubeYoutube",
           "category": "interaction",
           "linkedEntity": "ServiceYoutube",
           "emits": [
             {
               "event": "ServiceYoutubeLoaded",
-              "description": "Fired when ServiceYoutube finishes loading",
-              "scope": "internal",
+              "scope": "external",
               "payloadSchema": [
                 {
                   "name": "id",
-                  "type": "string",
-                  "required": true
-                },
-                {
-                  "name": "query",
-                  "type": "string"
-                },
-                {
-                  "name": "selectedVideoId",
-                  "type": "string"
-                },
-                {
-                  "name": "videoTitle",
-                  "type": "string"
-                },
-                {
-                  "name": "videoDescription",
-                  "type": "string"
-                },
-                {
-                  "name": "searchStatus",
-                  "type": "string"
-                },
-                {
-                  "name": "error",
-                  "type": "string"
-                },
-                {
-                  "name": "name",
-                  "type": "string"
-                },
-                {
-                  "name": "description",
-                  "type": "string"
-                },
-                {
-                  "name": "status",
-                  "type": "string"
-                },
-                {
-                  "name": "createdAt",
                   "type": "string"
                 }
               ]
             },
             {
               "event": "ServiceYoutubeLoadFailed",
-              "description": "Fired when ServiceYoutube fails to load",
-              "scope": "internal",
+              "scope": "external",
               "payloadSchema": [
                 {
                   "name": "message",
@@ -138,18 +209,18 @@
               ]
             },
             {
-              "event": "ServiceYoutubeYoutubeCompleted",
-              "scope": "internal",
+              "event": "ServiceYoutubeYoutubeReady",
+              "scope": "external",
               "payloadSchema": [
                 {
-                  "name": "result",
-                  "type": "object"
+                  "name": "videoId",
+                  "type": "string"
                 }
               ]
             },
             {
               "event": "ServiceYoutubeYoutubeFailed",
-              "scope": "internal",
+              "scope": "external",
               "payloadSchema": [
                 {
                   "name": "error",
@@ -160,6 +231,26 @@
                   "type": "string"
                 }
               ]
+            },
+            {
+              "event": "FAILED",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "READY",
+              "triggers": "READY",
+              "source": {
+                "kind": "trait",
+                "trait": "ServiceYoutubeDefaultPlayer"
+              }
             }
           ],
           "stateMachine": {
@@ -169,13 +260,7 @@
                 "isInitial": true
               },
               {
-                "name": "searching"
-              },
-              {
-                "name": "results"
-              },
-              {
-                "name": "viewingDetail"
+                "name": "ready"
               },
               {
                 "name": "error"
@@ -187,19 +272,8 @@
                 "name": "Initialize"
               },
               {
-                "key": "SEARCH",
-                "name": "Search"
-              },
-              {
-                "key": "SEARCH_COMPLETE",
-                "name": "Search Complete",
-                "payloadSchema": [
-                  {
-                    "name": "results",
-                    "type": "string",
-                    "required": true
-                  }
-                ]
+                "key": "READY",
+                "name": "Ready"
               },
               {
                 "key": "FAILED",
@@ -213,87 +287,11 @@
                 ]
               },
               {
-                "key": "SELECT_VIDEO",
-                "name": "Select Video",
-                "payloadSchema": [
-                  {
-                    "name": "videoId",
-                    "type": "string",
-                    "required": true
-                  }
-                ]
-              },
-              {
-                "key": "RESET",
-                "name": "Reset"
-              },
-              {
-                "key": "VIDEO_LOADED",
-                "name": "Video Loaded",
-                "payloadSchema": [
-                  {
-                    "name": "title",
-                    "type": "string",
-                    "required": true
-                  },
-                  {
-                    "name": "description",
-                    "type": "string",
-                    "required": true
-                  }
-                ]
-              },
-              {
-                "key": "BACK",
-                "name": "Back"
-              },
-              {
                 "key": "ServiceYoutubeLoaded",
                 "name": "ServiceYoutube loaded",
                 "payloadSchema": [
                   {
                     "name": "id",
-                    "type": "string",
-                    "required": true
-                  },
-                  {
-                    "name": "query",
-                    "type": "string"
-                  },
-                  {
-                    "name": "selectedVideoId",
-                    "type": "string"
-                  },
-                  {
-                    "name": "videoTitle",
-                    "type": "string"
-                  },
-                  {
-                    "name": "videoDescription",
-                    "type": "string"
-                  },
-                  {
-                    "name": "searchStatus",
-                    "type": "string"
-                  },
-                  {
-                    "name": "error",
-                    "type": "string"
-                  },
-                  {
-                    "name": "name",
-                    "type": "string"
-                  },
-                  {
-                    "name": "description",
-                    "type": "string"
-                  },
-                  {
-                    "name": "status",
-                    "type": "string"
-                  },
-                  {
-                    "name": "createdAt",
                     "type": "string"
                   }
                 ]
@@ -309,12 +307,12 @@
                 ]
               },
               {
-                "key": "ServiceYoutubeYoutubeCompleted",
-                "name": "ServiceYoutube youtube completed",
+                "key": "ServiceYoutubeYoutubeReady",
+                "name": "ServiceYoutube youtube ready",
                 "payloadSchema": [
                   {
-                    "name": "result",
-                    "type": "object"
+                    "name": "videoId",
+                    "type": "string"
                   }
                 ]
               },
@@ -331,6 +329,10 @@
                     "type": "string"
                   }
                 ]
+              },
+              {
+                "key": "RETRY",
+                "name": "Retry"
               }
             ],
             "transitions": [
@@ -341,8 +343,23 @@
                 "effects": [
                   [
                     "set",
-                    "@entity.query",
+                    "@entity.videoId",
                     ""
+                  ],
+                  [
+                    "set",
+                    "@entity.autoplay",
+                    false
+                  ],
+                  [
+                    "set",
+                    "@entity.controls",
+                    true
+                  ],
+                  [
+                    "set",
+                    "@entity.start",
+                    0
                   ],
                   [
                     "fetch",
@@ -358,152 +375,44 @@
                     "render-ui",
                     "main",
                     {
-                      "align": "stretch",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "direction": "horizontal",
-                          "align": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "name": "video"
-                            },
-                            {
-                              "type": "typography",
-                              "content": "YouTube Search",
-                              "variant": "h2"
-                            }
-                          ],
-                          "type": "stack",
-                          "gap": "md"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "placeholder": "Search YouTube videos...",
-                          "type": "input"
-                        },
-                        {
-                          "label": "Search",
-                          "action": "SEARCH",
-                          "type": "button",
-                          "variant": "primary",
-                          "icon": "search"
-                        }
-                      ],
                       "direction": "vertical",
-                      "gap": "lg"
+                      "children": [
+                        "@trait.ServiceYoutubeDefaultPlayer"
+                      ],
+                      "type": "stack",
+                      "gap": "md"
                     }
                   ]
                 ]
               },
               {
                 "from": "idle",
-                "to": "searching",
-                "event": "SEARCH",
+                "to": "ready",
+                "event": "READY",
                 "effects": [
                   [
-                    "render-ui",
-                    "main",
+                    "emit",
+                    "ServiceYoutubeYoutubeReady",
                     {
-                      "type": "loading-state",
-                      "title": "Searching...",
-                      "message": "Searching YouTube for videos..."
+                      "videoId": "@entity.videoId"
                     }
-                  ],
-                  [
-                    "call-service",
-                    "youtube",
-                    "search",
-                    {
-                      "query": "@entity.query",
-                      "maxResults": 10,
-                      "type": "video"
-                    },
-                    {
-                      "emit": {
-                        "failure": "ServiceYoutubeYoutubeFailed",
-                        "success": "ServiceYoutubeYoutubeCompleted"
-                      }
-                    }
-                  ]
-                ]
-              },
-              {
-                "from": "searching",
-                "to": "results",
-                "event": "SEARCH_COMPLETE",
-                "effects": [
-                  [
-                    "set",
-                    "@entity.searchStatus",
-                    "complete"
                   ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "children": [
-                        {
-                          "gap": "md",
-                          "type": "stack",
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "name": "video",
-                              "type": "icon"
-                            },
-                            {
-                              "content": "Search Results",
-                              "type": "typography",
-                              "variant": "h2"
-                            }
-                          ],
-                          "align": "center"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "content": "Select a video to view details.",
-                          "variant": "body",
-                          "type": "typography"
-                        },
-                        {
-                          "type": "stack",
-                          "gap": "sm",
-                          "justify": "center",
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "action": "RESET",
-                              "icon": "rotate-ccw",
-                              "label": "New Search",
-                              "variant": "ghost",
-                              "type": "button"
-                            },
-                            {
-                              "icon": "search",
-                              "action": "SEARCH",
-                              "type": "button",
-                              "variant": "ghost",
-                              "label": "Search Again"
-                            }
-                          ]
-                        }
-                      ],
-                      "align": "stretch",
-                      "gap": "lg",
+                      "gap": "md",
                       "type": "stack",
-                      "direction": "vertical"
+                      "direction": "vertical",
+                      "children": [
+                        "@trait.ServiceYoutubeDefaultPlayer"
+                      ]
                     }
                   ]
                 ]
               },
               {
-                "from": "searching",
+                "from": "idle",
                 "to": "error",
                 "event": "FAILED",
                 "effects": [
@@ -513,362 +422,129 @@
                     "@payload.error"
                   ],
                   [
-                    "set",
-                    "@entity.searchStatus",
-                    "error"
+                    "emit",
+                    "ServiceYoutubeYoutubeFailed",
+                    {
+                      "error": "@entity.error",
+                      "code": "youtube_embed_failed"
+                    }
                   ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "gap": "lg",
-                      "children": [
-                        {
-                          "message": "@entity.error",
-                          "onRetry": "SEARCH",
-                          "type": "error-state",
-                          "title": "Search Failed"
-                        },
-                        {
-                          "justify": "center",
-                          "type": "stack",
-                          "gap": "sm",
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "type": "button",
-                              "label": "Retry",
-                              "action": "SEARCH",
-                              "icon": "refresh-cw",
-                              "variant": "primary"
-                            },
-                            {
-                              "type": "button",
-                              "action": "RESET",
-                              "label": "Reset",
-                              "icon": "rotate-ccw",
-                              "variant": "ghost"
-                            }
-                          ]
-                        }
-                      ],
-                      "type": "stack",
-                      "align": "center",
-                      "direction": "vertical"
+                      "type": "error-state",
+                      "message": "@entity.error",
+                      "title": "Video Failed",
+                      "onRetry": "RETRY"
                     }
                   ]
                 ]
               },
               {
-                "from": "results",
-                "to": "searching",
-                "event": "SEARCH",
-                "effects": [
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "message": "Searching YouTube for videos...",
-                      "type": "loading-state",
-                      "title": "Searching..."
-                    }
-                  ],
-                  [
-                    "call-service",
-                    "youtube",
-                    "search",
-                    {
-                      "type": "video",
-                      "maxResults": 10,
-                      "query": "@entity.query"
-                    },
-                    {
-                      "emit": {
-                        "success": "ServiceYoutubeYoutubeCompleted",
-                        "failure": "ServiceYoutubeYoutubeFailed"
-                      }
-                    }
-                  ]
-                ]
-              },
-              {
-                "from": "results",
-                "to": "viewingDetail",
-                "event": "SELECT_VIDEO",
-                "effects": [
-                  [
-                    "set",
-                    "@entity.selectedVideoId",
-                    "@payload.videoId"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "type": "loading-state",
-                      "message": "Fetching video details...",
-                      "title": "Loading video..."
-                    }
-                  ],
-                  [
-                    "call-service",
-                    "youtube",
-                    "getVideo",
-                    {
-                      "videoId": "@payload.videoId"
-                    },
-                    {
-                      "emit": {
-                        "failure": "ServiceYoutubeYoutubeFailed",
-                        "success": "ServiceYoutubeYoutubeCompleted"
-                      }
-                    }
-                  ]
-                ]
-              },
-              {
-                "from": "results",
+                "from": "idle",
                 "to": "idle",
-                "event": "RESET",
-                "effects": [
-                  [
-                    "set",
-                    "@entity.searchStatus",
-                    "idle"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "type": "stack",
-                      "align": "stretch",
-                      "gap": "lg",
-                      "children": [
-                        {
-                          "direction": "horizontal",
-                          "gap": "md",
-                          "children": [
-                            {
-                              "name": "video",
-                              "type": "icon"
-                            },
-                            {
-                              "type": "typography",
-                              "content": "YouTube Search",
-                              "variant": "h2"
-                            }
-                          ],
-                          "type": "stack",
-                          "align": "center"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "placeholder": "Search YouTube videos...",
-                          "type": "input"
-                        },
-                        {
-                          "icon": "search",
-                          "action": "SEARCH",
-                          "variant": "primary",
-                          "label": "Search",
-                          "type": "button"
-                        }
-                      ],
-                      "direction": "vertical"
-                    }
-                  ]
-                ]
+                "event": "ServiceYoutubeLoaded"
               },
               {
-                "from": "viewingDetail",
-                "to": "viewingDetail",
-                "event": "VIDEO_LOADED",
-                "effects": [
-                  [
-                    "set",
-                    "@entity.videoTitle",
-                    "@payload.title"
-                  ],
-                  [
-                    "set",
-                    "@entity.videoDescription",
-                    "@payload.description"
-                  ],
-                  [
-                    "render-ui",
-                    "main",
-                    {
-                      "direction": "vertical",
-                      "align": "stretch",
-                      "gap": "lg",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "children": [
-                            {
-                              "name": "video",
-                              "type": "icon"
-                            },
-                            {
-                              "variant": "h2",
-                              "content": "@entity.videoTitle",
-                              "type": "typography"
-                            }
-                          ],
-                          "type": "stack",
-                          "align": "center",
-                          "direction": "horizontal",
-                          "gap": "md"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "content": "@entity.videoDescription",
-                          "type": "typography",
-                          "variant": "body"
-                        },
-                        {
-                          "icon": "arrow-left",
-                          "label": "Back to Results",
-                          "action": "BACK",
-                          "type": "button",
-                          "variant": "ghost"
-                        }
-                      ]
-                    }
-                  ]
-                ]
+                "from": "idle",
+                "to": "idle",
+                "event": "ServiceYoutubeLoadFailed"
               },
               {
-                "from": "viewingDetail",
-                "to": "results",
-                "event": "BACK",
+                "from": "ready",
+                "to": "ready",
+                "event": "ServiceYoutubeYoutubeReady"
+              },
+              {
+                "from": "ready",
+                "to": "error",
+                "event": "FAILED",
                 "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "emit",
+                    "ServiceYoutubeYoutubeFailed",
+                    {
+                      "code": "youtube_playback_failed",
+                      "error": "@entity.error"
+                    }
+                  ],
                   [
                     "render-ui",
                     "main",
                     {
-                      "align": "stretch",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "gap": "md",
-                          "align": "center",
-                          "children": [
-                            {
-                              "name": "video",
-                              "type": "icon"
-                            },
-                            {
-                              "type": "typography",
-                              "content": "Search Results",
-                              "variant": "h2"
-                            }
-                          ],
-                          "direction": "horizontal",
-                          "type": "stack"
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "variant": "body",
-                          "type": "typography",
-                          "content": "Select a video to view details."
-                        },
-                        {
-                          "type": "stack",
-                          "direction": "horizontal",
-                          "children": [
-                            {
-                              "icon": "rotate-ccw",
-                              "type": "button",
-                              "variant": "ghost",
-                              "label": "New Search",
-                              "action": "RESET"
-                            },
-                            {
-                              "label": "Search Again",
-                              "type": "button",
-                              "action": "SEARCH",
-                              "variant": "ghost",
-                              "icon": "search"
-                            }
-                          ],
-                          "justify": "center",
-                          "gap": "sm"
-                        }
-                      ],
-                      "direction": "vertical",
-                      "gap": "lg"
+                      "onRetry": "RETRY",
+                      "title": "Video Failed",
+                      "type": "error-state",
+                      "message": "@entity.error"
                     }
                   ]
                 ]
               },
               {
                 "from": "error",
+                "to": "error",
+                "event": "ServiceYoutubeYoutubeFailed"
+              },
+              {
+                "from": "error",
                 "to": "idle",
-                "event": "RESET",
+                "event": "RETRY",
                 "effects": [
-                  [
-                    "set",
-                    "@entity.searchStatus",
-                    "idle"
-                  ],
                   [
                     "set",
                     "@entity.error",
                     ""
                   ],
                   [
+                    "emit",
+                    "FAILED",
+                    {
+                      "error": "@entity.error"
+                    }
+                  ],
+                  [
                     "render-ui",
                     "main",
                     {
-                      "direction": "vertical",
                       "type": "stack",
-                      "align": "stretch",
                       "children": [
-                        {
-                          "type": "stack",
-                          "direction": "horizontal",
-                          "gap": "md",
-                          "align": "center",
-                          "children": [
-                            {
-                              "name": "video",
-                              "type": "icon"
-                            },
-                            {
-                              "variant": "h2",
-                              "type": "typography",
-                              "content": "YouTube Search"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "divider"
-                        },
-                        {
-                          "placeholder": "Search YouTube videos...",
-                          "type": "input"
-                        },
-                        {
-                          "variant": "primary",
-                          "label": "Search",
-                          "type": "button",
-                          "icon": "search",
-                          "action": "SEARCH"
-                        }
+                        "@trait.ServiceYoutubeDefaultPlayer"
                       ],
-                      "gap": "lg"
+                      "gap": "md",
+                      "direction": "vertical"
                     }
                   ]
                 ]
               }
             ]
+          },
+          "config": {
+            "controls": {
+              "type": "boolean",
+              "default": true
+            },
+            "start": {
+              "type": "number",
+              "default": 0
+            },
+            "autoplay": {
+              "type": "boolean",
+              "default": false
+            },
+            "videoId": {
+              "type": "string",
+              "default": ""
+            },
+            "uiTrait": {
+              "type": "trait",
+              "default": "@trait.ServiceYoutubeDefaultPlayer"
+            }
           },
           "scope": "instance"
         }

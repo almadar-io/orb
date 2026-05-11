@@ -1,0 +1,405 @@
+{
+  "name": "std-email-broadcast",
+  "version": "1.0.0",
+  "description": "std-email-broadcast — send an email blast to a segment of contacts using a chosen template; tracks send progress.",
+  "orbitals": [
+    {
+      "name": "EmailBroadcastOrbital",
+      "entity": {
+        "name": "EmailBroadcast",
+        "collection": "emailbroadcasts",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "subject",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "segmentId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "draft",
+            "values": [
+              "draft",
+              "scheduled",
+              "sending",
+              "sent",
+              "failed"
+            ]
+          },
+          {
+            "name": "scheduledAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "recipientCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "sentCount",
+            "type": "number",
+            "default": 0
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "EmailBroadcastBroadcast",
+          "category": "interaction",
+          "linkedEntity": "EmailBroadcast",
+          "emits": [
+            {
+              "event": "SEND",
+              "payloadSchema": [
+                {
+                  "name": "broadcastId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "EmailBroadcastLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[EmailBroadcast]"
+                }
+              ]
+            },
+            {
+              "event": "EmailBroadcastLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "BroadcastSent",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "sending"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "EmailBroadcastLoaded",
+                "name": "EmailBroadcast loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[EmailBroadcast]"
+                  }
+                ]
+              },
+              {
+                "key": "EmailBroadcastLoadFailed",
+                "name": "EmailBroadcast load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SEND",
+                "name": "Send",
+                "payloadSchema": [
+                  {
+                    "name": "broadcastId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "BroadcastSent",
+                "name": "Broadcast sent",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "EmailBroadcast",
+                    {
+                      "emit": {
+                        "success": "EmailBroadcastLoaded",
+                        "failure": "EmailBroadcastLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading broadcasts…",
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "caption"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "align": "center",
+                      "gap": "md",
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "EmailBroadcastLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "mail",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Email Broadcasts",
+                              "type": "typography",
+                              "variant": "h3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "@payload.data",
+                          "fields": [
+                            {
+                              "variant": "caption",
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "label": "Subject",
+                              "name": "subject",
+                              "variant": "caption"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "status",
+                              "label": "Status"
+                            },
+                            {
+                              "name": "recipientCount",
+                              "variant": "badge",
+                              "label": "Recipients"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "sentCount",
+                              "label": "Sent"
+                            },
+                            {
+                              "name": "scheduledAt",
+                              "label": "Scheduled",
+                              "variant": "caption"
+                            }
+                          ],
+                          "cols": 1,
+                          "itemActions": [
+                            {
+                              "label": "Send",
+                              "event": "SEND",
+                              "icon": "send",
+                              "variant": "primary"
+                            }
+                          ],
+                          "gap": "sm"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "EmailBroadcastLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "variant": "error",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "sending",
+                "event": "SEND",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.broadcastId"
+                  ],
+                  [
+                    "emit",
+                    "BroadcastSent",
+                    {
+                      "id": "@payload.broadcastId"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "sending",
+                "to": "browsing",
+                "event": "BroadcastSent",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "success",
+                      "type": "alert",
+                      "message": "Broadcast sent"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "EmailBroadcast",
+                    {
+                      "emit": {
+                        "failure": "EmailBroadcastLoadFailed",
+                        "success": "EmailBroadcastLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Email Broadcasts"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "EmailBroadcastPage",
+          "path": "/broadcasts",
+          "traits": [
+            {
+              "ref": "EmailBroadcastBroadcast"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

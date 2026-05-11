@@ -1,0 +1,352 @@
+{
+  "name": "std-warehouse",
+  "version": "1.0.0",
+  "description": "std-warehouse — physical or logical storage location where stock lives. Used by inventory and retail to scope stock counts.",
+  "orbitals": [
+    {
+      "name": "WarehouseOrbital",
+      "entity": {
+        "name": "Warehouse",
+        "collection": "warehouses",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "code",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "address",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "default": "warehouse",
+            "values": [
+              "warehouse",
+              "store",
+              "transit"
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "totalSkus",
+            "type": "number",
+            "default": 0
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "WarehouseDirectory",
+          "category": "interaction",
+          "linkedEntity": "Warehouse",
+          "emits": [
+            {
+              "event": "OPEN_WAREHOUSE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "WarehouseLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Warehouse]"
+                }
+              ]
+            },
+            {
+              "event": "WarehouseLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "WarehouseLoaded",
+                "name": "Warehouse loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Warehouse]"
+                  }
+                ]
+              },
+              {
+                "key": "WarehouseLoadFailed",
+                "name": "Warehouse load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "OPEN_WAREHOUSE",
+                "name": "Open Warehouse",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Warehouse",
+                    {
+                      "emit": {
+                        "failure": "WarehouseLoadFailed",
+                        "success": "WarehouseLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "gap": "md",
+                      "align": "center",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading locations…",
+                          "color": "muted",
+                          "variant": "caption",
+                          "type": "typography"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "WarehouseLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "warehouse"
+                            },
+                            {
+                              "content": "Locations",
+                              "type": "typography",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "entity": "@payload.data",
+                          "fields": [
+                            {
+                              "variant": "caption",
+                              "name": "code",
+                              "label": "Code"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Name",
+                              "name": "name"
+                            },
+                            {
+                              "label": "Type",
+                              "name": "type",
+                              "variant": "badge"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "SKUs",
+                              "name": "totalSkus"
+                            },
+                            {
+                              "label": "Active",
+                              "variant": "badge",
+                              "name": "isActive"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "variant": "primary",
+                              "event": "OPEN_WAREHOUSE",
+                              "label": "Open",
+                              "icon": "arrow-right"
+                            }
+                          ],
+                          "cols": 1,
+                          "gap": "sm"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "WarehouseLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "OPEN_WAREHOUSE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "info",
+                      "type": "alert",
+                      "message": "Opened location"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Warehouse",
+                    {
+                      "emit": {
+                        "success": "WarehouseLoaded",
+                        "failure": "WarehouseLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Locations"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "WarehousePage",
+          "path": "/warehouses",
+          "traits": [
+            {
+              "ref": "WarehouseDirectory"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

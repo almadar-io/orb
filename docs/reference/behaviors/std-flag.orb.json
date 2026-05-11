@@ -1,0 +1,713 @@
+{
+  "name": "std-flag",
+  "version": "1.0.0",
+  "description": "std-flag — user-initiated content flagging. Owns a Flag entity; SUBMIT persists @payload.data (targetId, targetType, reason, notes) and emits FlagSubmitted so cross-trait listeners (e.g. std-mod-queue) can react.",
+  "orbitals": [
+    {
+      "name": "FlagOrbital",
+      "entity": {
+        "name": "Flag",
+        "collection": "flags",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "targetId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "targetType",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "reportedBy",
+            "type": "string"
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "default": "spam",
+            "values": [
+              "spam",
+              "abuse",
+              "off-topic",
+              "misinformation",
+              "nsfw",
+              "other"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "FlagReport",
+          "category": "interaction",
+          "linkedEntity": "Flag",
+          "emits": [
+            {
+              "event": "SUBMIT",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "SELECT_REASON",
+              "payloadSchema": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "EDIT_NOTES",
+              "payloadSchema": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "FlagLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Flag]"
+                }
+              ]
+            },
+            {
+              "event": "FlagLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FlagSubmitted",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.targetId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.targetType",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.reportedBy",
+                  "type": "string"
+                },
+                {
+                  "name": "row.reason",
+                  "type": "string"
+                },
+                {
+                  "name": "row.notes",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FlagSubmitFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "submitting"
+              },
+              {
+                "name": "submitted"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SELECT_REASON",
+                "name": "Select Reason",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "EDIT_NOTES",
+                "name": "Edit Notes",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FlagLoaded",
+                "name": "Flag loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Flag]"
+                  }
+                ]
+              },
+              {
+                "key": "FlagLoadFailed",
+                "name": "Flag load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SUBMIT",
+                "name": "Submit",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "FlagSubmitted",
+                "name": "Flag submitted",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Flag"
+                  }
+                ]
+              },
+              {
+                "key": "FlagSubmitFailed",
+                "name": "Flag submit failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Flag",
+                    {
+                      "emit": {
+                        "success": "FlagLoaded",
+                        "failure": "FlagLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Report content",
+                          "variant": "h3"
+                        },
+                        {
+                          "options": [
+                            {
+                              "label": "Spam",
+                              "value": "spam"
+                            },
+                            {
+                              "value": "abuse",
+                              "label": "Abuse"
+                            },
+                            {
+                              "label": "Off-topic",
+                              "value": "off-topic"
+                            },
+                            {
+                              "value": "misinformation",
+                              "label": "Misinformation"
+                            },
+                            {
+                              "label": "NSFW",
+                              "value": "nsfw"
+                            },
+                            {
+                              "value": "other",
+                              "label": "Other"
+                            }
+                          ],
+                          "placeholder": "Select a reason",
+                          "type": "select",
+                          "action": "SELECT_REASON"
+                        },
+                        {
+                          "type": "textarea",
+                          "placeholder": "Add details (optional)",
+                          "action": "EDIT_NOTES"
+                        },
+                        {
+                          "action": "SUBMIT",
+                          "variant": "primary",
+                          "label": "Submit report",
+                          "icon": "flag",
+                          "type": "button"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "SELECT_REASON",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.reason",
+                    "@payload.value"
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "EDIT_NOTES",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.notes",
+                    "@payload.value"
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "FlagLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "content": "Report content",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "placeholder": "Select a reason",
+                          "type": "select",
+                          "options": [
+                            {
+                              "label": "Spam",
+                              "value": "spam"
+                            },
+                            {
+                              "value": "abuse",
+                              "label": "Abuse"
+                            },
+                            {
+                              "label": "Off-topic",
+                              "value": "off-topic"
+                            },
+                            {
+                              "value": "misinformation",
+                              "label": "Misinformation"
+                            },
+                            {
+                              "label": "NSFW",
+                              "value": "nsfw"
+                            },
+                            {
+                              "label": "Other",
+                              "value": "other"
+                            }
+                          ],
+                          "action": "SELECT_REASON"
+                        },
+                        {
+                          "type": "textarea",
+                          "placeholder": "Add details (optional)",
+                          "action": "EDIT_NOTES"
+                        },
+                        {
+                          "type": "button",
+                          "label": "Submit report",
+                          "icon": "flag",
+                          "variant": "primary",
+                          "action": "SUBMIT"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "FlagLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "submitting",
+                "event": "SUBMIT",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "Flag",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "FlagSubmitted",
+                        "failure": "FlagSubmitFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Submitting your report…",
+                          "variant": "caption"
+                        }
+                      ],
+                      "className": "py-12",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "submitted",
+                "event": "FlagSubmitted",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "align": "center",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "color": "success",
+                          "type": "icon",
+                          "name": "check-circle"
+                        },
+                        {
+                          "variant": "h3",
+                          "content": "Thanks. Our team will review this report.",
+                          "type": "typography"
+                        }
+                      ],
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "error",
+                "event": "FlagSubmitFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitted",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.reason",
+                    "spam"
+                  ],
+                  [
+                    "set",
+                    "@entity.notes",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "typography",
+                          "variant": "h3",
+                          "content": "Report content"
+                        },
+                        {
+                          "action": "SELECT_REASON",
+                          "placeholder": "Select a reason",
+                          "type": "select",
+                          "options": [
+                            {
+                              "label": "Spam",
+                              "value": "spam"
+                            },
+                            {
+                              "value": "abuse",
+                              "label": "Abuse"
+                            },
+                            {
+                              "label": "Off-topic",
+                              "value": "off-topic"
+                            },
+                            {
+                              "value": "misinformation",
+                              "label": "Misinformation"
+                            },
+                            {
+                              "label": "NSFW",
+                              "value": "nsfw"
+                            },
+                            {
+                              "label": "Other",
+                              "value": "other"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "textarea",
+                          "action": "EDIT_NOTES",
+                          "placeholder": "Add details (optional)"
+                        },
+                        {
+                          "variant": "primary",
+                          "icon": "flag",
+                          "action": "SUBMIT",
+                          "type": "button",
+                          "label": "Submit report"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "content": "Report content",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "options": [
+                            {
+                              "label": "Spam",
+                              "value": "spam"
+                            },
+                            {
+                              "label": "Abuse",
+                              "value": "abuse"
+                            },
+                            {
+                              "label": "Off-topic",
+                              "value": "off-topic"
+                            },
+                            {
+                              "value": "misinformation",
+                              "label": "Misinformation"
+                            },
+                            {
+                              "value": "nsfw",
+                              "label": "NSFW"
+                            },
+                            {
+                              "value": "other",
+                              "label": "Other"
+                            }
+                          ],
+                          "action": "SELECT_REASON",
+                          "placeholder": "Select a reason",
+                          "type": "select"
+                        },
+                        {
+                          "placeholder": "Add details (optional)",
+                          "action": "EDIT_NOTES",
+                          "type": "textarea"
+                        },
+                        {
+                          "variant": "primary",
+                          "action": "SUBMIT",
+                          "type": "button",
+                          "label": "Submit report",
+                          "icon": "flag"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Report content"
+            },
+            "reasons": {
+              "type": "[string]",
+              "default": [
+                "spam",
+                "abuse",
+                "off-topic",
+                "misinformation",
+                "nsfw",
+                "other"
+              ]
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "FlagReportPage",
+          "path": "/flags/report",
+          "traits": [
+            {
+              "ref": "FlagReport"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

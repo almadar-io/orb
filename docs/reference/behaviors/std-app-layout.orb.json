@@ -1,7 +1,7 @@
 {
   "name": "std-app-layout",
-  "version": "1.1.0",
-  "description": "std-app-layout — dashboard-layout chrome (sidebar nav + top bar with optional search and notifications) wrapping a single contentTrait slot. Use for list-style apps (CMS / helpdesk / CRM): the chrome stays stable while the consumer's content trait renders the data.",
+  "version": "1.4.0",
+  "description": "std-app-layout — dashboard-layout chrome (sidebar nav + top bar with search + topBarActions + notifications) wrapping a single contentTrait slot. Use for list-style apps (CMS / helpdesk / CRM): the chrome stays stable while the consumer's content trait renders the data, and the consumer can add domain icons (cart / profile / help) via topBarActions. Bind once per orbital — the consumer rebinds linkedEntity via `XAppLayout = AppShell.traits.AppLayout -> XEntity` so multiple orbitals in one file each get their own chrome without colliding on a shared atom entity.",
   "orbitals": [
     {
       "name": "AppLayoutOrbital",
@@ -20,6 +20,7 @@
         {
           "name": "AppLayout",
           "category": "interaction",
+          "linkedEntity": "AppLayoutState",
           "emits": [
             {
               "event": "SEARCH",
@@ -40,6 +41,30 @@
                   "type": "string"
                 }
               ]
+            },
+            {
+              "event": "AppLayoutStateLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[AppLayoutState]"
+                }
+              ]
+            },
+            {
+              "event": "AppLayoutStateLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
             }
           ],
           "stateMachine": {
@@ -53,6 +78,30 @@
               {
                 "key": "INIT",
                 "name": "Initialize"
+              },
+              {
+                "key": "AppLayoutStateLoaded",
+                "name": "AppLayoutState loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AppLayoutState]"
+                  }
+                ]
+              },
+              {
+                "key": "AppLayoutStateLoadFailed",
+                "name": "AppLayoutState load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
               },
               {
                 "key": "SEARCH",
@@ -70,29 +119,50 @@
                 "event": "INIT",
                 "effects": [
                   [
+                    "fetch",
+                    "AppLayoutState",
+                    {
+                      "emit": {
+                        "success": "AppLayoutStateLoaded",
+                        "failure": "AppLayoutStateLoadFailed"
+                      }
+                    }
+                  ],
+                  [
                     "render-ui",
                     "main",
                     {
-                      "searchEvent": "SEARCH",
-                      "type": "dashboard-layout",
+                      "notificationClickEvent": "NOTIFY_CLICK",
                       "children": [
                         {
-                          "direction": "vertical",
                           "className": "max-w-5xl mx-auto w-full",
+                          "gap": "lg",
                           "children": [
                             "@config.contentTrait"
                           ],
-                          "type": "stack",
-                          "gap": "lg"
+                          "direction": "vertical",
+                          "type": "stack"
                         }
                       ],
+                      "topBarActions": [],
+                      "navItems": [],
+                      "searchEvent": "SEARCH",
                       "notifications": [],
                       "appName": "App",
-                      "notificationClickEvent": "NOTIFY_CLICK",
-                      "navItems": []
+                      "type": "dashboard-layout"
                     }
                   ]
                 ]
+              },
+              {
+                "from": "composing",
+                "to": "composing",
+                "event": "AppLayoutStateLoaded"
+              },
+              {
+                "from": "composing",
+                "to": "composing",
+                "event": "AppLayoutStateLoadFailed"
               },
               {
                 "from": "composing",
@@ -107,18 +177,6 @@
             ]
           },
           "config": {
-            "navItems": {
-              "type": "[object]",
-              "default": []
-            },
-            "notifications": {
-              "type": "[object]",
-              "default": []
-            },
-            "notificationClickEvent": {
-              "type": "string",
-              "default": "NOTIFY_CLICK"
-            },
             "appName": {
               "type": "string",
               "default": "App"
@@ -129,6 +187,22 @@
             "searchEvent": {
               "type": "string",
               "default": "SEARCH"
+            },
+            "navItems": {
+              "type": "[object]",
+              "default": []
+            },
+            "topBarActions": {
+              "type": "[object]",
+              "default": []
+            },
+            "notifications": {
+              "type": "[object]",
+              "default": []
+            },
+            "notificationClickEvent": {
+              "type": "string",
+              "default": "NOTIFY_CLICK"
             }
           },
           "scope": "instance"

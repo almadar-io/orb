@@ -1,0 +1,431 @@
+{
+  "name": "std-checkout-terminal",
+  "version": "1.0.0",
+  "description": "std-checkout-terminal — retail POS checkout terminal. Owns a CheckoutSession entity (one row per active register session) and a single terminal trait that loads open sessions, renders cart + total + status in a data-grid, and supports tender / void session actions.",
+  "orbitals": [
+    {
+      "name": "CheckoutSessionOrbital",
+      "entity": {
+        "name": "CheckoutSession",
+        "collection": "checkoutsessions",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "terminalId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "cashierId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "cashierName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "cartItemsJson",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "subtotal",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "tax",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "total",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "paymentMethod",
+            "type": "string",
+            "default": "card",
+            "values": [
+              "cash",
+              "card",
+              "gift_card",
+              "split"
+            ]
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "open",
+            "values": [
+              "open",
+              "paying",
+              "completed",
+              "voided"
+            ]
+          },
+          {
+            "name": "openedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "completedAt",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "CheckoutSessionTerminal",
+          "category": "interaction",
+          "linkedEntity": "CheckoutSession",
+          "emits": [
+            {
+              "event": "TENDER_PAYMENT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "VOID_SESSION",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CheckoutSessionLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[CheckoutSession]"
+                }
+              ]
+            },
+            {
+              "event": "CheckoutSessionLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CheckoutSessionLoaded",
+                "name": "CheckoutSession loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[CheckoutSession]"
+                  }
+                ]
+              },
+              {
+                "key": "CheckoutSessionLoadFailed",
+                "name": "CheckoutSession load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "TENDER_PAYMENT",
+                "name": "Tender Payment",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "VOID_SESSION",
+                "name": "Void Session",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CheckoutSession",
+                    {
+                      "emit": {
+                        "failure": "CheckoutSessionLoadFailed",
+                        "success": "CheckoutSessionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "size": "md",
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Loading terminals…"
+                        }
+                      ],
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "CheckoutSessionLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "credit-card"
+                            },
+                            {
+                              "content": "Terminals",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "itemActions": [
+                            {
+                              "label": "Tender",
+                              "variant": "primary",
+                              "event": "TENDER_PAYMENT"
+                            },
+                            {
+                              "variant": "danger",
+                              "label": "Void",
+                              "event": "VOID_SESSION"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "gap": "sm",
+                          "fields": [
+                            {
+                              "label": "Terminal",
+                              "name": "terminalId",
+                              "variant": "caption"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Cashier",
+                              "name": "cashierName"
+                            },
+                            {
+                              "label": "Status",
+                              "variant": "badge",
+                              "name": "status"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Total",
+                              "name": "total"
+                            },
+                            {
+                              "label": "Opened",
+                              "variant": "caption",
+                              "name": "openedAt"
+                            }
+                          ],
+                          "cols": 1,
+                          "type": "data-grid"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "CheckoutSessionLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TENDER_PAYMENT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Payment tendered",
+                      "variant": "success",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "VOID_SESSION",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "info",
+                      "type": "alert",
+                      "message": "Session voided"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CheckoutSession",
+                    {
+                      "emit": {
+                        "success": "CheckoutSessionLoaded",
+                        "failure": "CheckoutSessionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Terminals"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "CheckoutSessionPage",
+          "path": "/terminals",
+          "traits": [
+            {
+              "ref": "CheckoutSessionTerminal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

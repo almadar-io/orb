@@ -1,0 +1,1205 @@
+{
+  "name": "std-stock-adjustment",
+  "version": "1.0.0",
+  "description": "Tracks stock-level adjustments as deltas to onHand per sku/warehouse",
+  "orbitals": [
+    {
+      "name": "StockAdjustmentOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-stock-level",
+          "as": "StockLevel"
+        },
+        {
+          "from": "std/behaviors/std-warehouse",
+          "as": "Warehouse"
+        },
+        {
+          "from": "std/behaviors/std-modal",
+          "as": "Modal"
+        },
+        {
+          "from": "std/behaviors/std-confirmation",
+          "as": "Confirmation"
+        }
+      ],
+      "entity": {
+        "name": "StockAdjustment",
+        "collection": "stockadjustments",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "stockLevelId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "sku",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "warehouseId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "warehouseName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "quantityDelta",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "default": "manual",
+            "values": [
+              "manual",
+              "damaged",
+              "transfer_in",
+              "transfer_out",
+              "shrinkage",
+              "recount"
+            ]
+          },
+          {
+            "name": "adjustedBy",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "adjustedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "pendingId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "StockAdjustmentBrowse",
+          "category": "interaction",
+          "linkedEntity": "StockAdjustment",
+          "emits": [
+            {
+              "event": "CREATE"
+            },
+            {
+              "event": "REQUEST_DELETE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.stockLevelId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.sku",
+                  "type": "string"
+                },
+                {
+                  "name": "row.warehouseId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.warehouseName",
+                  "type": "string"
+                },
+                {
+                  "name": "row.quantityDelta",
+                  "type": "number"
+                },
+                {
+                  "name": "row.reason",
+                  "type": "string"
+                },
+                {
+                  "name": "row.adjustedBy",
+                  "type": "string"
+                },
+                {
+                  "name": "row.adjustedAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.notes",
+                  "type": "string"
+                },
+                {
+                  "name": "row.pendingId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "StockAdjustmentLoaded",
+              "description": "Fired when the stock-adjustment collection finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[StockAdjustment]"
+                }
+              ]
+            },
+            {
+              "event": "StockAdjustmentLoadFailed",
+              "description": "Fired when the stock-adjustment collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "ADJUSTMENT_CREATED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentPersistor"
+              }
+            },
+            {
+              "event": "ADJUSTMENT_DELETED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentPersistor"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "StockAdjustmentLoaded",
+                "name": "StockAdjustment loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[StockAdjustment]"
+                  }
+                ]
+              },
+              {
+                "key": "StockAdjustmentLoadFailed",
+                "name": "StockAdjustment load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CREATE",
+                "name": "Create"
+              },
+              {
+                "key": "REQUEST_DELETE",
+                "name": "Request Delete"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StockAdjustment",
+                    {
+                      "emit": {
+                        "failure": "StockAdjustmentLoadFailed",
+                        "success": "StockAdjustmentLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "type": "typography",
+                          "content": "Loading adjustments…",
+                          "color": "muted"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "className": "py-12",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "StockAdjustmentLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "lg",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "justify": "between",
+                          "gap": "md",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "sliders"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "h2",
+                                  "content": "Stock Adjustments"
+                                }
+                              ],
+                              "direction": "horizontal",
+                              "type": "stack",
+                              "gap": "md"
+                            },
+                            {
+                              "variant": "primary",
+                              "type": "button",
+                              "icon": "plus",
+                              "action": "CREATE",
+                              "label": "New Adjustment"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "itemActions": [
+                            {
+                              "variant": "danger",
+                              "event": "REQUEST_DELETE",
+                              "label": "Delete"
+                            }
+                          ],
+                          "fields": [
+                            {
+                              "name": "sku",
+                              "variant": "h4",
+                              "label": "SKU",
+                              "icon": "tag"
+                            },
+                            {
+                              "label": "Warehouse",
+                              "variant": "body",
+                              "name": "warehouseName"
+                            },
+                            {
+                              "name": "quantityDelta",
+                              "label": "Delta",
+                              "variant": "badge"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "reason",
+                              "label": "Reason"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Adjusted At",
+                              "name": "adjustedAt"
+                            },
+                            {
+                              "name": "adjustedBy",
+                              "variant": "caption",
+                              "label": "Adjusted By"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "type": "data-grid"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "StockAdjustmentLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "className": "py-12",
+                      "align": "center",
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "name": "alert-triangle",
+                          "color": "destructive",
+                          "type": "icon"
+                        },
+                        {
+                          "variant": "h3",
+                          "content": "Failed to load adjustments",
+                          "type": "typography"
+                        },
+                        {
+                          "content": "@payload.error",
+                          "variant": "body",
+                          "color": "muted",
+                          "type": "typography"
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "action": "INIT",
+                          "label": "Retry",
+                          "icon": "rotate-ccw"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StockAdjustment",
+                    {
+                      "emit": {
+                        "success": "StockAdjustmentLoaded",
+                        "failure": "StockAdjustmentLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StockAdjustment",
+                    {
+                      "emit": {
+                        "failure": "StockAdjustmentLoadFailed",
+                        "success": "StockAdjustmentLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "StockAdjustmentCreate",
+          "category": "interaction",
+          "linkedEntity": "StockAdjustment",
+          "emits": [
+            {
+              "event": "SAVE",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CLOSE"
+            },
+            {
+              "event": "ModalRecordLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ModalRecordLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ModalRecord]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "CREATE",
+              "triggers": "CREATE",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CREATE",
+                "name": "Open",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "row",
+                    "type": "ModalRecord"
+                  }
+                ]
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoadFailed",
+                "name": "ModalRecord load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoaded",
+                "name": "ModalRecord loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ModalRecord]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StockAdjustment",
+                    {
+                      "emit": {
+                        "success": "ModalRecordLoaded",
+                        "failure": "ModalRecordLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "CREATE",
+                "guard": [
+                  "or",
+                  [
+                    "=",
+                    "create",
+                    "create"
+                  ],
+                  "@payload.row"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "plus-circle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "New Adjustment",
+                              "variant": "h3"
+                            }
+                          ],
+                          "gap": "sm",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "submitEvent": "SAVE",
+                          "type": "form-section",
+                          "cancelEvent": "CLOSE",
+                          "fields": [
+                            "sku",
+                            "warehouseId",
+                            "quantityDelta",
+                            "reason",
+                            "notes"
+                          ],
+                          "mode": "create",
+                          "entity": "@payload.row"
+                        }
+                      ],
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "icon": {
+              "type": "string",
+              "default": "layout-panel-top"
+            },
+            "mode": {
+              "type": "string",
+              "default": "create"
+            },
+            "fields": {
+              "type": "[string]",
+              "default": []
+            },
+            "title": {
+              "type": "string",
+              "default": "Details"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "StockAdjustmentDelete",
+          "category": "interaction",
+          "linkedEntity": "StockAdjustment",
+          "emits": [
+            {
+              "event": "CONFIRM_DELETE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CANCEL"
+            },
+            {
+              "event": "ConfirmActionLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ConfirmActionLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ConfirmAction]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "REQUEST_DELETE",
+              "triggers": "DELETE",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "confirming"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DELETE",
+                "name": "Request",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "ConfirmAction"
+                  }
+                ]
+              },
+              {
+                "key": "CONFIRM_DELETE",
+                "name": "Confirm"
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "ConfirmActionLoadFailed",
+                "name": "ConfirmAction load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ConfirmActionLoaded",
+                "name": "ConfirmAction loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ConfirmAction]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StockAdjustment",
+                    {
+                      "emit": {
+                        "failure": "ConfirmActionLoadFailed",
+                        "success": "ConfirmActionLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "confirming",
+                "event": "DELETE",
+                "guard": "@payload.row",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.pendingId",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.name",
+                    "@payload.row.name"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "alert-triangle",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Delete Adjustment",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "align": "center",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "This action cannot be undone."
+                        },
+                        {
+                          "type": "typography",
+                          "content": "@entity.name",
+                          "variant": "h4"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "@entity.pendingId",
+                          "variant": "caption"
+                        },
+                        {
+                          "justify": "end",
+                          "gap": "sm",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "label": "Cancel",
+                              "action": "CANCEL",
+                              "variant": "ghost",
+                              "type": "button"
+                            },
+                            {
+                              "label": "Delete",
+                              "action": "CONFIRM_DELETE",
+                              "actionPayload": {
+                                "id": "@payload.id"
+                              },
+                              "icon": "check",
+                              "variant": "danger",
+                              "type": "button"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CONFIRM_DELETE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Confirm Action"
+            },
+            "alertMessage": {
+              "type": "string",
+              "default": "Are you sure?"
+            },
+            "icon": {
+              "type": "string",
+              "default": "alert-triangle"
+            },
+            "confirmLabel": {
+              "type": "string",
+              "default": "Confirm"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "StockAdjustmentPersistor",
+          "category": "lifecycle",
+          "linkedEntity": "StockAdjustment",
+          "emits": [
+            {
+              "event": "ADJUSTMENT_CREATED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ADJUSTMENT_DELETED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "SAVE",
+              "triggers": "DO_CREATE",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentCreate"
+              }
+            },
+            {
+              "event": "CONFIRM_DELETE",
+              "triggers": "DO_DELETE",
+              "source": {
+                "kind": "trait",
+                "trait": "StockAdjustmentDelete"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DO_CREATE",
+                "name": "Do Create",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "DO_DELETE",
+                "name": "Do Delete",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ADJUSTMENT_CREATED",
+                "name": "Adjustment Created"
+              },
+              {
+                "key": "ADJUSTMENT_DELETED",
+                "name": "Adjustment Deleted"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_CREATE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "StockAdjustment",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "ADJUSTMENT_CREATED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_DELETE",
+                "effects": [
+                  [
+                    "persist",
+                    "delete",
+                    "StockAdjustment",
+                    "@payload.id",
+                    {
+                      "emit": {
+                        "success": "ADJUSTMENT_DELETED"
+                      }
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "StockAdjustmentPage",
+          "path": "/stock-adjustments",
+          "traits": [
+            {
+              "ref": "StockAdjustmentBrowse"
+            },
+            {
+              "ref": "StockAdjustmentCreate"
+            },
+            {
+              "ref": "StockAdjustmentDelete"
+            },
+            {
+              "ref": "StockAdjustmentPersistor"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

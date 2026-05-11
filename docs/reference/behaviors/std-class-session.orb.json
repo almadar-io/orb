@@ -1,0 +1,433 @@
+{
+  "name": "std-class-session",
+  "version": "1.0.0",
+  "description": "std-class-session — scheduled fitness/yoga/dance class session primitive. Tracks instructor, time, capacity, and attendance; START_CLASS / CANCEL_CLASS drive lifecycle transitions for studio operators.",
+  "orbitals": [
+    {
+      "name": "ClassSessionOrbital",
+      "entity": {
+        "name": "ClassSession",
+        "collection": "classsessions",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "className",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "instructorName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "startTime",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "durationMinutes",
+            "type": "number",
+            "default": 60
+          },
+          {
+            "name": "capacity",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "bookedCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "location",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "scheduled",
+            "values": [
+              "scheduled",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ClassSessionSchedule",
+          "category": "interaction",
+          "linkedEntity": "ClassSession",
+          "emits": [
+            {
+              "event": "START_CLASS",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CANCEL_CLASS",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "ClassSessionLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ClassSession]"
+                }
+              ]
+            },
+            {
+              "event": "ClassSessionLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "ClassSessionLoaded",
+                "name": "ClassSession loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ClassSession]"
+                  }
+                ]
+              },
+              {
+                "key": "ClassSessionLoadFailed",
+                "name": "ClassSession load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "START_CLASS",
+                "name": "Start Class",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CANCEL_CLASS",
+                "name": "Cancel Class",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "ClassSession",
+                    {
+                      "emit": {
+                        "success": "ClassSessionLoaded",
+                        "failure": "ClassSessionLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Loading class sessions…"
+                        }
+                      ],
+                      "className": "py-12",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "ClassSessionLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "name": "calendar",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Class Sessions",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "event": "START_CLASS",
+                              "label": "Start",
+                              "variant": "primary"
+                            },
+                            {
+                              "label": "Cancel",
+                              "variant": "danger",
+                              "event": "CANCEL_CLASS"
+                            }
+                          ],
+                          "cols": 1,
+                          "gap": "sm",
+                          "fields": [
+                            {
+                              "variant": "caption",
+                              "label": "Class",
+                              "name": "className"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Instructor",
+                              "name": "instructorName"
+                            },
+                            {
+                              "label": "Start",
+                              "variant": "caption",
+                              "name": "startTime"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "capacity",
+                              "label": "Capacity"
+                            },
+                            {
+                              "name": "bookedCount",
+                              "label": "Booked",
+                              "variant": "badge"
+                            },
+                            {
+                              "label": "Status",
+                              "variant": "badge",
+                              "name": "status"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "ClassSessionLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "START_CLASS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "success",
+                      "type": "alert",
+                      "message": "Class started"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "CANCEL_CLASS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "info",
+                      "message": "Class cancelled",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "ClassSession",
+                    {
+                      "emit": {
+                        "failure": "ClassSessionLoadFailed",
+                        "success": "ClassSessionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "align": "center",
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Loading class sessions…",
+                          "type": "typography"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Class Sessions"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ClassSessionPage",
+          "path": "/class-sessions",
+          "traits": [
+            {
+              "ref": "ClassSessionSchedule"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

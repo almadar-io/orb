@@ -1,0 +1,552 @@
+{
+  "name": "std-route-optimize",
+  "version": "1.0.0",
+  "description": "std-route-optimize — multi-stop route ordering for technician dispatch. Owns a Route entity (origin coords + ordered stops + totals); OPTIMIZE invokes the route-optimize service to reorder stops, then persists the updated row and emits RouteUpdated for downstream listeners.",
+  "orbitals": [
+    {
+      "name": "RouteOptimizeOrbital",
+      "entity": {
+        "name": "Route",
+        "collection": "routes",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "technicianId",
+            "type": "string"
+          },
+          {
+            "name": "originLat",
+            "type": "number"
+          },
+          {
+            "name": "originLng",
+            "type": "number"
+          },
+          {
+            "name": "stops",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "totalDistanceKm",
+            "type": "number"
+          },
+          {
+            "name": "totalDurationMinutes",
+            "type": "number"
+          },
+          {
+            "name": "optimizedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "RouteOptimize",
+          "category": "interaction",
+          "linkedEntity": "Route",
+          "emits": [
+            {
+              "event": "OPTIMIZE",
+              "payloadSchema": [
+                {
+                  "name": "routeId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "RouteLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Route]"
+                }
+              ]
+            },
+            {
+              "event": "RouteLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "RouteOptimized",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.technicianId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.originLat",
+                  "type": "number"
+                },
+                {
+                  "name": "row.originLng",
+                  "type": "number"
+                },
+                {
+                  "name": "row.stops",
+                  "type": "[string]"
+                },
+                {
+                  "name": "row.totalDistanceKm",
+                  "type": "number"
+                },
+                {
+                  "name": "row.totalDurationMinutes",
+                  "type": "number"
+                },
+                {
+                  "name": "row.optimizedAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "RouteOptimizeFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "RouteUpdated",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.technicianId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.originLat",
+                  "type": "number"
+                },
+                {
+                  "name": "row.originLng",
+                  "type": "number"
+                },
+                {
+                  "name": "row.stops",
+                  "type": "[string]"
+                },
+                {
+                  "name": "row.totalDistanceKm",
+                  "type": "number"
+                },
+                {
+                  "name": "row.totalDurationMinutes",
+                  "type": "number"
+                },
+                {
+                  "name": "row.optimizedAt",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "optimizing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "RouteLoaded",
+                "name": "Route loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Route]"
+                  }
+                ]
+              },
+              {
+                "key": "RouteLoadFailed",
+                "name": "Route load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "OPTIMIZE",
+                "name": "Optimize",
+                "payloadSchema": [
+                  {
+                    "name": "routeId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RouteUpdated",
+                "name": "Route updated",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Route"
+                  }
+                ]
+              },
+              {
+                "key": "RouteOptimized",
+                "name": "Route optimized",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Route"
+                  }
+                ]
+              },
+              {
+                "key": "RouteOptimizeFailed",
+                "name": "Route optimize failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Route",
+                    {
+                      "emit": {
+                        "success": "RouteLoaded",
+                        "failure": "RouteLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "content": "Loading routes…",
+                          "type": "typography",
+                          "variant": "caption"
+                        }
+                      ],
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "type": "stack",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "RouteLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "map"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Routes",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "gap": "sm",
+                          "cols": 1,
+                          "entity": "@payload.data",
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "label": "Technician",
+                              "variant": "caption",
+                              "name": "technicianId"
+                            },
+                            {
+                              "name": "stops",
+                              "variant": "caption",
+                              "label": "Stops"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Distance (km)",
+                              "name": "totalDistanceKm"
+                            },
+                            {
+                              "name": "totalDurationMinutes",
+                              "label": "Duration (min)",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Optimized",
+                              "name": "optimizedAt",
+                              "variant": "caption"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "icon": "route",
+                              "label": "Optimize",
+                              "event": "OPTIMIZE",
+                              "variant": "primary"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "RouteLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "optimizing",
+                "event": "OPTIMIZE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.routeId"
+                  ],
+                  [
+                    "call-service",
+                    "route-optimize",
+                    "optimize",
+                    {
+                      "routeId": "@entity.id"
+                    },
+                    {
+                      "emit": {
+                        "failure": "RouteOptimizeFailed",
+                        "success": "RouteOptimized"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Optimizing route…",
+                          "type": "typography"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md",
+                      "className": "py-12",
+                      "type": "stack",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "RouteUpdated",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Route updated",
+                      "type": "alert",
+                      "variant": "success"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "optimizing",
+                "to": "browsing",
+                "event": "RouteOptimized",
+                "effects": [
+                  [
+                    "persist",
+                    "update",
+                    "Route",
+                    "@payload.row",
+                    {
+                      "emit": {
+                        "success": "RouteUpdated",
+                        "failure": "RouteOptimizeFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "optimizing",
+                "to": "browsing",
+                "event": "RouteOptimizeFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Route",
+                    {
+                      "emit": {
+                        "success": "RouteLoaded",
+                        "failure": "RouteLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Routes"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "RouteOptimizePage",
+          "path": "/routes/optimize",
+          "traits": [
+            {
+              "ref": "RouteOptimize"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

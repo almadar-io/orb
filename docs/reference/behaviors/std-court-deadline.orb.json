@@ -1,0 +1,385 @@
+{
+  "name": "std-court-deadline",
+  "version": "1.0.0",
+  "description": "std-court-deadline — statutory filing deadline tied to a legal matter. Browses deadlines in a data-grid with Complete / Extend row actions.",
+  "orbitals": [
+    {
+      "name": "CourtDeadlineOrbital",
+      "entity": {
+        "name": "CourtDeadline",
+        "collection": "courtdeadlines",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "matterId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "deadlineType",
+            "type": "string",
+            "default": "filing",
+            "values": [
+              "filing",
+              "response",
+              "discovery",
+              "hearing",
+              "trial",
+              "other"
+            ]
+          },
+          {
+            "name": "dueAt",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "jurisdiction",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "assignedTo",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "upcoming",
+            "values": [
+              "upcoming",
+              "completed",
+              "missed",
+              "extended"
+            ]
+          },
+          {
+            "name": "reminderSent",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "CourtDeadlineDocket",
+          "category": "interaction",
+          "linkedEntity": "CourtDeadline",
+          "emits": [
+            {
+              "event": "MARK_COMPLETED",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "EXTEND_DEADLINE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CourtDeadlineLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[CourtDeadline]"
+                }
+              ]
+            },
+            {
+              "event": "CourtDeadlineLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CourtDeadlineLoaded",
+                "name": "CourtDeadline loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[CourtDeadline]"
+                  }
+                ]
+              },
+              {
+                "key": "CourtDeadlineLoadFailed",
+                "name": "CourtDeadline load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "MARK_COMPLETED",
+                "name": "Mark Completed",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "EXTEND_DEADLINE",
+                "name": "Extend Deadline",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CourtDeadline",
+                    {
+                      "emit": {
+                        "failure": "CourtDeadlineLoadFailed",
+                        "success": "CourtDeadlineLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "CourtDeadlineLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "fields": [
+                        {
+                          "name": "title",
+                          "variant": "caption",
+                          "label": "Title"
+                        },
+                        {
+                          "variant": "badge",
+                          "label": "Type",
+                          "name": "deadlineType"
+                        },
+                        {
+                          "name": "dueAt",
+                          "variant": "caption",
+                          "label": "Due"
+                        },
+                        {
+                          "variant": "caption",
+                          "label": "Jurisdiction",
+                          "name": "jurisdiction"
+                        },
+                        {
+                          "variant": "caption",
+                          "label": "Assigned",
+                          "name": "assignedTo"
+                        },
+                        {
+                          "label": "Status",
+                          "variant": "badge",
+                          "name": "status"
+                        }
+                      ],
+                      "itemActions": [
+                        {
+                          "variant": "primary",
+                          "label": "Complete",
+                          "event": "MARK_COMPLETED"
+                        },
+                        {
+                          "event": "EXTEND_DEADLINE",
+                          "variant": "ghost",
+                          "label": "Extend"
+                        }
+                      ],
+                      "cols": 1,
+                      "type": "data-grid",
+                      "gap": "sm",
+                      "entity": "@payload.data"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "CourtDeadlineLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "MARK_COMPLETED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Deadline completed",
+                      "type": "alert",
+                      "variant": "success"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "EXTEND_DEADLINE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "info",
+                      "message": "Deadline extended"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CourtDeadline",
+                    {
+                      "emit": {
+                        "failure": "CourtDeadlineLoadFailed",
+                        "success": "CourtDeadlineLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Deadlines"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "CourtDeadlinePage",
+          "path": "/deadlines",
+          "traits": [
+            {
+              "ref": "CourtDeadlineDocket"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

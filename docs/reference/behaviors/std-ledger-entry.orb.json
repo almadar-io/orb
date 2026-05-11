@@ -1,0 +1,412 @@
+{
+  "name": "std-ledger-entry",
+  "version": "1.0.0",
+  "description": "std-ledger-entry — general-ledger journal entry atom. Owns a LedgerEntry entity (double-entry debit/credit) and a single trait that loads journal entries into a data-grid with reconcile and reverse row actions.",
+  "orbitals": [
+    {
+      "name": "LedgerEntryOrbital",
+      "entity": {
+        "name": "LedgerEntry",
+        "collection": "ledgerentries",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "accountId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "accountName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "entryDate",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "debit",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "credit",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "referenceType",
+            "type": "string",
+            "default": "manual",
+            "values": [
+              "manual",
+              "invoice",
+              "bill",
+              "payment",
+              "adjustment"
+            ]
+          },
+          {
+            "name": "referenceId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "isReconciled",
+            "type": "boolean",
+            "default": false
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "LedgerEntryJournal",
+          "category": "interaction",
+          "linkedEntity": "LedgerEntry",
+          "emits": [
+            {
+              "event": "RECONCILE_ENTRY",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "REVERSE_ENTRY",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "LedgerEntryLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[LedgerEntry]"
+                }
+              ]
+            },
+            {
+              "event": "LedgerEntryLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "LedgerEntryLoaded",
+                "name": "LedgerEntry loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[LedgerEntry]"
+                  }
+                ]
+              },
+              {
+                "key": "LedgerEntryLoadFailed",
+                "name": "LedgerEntry load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "RECONCILE_ENTRY",
+                "name": "Reconcile Entry",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REVERSE_ENTRY",
+                "name": "Reverse Entry",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "LedgerEntry",
+                    {
+                      "emit": {
+                        "failure": "LedgerEntryLoadFailed",
+                        "success": "LedgerEntryLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Loading journal entries…"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "LedgerEntryLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "book-open"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Journal Entries",
+                              "variant": "h3"
+                            }
+                          ],
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "cols": 1,
+                          "fields": [
+                            {
+                              "label": "Date",
+                              "name": "entryDate",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Account",
+                              "name": "accountName",
+                              "variant": "caption"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Description",
+                              "name": "description"
+                            },
+                            {
+                              "name": "debit",
+                              "label": "Debit",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Credit",
+                              "variant": "caption",
+                              "name": "credit"
+                            },
+                            {
+                              "variant": "badge",
+                              "name": "isReconciled",
+                              "label": "Reconciled"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "variant": "primary",
+                              "event": "RECONCILE_ENTRY",
+                              "label": "Reconcile"
+                            },
+                            {
+                              "variant": "danger",
+                              "event": "REVERSE_ENTRY",
+                              "label": "Reverse"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "gap": "sm",
+                          "type": "data-grid"
+                        }
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "LedgerEntryLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "RECONCILE_ENTRY",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Entry reconciled",
+                    "success"
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REVERSE_ENTRY",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Entry reversed",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "LedgerEntry",
+                    {
+                      "emit": {
+                        "success": "LedgerEntryLoaded",
+                        "failure": "LedgerEntryLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Journal Entries"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "LedgerEntryPage",
+          "path": "/journal",
+          "traits": [
+            {
+              "ref": "LedgerEntryJournal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,705 @@
+{
+  "name": "std-technician-dispatch",
+  "version": "1.0.0",
+  "description": "std-technician-dispatch — dispatch board for field technicians. Owns a Technician entity (id, skills, availability, current assignment, last-known location) and a single trait that loads the roster, renders an Assign / SetUnavailable data-grid, and tracks accept / reject responses so a parent molecule can wire them to its WorkOrder.",
+  "orbitals": [
+    {
+      "name": "TechnicianDispatchOrbital",
+      "entity": {
+        "name": "Technician",
+        "collection": "technicians",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "phone",
+            "type": "string"
+          },
+          {
+            "name": "skills",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "available",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "currentOrderId",
+            "type": "string"
+          },
+          {
+            "name": "lat",
+            "type": "number"
+          },
+          {
+            "name": "lng",
+            "type": "number"
+          },
+          {
+            "name": "lastSeenAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "TechnicianDispatch",
+          "category": "interaction",
+          "linkedEntity": "Technician",
+          "emits": [
+            {
+              "event": "ASSIGN",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "orderId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "ACCEPT",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "REJECT",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TOGGLE_AVAILABLE",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "available",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TechnicianLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Technician]"
+                }
+              ]
+            },
+            {
+              "event": "TechnicianLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "TechnicianUpdated",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.phone",
+                  "type": "string"
+                },
+                {
+                  "name": "row.skills",
+                  "type": "[string]"
+                },
+                {
+                  "name": "row.available",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.currentOrderId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lat",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lng",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastSeenAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "TechnicianUpdateFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "AssignmentAccepted",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "AssignmentRejected",
+              "payloadSchema": [
+                {
+                  "name": "technicianId",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TechnicianLoaded",
+                "name": "Technician loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Technician]"
+                  }
+                ]
+              },
+              {
+                "key": "TechnicianLoadFailed",
+                "name": "Technician load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ASSIGN",
+                "name": "Assign",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "orderId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ACCEPT",
+                "name": "Accept",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "REJECT",
+                "name": "Reject",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TOGGLE_AVAILABLE",
+                "name": "Toggle Available",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "available",
+                    "type": "boolean",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TechnicianUpdated",
+                "name": "Technician updated",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Technician"
+                  }
+                ]
+              },
+              {
+                "key": "TechnicianUpdateFailed",
+                "name": "Technician update failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "AssignmentAccepted",
+                "name": "Assignment accepted",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "AssignmentRejected",
+                "name": "Assignment rejected",
+                "payloadSchema": [
+                  {
+                    "name": "technicianId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Technician",
+                    {
+                      "emit": {
+                        "success": "TechnicianLoaded",
+                        "failure": "TechnicianLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading technicians…",
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "caption"
+                        }
+                      ],
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "TechnicianLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "hard-hat"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Dispatch Board",
+                              "variant": "h3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "label": "Technician",
+                              "name": "name",
+                              "variant": "body"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Skills",
+                              "name": "skills"
+                            },
+                            {
+                              "variant": "badge",
+                              "label": "Available",
+                              "name": "available"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Current Order",
+                              "name": "currentOrderId"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Last Seen",
+                              "name": "lastSeenAt"
+                            }
+                          ],
+                          "cols": 1,
+                          "gap": "sm",
+                          "itemActions": [
+                            {
+                              "variant": "primary",
+                              "icon": "user-plus",
+                              "event": "ASSIGN",
+                              "label": "Assign"
+                            },
+                            {
+                              "variant": "secondary",
+                              "icon": "user-minus",
+                              "label": "Set Unavailable",
+                              "event": "TOGGLE_AVAILABLE"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "type": "data-grid"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "TechnicianLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "error",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ASSIGN",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.technicianId"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentOrderId",
+                    "@payload.orderId"
+                  ],
+                  [
+                    "set",
+                    "@entity.available",
+                    false
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Technician",
+                    "@entity",
+                    {
+                      "emit": {
+                        "success": "TechnicianUpdated",
+                        "failure": "TechnicianUpdateFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ACCEPT",
+                "effects": [
+                  [
+                    "emit",
+                    "AssignmentAccepted",
+                    {
+                      "technicianId": "@payload.technicianId"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "REJECT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.technicianId"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentOrderId",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.available",
+                    true
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Technician",
+                    "@entity",
+                    {
+                      "emit": {
+                        "success": "TechnicianUpdated",
+                        "failure": "TechnicianUpdateFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "emit",
+                    "AssignmentRejected",
+                    {
+                      "technicianId": "@payload.technicianId"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TOGGLE_AVAILABLE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.technicianId"
+                  ],
+                  [
+                    "set",
+                    "@entity.available",
+                    "@payload.available"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Technician",
+                    "@entity",
+                    {
+                      "emit": {
+                        "failure": "TechnicianUpdateFailed",
+                        "success": "TechnicianUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "TechnicianUpdated",
+                "effects": [
+                  [
+                    "fetch",
+                    "Technician",
+                    {
+                      "emit": {
+                        "success": "TechnicianLoaded",
+                        "failure": "TechnicianLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TechnicianUpdateFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "variant": "error",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "AssignmentAccepted"
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "AssignmentRejected"
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Technician",
+                    {
+                      "emit": {
+                        "success": "TechnicianLoaded",
+                        "failure": "TechnicianLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Dispatch Board"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "TechnicianDispatchPage",
+          "path": "/technicians/dispatch",
+          "traits": [
+            {
+              "ref": "TechnicianDispatch"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

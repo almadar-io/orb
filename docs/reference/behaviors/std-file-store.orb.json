@@ -1,0 +1,401 @@
+{
+  "name": "std-file-store",
+  "version": "1.0.0",
+  "description": "std-file-store — generic file + folder + metadata primitive consumed by document-mgmt, legal-case, and any organism that needs a file store. Fetches StoredFile rows on INIT and renders them in a data-grid with per-row Download/Archive actions.",
+  "orbitals": [
+    {
+      "name": "StoredFileOrbital",
+      "entity": {
+        "name": "StoredFile",
+        "collection": "storedfiles",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "path",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "mimeType",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "sizeBytes",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "uploaderId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "uploaderName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "folder",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "uploadedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "isArchived",
+            "type": "boolean",
+            "default": false
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "StoredFileStore",
+          "category": "interaction",
+          "linkedEntity": "StoredFile",
+          "emits": [
+            {
+              "event": "DOWNLOAD_FILE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "ARCHIVE_FILE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "StoredFileLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[StoredFile]"
+                }
+              ]
+            },
+            {
+              "event": "StoredFileLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "StoredFileLoaded",
+                "name": "StoredFile loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[StoredFile]"
+                  }
+                ]
+              },
+              {
+                "key": "StoredFileLoadFailed",
+                "name": "StoredFile load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "DOWNLOAD_FILE",
+                "name": "Download File",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ARCHIVE_FILE",
+                "name": "Archive File",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StoredFile",
+                    {
+                      "emit": {
+                        "failure": "StoredFileLoadFailed",
+                        "success": "StoredFileLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "content": "Loading files…",
+                          "type": "typography"
+                        }
+                      ],
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "StoredFileLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Files"
+                        },
+                        {
+                          "entity": "@payload.data",
+                          "itemActions": [
+                            {
+                              "event": "DOWNLOAD_FILE",
+                              "variant": "primary",
+                              "label": "Download"
+                            },
+                            {
+                              "event": "ARCHIVE_FILE",
+                              "variant": "danger",
+                              "label": "Archive"
+                            }
+                          ],
+                          "fields": [
+                            {
+                              "name": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "name": "folder",
+                              "label": "Folder"
+                            },
+                            {
+                              "name": "mimeType",
+                              "label": "Type"
+                            },
+                            {
+                              "name": "sizeBytes",
+                              "label": "Size"
+                            },
+                            {
+                              "label": "Uploaded",
+                              "name": "uploadedAt"
+                            }
+                          ],
+                          "type": "data-grid"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "StoredFileLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "@payload.error",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "DOWNLOAD_FILE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "info",
+                      "type": "alert",
+                      "message": "Download requested"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ARCHIVE_FILE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Archive requested",
+                      "type": "alert",
+                      "variant": "info"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "StoredFile",
+                    {
+                      "emit": {
+                        "success": "StoredFileLoaded",
+                        "failure": "StoredFileLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "type": "typography",
+                          "color": "muted",
+                          "content": "Loading files…"
+                        }
+                      ],
+                      "align": "center",
+                      "type": "stack",
+                      "className": "py-12",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Files"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "StoredFilePage",
+          "path": "/files",
+          "traits": [
+            {
+              "ref": "StoredFileStore"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

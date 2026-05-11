@@ -1,0 +1,374 @@
+{
+  "name": "std-customer-account",
+  "version": "1.0.0",
+  "description": "Retail customer profile primitive with purchase history reference, store credit, and loyalty points.",
+  "orbitals": [
+    {
+      "name": "CustomerAccountOrbital",
+      "entity": {
+        "name": "CustomerAccount",
+        "collection": "customeraccounts",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "phone",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "loyaltyPoints",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "storeCreditAmount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "totalSpent",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "joinedAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "lastVisitAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "banned"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "CustomerAccountDirectory",
+          "category": "interaction",
+          "linkedEntity": "CustomerAccount",
+          "emits": [
+            {
+              "event": "GRANT_POINTS",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "GRANT_CREDIT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CustomerAccountLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[CustomerAccount]"
+                }
+              ]
+            },
+            {
+              "event": "CustomerAccountLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CustomerAccountLoaded",
+                "name": "CustomerAccount loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[CustomerAccount]"
+                  }
+                ]
+              },
+              {
+                "key": "CustomerAccountLoadFailed",
+                "name": "CustomerAccount load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "GRANT_POINTS",
+                "name": "Grant Points",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "GRANT_CREDIT",
+                "name": "Grant Credit",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CustomerAccount",
+                    {
+                      "emit": {
+                        "failure": "CustomerAccountLoadFailed",
+                        "success": "CustomerAccountLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "CustomerAccountLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "data-grid",
+                      "fields": [
+                        {
+                          "name": "name",
+                          "label": "Name",
+                          "variant": "h4"
+                        },
+                        {
+                          "variant": "body",
+                          "label": "Email",
+                          "name": "email"
+                        },
+                        {
+                          "variant": "caption",
+                          "name": "phone",
+                          "label": "Phone"
+                        },
+                        {
+                          "name": "loyaltyPoints",
+                          "label": "Points",
+                          "variant": "caption"
+                        },
+                        {
+                          "variant": "caption",
+                          "name": "totalSpent",
+                          "label": "Total Spent"
+                        },
+                        {
+                          "label": "Status",
+                          "name": "status",
+                          "variant": "badge"
+                        }
+                      ],
+                      "itemActions": [
+                        {
+                          "variant": "primary",
+                          "label": "Add Points",
+                          "event": "GRANT_POINTS"
+                        },
+                        {
+                          "label": "Issue Credit",
+                          "event": "GRANT_CREDIT",
+                          "variant": "ghost"
+                        }
+                      ],
+                      "entity": "@payload.data"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "CustomerAccountLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "@payload.error",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "GRANT_POINTS",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "success",
+                      "message": "Points granted"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "GRANT_CREDIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "success",
+                      "message": "Store credit issued"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "CustomerAccount",
+                    {
+                      "emit": {
+                        "failure": "CustomerAccountLoadFailed",
+                        "success": "CustomerAccountLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Customers"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "CustomerAccountPage",
+          "path": "/customers",
+          "traits": [
+            {
+              "ref": "CustomerAccountDirectory"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

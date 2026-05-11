@@ -1,0 +1,769 @@
+{
+  "name": "std-saved-search",
+  "version": "1.0.0",
+  "description": "std-saved-search — persisted query + alert subscription. Owns a SavedSearch entity (one row per saved query) and a single manage trait that lists saved searches in a data-grid, lets users toggle their alert subscription / rename the search / delete it, and persists each change.",
+  "orbitals": [
+    {
+      "name": "SavedSearchOrbital",
+      "entity": {
+        "name": "SavedSearch",
+        "collection": "savedsearches",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "query",
+            "type": "string"
+          },
+          {
+            "name": "filters",
+            "type": "object"
+          },
+          {
+            "name": "alertEnabled",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "alertFrequency",
+            "type": "string",
+            "default": "daily",
+            "values": [
+              "instant",
+              "daily",
+              "weekly"
+            ]
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "lastNotifiedAt",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "SavedSearchManage",
+          "category": "interaction",
+          "linkedEntity": "SavedSearch",
+          "emits": [
+            {
+              "event": "TOGGLE_ALERT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "enabled",
+                  "type": "boolean",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "DELETE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "EDIT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "RENAME",
+              "payloadSchema": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CHANGE_FREQUENCY",
+              "payloadSchema": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "SAVE"
+            },
+            {
+              "event": "CANCEL"
+            },
+            {
+              "event": "SavedSearchLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[SavedSearch]"
+                }
+              ]
+            },
+            {
+              "event": "SavedSearchLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SavedSearchUpdated",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.query",
+                  "type": "string"
+                },
+                {
+                  "name": "row.filters",
+                  "type": "object"
+                },
+                {
+                  "name": "row.alertEnabled",
+                  "type": "boolean"
+                },
+                {
+                  "name": "row.alertFrequency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.userId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.lastNotifiedAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SavedSearchDeleted",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "editing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SavedSearchLoaded",
+                "name": "SavedSearch loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[SavedSearch]"
+                  }
+                ]
+              },
+              {
+                "key": "SavedSearchLoadFailed",
+                "name": "SavedSearch load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "TOGGLE_ALERT",
+                "name": "Toggle Alert",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "DELETE",
+                "name": "Delete",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "EDIT",
+                "name": "Edit",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "SavedSearchUpdated",
+                "name": "SavedSearch updated",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "SavedSearch"
+                  }
+                ]
+              },
+              {
+                "key": "SavedSearchDeleted",
+                "name": "SavedSearch deleted",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RENAME",
+                "name": "Rename",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "CHANGE_FREQUENCY",
+                "name": "Change Frequency",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "SAVE",
+                "name": "Save"
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "SavedSearch",
+                    {
+                      "emit": {
+                        "success": "SavedSearchLoaded",
+                        "failure": "SavedSearchLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading saved searches…",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ],
+                      "className": "py-12",
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "SavedSearchLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "bookmark"
+                            },
+                            {
+                              "content": "Saved Searches",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "variant": "h4",
+                              "name": "name"
+                            },
+                            {
+                              "name": "query",
+                              "label": "Query",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Frequency",
+                              "name": "alertFrequency",
+                              "variant": "badge"
+                            },
+                            {
+                              "name": "alertEnabled",
+                              "label": "Alerts",
+                              "variant": "badge"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "gap": "sm",
+                          "cols": 1,
+                          "itemActions": [
+                            {
+                              "variant": "secondary",
+                              "label": "Toggle alert",
+                              "event": "TOGGLE_ALERT",
+                              "icon": "bell"
+                            },
+                            {
+                              "label": "Edit",
+                              "event": "EDIT",
+                              "icon": "pencil",
+                              "variant": "secondary"
+                            },
+                            {
+                              "variant": "danger",
+                              "event": "DELETE",
+                              "icon": "trash-2",
+                              "label": "Delete"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "type": "stack",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "SavedSearchLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "@payload.error",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "TOGGLE_ALERT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.alertEnabled",
+                    "@payload.enabled"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "SavedSearch",
+                    "@entity",
+                    {
+                      "emit": {
+                        "failure": "SavedSearchLoadFailed",
+                        "success": "SavedSearchUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "DELETE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "persist",
+                    "delete",
+                    "SavedSearch",
+                    "@entity",
+                    {
+                      "emit": {
+                        "success": "SavedSearchDeleted",
+                        "failure": "SavedSearchLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "editing",
+                "event": "EDIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "pencil"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Edit saved search",
+                              "variant": "h3"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "value": "@entity.name",
+                          "action": "RENAME",
+                          "placeholder": "Name",
+                          "type": "input"
+                        },
+                        {
+                          "action": "CHANGE_FREQUENCY",
+                          "placeholder": "Alert frequency",
+                          "options": [
+                            {
+                              "value": "instant",
+                              "label": "Instant"
+                            },
+                            {
+                              "label": "Daily",
+                              "value": "daily"
+                            },
+                            {
+                              "value": "weekly",
+                              "label": "Weekly"
+                            }
+                          ],
+                          "type": "select",
+                          "value": "@entity.alertFrequency"
+                        },
+                        {
+                          "type": "switch",
+                          "checked": "@entity.alertEnabled",
+                          "label": "Alerts enabled"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "icon": "check",
+                              "action": "SAVE",
+                              "label": "Save",
+                              "variant": "primary",
+                              "type": "button"
+                            },
+                            {
+                              "action": "CANCEL",
+                              "icon": "x",
+                              "label": "Cancel",
+                              "variant": "secondary",
+                              "type": "button"
+                            }
+                          ],
+                          "gap": "sm"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "SavedSearchUpdated",
+                "effects": [
+                  [
+                    "fetch",
+                    "SavedSearch",
+                    {
+                      "emit": {
+                        "failure": "SavedSearchLoadFailed",
+                        "success": "SavedSearchLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "SavedSearchDeleted",
+                "effects": [
+                  [
+                    "fetch",
+                    "SavedSearch",
+                    {
+                      "emit": {
+                        "success": "SavedSearchLoaded",
+                        "failure": "SavedSearchLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "editing",
+                "event": "RENAME",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.name",
+                    "@payload.value"
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "editing",
+                "event": "CHANGE_FREQUENCY",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.alertFrequency",
+                    "@payload.value"
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "browsing",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "persist",
+                    "update",
+                    "SavedSearch",
+                    "@entity",
+                    {
+                      "emit": {
+                        "success": "SavedSearchUpdated",
+                        "failure": "SavedSearchLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "editing",
+                "to": "loading",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "fetch",
+                    "SavedSearch",
+                    {
+                      "emit": {
+                        "success": "SavedSearchLoaded",
+                        "failure": "SavedSearchLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "SavedSearch",
+                    {
+                      "emit": {
+                        "failure": "SavedSearchLoadFailed",
+                        "success": "SavedSearchLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner",
+                      "size": "sm"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Saved Searches"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "SavedSearchManagePage",
+          "path": "/savedsearches",
+          "traits": [
+            {
+              "ref": "SavedSearchManage"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

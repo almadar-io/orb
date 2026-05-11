@@ -1,0 +1,701 @@
+{
+  "name": "std-service-calendar-ical",
+  "version": "1.0.0",
+  "description": "std-service-calendar-ical — iCal export service. Bind via `uses CalendarIcal from \"std/behaviors/std-service-calendar-ical\"` and configure `eventName` / `startsAt` / `endsAt` / `description` / `location` at the call site. Pass `uiTrait: \"@trait.YourEventForm\"` to inject your own form; leave unset to render the atom's default event form (standalone surface). Generates an .ics file attendees can add to Google/Apple Calendar.",
+  "orbitals": [
+    {
+      "name": "ServiceCalendarIcalOrbital",
+      "entity": {
+        "name": "ServiceCalendarIcal",
+        "persistence": "runtime",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "eventName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "startsAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "endsAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "location",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "icsContent",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "downloadUrl",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "error",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "idle",
+            "values": [
+              "idle",
+              "generating",
+              "succeeded",
+              "error"
+            ]
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "ServiceCalendarIcalDefaultForm",
+          "category": "interaction",
+          "emits": [
+            {
+              "event": "GENERATE",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "source",
+                  "type": "string"
+                },
+                {
+                  "name": "eventName",
+                  "type": "string"
+                },
+                {
+                  "name": "startsAt",
+                  "type": "string"
+                },
+                {
+                  "name": "endsAt",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "ready",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "ready",
+                "to": "ready",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "gap": "md",
+                          "direction": "horizontal",
+                          "align": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar"
+                            },
+                            {
+                              "variant": "h2",
+                              "content": "Add to Calendar",
+                              "type": "typography"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "md",
+                          "direction": "vertical",
+                          "children": [
+                            {
+                              "inputType": "text",
+                              "placeholder": "Event name",
+                              "type": "input"
+                            },
+                            {
+                              "inputType": "text",
+                              "placeholder": "Starts at (ISO 8601)",
+                              "type": "input"
+                            },
+                            {
+                              "placeholder": "Ends at (ISO 8601)",
+                              "type": "input",
+                              "inputType": "text"
+                            }
+                          ]
+                        },
+                        {
+                          "label": "Generate .ics",
+                          "icon": "calendar",
+                          "variant": "primary",
+                          "type": "button",
+                          "action": "GENERATE"
+                        }
+                      ],
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "ServiceCalendarIcalIcal",
+          "category": "interaction",
+          "linkedEntity": "ServiceCalendarIcal",
+          "emits": [
+            {
+              "event": "ServiceCalendarIcalLoaded",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServiceCalendarIcalLoadFailed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "message",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "GENERATED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "icsContent",
+                  "type": "string"
+                },
+                {
+                  "name": "downloadUrl",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ServiceCalendarIcalIcalFailed",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "FAILED",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "GENERATE",
+              "triggers": "GENERATE",
+              "source": {
+                "kind": "trait",
+                "trait": "ServiceCalendarIcalDefaultForm"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "generating"
+              },
+              {
+                "name": "succeeded"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "GENERATE",
+                "name": "Generate",
+                "payloadSchema": [
+                  {
+                    "name": "source",
+                    "type": "string"
+                  },
+                  {
+                    "name": "eventName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "startsAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "endsAt",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ServiceCalendarIcalLoaded",
+                "name": "ServiceCalendarIcal loaded",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ServiceCalendarIcalLoadFailed",
+                "name": "ServiceCalendarIcal load failed",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "GENERATED",
+                "name": "Generated",
+                "payloadSchema": [
+                  {
+                    "name": "icsContent",
+                    "type": "string"
+                  },
+                  {
+                    "name": "downloadUrl",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "FAILED",
+                "name": "Failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RESET",
+                "name": "Reset"
+              },
+              {
+                "key": "ServiceCalendarIcalIcalFailed",
+                "name": "ServiceCalendarIcal ical failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "RETRY",
+                "name": "Retry"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.eventName",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.startsAt",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.endsAt",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.description",
+                    ""
+                  ],
+                  [
+                    "set",
+                    "@entity.location",
+                    ""
+                  ],
+                  [
+                    "fetch",
+                    "ServiceCalendarIcal",
+                    {
+                      "emit": {
+                        "success": "ServiceCalendarIcalLoaded",
+                        "failure": "ServiceCalendarIcalLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        "@trait.ServiceCalendarIcalDefaultForm"
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "generating",
+                "event": "GENERATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "generating"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "title": "Generating .ics...",
+                      "type": "loading-state",
+                      "message": "Creating your calendar file."
+                    }
+                  ],
+                  [
+                    "call-service",
+                    "calendar-ical",
+                    "generate",
+                    {
+                      "eventName": "@entity.eventName",
+                      "startsAt": "@entity.startsAt",
+                      "location": "@entity.location",
+                      "description": "@entity.description",
+                      "endsAt": "@entity.endsAt"
+                    },
+                    {
+                      "emit": {
+                        "success": "GENERATED",
+                        "failure": "FAILED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServiceCalendarIcalLoaded"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "ServiceCalendarIcalLoadFailed"
+              },
+              {
+                "from": "generating",
+                "to": "succeeded",
+                "event": "GENERATED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.icsContent",
+                    "@payload.icsContent"
+                  ],
+                  [
+                    "set",
+                    "@entity.downloadUrl",
+                    "@payload.downloadUrl"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "succeeded"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "check-circle"
+                        },
+                        {
+                          "variant": "success",
+                          "type": "alert",
+                          "message": "Calendar file ready!"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "variant": "body",
+                          "content": "@entity.downloadUrl"
+                        },
+                        {
+                          "variant": "primary",
+                          "icon": "download",
+                          "type": "button",
+                          "label": "Download .ics",
+                          "action": "RESET"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "type": "button",
+                          "label": "New Event",
+                          "variant": "ghost",
+                          "action": "RESET"
+                        }
+                      ],
+                      "gap": "lg",
+                      "align": "center",
+                      "direction": "vertical",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "generating",
+                "to": "error",
+                "event": "FAILED",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.error",
+                    "@payload.error"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "error"
+                  ],
+                  [
+                    "emit",
+                    "ServiceCalendarIcalIcalFailed",
+                    {
+                      "code": "generate_failed",
+                      "error": "@entity.error"
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@entity.error",
+                      "type": "error-state",
+                      "title": "Generation Failed",
+                      "onRetry": "RETRY"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "type": "stack",
+                      "direction": "vertical",
+                      "children": [
+                        "@trait.ServiceCalendarIcalDefaultForm"
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "succeeded",
+                "to": "succeeded",
+                "event": "GENERATED"
+              },
+              {
+                "from": "error",
+                "to": "error",
+                "event": "ServiceCalendarIcalIcalFailed"
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RETRY",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        "@trait.ServiceCalendarIcalDefaultForm"
+                      ],
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "idle",
+                "event": "RESET",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.status",
+                    "idle"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "children": [
+                        "@trait.ServiceCalendarIcalDefaultForm"
+                      ],
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "uiTrait": {
+              "type": "trait",
+              "default": "@trait.ServiceCalendarIcalDefaultForm"
+            },
+            "eventName": {
+              "type": "string",
+              "default": ""
+            },
+            "description": {
+              "type": "string",
+              "default": ""
+            },
+            "endsAt": {
+              "type": "string",
+              "default": ""
+            },
+            "startsAt": {
+              "type": "string",
+              "default": ""
+            },
+            "location": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "ServiceCalendarIcalPage",
+          "path": "/servicecalendaricals",
+          "traits": [
+            {
+              "ref": "ServiceCalendarIcalIcal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

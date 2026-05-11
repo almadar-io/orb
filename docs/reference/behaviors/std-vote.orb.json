@@ -1,0 +1,491 @@
+{
+  "name": "std-vote",
+  "version": "1.0.0",
+  "description": "std-vote — forum-style up/down vote tally with single-vote-per-user constraint. Owns a Vote entity; VOTE persists the new direction (toggling to none when re-clicking the active arrow) and emits VoteCasted so cross-trait listeners can recompute aggregates.",
+  "orbitals": [
+    {
+      "name": "VoteOrbital",
+      "entity": {
+        "name": "Vote",
+        "collection": "votes",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "targetId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "voterId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "direction",
+            "type": "string",
+            "default": "none",
+            "values": [
+              "up",
+              "down",
+              "none"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "VoteCast",
+          "category": "interaction",
+          "linkedEntity": "Vote",
+          "emits": [
+            {
+              "event": "VOTE",
+              "payloadSchema": [
+                {
+                  "name": "next",
+                  "type": "string"
+                },
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "VoteLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Vote]"
+                }
+              ]
+            },
+            {
+              "event": "VoteLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "VoteCasted",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.targetId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.voterId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.direction",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "VoteCastFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "idle"
+              },
+              {
+                "name": "voting"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "VoteLoaded",
+                "name": "Vote loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Vote]"
+                  }
+                ]
+              },
+              {
+                "key": "VoteLoadFailed",
+                "name": "Vote load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "VOTE",
+                "name": "Vote",
+                "payloadSchema": [
+                  {
+                    "name": "next",
+                    "type": "string"
+                  },
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "VoteCasted",
+                "name": "Vote casted",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Vote"
+                  }
+                ]
+              },
+              {
+                "key": "VoteCastFailed",
+                "name": "Vote cast failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Vote",
+                    {
+                      "emit": {
+                        "success": "VoteLoaded",
+                        "failure": "VoteLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "className": "py-12",
+                      "gap": "md",
+                      "type": "stack",
+                      "align": "center",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "color": "muted",
+                          "variant": "caption",
+                          "content": "Loading votes…"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "idle",
+                "event": "VoteLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "count": 0,
+                      "type": "vote-stack",
+                      "label": "Vote",
+                      "onVote": "VOTE",
+                      "variant": "vertical",
+                      "userVote": "@entity.direction"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "idle",
+                "event": "VoteLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "variant": "error",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "voting",
+                "event": "VOTE",
+                "guard": [
+                  "not",
+                  [
+                    "=",
+                    "@payload.next",
+                    "@entity.direction"
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.direction",
+                    "@payload.next"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Vote",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "VoteCastFailed",
+                        "success": "VoteCasted"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "gap": "md",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Recording your vote…",
+                          "variant": "caption"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "voting",
+                "event": "VOTE",
+                "guard": [
+                  "=",
+                  "@payload.next",
+                  "@entity.direction"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.direction",
+                    "none"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Vote",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "failure": "VoteCastFailed",
+                        "success": "VoteCasted"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Clearing your vote…",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ],
+                      "className": "py-12",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "voting",
+                "to": "idle",
+                "event": "VoteCasted",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "vertical",
+                      "type": "vote-stack",
+                      "userVote": "@entity.direction",
+                      "label": "Vote",
+                      "count": 0,
+                      "onVote": "VOTE"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "voting",
+                "to": "error",
+                "event": "VoteCastFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Vote",
+                    {
+                      "emit": {
+                        "success": "VoteLoaded",
+                        "failure": "VoteLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading votes…",
+                          "type": "typography",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "allowDown": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "VoteCastPage",
+          "path": "/votes/cast",
+          "traits": [
+            {
+              "ref": "VoteCast"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

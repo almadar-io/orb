@@ -1,0 +1,1183 @@
+{
+  "name": "std-broadcast-builder",
+  "version": "1.0.0",
+  "description": "std-broadcast-builder composes EmailBroadcast + Segment + TemplateEditor + Modal + Confirmation into a unified broadcast-building UI",
+  "orbitals": [
+    {
+      "name": "BroadcastBuilderOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-email-broadcast",
+          "as": "EmailBroadcast"
+        },
+        {
+          "from": "std/behaviors/std-segment",
+          "as": "Segment"
+        },
+        {
+          "from": "std/behaviors/std-template-editor",
+          "as": "TemplateEditor"
+        },
+        {
+          "from": "std/behaviors/std-modal",
+          "as": "Modal"
+        },
+        {
+          "from": "std/behaviors/std-confirmation",
+          "as": "Confirmation"
+        }
+      ],
+      "entity": {
+        "name": "BroadcastDraft",
+        "collection": "broadcastdrafts",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "segmentId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "segmentName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "templateId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "templateName",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "subject",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "scheduledAt",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "draft",
+            "values": [
+              "draft",
+              "ready",
+              "sent"
+            ]
+          },
+          {
+            "name": "pendingId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "BroadcastDraftBrowse",
+          "category": "interaction",
+          "linkedEntity": "BroadcastDraft",
+          "emits": [
+            {
+              "event": "CREATE"
+            },
+            {
+              "event": "REQUEST_DELETE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.segmentId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.segmentName",
+                  "type": "string"
+                },
+                {
+                  "name": "row.templateId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.templateName",
+                  "type": "string"
+                },
+                {
+                  "name": "row.subject",
+                  "type": "string"
+                },
+                {
+                  "name": "row.scheduledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.pendingId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "BroadcastDraftLoaded",
+              "description": "Fired when the broadcast-draft collection finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[BroadcastDraft]"
+                }
+              ]
+            },
+            {
+              "event": "BroadcastDraftLoadFailed",
+              "description": "Fired when the broadcast-draft collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "DRAFT_CREATED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftPersistor"
+              }
+            },
+            {
+              "event": "DRAFT_DELETED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftPersistor"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "BroadcastDraftLoaded",
+                "name": "BroadcastDraft loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[BroadcastDraft]"
+                  }
+                ]
+              },
+              {
+                "key": "BroadcastDraftLoadFailed",
+                "name": "BroadcastDraft load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CREATE",
+                "name": "Create"
+              },
+              {
+                "key": "REQUEST_DELETE",
+                "name": "Request Delete"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BroadcastDraft",
+                    {
+                      "emit": {
+                        "failure": "BroadcastDraftLoadFailed",
+                        "success": "BroadcastDraftLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "content": "Loading broadcasts…",
+                          "type": "typography",
+                          "color": "muted",
+                          "variant": "caption"
+                        }
+                      ],
+                      "align": "center",
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "BroadcastDraftLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "gap": "lg",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "direction": "horizontal",
+                              "gap": "md",
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "send"
+                                },
+                                {
+                                  "variant": "h2",
+                                  "type": "typography",
+                                  "content": "Broadcasts"
+                                }
+                              ]
+                            },
+                            {
+                              "action": "CREATE",
+                              "variant": "primary",
+                              "type": "button",
+                              "icon": "plus",
+                              "label": "New Broadcast"
+                            }
+                          ],
+                          "gap": "md",
+                          "justify": "between",
+                          "type": "stack",
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "data-grid",
+                          "fields": [
+                            {
+                              "variant": "h4",
+                              "name": "name",
+                              "label": "Name",
+                              "icon": "send"
+                            },
+                            {
+                              "name": "subject",
+                              "label": "Subject",
+                              "variant": "body"
+                            },
+                            {
+                              "label": "Segment",
+                              "variant": "caption",
+                              "name": "segmentName"
+                            },
+                            {
+                              "label": "Template",
+                              "name": "templateName",
+                              "variant": "caption"
+                            },
+                            {
+                              "name": "scheduledAt",
+                              "variant": "caption",
+                              "label": "Scheduled"
+                            },
+                            {
+                              "variant": "badge",
+                              "label": "Status",
+                              "name": "status"
+                            }
+                          ],
+                          "itemActions": [
+                            {
+                              "event": "REQUEST_DELETE",
+                              "variant": "danger",
+                              "label": "Delete"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "BroadcastDraftLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "type": "stack",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "color": "destructive",
+                          "name": "alert-triangle",
+                          "type": "icon"
+                        },
+                        {
+                          "content": "Failed to load broadcasts",
+                          "type": "typography",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "typography",
+                          "color": "muted",
+                          "content": "@payload.error",
+                          "variant": "body"
+                        },
+                        {
+                          "type": "button",
+                          "label": "Retry",
+                          "icon": "rotate-ccw",
+                          "variant": "primary",
+                          "action": "INIT"
+                        }
+                      ],
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BroadcastDraft",
+                    {
+                      "emit": {
+                        "failure": "BroadcastDraftLoadFailed",
+                        "success": "BroadcastDraftLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BroadcastDraft",
+                    {
+                      "emit": {
+                        "failure": "BroadcastDraftLoadFailed",
+                        "success": "BroadcastDraftLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "BroadcastDraftCreate",
+          "category": "interaction",
+          "linkedEntity": "BroadcastDraft",
+          "emits": [
+            {
+              "event": "SAVE",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CLOSE"
+            },
+            {
+              "event": "ModalRecordLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ModalRecordLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ModalRecord]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "CREATE",
+              "triggers": "CREATE",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "CREATE",
+                "name": "Open",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "row",
+                    "type": "ModalRecord"
+                  }
+                ]
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "SAVE",
+                "name": "Save",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoadFailed",
+                "name": "ModalRecord load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoaded",
+                "name": "ModalRecord loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ModalRecord]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BroadcastDraft",
+                    {
+                      "emit": {
+                        "failure": "ModalRecordLoadFailed",
+                        "success": "ModalRecordLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "CREATE",
+                "guard": [
+                  "or",
+                  [
+                    "=",
+                    "create",
+                    "create"
+                  ],
+                  "@payload.row"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "name": "plus-circle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "New Broadcast",
+                              "variant": "h3"
+                            }
+                          ],
+                          "type": "stack"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "form-section",
+                          "submitEvent": "SAVE",
+                          "mode": "create",
+                          "fields": [
+                            "name",
+                            "segmentId",
+                            "templateId",
+                            "subject",
+                            "scheduledAt"
+                          ],
+                          "cancelEvent": "CLOSE",
+                          "entity": "@payload.row"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "SAVE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "fields": {
+              "type": "[string]",
+              "default": []
+            },
+            "title": {
+              "type": "string",
+              "default": "Details"
+            },
+            "icon": {
+              "type": "string",
+              "default": "layout-panel-top"
+            },
+            "mode": {
+              "type": "string",
+              "default": "create"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "BroadcastDraftDelete",
+          "category": "interaction",
+          "linkedEntity": "BroadcastDraft",
+          "emits": [
+            {
+              "event": "CONFIRM_DELETE",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CANCEL"
+            },
+            {
+              "event": "ConfirmActionLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ConfirmActionLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[ConfirmAction]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "REQUEST_DELETE",
+              "triggers": "DELETE",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "confirming"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DELETE",
+                "name": "Request",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "ConfirmAction"
+                  }
+                ]
+              },
+              {
+                "key": "CONFIRM_DELETE",
+                "name": "Confirm"
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close"
+              },
+              {
+                "key": "ConfirmActionLoadFailed",
+                "name": "ConfirmAction load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ConfirmActionLoaded",
+                "name": "ConfirmAction loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ConfirmAction]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "BroadcastDraft",
+                    {
+                      "emit": {
+                        "success": "ConfirmActionLoaded",
+                        "failure": "ConfirmActionLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "confirming",
+                "event": "DELETE",
+                "guard": "@payload.row",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.pendingId",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.name",
+                    "@payload.row.name"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "gap": "sm",
+                          "align": "center",
+                          "type": "stack",
+                          "children": [
+                            {
+                              "name": "alert-triangle",
+                              "type": "icon"
+                            },
+                            {
+                              "content": "Delete Draft",
+                              "variant": "h3",
+                              "type": "typography"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "variant": "error",
+                          "type": "alert",
+                          "message": "This will discard the draft."
+                        },
+                        {
+                          "content": "@entity.name",
+                          "type": "typography",
+                          "variant": "h4"
+                        },
+                        {
+                          "type": "typography",
+                          "color": "muted",
+                          "content": "@entity.pendingId",
+                          "variant": "caption"
+                        },
+                        {
+                          "direction": "horizontal",
+                          "children": [
+                            {
+                              "variant": "ghost",
+                              "label": "Cancel",
+                              "action": "CANCEL",
+                              "type": "button"
+                            },
+                            {
+                              "icon": "check",
+                              "label": "Delete",
+                              "type": "button",
+                              "action": "CONFIRM_DELETE",
+                              "actionPayload": {
+                                "id": "@payload.id"
+                              },
+                              "variant": "danger"
+                            }
+                          ],
+                          "gap": "sm",
+                          "type": "stack",
+                          "justify": "end"
+                        }
+                      ],
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CONFIRM_DELETE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "confirmLabel": {
+              "type": "string",
+              "default": "Confirm"
+            },
+            "alertMessage": {
+              "type": "string",
+              "default": "Are you sure?"
+            },
+            "title": {
+              "type": "string",
+              "default": "Confirm Action"
+            },
+            "icon": {
+              "type": "string",
+              "default": "alert-triangle"
+            }
+          },
+          "scope": "instance"
+        },
+        {
+          "name": "BroadcastDraftPersistor",
+          "category": "lifecycle",
+          "linkedEntity": "BroadcastDraft",
+          "emits": [
+            {
+              "event": "DRAFT_CREATED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "DRAFT_DELETED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "SAVE",
+              "triggers": "DO_CREATE",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftCreate"
+              }
+            },
+            {
+              "event": "CONFIRM_DELETE",
+              "triggers": "DO_DELETE",
+              "source": {
+                "kind": "trait",
+                "trait": "BroadcastDraftDelete"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DO_CREATE",
+                "name": "Do Create",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "DO_DELETE",
+                "name": "Do Delete",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "DRAFT_CREATED",
+                "name": "Draft Created"
+              },
+              {
+                "key": "DRAFT_DELETED",
+                "name": "Draft Deleted"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_CREATE",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "BroadcastDraft",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "DRAFT_CREATED"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_DELETE",
+                "effects": [
+                  [
+                    "persist",
+                    "delete",
+                    "BroadcastDraft",
+                    "@payload.id",
+                    {
+                      "emit": {
+                        "success": "DRAFT_DELETED"
+                      }
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "BroadcastBuilderPage",
+          "path": "/broadcast-builder",
+          "traits": [
+            {
+              "ref": "BroadcastDraftBrowse"
+            },
+            {
+              "ref": "BroadcastDraftCreate"
+            },
+            {
+              "ref": "BroadcastDraftDelete"
+            },
+            {
+              "ref": "BroadcastDraftPersistor"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

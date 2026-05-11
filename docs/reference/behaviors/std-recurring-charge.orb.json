@@ -1,0 +1,1292 @@
+{
+  "name": "std-recurring-charge",
+  "version": "1.0.0",
+  "description": "std-recurring-charge — subscription cycle clock with retry policy and inline proration math. Owns a Subscription entity; CHARGE invokes the stripe-charge service, PRORATE adjusts amount inline by daysIntoPeriod, CANCEL flips status. Persists results back to the row and emits SubscriptionUpdated for downstream listeners.",
+  "orbitals": [
+    {
+      "name": "SubscriptionOrbital",
+      "entity": {
+        "name": "Subscription",
+        "collection": "subscriptions",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "customerId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "planId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "trial",
+              "past-due",
+              "cancelled",
+              "paused"
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "number"
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "default": "USD"
+          },
+          {
+            "name": "interval",
+            "type": "string",
+            "default": "monthly",
+            "values": [
+              "monthly",
+              "yearly"
+            ]
+          },
+          {
+            "name": "currentPeriodStart",
+            "type": "string"
+          },
+          {
+            "name": "currentPeriodEnd",
+            "type": "string"
+          },
+          {
+            "name": "nextBillingAt",
+            "type": "string"
+          },
+          {
+            "name": "attemptCount",
+            "type": "number",
+            "default": 0
+          },
+          {
+            "name": "lastChargeAt",
+            "type": "string"
+          },
+          {
+            "name": "cancelledAt",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "SubscriptionManage",
+          "category": "interaction",
+          "linkedEntity": "Subscription",
+          "emits": [
+            {
+              "event": "CHARGE",
+              "payloadSchema": [
+                {
+                  "name": "subscriptionId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.customerId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.planId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.amount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.currency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.interval",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodStart",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodEnd",
+                  "type": "string"
+                },
+                {
+                  "name": "row.nextBillingAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.attemptCount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastChargeAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.cancelledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "PRORATE",
+              "payloadSchema": [
+                {
+                  "name": "subscriptionId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "newPlanId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "daysIntoPeriod",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.customerId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.planId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.amount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.currency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.interval",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodStart",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodEnd",
+                  "type": "string"
+                },
+                {
+                  "name": "row.nextBillingAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.attemptCount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastChargeAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.cancelledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CANCEL",
+              "payloadSchema": [
+                {
+                  "name": "subscriptionId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "cancelledAt",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.customerId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.planId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.amount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.currency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.interval",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodStart",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodEnd",
+                  "type": "string"
+                },
+                {
+                  "name": "row.nextBillingAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.attemptCount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastChargeAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.cancelledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SubscriptionLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Subscription]"
+                }
+              ]
+            },
+            {
+              "event": "SubscriptionLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ChargeSucceeded",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.customerId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.planId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.amount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.currency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.interval",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodStart",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodEnd",
+                  "type": "string"
+                },
+                {
+                  "name": "row.nextBillingAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.attemptCount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastChargeAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.cancelledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ChargeFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "SubscriptionUpdated",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.customerId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.planId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.amount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.currency",
+                  "type": "string"
+                },
+                {
+                  "name": "row.interval",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodStart",
+                  "type": "string"
+                },
+                {
+                  "name": "row.currentPeriodEnd",
+                  "type": "string"
+                },
+                {
+                  "name": "row.nextBillingAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.attemptCount",
+                  "type": "number"
+                },
+                {
+                  "name": "row.lastChargeAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.cancelledAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "charging"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "SubscriptionLoaded",
+                "name": "Subscription loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Subscription]"
+                  }
+                ]
+              },
+              {
+                "key": "SubscriptionLoadFailed",
+                "name": "Subscription load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "CHARGE",
+                "name": "Charge",
+                "payloadSchema": [
+                  {
+                    "name": "subscriptionId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "Subscription"
+                  }
+                ]
+              },
+              {
+                "key": "PRORATE",
+                "name": "Prorate",
+                "payloadSchema": [
+                  {
+                    "name": "subscriptionId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "newPlanId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "daysIntoPeriod",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "Subscription"
+                  }
+                ]
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel",
+                "payloadSchema": [
+                  {
+                    "name": "subscriptionId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "cancelledAt",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "Subscription"
+                  }
+                ]
+              },
+              {
+                "key": "SubscriptionUpdated",
+                "name": "Subscription updated",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Subscription"
+                  }
+                ]
+              },
+              {
+                "key": "ChargeSucceeded",
+                "name": "Charge succeeded",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "Subscription"
+                  }
+                ]
+              },
+              {
+                "key": "ChargeFailed",
+                "name": "Charge failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Subscription",
+                    {
+                      "emit": {
+                        "failure": "SubscriptionLoadFailed",
+                        "success": "SubscriptionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "align": "center",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Loading subscriptions…"
+                        }
+                      ],
+                      "className": "py-12",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "SubscriptionLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "repeat"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Subscriptions",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "cols": 1,
+                          "gap": "sm",
+                          "type": "data-grid",
+                          "itemActions": [
+                            {
+                              "icon": "credit-card",
+                              "variant": "primary",
+                              "label": "Charge",
+                              "event": "CHARGE"
+                            },
+                            {
+                              "variant": "secondary",
+                              "icon": "calculator",
+                              "event": "PRORATE",
+                              "label": "Prorate"
+                            },
+                            {
+                              "event": "CANCEL",
+                              "icon": "x",
+                              "label": "Cancel",
+                              "variant": "danger"
+                            }
+                          ],
+                          "fields": [
+                            {
+                              "variant": "caption",
+                              "name": "customerId",
+                              "label": "Customer"
+                            },
+                            {
+                              "name": "planId",
+                              "variant": "caption",
+                              "label": "Plan"
+                            },
+                            {
+                              "variant": "badge",
+                              "label": "Status",
+                              "name": "status"
+                            },
+                            {
+                              "name": "amount",
+                              "variant": "caption",
+                              "label": "Amount"
+                            },
+                            {
+                              "variant": "caption",
+                              "label": "Currency",
+                              "name": "currency"
+                            },
+                            {
+                              "label": "Interval",
+                              "variant": "badge",
+                              "name": "interval"
+                            },
+                            {
+                              "label": "Next Bill",
+                              "name": "nextBillingAt",
+                              "variant": "caption"
+                            },
+                            {
+                              "label": "Retries",
+                              "variant": "caption",
+                              "name": "attemptCount"
+                            }
+                          ],
+                          "entity": "@payload.data"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "SubscriptionLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "variant": "error",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "charging",
+                "event": "CHARGE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.subscriptionId"
+                  ],
+                  [
+                    "set",
+                    "@entity.customerId",
+                    "@payload.row.customerId"
+                  ],
+                  [
+                    "set",
+                    "@entity.planId",
+                    "@payload.row.planId"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "@payload.row.status"
+                  ],
+                  [
+                    "set",
+                    "@entity.amount",
+                    "@payload.row.amount"
+                  ],
+                  [
+                    "set",
+                    "@entity.currency",
+                    "@payload.row.currency"
+                  ],
+                  [
+                    "set",
+                    "@entity.interval",
+                    "@payload.row.interval"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodStart",
+                    "@payload.row.currentPeriodStart"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodEnd",
+                    "@payload.row.currentPeriodEnd"
+                  ],
+                  [
+                    "set",
+                    "@entity.nextBillingAt",
+                    "@payload.row.nextBillingAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.attemptCount",
+                    "@payload.row.attemptCount"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastChargeAt",
+                    "@payload.row.lastChargeAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.cancelledAt",
+                    "@payload.row.cancelledAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.createdAt",
+                    "@payload.row.createdAt"
+                  ],
+                  [
+                    "call-service",
+                    "stripe-charge",
+                    "charge",
+                    {
+                      "currency": "@entity.currency",
+                      "subscriptionId": "@payload.subscriptionId",
+                      "amount": "@entity.amount"
+                    },
+                    {
+                      "emit": {
+                        "failure": "ChargeFailed",
+                        "success": "ChargeSucceeded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "className": "py-12",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "color": "muted",
+                          "type": "typography",
+                          "content": "Charging subscription…"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "PRORATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.subscriptionId"
+                  ],
+                  [
+                    "set",
+                    "@entity.customerId",
+                    "@payload.row.customerId"
+                  ],
+                  [
+                    "set",
+                    "@entity.planId",
+                    "@payload.newPlanId"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "@payload.row.status"
+                  ],
+                  [
+                    "set",
+                    "@entity.amount",
+                    [
+                      "*",
+                      "@payload.row.amount",
+                      [
+                        "-",
+                        1,
+                        [
+                          "/",
+                          "@payload.daysIntoPeriod",
+                          30
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.currency",
+                    "@payload.row.currency"
+                  ],
+                  [
+                    "set",
+                    "@entity.interval",
+                    "@payload.row.interval"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodStart",
+                    "@payload.row.currentPeriodStart"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodEnd",
+                    "@payload.row.currentPeriodEnd"
+                  ],
+                  [
+                    "set",
+                    "@entity.nextBillingAt",
+                    "@payload.row.nextBillingAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.attemptCount",
+                    "@payload.row.attemptCount"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastChargeAt",
+                    "@payload.row.lastChargeAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.cancelledAt",
+                    "@payload.row.cancelledAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.createdAt",
+                    "@payload.row.createdAt"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Subscription",
+                    "@entity",
+                    {
+                      "emit": {
+                        "failure": "ChargeFailed",
+                        "success": "SubscriptionUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.subscriptionId"
+                  ],
+                  [
+                    "set",
+                    "@entity.customerId",
+                    "@payload.row.customerId"
+                  ],
+                  [
+                    "set",
+                    "@entity.planId",
+                    "@payload.row.planId"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "cancelled"
+                  ],
+                  [
+                    "set",
+                    "@entity.amount",
+                    "@payload.row.amount"
+                  ],
+                  [
+                    "set",
+                    "@entity.currency",
+                    "@payload.row.currency"
+                  ],
+                  [
+                    "set",
+                    "@entity.interval",
+                    "@payload.row.interval"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodStart",
+                    "@payload.row.currentPeriodStart"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodEnd",
+                    "@payload.row.currentPeriodEnd"
+                  ],
+                  [
+                    "set",
+                    "@entity.nextBillingAt",
+                    "@payload.row.nextBillingAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.attemptCount",
+                    "@payload.row.attemptCount"
+                  ],
+                  [
+                    "set",
+                    "@entity.lastChargeAt",
+                    "@payload.row.lastChargeAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.cancelledAt",
+                    "@payload.cancelledAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.createdAt",
+                    "@payload.row.createdAt"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Subscription",
+                    "@entity",
+                    {
+                      "emit": {
+                        "failure": "ChargeFailed",
+                        "success": "SubscriptionUpdated"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "SubscriptionUpdated",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "Subscription updated",
+                      "variant": "success",
+                      "type": "alert"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "charging",
+                "to": "loading",
+                "event": "ChargeSucceeded",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.row.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.customerId",
+                    "@payload.row.customerId"
+                  ],
+                  [
+                    "set",
+                    "@entity.planId",
+                    "@payload.row.planId"
+                  ],
+                  [
+                    "set",
+                    "@entity.status",
+                    "@payload.row.status"
+                  ],
+                  [
+                    "set",
+                    "@entity.amount",
+                    "@payload.row.amount"
+                  ],
+                  [
+                    "set",
+                    "@entity.currency",
+                    "@payload.row.currency"
+                  ],
+                  [
+                    "set",
+                    "@entity.interval",
+                    "@payload.row.interval"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodStart",
+                    "@payload.row.currentPeriodStart"
+                  ],
+                  [
+                    "set",
+                    "@entity.currentPeriodEnd",
+                    "@payload.row.currentPeriodEnd"
+                  ],
+                  [
+                    "set",
+                    "@entity.nextBillingAt",
+                    "@payload.row.nextBillingAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.attemptCount",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.lastChargeAt",
+                    "@payload.row.lastChargeAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.cancelledAt",
+                    "@payload.row.cancelledAt"
+                  ],
+                  [
+                    "set",
+                    "@entity.createdAt",
+                    "@payload.row.createdAt"
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Subscription",
+                    "@entity",
+                    {
+                      "emit": {
+                        "failure": "ChargeFailed",
+                        "success": "SubscriptionUpdated"
+                      }
+                    }
+                  ],
+                  [
+                    "fetch",
+                    "Subscription",
+                    {
+                      "emit": {
+                        "success": "SubscriptionLoaded",
+                        "failure": "SubscriptionLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "charging",
+                "to": "browsing",
+                "event": "ChargeFailed",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.attemptCount",
+                    [
+                      "+",
+                      "@entity.attemptCount",
+                      1
+                    ]
+                  ],
+                  [
+                    "persist",
+                    "update",
+                    "Subscription",
+                    "@entity",
+                    {
+                      "emit": {
+                        "success": "SubscriptionUpdated",
+                        "failure": "ChargeFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "alert",
+                      "message": "@payload.error",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Subscription",
+                    {
+                      "emit": {
+                        "failure": "SubscriptionLoadFailed",
+                        "success": "SubscriptionLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "size": "sm",
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Subscriptions"
+            },
+            "maxRetries": {
+              "type": "number",
+              "default": 4
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "SubscriptionManagePage",
+          "path": "/subscriptions/manage",
+          "traits": [
+            {
+              "ref": "SubscriptionManage"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

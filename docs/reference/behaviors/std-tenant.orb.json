@@ -1,0 +1,352 @@
+{
+  "name": "std-tenant",
+  "version": "1.0.0",
+  "description": "Tenant primitive: person/company occupying a leased unit.",
+  "orbitals": [
+    {
+      "name": "TenantOrbital",
+      "entity": {
+        "name": "Tenant",
+        "collection": "tenants",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "phone",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "leaseId",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "moveInDate",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "moveOutDate",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "prospective",
+            "values": [
+              "current",
+              "former",
+              "prospective"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "TenantDirectory",
+          "category": "interaction",
+          "linkedEntity": "Tenant",
+          "emits": [
+            {
+              "event": "ACTIVATE_TENANT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "MOVE_OUT",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TenantLoaded",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Tenant]"
+                }
+              ]
+            },
+            {
+              "event": "TenantLoadFailed",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TenantLoaded",
+                "name": "Tenant loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Tenant]"
+                  }
+                ]
+              },
+              {
+                "key": "TenantLoadFailed",
+                "name": "Tenant load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ACTIVATE_TENANT",
+                "name": "Activate Tenant",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "MOVE_OUT",
+                "name": "Move Out",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Tenant",
+                    {
+                      "emit": {
+                        "failure": "TenantLoadFailed",
+                        "success": "TenantLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "TenantLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "fields": [
+                        {
+                          "label": "Name",
+                          "name": "name",
+                          "variant": "h4"
+                        },
+                        {
+                          "variant": "body",
+                          "label": "Email",
+                          "name": "email"
+                        },
+                        {
+                          "name": "phone",
+                          "variant": "caption",
+                          "label": "Phone"
+                        },
+                        {
+                          "name": "status",
+                          "variant": "badge",
+                          "label": "Status"
+                        },
+                        {
+                          "name": "moveInDate",
+                          "label": "Move-In",
+                          "variant": "caption"
+                        }
+                      ],
+                      "type": "data-grid",
+                      "entity": "@payload.data",
+                      "itemActions": [
+                        {
+                          "event": "ACTIVATE_TENANT",
+                          "variant": "primary",
+                          "label": "Activate"
+                        },
+                        {
+                          "label": "Move Out",
+                          "event": "MOVE_OUT",
+                          "variant": "danger"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "TenantLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "title": "Failed to load tenants",
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "ACTIVATE_TENANT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Tenant activated",
+                    "success"
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "browsing",
+                "event": "MOVE_OUT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "notify",
+                    "Tenant move-out recorded",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Tenant",
+                    {
+                      "emit": {
+                        "failure": "TenantLoadFailed",
+                        "success": "TenantLoaded"
+                      }
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "title": {
+              "type": "string",
+              "default": "Tenants"
+            }
+          },
+          "scope": "collection"
+        }
+      ],
+      "pages": [
+        {
+          "name": "TenantPage",
+          "path": "/tenants",
+          "traits": [
+            {
+              "ref": "TenantDirectory"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

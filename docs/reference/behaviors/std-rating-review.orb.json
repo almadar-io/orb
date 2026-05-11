@@ -1,0 +1,602 @@
+{
+  "name": "std-rating-review",
+  "version": "1.0.0",
+  "description": "std-rating-review — capture a 1..N star rating with optional comment + photos. Owns a RatingReview entity; SUBMIT persists @payload.data (rating, comment, photos, targetId) and emits RatingReviewSubmitted so cross-trait listeners can react (e.g. recompute aggregate).",
+  "orbitals": [
+    {
+      "name": "RatingReviewOrbital",
+      "entity": {
+        "name": "RatingReview",
+        "collection": "ratingreviews",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "rating",
+            "type": "number",
+            "required": true
+          },
+          {
+            "name": "comment",
+            "type": "string"
+          },
+          {
+            "name": "photos",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorId",
+            "type": "string"
+          },
+          {
+            "name": "targetId",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "RatingReviewSubmit",
+          "category": "interaction",
+          "linkedEntity": "RatingReview",
+          "emits": [
+            {
+              "event": "SUBMIT",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "RATE",
+              "payloadSchema": [
+                {
+                  "name": "rating",
+                  "type": "number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "EDIT_COMMENT",
+              "payloadSchema": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "RatingReviewLoaded",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[RatingReview]"
+                }
+              ]
+            },
+            {
+              "event": "RatingReviewLoadFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "RatingReviewSubmitted",
+              "payloadSchema": [
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.rating",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "row.comment",
+                  "type": "string"
+                },
+                {
+                  "name": "row.photos",
+                  "type": "[string]"
+                },
+                {
+                  "name": "row.authorId",
+                  "type": "string"
+                },
+                {
+                  "name": "row.targetId",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "RatingReviewSubmitFailed",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "submitting"
+              },
+              {
+                "name": "submitted"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "RATE",
+                "name": "Rate",
+                "payloadSchema": [
+                  {
+                    "name": "rating",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "EDIT_COMMENT",
+                "name": "Edit Comment",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RatingReviewLoaded",
+                "name": "RatingReview loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[RatingReview]"
+                  }
+                ]
+              },
+              {
+                "key": "RatingReviewLoadFailed",
+                "name": "RatingReview load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "SUBMIT",
+                "name": "Submit",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "RatingReviewSubmitted",
+                "name": "RatingReview submitted",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "RatingReview"
+                  }
+                ]
+              },
+              {
+                "key": "RatingReviewSubmitFailed",
+                "name": "RatingReview submit failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "RatingReview",
+                    {
+                      "emit": {
+                        "success": "RatingReviewLoaded",
+                        "failure": "RatingReviewLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "type": "typography",
+                          "content": "Rate this",
+                          "variant": "h3"
+                        },
+                        {
+                          "max": 5,
+                          "value": "@entity.rating",
+                          "type": "star-rating",
+                          "action": "RATE"
+                        },
+                        {
+                          "action": "EDIT_COMMENT",
+                          "placeholder": "Tell us more (optional)",
+                          "type": "textarea"
+                        },
+                        {
+                          "type": "button",
+                          "variant": "primary",
+                          "icon": "send",
+                          "action": "SUBMIT",
+                          "label": "Submit"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "RATE",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.rating",
+                    "@payload.rating"
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Rate this"
+                        },
+                        {
+                          "max": 5,
+                          "action": "RATE",
+                          "type": "star-rating",
+                          "value": "@entity.rating"
+                        },
+                        {
+                          "action": "EDIT_COMMENT",
+                          "type": "textarea",
+                          "placeholder": "Tell us more (optional)"
+                        },
+                        {
+                          "label": "Submit",
+                          "variant": "primary",
+                          "action": "SUBMIT",
+                          "icon": "send",
+                          "type": "button"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "EDIT_COMMENT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.comment",
+                    "@payload.value"
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "RatingReviewLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "content": "Rate this",
+                          "variant": "h3",
+                          "type": "typography"
+                        },
+                        {
+                          "max": 5,
+                          "value": "@entity.rating",
+                          "type": "star-rating",
+                          "action": "RATE"
+                        },
+                        {
+                          "type": "textarea",
+                          "placeholder": "Tell us more (optional)",
+                          "action": "EDIT_COMMENT"
+                        },
+                        {
+                          "label": "Submit",
+                          "variant": "primary",
+                          "icon": "send",
+                          "action": "SUBMIT",
+                          "type": "button"
+                        }
+                      ],
+                      "gap": "md",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "RatingReviewLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "variant": "error",
+                      "type": "alert",
+                      "message": "@payload.error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "submitting",
+                "event": "SUBMIT",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "RatingReview",
+                    "@payload.data",
+                    {
+                      "emit": {
+                        "success": "RatingReviewSubmitted",
+                        "failure": "RatingReviewSubmitFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "align": "center",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "className": "py-12",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "variant": "caption",
+                          "content": "Submitting your review…",
+                          "color": "muted",
+                          "type": "typography"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "submitted",
+                "event": "RatingReviewSubmitted",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "color": "success",
+                          "name": "check-circle",
+                          "type": "icon"
+                        },
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Thanks for your review!"
+                        }
+                      ],
+                      "align": "center",
+                      "direction": "vertical",
+                      "gap": "md",
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitting",
+                "to": "idle",
+                "event": "RatingReviewSubmitFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "message": "@payload.error",
+                      "type": "alert",
+                      "variant": "error"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "submitted",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.rating",
+                    0
+                  ],
+                  [
+                    "set",
+                    "@entity.comment",
+                    ""
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "children": [
+                        {
+                          "variant": "h3",
+                          "type": "typography",
+                          "content": "Rate this"
+                        },
+                        {
+                          "type": "star-rating",
+                          "action": "RATE",
+                          "value": "@entity.rating",
+                          "max": 5
+                        },
+                        {
+                          "placeholder": "Tell us more (optional)",
+                          "action": "EDIT_COMMENT",
+                          "type": "textarea"
+                        },
+                        {
+                          "type": "button",
+                          "icon": "send",
+                          "action": "SUBMIT",
+                          "label": "Submit",
+                          "variant": "primary"
+                        }
+                      ],
+                      "direction": "vertical",
+                      "gap": "md"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "maxStars": {
+              "type": "number",
+              "default": 5
+            },
+            "title": {
+              "type": "string",
+              "default": "Rate this"
+            },
+            "allowComment": {
+              "type": "boolean",
+              "default": true
+            },
+            "allowPhotos": {
+              "type": "boolean",
+              "default": false
+            },
+            "submitEvent": {
+              "type": "string",
+              "default": "SUBMIT_REVIEW"
+            }
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "RatingReviewSubmitPage",
+          "path": "/ratingreviews/submit",
+          "traits": [
+            {
+              "ref": "RatingReviewSubmit"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
