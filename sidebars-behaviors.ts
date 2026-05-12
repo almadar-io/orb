@@ -1,6 +1,6 @@
 // AUTO-GENERATED — regenerated to match available .mdx pages.
 //
-// Generated: 2026-05-11T12:50:40.829Z
+// Generated: 2026-05-12T01:34:08.451Z
 // Total: 37 behaviors (15 atoms, 3 molecules, 19 organisms)
 
 export const behaviorSidebarItems = [

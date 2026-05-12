@@ -432,7 +432,11 @@ function BehaviorBrowser({
   onToggleCollapse: () => void;
 }) {
   const [query, setQuery] = useState("");
+  // CORE is the canonical entry point — keep it open by default; collapse
+  // every other topic so the initial nav stays scannable. User toggles are
+  // captured by `collapsedSections[cat]` and override the default below.
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const defaultCollapsed = useCallback((cat: string): boolean => cat !== "CORE", []);
 
   const filtered = items.filter(
     (b) =>
@@ -492,7 +496,7 @@ function BehaviorBrowser({
       </HStack>
       <Box className="overflow-y-auto py-1" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         {sortedCategories.map((cat) => {
-          const isCollapsed = collapsedSections[cat] ?? false;
+          const isCollapsed = collapsedSections[cat] ?? defaultCollapsed(cat);
           return (
             <Box key={cat} className="mb-0.5">
               <Box
