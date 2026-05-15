@@ -246,26 +246,18 @@ const LEVEL_LABELS: Record<string, string> = {
   organism: "ORGANISMS",
 };
 
-// Behaviors group primarily by topic (Phase 10 std layout introduced
-// behaviors/registry/<topic>/<tier>/std-X.orb where <topic> ∈ core | agent
-// | game | service | app | probes). Level is preserved as a per-item glyph
-// + secondary sort key inside each topic group.
+// Behaviors group primarily by topic. The orb-website registry ships only
+// `core` and `service` topics (`agent`, `app`, `game`, `probes` are filtered
+// out by scripts/generate-behavior-catalog.ts). Level is preserved as a
+// per-item glyph + secondary sort key inside each topic group.
 const TOPIC_LABELS: Record<string, string> = {
   core: "CORE",
-  agent: "AGENT",
-  app: "APP",
-  game: "GAME",
   service: "SERVICE",
-  probes: "PROBES",
 };
 
 const TOPIC_ORDER: Record<string, number> = {
   CORE: 0,
-  AGENT: 1,
-  APP: 2,
-  GAME: 3,
-  SERVICE: 4,
-  PROBES: 5,
+  SERVICE: 1,
 };
 
 const LEVEL_SUB_ORDER: Record<string, number> = {
