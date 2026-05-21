@@ -1,3 +1,5 @@
+import type { EventPayloadValue } from '@almadar/core';
+
 declare global {
   namespace Express {
     interface Request {
@@ -6,7 +8,7 @@ declare global {
         email?: string;
         name?: string;
         picture?: string;
-        [key: string]: unknown;
+        [key: string]: EventPayloadValue;
       };
     }
   }
