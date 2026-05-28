@@ -15,7 +15,10 @@ const containerQueries = require('@tailwindcss/container-queries');
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  presets: [require('./tailwind-preset.cjs')],
+  // Single source of truth for Layer 1 + Layer 2 token mappings is
+  // @almadar/ui's published preset. Don't fork a local copy — it goes
+  // stale silently and breaks look variants without any build error.
+  presets: [require('@almadar/ui/tailwind-preset')],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
