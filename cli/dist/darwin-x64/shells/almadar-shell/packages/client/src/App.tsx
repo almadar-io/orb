@@ -47,7 +47,7 @@ function App() {
   return (
     <I18nProvider value={i18nValue}>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <ThemeProvider defaultTheme="minimalist">
         <EventBusProvider>
           <VerificationProvider>
             <UISlotProvider>
