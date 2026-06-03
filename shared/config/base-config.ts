@@ -90,6 +90,7 @@ export function createConfig(opts: SiteConfig): Config {
       path.resolve(__dirname, '../theme/register-orb-prism.ts'),
       path.resolve(__dirname, '../theme/register-lolo-prism.ts'),
       path.resolve(__dirname, '../theme/consent-banner.ts'),
+      path.resolve(__dirname, '../theme/analytics.ts'),
     ],
 
     // GA4 with Consent Mode v2 — defaults to denied and is gated by the
@@ -97,6 +98,11 @@ export function createConfig(opts: SiteConfig): Config {
     // script runs before gtag.js so no analytics cookies/hits fire pre-consent.
     // (Replaces the preset `gtag` option below.)
     headTags: [
+      {
+        tagName: 'script',
+        attributes: {},
+        innerHTML: `window.__ALMADAR_ANALYTICS_ENDPOINT__=${JSON.stringify(process.env.ANALYTICS_ENDPOINT || 'https://almadar-analytics--kflow-b3a39.europe-west4.hosted.app/e')};`,
+      },
       {
         tagName: 'script',
         attributes: {},
