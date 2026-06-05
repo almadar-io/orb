@@ -1,0 +1,1396 @@
+{
+  "name": "std-todo",
+  "version": "1.0.0",
+  "description": "Todo list with Add (modal) and Remove (confirmation) flows, closed-circuit fetch + persist",
+  "orbitals": [
+    {
+      "name": "TodoOrbital",
+      "uses": [
+        {
+          "from": "std/behaviors/std-confirmation",
+          "as": "Confirmation"
+        },
+        {
+          "from": "std/behaviors/std-modal",
+          "as": "Modal"
+        }
+      ],
+      "entity": {
+        "name": "Todo",
+        "collection": "todos",
+        "persistence": "persistent",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "default": "active",
+            "values": [
+              "active",
+              "inactive",
+              "pending"
+            ]
+          },
+          {
+            "name": "createdAt",
+            "type": "string"
+          },
+          {
+            "name": "pendingId",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      },
+      "traits": [
+        {
+          "name": "TodoBrowse",
+          "category": "interaction",
+          "linkedEntity": "Todo",
+          "emits": [
+            {
+              "event": "TodoLoaded",
+              "description": "Fired when the Todo collection finishes loading",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Todo]"
+                }
+              ]
+            },
+            {
+              "event": "TodoLoadFailed",
+              "description": "Fired when the Todo collection fails to load",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ADD_TODO",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "row.id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.name",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "row.description",
+                  "type": "string"
+                },
+                {
+                  "name": "row.status",
+                  "type": "string"
+                },
+                {
+                  "name": "row.createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "row.pendingId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "REMOVE_TODO",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "name",
+                  "type": "string"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "TODO_ADDED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoPersistor"
+              }
+            },
+            {
+              "event": "TODO_REMOVED",
+              "triggers": "INIT",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoPersistor"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "loading",
+                "isInitial": true
+              },
+              {
+                "name": "browsing"
+              },
+              {
+                "name": "error"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "TodoLoaded",
+                "name": "Todo loaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Todo]"
+                  }
+                ]
+              },
+              {
+                "key": "TodoLoadFailed",
+                "name": "Todo load failed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ADD_TODO",
+                "name": "Add Todo"
+              },
+              {
+                "key": "REMOVE_TODO",
+                "name": "Remove Todo"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "loading",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Todo",
+                    {
+                      "emit": {
+                        "success": "TodoLoaded",
+                        "failure": "TodoLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "stack",
+                      "align": "center",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "type": "spinner"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Loading todos…",
+                          "variant": "caption",
+                          "color": "muted"
+                        }
+                      ],
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "browsing",
+                "event": "TodoLoaded",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "children": [
+                        {
+                          "gap": "md",
+                          "children": [
+                            {
+                              "gap": "md",
+                              "direction": "horizontal",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "list-checks"
+                                },
+                                {
+                                  "type": "typography",
+                                  "variant": "h2",
+                                  "content": "Todos"
+                                }
+                              ],
+                              "type": "stack"
+                            },
+                            {
+                              "type": "button",
+                              "icon": "plus",
+                              "label": "Add Todo",
+                              "variant": "primary",
+                              "action": "ADD_TODO"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "justify": "between"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "itemActions": [
+                            {
+                              "variant": "danger",
+                              "event": "REMOVE_TODO",
+                              "label": "Remove"
+                            }
+                          ],
+                          "entity": "@payload.data",
+                          "fields": [
+                            {
+                              "label": "Name",
+                              "icon": "check-square",
+                              "variant": "h4",
+                              "name": "name"
+                            },
+                            {
+                              "name": "description",
+                              "variant": "caption",
+                              "label": "Description"
+                            },
+                            {
+                              "label": "Status",
+                              "name": "status",
+                              "variant": "badge"
+                            }
+                          ],
+                          "type": "data-grid"
+                        }
+                      ],
+                      "className": "max-w-5xl mx-auto w-full",
+                      "type": "stack",
+                      "gap": "lg",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "loading",
+                "to": "error",
+                "event": "TodoLoadFailed",
+                "effects": [
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "gap": "md",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "color": "destructive",
+                          "name": "alert-triangle"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "Failed to load todos",
+                          "variant": "h3"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "@payload.error",
+                          "color": "muted",
+                          "variant": "body"
+                        },
+                        {
+                          "icon": "rotate-ccw",
+                          "label": "Retry",
+                          "action": "INIT",
+                          "type": "button",
+                          "variant": "primary"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical",
+                      "className": "py-12"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "browsing",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Todo",
+                    {
+                      "emit": {
+                        "failure": "TodoLoadFailed",
+                        "success": "TodoLoaded"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "error",
+                "to": "loading",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Todo",
+                    {
+                      "emit": {
+                        "success": "TodoLoaded",
+                        "failure": "TodoLoadFailed"
+                      }
+                    }
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "type": "spinner"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "collection"
+        },
+        {
+          "name": "TodoAdd",
+          "entityRebindable": true,
+          "entityContract": {
+            "requires": [],
+            "provides": []
+          },
+          "category": "interaction",
+          "linkedEntity": "Todo",
+          "emits": [
+            {
+              "event": "TODO_ADDED",
+              "description": "Indicates a successful data save operation.",
+              "synonyms": "submit, persist, confirm",
+              "tier": "essential",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "object",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "CLOSE",
+              "description": "Indicates the modal window is being closed.",
+              "synonyms": "dismiss, hide, cancel",
+              "tier": "essential"
+            },
+            {
+              "event": "ModalRecordLoadFailed",
+              "description": "Indicates a failure to load the record data.",
+              "synonyms": "error, failure, problem, unsuccessful",
+              "tier": "internal",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ModalRecordLoaded",
+              "description": "Signals that the modal's data has been successfully loaded.",
+              "synonyms": "loaded, data ready, populated",
+              "tier": "essential",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Todo]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "ADD_TODO",
+              "triggers": "ADD_TODO",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "closed",
+                "isInitial": true
+              },
+              {
+                "name": "open"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "ADD_TODO",
+                "name": "Open",
+                "description": "A request to display the modal window.",
+                "synonyms": "show, display, present, reveal",
+                "tier": "essential",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "row",
+                    "type": "Todo"
+                  }
+                ]
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close",
+                "description": "Indicates the modal window is being closed.",
+                "synonyms": "dismiss, hide, cancel",
+                "tier": "essential"
+              },
+              {
+                "key": "TODO_ADDED",
+                "name": "Save",
+                "description": "Indicates a successful data save operation.",
+                "synonyms": "submit, persist, confirm",
+                "tier": "essential",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoadFailed",
+                "name": "ModalRecord load failed",
+                "description": "Indicates a failure to load the record data.",
+                "synonyms": "error, failure, problem, unsuccessful",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ModalRecordLoaded",
+                "name": "ModalRecord loaded",
+                "description": "Signals that the modal's data has been successfully loaded.",
+                "synonyms": "loaded, data ready, populated",
+                "tier": "essential",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Todo]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "closed",
+                "to": "closed",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Todo",
+                    {
+                      "emit": {
+                        "failure": "ModalRecordLoadFailed",
+                        "success": "ModalRecordLoaded"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "closed",
+                "to": "open",
+                "event": "ADD_TODO",
+                "guard": [
+                  "or",
+                  [
+                    "=",
+                    "create",
+                    "create"
+                  ],
+                  "@payload.row"
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.id",
+                    "@payload.id"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "gap": "md",
+                      "children": [
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "plus-circle"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Add Todo",
+                              "variant": "h3"
+                            }
+                          ],
+                          "direction": "horizontal"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "type": "form-section",
+                          "entity": "@payload.row",
+                          "cancelEvent": "CLOSE",
+                          "fields": [
+                            "list",
+                            "name",
+                            "description",
+                            "status"
+                          ],
+                          "mode": "create",
+                          "submitEvent": "TODO_ADDED"
+                        }
+                      ],
+                      "type": "stack",
+                      "direction": "vertical"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ],
+                  [
+                    "notify",
+                    "Cancelled",
+                    "info"
+                  ]
+                ]
+              },
+              {
+                "from": "open",
+                "to": "closed",
+                "event": "TODO_ADDED",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "detailSlot": {
+              "type": "slot",
+              "default": "modal",
+              "label": "Render slot",
+              "description": "UI slot the modal renders into",
+              "tier": "internal"
+            },
+            "mode": {
+              "type": "string",
+              "default": "create",
+              "label": "Form mode",
+              "description": "create or edit — controls submit-button copy and validation",
+              "tier": "presentation"
+            },
+            "icon": {
+              "type": "string",
+              "default": "plus-circle",
+              "label": "Icon",
+              "description": "Icon shown in the modal header",
+              "tier": "presentation"
+            },
+            "fields": {
+              "type": "[string]",
+              "default": [
+                "name",
+                "description",
+                "status"
+              ],
+              "label": "Form fields",
+              "description": "Entity fields displayed as inputs in the modal form",
+              "tier": "presentation",
+              "items": {
+                "type": "string"
+              }
+            },
+            "detailPattern": {
+              "type": "pattern",
+              "default": "stack",
+              "label": "Layout pattern",
+              "description": "Pattern used to arrange the form body",
+              "tier": "internal"
+            },
+            "title": {
+              "type": "string",
+              "default": "Add Todo",
+              "label": "Modal title",
+              "description": "Heading at the top of the modal",
+              "tier": "presentation"
+            }
+          },
+          "scope": "instance",
+          "sourceBehavior": {
+            "behavior": "std/behaviors/std-modal",
+            "alias": "Modal",
+            "originalName": "ModalRecordModal"
+          },
+          "sourceEntityDefinition": {
+            "name": "ModalRecord",
+            "persistence": "runtime",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "name",
+                "type": "string",
+                "description": "A user-facing identifier for the modal.",
+                "synonyms": "title, label, identifier"
+              },
+              {
+                "name": "description",
+                "type": "string",
+                "description": "A textual explanation of the modal's content or function.",
+                "synonyms": "details, explanation, notes, summary"
+              },
+              {
+                "name": "status",
+                "type": "string",
+                "default": "active",
+                "values": [
+                  "active",
+                  "inactive",
+                  "pending"
+                ],
+                "description": "Current operational state of the record.",
+                "synonyms": "state, condition, flag"
+              },
+              {
+                "name": "createdAt",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "TodoRemove",
+          "entityRebindable": true,
+          "entityContract": {
+            "requires": [],
+            "provides": [
+              "name",
+              "pendingId"
+            ]
+          },
+          "category": "interaction",
+          "linkedEntity": "Todo",
+          "emits": [
+            {
+              "event": "TODO_REMOVED",
+              "description": "Indicates the user has approved the action.",
+              "synonyms": "approve, accept, ok",
+              "tier": "essential",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "CANCEL",
+              "description": "Indicates the action was cancelled by the user.",
+              "synonyms": "dismiss, reject, undo",
+              "tier": "essential"
+            },
+            {
+              "event": "ConfirmActionLoadFailed",
+              "description": "Indicates failure to load the confirmation action.",
+              "synonyms": "error, failure, failed, problem",
+              "tier": "internal",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "error",
+                  "type": "string"
+                },
+                {
+                  "name": "code",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "event": "ConfirmActionLoaded",
+              "description": "Indicates the confirmation action has been successfully loaded.",
+              "synonyms": "loaded, ready, initialized",
+              "tier": "internal",
+              "scope": "internal",
+              "payloadSchema": [
+                {
+                  "name": "data",
+                  "type": "[Todo]"
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "REMOVE_TODO",
+              "triggers": "REMOVE_TODO",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoBrowse"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              },
+              {
+                "name": "confirming"
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "REMOVE_TODO",
+                "name": "Request",
+                "description": "A request for confirmation before proceeding.",
+                "synonyms": "prompt, ask, verify",
+                "tier": "essential",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "Todo"
+                  }
+                ]
+              },
+              {
+                "key": "TODO_REMOVED",
+                "name": "Confirm",
+                "description": "Indicates the user has approved the action.",
+                "synonyms": "approve, accept, ok",
+                "tier": "essential"
+              },
+              {
+                "key": "CANCEL",
+                "name": "Cancel",
+                "description": "Indicates the action was cancelled by the user.",
+                "synonyms": "dismiss, reject, undo",
+                "tier": "essential"
+              },
+              {
+                "key": "CLOSE",
+                "name": "Close",
+                "description": "Indicates the user dismissed the confirmation.",
+                "synonyms": "dismiss, decline, reject",
+                "tier": "essential"
+              },
+              {
+                "key": "ConfirmActionLoadFailed",
+                "name": "ConfirmAction load failed",
+                "description": "Indicates failure to load the confirmation action.",
+                "synonyms": "error, failure, failed, problem",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "key": "ConfirmActionLoaded",
+                "name": "ConfirmAction loaded",
+                "description": "Indicates the confirmation action has been successfully loaded.",
+                "synonyms": "loaded, ready, initialized",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[Todo]"
+                  }
+                ]
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT",
+                "effects": [
+                  [
+                    "fetch",
+                    "Todo",
+                    {
+                      "emit": {
+                        "success": "ConfirmActionLoaded",
+                        "failure": "ConfirmActionLoadFailed"
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "confirming",
+                "event": "REMOVE_TODO",
+                "guard": "@payload.row",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.pendingId",
+                    "@payload.id"
+                  ],
+                  [
+                    "set",
+                    "@entity.name",
+                    "@payload.row.name"
+                  ],
+                  [
+                    "render-ui",
+                    "modal",
+                    {
+                      "type": "stack",
+                      "gap": "md",
+                      "direction": "vertical",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "alert-triangle",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Remove Todo",
+                              "variant": "h3"
+                            }
+                          ],
+                          "type": "stack",
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm"
+                        },
+                        {
+                          "type": "divider"
+                        },
+                        {
+                          "message": "Are you sure you want to remove this todo? This cannot be undone.",
+                          "type": "alert",
+                          "variant": "error"
+                        },
+                        {
+                          "variant": "h4",
+                          "type": "typography",
+                          "content": "@entity.name"
+                        },
+                        {
+                          "variant": "caption",
+                          "type": "typography",
+                          "content": "@entity.pendingId",
+                          "color": "muted"
+                        },
+                        {
+                          "type": "stack",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "action": "CANCEL",
+                              "variant": "ghost",
+                              "type": "button",
+                              "label": "Cancel"
+                            },
+                            {
+                              "icon": "check",
+                              "variant": "danger",
+                              "type": "button",
+                              "label": "Remove",
+                              "actionPayload": {
+                                "id": "@payload.id"
+                              },
+                              "action": "TODO_REMOVED"
+                            }
+                          ],
+                          "justify": "end",
+                          "direction": "horizontal"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "TODO_REMOVED",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CANCEL",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              },
+              {
+                "from": "confirming",
+                "to": "idle",
+                "event": "CLOSE",
+                "effects": [
+                  [
+                    "render-ui",
+                    "modal",
+                    null
+                  ]
+                ]
+              }
+            ]
+          },
+          "config": {
+            "icon": {
+              "type": "string",
+              "default": "alert-triangle",
+              "label": "Icon",
+              "description": "Icon name displayed in the confirmation modal header",
+              "tier": "presentation"
+            },
+            "confirmLabel": {
+              "type": "string",
+              "default": "Remove",
+              "label": "Confirm button",
+              "description": "Label on the primary confirm action button",
+              "tier": "presentation"
+            },
+            "title": {
+              "type": "string",
+              "default": "Remove Todo",
+              "label": "Modal title",
+              "description": "Heading shown at the top of the confirmation modal",
+              "tier": "presentation"
+            },
+            "alertMessage": {
+              "type": "string",
+              "default": "Are you sure you want to remove this todo? This cannot be undone.",
+              "label": "Alert message",
+              "description": "Body text explaining what the user is confirming",
+              "tier": "presentation"
+            }
+          },
+          "scope": "instance",
+          "sourceBehavior": {
+            "behavior": "std/behaviors/std-confirmation",
+            "alias": "Confirmation",
+            "originalName": "ConfirmActionConfirmation"
+          },
+          "sourceEntityDefinition": {
+            "name": "ConfirmAction",
+            "persistence": "runtime",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "name",
+                "type": "string",
+                "description": "A user-facing identifier for the confirmation action.",
+                "synonyms": "label, title, identifier"
+              },
+              {
+                "name": "description",
+                "type": "string",
+                "description": "A detailed explanation of the action being confirmed.",
+                "synonyms": "details, explanation, notes, information"
+              },
+              {
+                "name": "status",
+                "type": "string",
+                "default": "active",
+                "values": [
+                  "active",
+                  "inactive",
+                  "pending"
+                ],
+                "description": "Indicates the current operational state of the action.",
+                "synonyms": "state, condition, enabled"
+              },
+              {
+                "name": "createdAt",
+                "type": "string"
+              },
+              {
+                "name": "pendingId",
+                "type": "string",
+                "default": "",
+                "description": "Unique identifier for the pending confirmation request.",
+                "synonyms": "requestId, referenceId, confirmationId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "TodoPersistor",
+          "category": "lifecycle",
+          "linkedEntity": "Todo",
+          "emits": [
+            {
+              "event": "TODO_ADDED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "event": "TODO_REMOVED",
+              "scope": "external",
+              "payloadSchema": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "listens": [
+            {
+              "event": "TODO_ADDED",
+              "triggers": "DO_ADD",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoAdd"
+              }
+            },
+            {
+              "event": "TODO_REMOVED",
+              "triggers": "DO_REMOVE",
+              "source": {
+                "kind": "trait",
+                "trait": "TodoRemove"
+              }
+            }
+          ],
+          "stateMachine": {
+            "states": [
+              {
+                "name": "idle",
+                "isInitial": true
+              }
+            ],
+            "events": [
+              {
+                "key": "INIT",
+                "name": "Initialize"
+              },
+              {
+                "key": "DO_ADD",
+                "name": "Do Add",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "Todo"
+                  }
+                ]
+              },
+              {
+                "key": "DO_REMOVE",
+                "name": "Do Remove",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "key": "TODO_ADDED",
+                "name": "Todo Added"
+              },
+              {
+                "key": "TODO_REMOVED",
+                "name": "Todo Removed"
+              }
+            ],
+            "transitions": [
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "INIT"
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_ADD",
+                "effects": [
+                  [
+                    "persist",
+                    "create",
+                    "Todo",
+                    "@payload.data"
+                  ],
+                  [
+                    "emit",
+                    "TODO_ADDED",
+                    {
+                      "id": "@payload.data.id"
+                    }
+                  ]
+                ]
+              },
+              {
+                "from": "idle",
+                "to": "idle",
+                "event": "DO_REMOVE",
+                "effects": [
+                  [
+                    "persist",
+                    "delete",
+                    "Todo",
+                    "@payload.id"
+                  ],
+                  [
+                    "emit",
+                    "TODO_REMOVED",
+                    {
+                      "id": "@payload.id"
+                    }
+                  ]
+                ]
+              }
+            ]
+          },
+          "scope": "instance"
+        }
+      ],
+      "pages": [
+        {
+          "name": "TodoPage",
+          "path": "/todos",
+          "traits": [
+            {
+              "ref": "TodoBrowse"
+            },
+            {
+              "ref": "TodoAdd"
+            },
+            {
+              "ref": "TodoRemove"
+            },
+            {
+              "ref": "TodoPersistor"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "_metadata": {
+    "configProvenance": {
+      "TodoOrbital": [
+        {
+          "trait": "TodoAdd",
+          "patternPath": "root.children.0.children.0",
+          "prop": "name",
+          "knob": "icon"
+        },
+        {
+          "trait": "TodoAdd",
+          "patternPath": "root.children.0.children.1",
+          "prop": "content",
+          "knob": "title"
+        },
+        {
+          "trait": "TodoAdd",
+          "patternPath": "root.children.2",
+          "prop": "fields",
+          "knob": "fields"
+        },
+        {
+          "trait": "TodoAdd",
+          "patternPath": "root.children.2",
+          "prop": "mode",
+          "knob": "mode"
+        },
+        {
+          "trait": "TodoAdd",
+          "patternPath": "root",
+          "prop": "type",
+          "knob": "detailPattern"
+        },
+        {
+          "trait": "TodoRemove",
+          "patternPath": "root.children.0.children.0",
+          "prop": "name",
+          "knob": "icon"
+        },
+        {
+          "trait": "TodoRemove",
+          "patternPath": "root.children.0.children.1",
+          "prop": "content",
+          "knob": "title"
+        },
+        {
+          "trait": "TodoRemove",
+          "patternPath": "root.children.2",
+          "prop": "message",
+          "knob": "alertMessage"
+        },
+        {
+          "trait": "TodoRemove",
+          "patternPath": "root.children.5.children.1",
+          "prop": "label",
+          "knob": "confirmLabel"
+        }
+      ]
+    }
+  }
+}

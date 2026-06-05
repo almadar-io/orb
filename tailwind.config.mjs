@@ -95,5 +95,10 @@ export default {
       },
     },
   },
-  plugins: [],
+  // @almadar/ui layout components (e.g. DashboardLayout — the app-shell the
+  // runtime renders for std `app-layout`) rely on container queries
+  // (`@container/dashboard`, `@lg/dashboard:*`) for their responsive sidebar.
+  // Without this plugin those classes generate nothing, so the responsive
+  // sidebar can't collapse/dismiss in small (preview) viewports.
+  plugins: [require('@tailwindcss/container-queries')],
 };

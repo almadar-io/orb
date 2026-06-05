@@ -131,6 +131,11 @@ export function createConfig(opts: SiteConfig): Config {
                   // single v5 copy so Router context is shared across the bundle.
                   'react-router': path.dirname(require.resolve('react-router/package.json')),
                   'react-router-dom': path.dirname(require.resolve('react-router-dom/package.json')),
+                  // @phosphor-icons/react (pulled in by @almadar/ui 5.x's icon
+                  // family system) has a CJS `main`/`require` entry
+                  // (dist/index.cjs.js) that throws "exports is not defined"
+                  // under Docusaurus's ESM webpack. Force the ESM build.
+                  '@phosphor-icons/react$': path.resolve(siteDir, 'node_modules/@phosphor-icons/react/dist/index.es.js'),
                 },
                 // Node core modules are not available in the browser; stub them
                 // out. `@almadar/runtime`'s `OrbitalServerRuntime` guards every
@@ -218,7 +223,7 @@ export function createConfig(opts: SiteConfig): Config {
     themeConfig: {
       image: "img/og-image.png",
       colorMode: {
-        defaultMode: "dark",
+        defaultMode: "light",
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },
