@@ -126,3 +126,88 @@ jobs:
           jq --arg v "$VERSION" '.version = $v | .optionalDependencies |= with_entries(.value = $v)' package.json > tmp.json && mv tmp.json package.json
           echo "Publishing @almadar/orb@${VERSION}..."
           npm publish --access public || echo "Failed to publish @almadar/orb"
+
+  update-homebrew:
+    name: Update Homebrew Tap
+    needs: publish
+    runs-on: ubuntu-latest
+    if: ${{ vars.PUBLISH_HOMEBREW == 'true' }}
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download and compute SHA256
+        id: sha
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          BASE_URL="https://github.com/almadar-io/orb/releases/download/${VERSION}"
+
+          for platform in darwin-x64 darwin-arm64 linux-x64 linux-arm64; do
+            if curl -fsSL "${BASE_URL}/orb-${platform}.tar.gz" -o "orb-${platform}.tar.gz" 2>/dev/null; then
+              SHA=$(sha256sum "orb-${platform}.tar.gz" | cut -d' ' -f1)
+              echo "${platform}=${SHA}" >> $GITHUB_OUTPUT
+            else
+              echo "${platform}=MISSING" >> $GITHUB_OUTPUT
+            fi
+          done
+
+      - name: Update Homebrew formula
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          VERSION_NUM=${VERSION#v}
+
+          git clone https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/almadar-io/homebrew-tap.git tap || exit 0
+
+          cat > tap/Formula/orb.rb << EOF
+          class Orb < Formula
+            desc "Compile Orbital schemas to full-stack applications"
+            homepage "https://orb.almadar.io"
+            version "${VERSION_NUM}"
+            license "MIT"
+
+            on_macos do
+              on_intel do
+                url "https://github.com/almadar-io/orb/releases/download/${VERSION}/orb-darwin-x64.tar.gz"
+                sha256 "${{ steps.sha.outputs.darwin-x64 }}"
+              end
+              on_arm do
+                url "https://github.com/almadar-io/orb/releases/download/${VERSION}/orb-darwin-arm64.tar.gz"
+                sha256 "${{ steps.sha.outputs.darwin-arm64 }}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "https://github.com/almadar-io/orb/releases/download/${VERSION}/orb-linux-x64.tar.gz"
+                sha256 "${{ steps.sha.outputs.linux-x64 }}"
+              end
+              on_arm do
+                url "https://github.com/almadar-io/orb/releases/download/${VERSION}/orb-linux-arm64.tar.gz"
+                sha256 "${{ steps.sha.outputs.linux-arm64 }}"
+              end
+            end
+
+            def install
+              bin.install "orb"
+              # Install shell templates
+              (lib/"orb/shells").install Dir["shells/*"] if Dir.exist?("shells")
+            end
+
+            test do
+              assert_match "orb", shell_output("#{bin}/orb --help")
+            end
+          end
+          EOF
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/orb.rb
+          git diff --staged --quiet || git commit -m "Update orb to ${VERSION}"
+          git push || echo "Could not push"
