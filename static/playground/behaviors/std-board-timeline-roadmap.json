@@ -1,0 +1,2007 @@
+{
+  "name": "std-board-timeline-roadmap",
+  "description": "Timeline / roadmap board — horizontal time axis with quarters or months as columns; items render as cards inside their target column (item.stage = column.key). Mirrors the Linear / Asana / Productboard roadmap UX. Configure `columns` as ['Q1', 'Q2', 'Q3', 'Q4'] (or months) and the board lays them out left-to-right along a time axis. Same BoardItemBoard trait, same state machine, same emits/listens as std-board — only the bodyContent tree differs.",
+  "level": "atom",
+  "topic": "core-variations",
+  "schema": {
+    "name": "std-board-timeline-roadmap",
+    "version": "1.1.0",
+    "description": "Timeline / roadmap board — horizontal time axis with quarters or months as columns; items render as cards inside their target column (item.stage = column.key). Mirrors the Linear / Asana / Productboard roadmap UX. Configure `columns` as ['Q1', 'Q2', 'Q3', 'Q4'] (or months) and the board lays them out left-to-right along a time axis. Same BoardItemBoard trait, same state machine, same emits/listens as std-board — only the bodyContent tree differs.",
+    "orbitals": [
+      {
+        "name": "TimelineRoadmapBoardOrbital",
+        "uses": [
+          {
+            "from": "std/behaviors/std-board",
+            "as": "Board"
+          }
+        ],
+        "entity": {
+          "name": "TimelineRoadmapItem",
+          "collection": "timeline_roadmap_items",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "The item's displayed name or heading.",
+              "synonyms": "name, heading, label"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "default": "",
+              "description": "A textual explanation or summary of the item.",
+              "synonyms": "details, summary, explanation, notes"
+            },
+            {
+              "name": "stage",
+              "type": "string",
+              "default": "Q1",
+              "values": [
+                "Q1",
+                "Q2",
+                "Q3",
+                "Q4"
+              ],
+              "description": "The item's position within the timeline's time divisions.",
+              "synonyms": "period, timeframe, phase, quarter, month"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "default": "",
+              "description": "Free-form text providing additional information.",
+              "synonyms": "comments, remarks, details, annotations"
+            },
+            {
+              "name": "position",
+              "type": "number",
+              "default": 0,
+              "description": "Numerical order within the timeline.",
+              "synonyms": "order, sequence, index"
+            },
+            {
+              "name": "boards",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object"
+              },
+              "intrinsic": true
+            },
+            {
+              "name": "currentId",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "currentTitle",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "currentDescription",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "currentStage",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "currentNotes",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "errorMessage",
+              "type": "string",
+              "default": "",
+              "intrinsic": true
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "TimelineRoadmapBoard",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "boards",
+                "currentDescription",
+                "currentId",
+                "currentNotes",
+                "currentStage",
+                "currentTitle",
+                "errorMessage"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "TimelineRoadmapItem",
+            "emits": [
+              {
+                "event": "OPEN_CARD",
+                "description": "Indicates a card within the board has been selected.",
+                "synonyms": "select, choose, activate, display",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE_CARD",
+                "description": "Signals a card is being dismissed or closed.",
+                "synonyms": "dismiss, hide, close, remove",
+                "tier": "domain"
+              },
+              {
+                "event": "ADD_CARD",
+                "description": "Signals a new card is being added to the board.",
+                "synonyms": "create, new, append",
+                "tier": "domain"
+              },
+              {
+                "event": "CANCEL_ADD",
+                "description": "Aborts an in-progress addition operation.",
+                "synonyms": "discard, undo, reset",
+                "tier": "presentation"
+              },
+              {
+                "event": "SAVE_CARD",
+                "description": "Signals that a card's data has been successfully saved.",
+                "synonyms": "persist, update, store",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "MOVE_CARD",
+                "description": "Signals a card has been repositioned within a column.",
+                "synonyms": "reorder, drag, reposition",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "sourceGroup",
+                    "type": "string"
+                  },
+                  {
+                    "name": "targetGroup",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "newIndex",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "event": "REORDER_CARD",
+                "description": "Signals a change in the order of cards within a column.",
+                "synonyms": "rearrange, sort, shuffle, reposition",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "oldIndex",
+                    "type": "number"
+                  },
+                  {
+                    "name": "newIndex",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "event": "DELETE_CARD",
+                "description": "Signals removal of a card from the board.",
+                "synonyms": "remove, delete, discard",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "BoardItemsLoaded",
+                "description": "Signals that board items have been successfully loaded.",
+                "synonyms": "loaded, fetched, retrieved, populated",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ObjectSpec]"
+                  }
+                ]
+              },
+              {
+                "event": "BoardItemsLoadFailed",
+                "description": "Indicates a failure to load board items.",
+                "synonyms": "error, failed, problem, loading failure",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "BoardItemsSaved",
+                "description": "Signals that board items have been successfully saved.",
+                "synonyms": "saved, persisted, updated",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "event": "BoardItemsSaveFailed",
+                "description": "Indicates a failure to save board items.",
+                "synonyms": "error, failed, save error",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "viewing_board"
+                },
+                {
+                  "name": "viewing_card"
+                },
+                {
+                  "name": "adding"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BoardItemsLoaded",
+                  "name": "Board items loaded",
+                  "description": "Signals that board items have been successfully loaded.",
+                  "synonyms": "loaded, fetched, retrieved, populated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ObjectSpec]"
+                    }
+                  ]
+                },
+                {
+                  "key": "BoardItemsLoadFailed",
+                  "name": "Board items load failed",
+                  "description": "Indicates a failure to load board items.",
+                  "synonyms": "error, failed, problem, loading failure",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "BoardItemsSaveFailed",
+                  "name": "Board items save failed",
+                  "description": "Indicates a failure to save board items.",
+                  "synonyms": "error, failed, save error",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "OPEN_CARD",
+                  "name": "Open Card",
+                  "description": "Indicates a card within the board has been selected.",
+                  "synonyms": "select, choose, activate, display",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ADD_CARD",
+                  "name": "Add Card",
+                  "description": "Signals a new card is being added to the board.",
+                  "synonyms": "create, new, append",
+                  "tier": "domain"
+                },
+                {
+                  "key": "MOVE_CARD",
+                  "name": "Move Card",
+                  "description": "Signals a card has been repositioned within a column.",
+                  "synonyms": "reorder, drag, reposition",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "sourceGroup",
+                      "type": "string"
+                    },
+                    {
+                      "name": "targetGroup",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "newIndex",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "REORDER_CARD",
+                  "name": "Reorder Card",
+                  "description": "Signals a change in the order of cards within a column.",
+                  "synonyms": "rearrange, sort, shuffle, reposition",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "oldIndex",
+                      "type": "number"
+                    },
+                    {
+                      "name": "newIndex",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "REORDER_POSITION",
+                  "name": "Reorder Position",
+                  "description": "Indicates a change in the order of items within a column.",
+                  "synonyms": "sort, rearrange, reposition",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "position",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "BoardItemsSaved",
+                  "name": "Board items saved",
+                  "description": "Signals that board items have been successfully saved.",
+                  "synonyms": "saved, persisted, updated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "CLOSE_CARD",
+                  "name": "Close Card",
+                  "description": "Signals a card is being dismissed or closed.",
+                  "synonyms": "dismiss, hide, close, remove",
+                  "tier": "domain"
+                },
+                {
+                  "key": "DELETE_CARD",
+                  "name": "Delete Card",
+                  "description": "Signals removal of a card from the board.",
+                  "synonyms": "remove, delete, discard",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SAVE_CARD",
+                  "name": "Save Card",
+                  "description": "Signals that a card's data has been successfully saved.",
+                  "synonyms": "persist, update, store",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CANCEL_ADD",
+                  "name": "Cancel Add",
+                  "description": "Aborts an in-progress addition operation.",
+                  "synonyms": "discard, undo, reset",
+                  "tier": "presentation"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "TimelineRoadmapItem",
+                      {
+                        "emit": {
+                          "failure": "BoardItemsLoadFailed",
+                          "success": "BoardItemsLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Loading board…"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "viewing_board",
+                  "event": "BoardItemsLoaded",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.boards",
+                      [
+                        "array/map",
+                        [
+                          {
+                            "label": "Q1",
+                            "icon": "calendar",
+                            "key": "Q1",
+                            "variant": "default"
+                          },
+                          {
+                            "key": "Q2",
+                            "label": "Q2",
+                            "icon": "calendar",
+                            "variant": "primary"
+                          },
+                          {
+                            "icon": "calendar",
+                            "variant": "info",
+                            "label": "Q3",
+                            "key": "Q3"
+                          },
+                          {
+                            "variant": "success",
+                            "icon": "calendar",
+                            "label": "Q4",
+                            "key": "Q4"
+                          }
+                        ],
+                        [
+                          "fn",
+                          "col",
+                          {
+                            "label": [
+                              "object/get",
+                              "@col",
+                              "label"
+                            ],
+                            "icon": [
+                              "object/get",
+                              "@col",
+                              "icon",
+                              "circle"
+                            ],
+                            "count": [
+                              "array/len",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "fn",
+                                  "item",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@item",
+                                      "stage"
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@col",
+                                      "key"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ],
+                            "items": [
+                              "array/sort",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "fn",
+                                  "item",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@item",
+                                      "stage"
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@col",
+                                      "key"
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              "position"
+                            ],
+                            "key": [
+                              "object/get",
+                              "@col",
+                              "key"
+                            ],
+                            "variant": [
+                              "object/get",
+                              "@col",
+                              "variant",
+                              "default"
+                            ]
+                          }
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "name": "calendar-range",
+                                "type": "icon"
+                              },
+                              {
+                                "type": "typography",
+                                "content": "Board",
+                                "variant": "h2"
+                              },
+                              {
+                                "className": "ml-2",
+                                "color": "muted",
+                                "content": "Roadmap",
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "align": "center",
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "gap": "sm",
+                            "className": "px-card-md"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "children": [
+                              {
+                                "cols": 4,
+                                "renderItem": [
+                                  "fn",
+                                  "col",
+                                  {
+                                    "type": "stack",
+                                    "children": [
+                                      {
+                                        "children": [
+                                          {
+                                            "type": "icon",
+                                            "name": "@col.icon"
+                                          },
+                                          {
+                                            "className": "flex-1",
+                                            "content": "@col.label",
+                                            "variant": "h4",
+                                            "type": "typography"
+                                          },
+                                          {
+                                            "size": "sm",
+                                            "variant": "primary",
+                                            "label": "@col.count",
+                                            "type": "badge"
+                                          }
+                                        ],
+                                        "className": "px-card-md py-2 bg-[var(--color-surface-subtle)] border-b border-[var(--color-border)] sticky top-0",
+                                        "gap": "xs",
+                                        "direction": "horizontal",
+                                        "align": "center",
+                                        "type": "stack"
+                                      },
+                                      {
+                                        "className": "p-card-md min-h-[160px]",
+                                        "type": "data-list",
+                                        "dragGroup": "@col.key",
+                                        "positionEvent": "REORDER_POSITION",
+                                        "renderItem": [
+                                          "fn",
+                                          "item",
+                                          {
+                                            "children": [
+                                              {
+                                                "children": [
+                                                  {
+                                                    "gap": "xs",
+                                                    "type": "stack",
+                                                    "align": "center",
+                                                    "direction": "horizontal",
+                                                    "children": [
+                                                      {
+                                                        "type": "icon",
+                                                        "name": "flag"
+                                                      },
+                                                      {
+                                                        "className": "flex-1",
+                                                        "content": "@item.title",
+                                                        "weight": "medium",
+                                                        "type": "typography",
+                                                        "variant": "body"
+                                                      }
+                                                    ]
+                                                  },
+                                                  {
+                                                    "content": "@item.description",
+                                                    "variant": "caption",
+                                                    "type": "typography",
+                                                    "className": "line-clamp-2",
+                                                    "color": "muted"
+                                                  },
+                                                  {
+                                                    "children": [
+                                                      {
+                                                        "variant": "primary",
+                                                        "type": "badge",
+                                                        "label": "@item.stage",
+                                                        "size": "sm"
+                                                      },
+                                                      {
+                                                        "label": "Details",
+                                                        "icon": "arrow-right",
+                                                        "size": "sm",
+                                                        "variant": "ghost",
+                                                        "className": "ml-auto",
+                                                        "action": "OPEN_CARD",
+                                                        "actionPayload": {
+                                                          "id": "@item.id",
+                                                          "row": "@item"
+                                                        },
+                                                        "type": "button"
+                                                      }
+                                                    ],
+                                                    "align": "center",
+                                                    "className": "pt-1",
+                                                    "direction": "horizontal",
+                                                    "gap": "xs",
+                                                    "type": "stack"
+                                                  }
+                                                ],
+                                                "direction": "vertical",
+                                                "type": "stack",
+                                                "gap": "xs"
+                                              }
+                                            ],
+                                            "className": "cursor-grab hover:shadow-md transition-shadow",
+                                            "padding": "sm",
+                                            "type": "card",
+                                            "look": "elevated"
+                                          }
+                                        ],
+                                        "entity": "@col.items",
+                                        "fields": [],
+                                        "reorderEvent": "REORDER_CARD",
+                                        "accepts": "*",
+                                        "sortable": true,
+                                        "gap": "sm",
+                                        "dropEvent": "MOVE_CARD"
+                                      }
+                                    ],
+                                    "direction": "vertical",
+                                    "gap": "none",
+                                    "className": "min-w-[240px] border-r border-[var(--color-border)] last:border-r-0"
+                                  }
+                                ],
+                                "type": "data-grid",
+                                "className": "min-w-full",
+                                "dndRoot": true,
+                                "fields": [],
+                                "entity": "@entity.boards",
+                                "gap": "none"
+                              }
+                            ],
+                            "align": "stretch",
+                            "gap": "none",
+                            "type": "stack",
+                            "className": "overflow-x-auto border-y border-[var(--color-border)]",
+                            "direction": "horizontal"
+                          },
+                          {
+                            "action": "ADD_CARD",
+                            "label": "Add milestone",
+                            "icon": "plus",
+                            "type": "floating-action-button",
+                            "variant": "primary"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "BoardItemsLoadFailed",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.errorMessage",
+                      "@payload.error"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "title": "Failed to load board",
+                        "message": "@entity.errorMessage",
+                        "type": "error-state"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "BoardItemsSaveFailed",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.errorMessage",
+                      "@payload.error"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "title": "Save failed",
+                        "type": "error-state",
+                        "message": "@entity.errorMessage"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_card",
+                  "event": "OPEN_CARD",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.currentId",
+                      "@payload.row.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentTitle",
+                      "@payload.row.title"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentDescription",
+                      "@payload.row.description"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentStage",
+                      "@payload.row.stage"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentNotes",
+                      "@payload.row.notes"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "md",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "type": "button",
+                                "variant": "ghost",
+                                "icon": "arrow-left",
+                                "label": "Back",
+                                "action": "CLOSE_CARD"
+                              },
+                              {
+                                "type": "icon",
+                                "name": "credit-card"
+                              },
+                              {
+                                "content": "@entity.currentTitle",
+                                "type": "typography",
+                                "variant": "h3"
+                              },
+                              {
+                                "label": "@entity.currentStage",
+                                "type": "badge",
+                                "variant": "primary"
+                              }
+                            ],
+                            "gap": "sm",
+                            "type": "stack",
+                            "align": "center",
+                            "direction": "horizontal"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "children": [
+                              {
+                                "gap": "sm",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "content": "Description",
+                                    "variant": "caption",
+                                    "type": "typography",
+                                    "color": "muted"
+                                  },
+                                  {
+                                    "content": "@entity.currentDescription",
+                                    "type": "typography",
+                                    "variant": "body"
+                                  },
+                                  {
+                                    "type": "divider"
+                                  },
+                                  {
+                                    "content": "Notes",
+                                    "type": "typography",
+                                    "variant": "caption",
+                                    "color": "muted"
+                                  },
+                                  {
+                                    "content": "@entity.currentNotes",
+                                    "variant": "body",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "direction": "vertical"
+                              }
+                            ],
+                            "look": "elevated",
+                            "type": "card"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Move to stage:",
+                            "type": "typography",
+                            "color": "muted"
+                          },
+                          {
+                            "gap": "sm",
+                            "variant": "default",
+                            "entity": "@entity.boards",
+                            "fields": [],
+                            "renderItem": [
+                              "fn",
+                              "col",
+                              {
+                                "variant": "secondary",
+                                "label": "@col.label",
+                                "icon": "@col.icon",
+                                "type": "button",
+                                "action": "MOVE_CARD",
+                                "actionPayload": {
+                                  "targetGroup": "@col.key",
+                                  "id": "@entity.currentId"
+                                }
+                              }
+                            ],
+                            "type": "data-list"
+                          },
+                          {
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "variant": "danger",
+                                "actionPayload": {
+                                  "id": "@entity.currentId"
+                                },
+                                "action": "DELETE_CARD",
+                                "label": "Delete",
+                                "type": "button",
+                                "icon": "trash-2"
+                              }
+                            ],
+                            "gap": "sm",
+                            "type": "stack",
+                            "align": "center"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "adding",
+                  "event": "ADD_CARD",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.currentId",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.currentTitle",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.currentDescription",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.currentStage",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.currentNotes",
+                      ""
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "children": [
+                          {
+                            "align": "center",
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "type": "button",
+                                "action": "CANCEL_ADD",
+                                "variant": "ghost",
+                                "icon": "x",
+                                "label": "Cancel"
+                              },
+                              {
+                                "name": "plus",
+                                "type": "icon"
+                              },
+                              {
+                                "variant": "h3",
+                                "type": "typography",
+                                "content": "New board item"
+                              }
+                            ],
+                            "type": "stack",
+                            "gap": "sm"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "mode": "create",
+                            "cancelEvent": "CANCEL_ADD",
+                            "fields": [
+                              "list",
+                              "title",
+                              "description",
+                              "stage",
+                              "notes"
+                            ],
+                            "submitEvent": "SAVE_CARD",
+                            "entity": "@entity",
+                            "type": "form-section"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_board",
+                  "event": "MOVE_CARD",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "TimelineRoadmapItem",
+                      {
+                        "stage": "@payload.targetGroup",
+                        "id": "@payload.id"
+                      },
+                      {
+                        "emit": {
+                          "failure": "BoardItemsSaveFailed",
+                          "success": "BoardItemsSaved"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_board",
+                  "event": "REORDER_CARD"
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_board",
+                  "event": "REORDER_POSITION",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "TimelineRoadmapItem",
+                      {
+                        "position": "@payload.position",
+                        "id": "@payload.id"
+                      },
+                      {
+                        "emit": {
+                          "success": "BoardItemsSaved",
+                          "failure": "BoardItemsSaveFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_board",
+                  "event": "BoardItemsSaved",
+                  "effects": [
+                    [
+                      "fetch",
+                      "TimelineRoadmapItem",
+                      {
+                        "emit": {
+                          "failure": "BoardItemsLoadFailed",
+                          "success": "BoardItemsLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_board",
+                  "to": "viewing_board",
+                  "event": "BoardItemsLoaded",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.boards",
+                      [
+                        "array/map",
+                        [
+                          {
+                            "label": "Q1",
+                            "icon": "calendar",
+                            "key": "Q1",
+                            "variant": "default"
+                          },
+                          {
+                            "key": "Q2",
+                            "label": "Q2",
+                            "icon": "calendar",
+                            "variant": "primary"
+                          },
+                          {
+                            "icon": "calendar",
+                            "variant": "info",
+                            "label": "Q3",
+                            "key": "Q3"
+                          },
+                          {
+                            "variant": "success",
+                            "icon": "calendar",
+                            "label": "Q4",
+                            "key": "Q4"
+                          }
+                        ],
+                        [
+                          "fn",
+                          "col",
+                          {
+                            "key": [
+                              "object/get",
+                              "@col",
+                              "key"
+                            ],
+                            "count": [
+                              "array/len",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "fn",
+                                  "item",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@item",
+                                      "stage"
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@col",
+                                      "key"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ],
+                            "label": [
+                              "object/get",
+                              "@col",
+                              "label"
+                            ],
+                            "items": [
+                              "array/sort",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "fn",
+                                  "item",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@item",
+                                      "stage"
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@col",
+                                      "key"
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              "position"
+                            ],
+                            "variant": [
+                              "object/get",
+                              "@col",
+                              "variant",
+                              "default"
+                            ],
+                            "icon": [
+                              "object/get",
+                              "@col",
+                              "icon",
+                              "circle"
+                            ]
+                          }
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_card",
+                  "to": "loading",
+                  "event": "CLOSE_CARD",
+                  "effects": [
+                    [
+                      "fetch",
+                      "TimelineRoadmapItem",
+                      {
+                        "emit": {
+                          "failure": "BoardItemsLoadFailed",
+                          "success": "BoardItemsLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Refreshing board…"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_card",
+                  "to": "loading",
+                  "event": "MOVE_CARD",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "TimelineRoadmapItem",
+                      {
+                        "stage": "@payload.targetGroup",
+                        "id": "@payload.id"
+                      },
+                      {
+                        "emit": {
+                          "success": "BoardItemsSaved",
+                          "failure": "BoardItemsSaveFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "title": "Moving item…",
+                        "type": "loading-state"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "viewing_card",
+                  "to": "loading",
+                  "event": "DELETE_CARD",
+                  "effects": [
+                    [
+                      "persist",
+                      "delete",
+                      "TimelineRoadmapItem",
+                      "@payload.id",
+                      {
+                        "emit": {
+                          "success": "BoardItemsSaved",
+                          "failure": "BoardItemsSaveFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Deleting item…"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "adding",
+                  "to": "loading",
+                  "event": "SAVE_CARD",
+                  "effects": [
+                    [
+                      "persist",
+                      "create",
+                      "TimelineRoadmapItem",
+                      "@payload.data",
+                      {
+                        "emit": {
+                          "failure": "BoardItemsSaveFailed",
+                          "success": "BoardItemsSaved"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "title": "Saving…",
+                        "type": "loading-state"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "adding",
+                  "to": "viewing_board",
+                  "event": "CANCEL_ADD",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "title": "Cancelling…",
+                        "type": "loading-state"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Retrying…"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "gridCols": {
+                "type": "number",
+                "default": 4,
+                "label": "Grid columns",
+                "description": "Outer grid column count before the board wraps",
+                "tier": "presentation"
+              },
+              "cardTitleBinding": {
+                "type": "string",
+                "default": "@item.title",
+                "label": "Card title binding",
+                "description": "Per-card binding for the title slot.",
+                "tier": "presentation"
+              },
+              "cardDescriptionBinding": {
+                "type": "string",
+                "default": "@item.description",
+                "label": "Card description binding",
+                "description": "Per-card binding for the description slot.",
+                "tier": "presentation"
+              },
+              "cardStageBinding": {
+                "type": "string",
+                "default": "@item.stage",
+                "label": "Card stage binding",
+                "description": "Per-card binding for the stage/status slot.",
+                "tier": "presentation"
+              },
+              "formFields": {
+                "type": "[string]",
+                "default": [
+                  "title",
+                  "description",
+                  "stage",
+                  "notes"
+                ],
+                "label": "New-card fields",
+                "description": "Fields shown in the add-card form",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "bodyContent": {
+                "type": "render-ui",
+                "default": {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "name": "calendar-range",
+                          "type": "icon"
+                        },
+                        {
+                          "type": "typography",
+                          "content": "@config.title",
+                          "variant": "h2"
+                        },
+                        {
+                          "className": "ml-2",
+                          "color": "muted",
+                          "content": "Roadmap",
+                          "variant": "caption",
+                          "type": "typography"
+                        }
+                      ],
+                      "align": "center",
+                      "direction": "horizontal",
+                      "type": "stack",
+                      "gap": "sm",
+                      "className": "px-card-md"
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "children": [
+                        {
+                          "cols": "@config.gridCols",
+                          "renderItem": [
+                            "fn",
+                            "col",
+                            {
+                              "type": "stack",
+                              "children": [
+                                {
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "name": "@col.icon"
+                                    },
+                                    {
+                                      "className": "flex-1",
+                                      "content": "@col.label",
+                                      "variant": "h4",
+                                      "type": "typography"
+                                    },
+                                    {
+                                      "size": "sm",
+                                      "variant": "primary",
+                                      "label": "@col.count",
+                                      "type": "badge"
+                                    }
+                                  ],
+                                  "className": "px-card-md py-2 bg-[var(--color-surface-subtle)] border-b border-[var(--color-border)] sticky top-0",
+                                  "gap": "xs",
+                                  "direction": "horizontal",
+                                  "align": "center",
+                                  "type": "stack"
+                                },
+                                {
+                                  "className": "p-card-md min-h-[160px]",
+                                  "type": "data-list",
+                                  "dragGroup": "@col.key",
+                                  "positionEvent": "REORDER_POSITION",
+                                  "renderItem": [
+                                    "fn",
+                                    "item",
+                                    {
+                                      "children": [
+                                        {
+                                          "children": [
+                                            {
+                                              "gap": "xs",
+                                              "type": "stack",
+                                              "align": "center",
+                                              "direction": "horizontal",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "name": "flag"
+                                                },
+                                                {
+                                                  "className": "flex-1",
+                                                  "content": "@config.cardTitleBinding",
+                                                  "weight": "medium",
+                                                  "type": "typography",
+                                                  "variant": "body"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "content": "@config.cardDescriptionBinding",
+                                              "variant": "caption",
+                                              "type": "typography",
+                                              "className": "line-clamp-2",
+                                              "color": "muted"
+                                            },
+                                            {
+                                              "children": [
+                                                {
+                                                  "variant": "primary",
+                                                  "type": "badge",
+                                                  "label": "@config.cardStageBinding",
+                                                  "size": "sm"
+                                                },
+                                                {
+                                                  "label": "Details",
+                                                  "icon": "arrow-right",
+                                                  "size": "sm",
+                                                  "variant": "ghost",
+                                                  "className": "ml-auto",
+                                                  "action": "OPEN_CARD",
+                                                  "actionPayload": {
+                                                    "id": "@config.cardIdBinding",
+                                                    "row": "@item"
+                                                  },
+                                                  "type": "button"
+                                                }
+                                              ],
+                                              "align": "center",
+                                              "className": "pt-1",
+                                              "direction": "horizontal",
+                                              "gap": "xs",
+                                              "type": "stack"
+                                            }
+                                          ],
+                                          "direction": "vertical",
+                                          "type": "stack",
+                                          "gap": "xs"
+                                        }
+                                      ],
+                                      "className": "cursor-grab hover:shadow-md transition-shadow",
+                                      "padding": "sm",
+                                      "type": "card",
+                                      "look": "elevated"
+                                    }
+                                  ],
+                                  "entity": "@col.items",
+                                  "fields": [],
+                                  "reorderEvent": "REORDER_CARD",
+                                  "accepts": "*",
+                                  "sortable": true,
+                                  "gap": "sm",
+                                  "dropEvent": "MOVE_CARD"
+                                }
+                              ],
+                              "direction": "vertical",
+                              "gap": "none",
+                              "className": "min-w-[240px] border-r border-[var(--color-border)] last:border-r-0"
+                            }
+                          ],
+                          "type": "data-grid",
+                          "className": "min-w-full",
+                          "dndRoot": true,
+                          "fields": [],
+                          "entity": "@entity.boards",
+                          "gap": "none"
+                        }
+                      ],
+                      "align": "stretch",
+                      "gap": "none",
+                      "type": "stack",
+                      "className": "overflow-x-auto border-y border-[var(--color-border)]",
+                      "direction": "horizontal"
+                    },
+                    {
+                      "action": "ADD_CARD",
+                      "label": "Add milestone",
+                      "icon": "plus",
+                      "type": "floating-action-button",
+                      "variant": "primary"
+                    }
+                  ],
+                  "direction": "vertical",
+                  "type": "stack",
+                  "gap": "md"
+                },
+                "label": "Body content tree",
+                "description": "Render-ui SExpr rendered after the board loads. Default is the canonical column data-grid with nested per-column data-lists. Layer 3 variants override this with their own tree (swim-lanes, timeline-roadmap, etc.) while inheriting the same trait, state machine, emits, and listens.",
+                "tier": "internal"
+              },
+              "columns": {
+                "type": "[ColumnSpec]",
+                "default": [
+                  {
+                    "label": "Q1",
+                    "icon": "calendar",
+                    "key": "Q1",
+                    "variant": "default"
+                  },
+                  {
+                    "key": "Q2",
+                    "label": "Q2",
+                    "icon": "calendar",
+                    "variant": "primary"
+                  },
+                  {
+                    "icon": "calendar",
+                    "variant": "info",
+                    "label": "Q3",
+                    "key": "Q3"
+                  },
+                  {
+                    "variant": "success",
+                    "icon": "calendar",
+                    "label": "Q4",
+                    "key": "Q4"
+                  }
+                ],
+                "label": "Columns",
+                "description": "Board columns; each row's stage maps to a column key",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "icon": {
+                      "name": "icon",
+                      "type": "string",
+                      "required": false
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": true
+                    },
+                    "key": {
+                      "name": "key",
+                      "type": "string",
+                      "required": true
+                    },
+                    "variant": {
+                      "name": "variant",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "cardIdBinding": {
+                "type": "string",
+                "default": "@item.id",
+                "label": "Card id binding",
+                "description": "Per-card binding for the id used in action payloads.",
+                "tier": "presentation"
+              },
+              "cardLook": {
+                "type": "string",
+                "default": "elevated",
+                "label": "Card look",
+                "description": "Layer 2 visual treatment for cards rendered by this board.",
+                "tier": "presentation",
+                "values": [
+                  "elevated",
+                  "flat-bordered",
+                  "borderless-divider",
+                  "ticket",
+                  "invoice",
+                  "chip",
+                  "tile-image-first"
+                ]
+              },
+              "groupByField": {
+                "type": "string",
+                "default": "stage",
+                "label": "Group-by field",
+                "description": "Entity field whose value matches a column key — items are filtered into columns by it. Default 'stage'; set to 'status' (or any field) for entities that track state under a different name.",
+                "tier": "presentation"
+              },
+              "title": {
+                "type": "string",
+                "default": "Board",
+                "label": "Board title",
+                "description": "Heading shown above the column board",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-board",
+              "alias": "Board",
+              "originalName": "BoardItemBoard"
+            },
+            "sourceEntityDefinition": {
+              "name": "BoardView",
+              "collection": "board_items",
+              "persistence": "persistent",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "title",
+                  "type": "string",
+                  "required": true,
+                  "description": "The descriptive name of the board.",
+                  "synonyms": "name, heading, label"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "default": "",
+                  "description": "A textual explanation or summary of the board.",
+                  "synonyms": "summary, details, notes, explanation"
+                },
+                {
+                  "name": "stage",
+                  "type": "string",
+                  "default": "todo",
+                  "values": [
+                    "todo",
+                    "doing",
+                    "done"
+                  ],
+                  "description": "The current status or lifecycle phase of the board.",
+                  "synonyms": "status, lifecycle, progress, state"
+                },
+                {
+                  "name": "notes",
+                  "type": "string",
+                  "default": "",
+                  "description": "Free-form text providing additional information.",
+                  "synonyms": "comments, remarks, details, annotations"
+                },
+                {
+                  "name": "position",
+                  "type": "number",
+                  "default": 0,
+                  "description": "The sequential order of this item within a collection.",
+                  "synonyms": "order, sequence, index, rank"
+                },
+                {
+                  "name": "boards",
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "name": "count",
+                        "type": "number",
+                        "required": false
+                      },
+                      "label": {
+                        "name": "label",
+                        "type": "string",
+                        "required": true
+                      },
+                      "icon": {
+                        "name": "icon",
+                        "type": "string",
+                        "required": false
+                      },
+                      "items": {
+                        "name": "items",
+                        "type": "array",
+                        "required": false,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "name": "id",
+                              "type": "string",
+                              "required": true
+                            },
+                            "description": {
+                              "name": "description",
+                              "type": "string",
+                              "required": false
+                            },
+                            "notes": {
+                              "name": "notes",
+                              "type": "string",
+                              "required": false
+                            },
+                            "title": {
+                              "name": "title",
+                              "type": "string",
+                              "required": false
+                            },
+                            "position": {
+                              "name": "position",
+                              "type": "number",
+                              "required": false
+                            },
+                            "stage": {
+                              "name": "stage",
+                              "type": "string",
+                              "required": false
+                            }
+                          }
+                        }
+                      },
+                      "key": {
+                        "name": "key",
+                        "type": "string",
+                        "required": true
+                      },
+                      "variant": {
+                        "name": "variant",
+                        "type": "string",
+                        "required": false,
+                        "values": [
+                          "default",
+                          "primary",
+                          "success",
+                          "warning",
+                          "error",
+                          "info"
+                        ]
+                      }
+                    }
+                  },
+                  "intrinsic": true
+                },
+                {
+                  "name": "currentId",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "currentTitle",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "currentDescription",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "currentStage",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "currentNotes",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "errorMessage",
+                  "type": "string",
+                  "default": "",
+                  "intrinsic": true
+                }
+              ]
+            }
+          }
+        ],
+        "pages": [
+          {
+            "name": "TimelineRoadmapPage",
+            "path": "/timeline-roadmap",
+            "traits": [
+              {
+                "ref": "TimelineRoadmapBoard"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "TimelineRoadmapBoardOrbital": [
+          {
+            "trait": "TimelineRoadmapBoard",
+            "patternPath": "root.children.2",
+            "prop": "look",
+            "knob": "cardLook"
+          },
+          {
+            "trait": "TimelineRoadmapBoard",
+            "patternPath": "root.children.2",
+            "prop": "fields",
+            "knob": "formFields"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

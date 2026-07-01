@@ -1,0 +1,327 @@
+{
+  "name": "std-status-lifecycle",
+  "description": "Infra substrate: data-driven entity status lifecycle. The statuses and the allowed transitions are config data over a fixed single-state topology, so a host organism can expand or collapse its lifecycle without forking. Compose onto an entity, rename the ChangeStatusRequested listen to the host's status-change action, and supply `states` + `transitions`. A requested move is validated against the `transitions` table (illegal moves are rejected), then the new value is written to `statusField` on the target entity and StatusChanged is emitted. Surfaces nothing — the host renders the badge and buttons.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-status-lifecycle",
+    "version": "0.1.0",
+    "description": "Infra substrate: data-driven entity status lifecycle. The statuses and the allowed transitions are config data over a fixed single-state topology, so a host organism can expand or collapse its lifecycle without forking. Compose onto an entity, rename the ChangeStatusRequested listen to the host's status-change action, and supply `states` + `transitions`. A requested move is validated against the `transitions` table (illegal moves are rejected), then the new value is written to `statusField` on the target entity and StatusChanged is emitted. Surfaces nothing — the host renders the badge and buttons.",
+    "orbitals": [
+      {
+        "name": "StatusLifecycleOrbital",
+        "entity": {
+          "name": "StatusRecord",
+          "collection": "status_records",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "",
+              "description": "Current lifecycle status of the record.",
+              "synonyms": "state, stage, phase"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "StatusMachine",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "lifecycle",
+            "linkedEntity": "StatusRecord",
+            "emits": [
+              {
+                "event": "StatusChanged",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "entityId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "StatusChangeFailed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "ChangeStatusRequested",
+                  "name": "Change status requested",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "from",
+                      "type": "string"
+                    },
+                    {
+                      "name": "to",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "StatusChangeFailed",
+                  "name": "Status change failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "StatusChanged",
+                  "name": "Status changed",
+                  "payloadSchema": [
+                    {
+                      "name": "entityId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ChangeStatusRequested",
+                  "guard": [
+                    "and",
+                    false,
+                    [
+                      "array/some",
+                      [
+                        {
+                          "to": "active",
+                          "from": "draft",
+                          "event": "ACTIVATE",
+                          "label": "Activate"
+                        },
+                        {
+                          "event": "ARCHIVE",
+                          "label": "Archive",
+                          "to": "archived",
+                          "from": "active"
+                        }
+                      ],
+                      [
+                        "fn",
+                        "t",
+                        [
+                          "and",
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@t",
+                              "from"
+                            ],
+                            "@payload.from"
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@t",
+                              "to"
+                            ],
+                            "@payload.to"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "StatusRecord",
+                      [
+                        "object/set",
+                        {
+                          "id": "@payload.id"
+                        },
+                        "status",
+                        "@payload.to"
+                      ],
+                      {
+                        "emit": {
+                          "success": "StatusChanged",
+                          "failure": "StatusChangeFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "emit",
+                      "StatusChanged",
+                      {
+                        "status": "@payload.to",
+                        "entityId": "@payload.id"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "StatusChangeFailed"
+                }
+              ]
+            },
+            "config": {
+              "statusField": {
+                "type": "string",
+                "default": "status",
+                "label": "Which field holds the status?",
+                "description": "Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').",
+                "synonyms": "state field, stage field, status column, lifecycle field",
+                "tier": "domain"
+              },
+              "states": {
+                "type": "[string]",
+                "default": [
+                  "draft",
+                  "active",
+                  "archived"
+                ],
+                "label": "What are the possible statuses?",
+                "description": "The complete set of statuses a record can hold.",
+                "synonyms": "states, stages, phases, statuses, lifecycle, workflow steps",
+                "tier": "domain",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Enforce status lifecycle rules?",
+                "description": "Validate and apply status transitions against the configured table. Off by default.",
+                "synonyms": "lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply",
+                "tier": "infra"
+              },
+              "initialStatus": {
+                "type": "string",
+                "default": "draft",
+                "label": "What status do new records start in?",
+                "description": "The status assigned when a record is first created.",
+                "synonyms": "starting state, default status, first stage, initial state",
+                "tier": "domain"
+              },
+              "targetEntity": {
+                "type": "string",
+                "default": "StatusRecord",
+                "label": "Target entity",
+                "description": "Entity name whose status field this lifecycle drives (e.g. 'Contract'). Rebind per composition.",
+                "tier": "internal"
+              },
+              "transitions": {
+                "type": "[TransitionSpec]",
+                "default": [
+                  {
+                    "to": "active",
+                    "from": "draft",
+                    "event": "ACTIVATE",
+                    "label": "Activate"
+                  },
+                  {
+                    "event": "ARCHIVE",
+                    "label": "Archive",
+                    "to": "archived",
+                    "from": "active"
+                  }
+                ],
+                "label": "Which status moves are allowed?",
+                "description": "Legal transitions as { from, to, event, label }. Only matching moves are applied.",
+                "synonyms": "edges, allowed moves, status flow, workflow transitions",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "to": {
+                      "name": "to",
+                      "type": "string",
+                      "required": true
+                    },
+                    "event": {
+                      "name": "event",
+                      "type": "string",
+                      "required": false
+                    },
+                    "from": {
+                      "name": "from",
+                      "type": "string",
+                      "required": true
+                    }
+                  }
+                }
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "StatusLifecyclePage",
+            "path": "/status-lifecycle",
+            "traits": [
+              {
+                "ref": "StatusMachine"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

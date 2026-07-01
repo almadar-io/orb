@@ -1,0 +1,1162 @@
+{
+  "name": "std-data-erasure",
+  "description": "std-data-erasure — GDPR Art. 17 right-to-be-forgotten queue. Tracks ErasureRequest rows through pending → grace → executed lifecycle with Cancel during grace. v1.0 ships the request lifecycle UI + knob set; auto-emit of ExecuteErasure after grace lands in v1.1 (loop-with-emit gap — docs/Almadar_Std_Factories.md). Target app/ atoms then own the actual delete or piiFields scrub via an ExecuteErasure listener.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-data-erasure",
+    "version": "1.0.0",
+    "description": "std-data-erasure — GDPR Art. 17 right-to-be-forgotten queue. Tracks ErasureRequest rows through pending → grace → executed lifecycle with Cancel during grace. v1.0 ships the request lifecycle UI + knob set; auto-emit of ExecuteErasure after grace lands in v1.1 (loop-with-emit gap — docs/Almadar_Std_Factories.md). Target app/ atoms then own the actual delete or piiFields scrub via an ExecuteErasure listener.",
+    "orbitals": [
+      {
+        "name": "DataErasureOrbital",
+        "entity": {
+          "name": "ErasureRequest",
+          "collection": "erasure_requests",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "subjectId",
+              "type": "string",
+              "default": "",
+              "description": "Unique identifier for the data subject.",
+              "synonyms": "data subject ID, identifier, user ID"
+            },
+            {
+              "name": "targetEntity",
+              "type": "string",
+              "default": "",
+              "description": "The entity or system affected by the erasure request.",
+              "synonyms": "affected entity, target system, destination"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "pending",
+              "values": [
+                "pending",
+                "grace",
+                "executed",
+                "cancelled"
+              ],
+              "description": "Current state of the erasure request.",
+              "synonyms": "state, lifecycle, condition"
+            },
+            {
+              "name": "requestedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the erasure request was initially submitted.",
+              "synonyms": "submission time, creation time, request date"
+            },
+            {
+              "name": "executesAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the erasure process completed.",
+              "synonyms": "completion time, finish time, end time"
+            },
+            {
+              "name": "executedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the erasure process completed.",
+              "synonyms": "completion time, finish time, end time"
+            },
+            {
+              "name": "cancelledAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp when the erasure request was cancelled.",
+              "synonyms": "cancellation time, cancelled timestamp, cancel date"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "default": "",
+              "description": "Free-form text providing additional information or context.",
+              "synonyms": "comment, remark, description, details"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ErasureWorkflow",
+            "category": "interaction",
+            "capabilities": [
+              "compliance",
+              "erasure"
+            ],
+            "linkedEntity": "ErasureRequest",
+            "emits": [
+              {
+                "event": "CANCEL_ERASURE",
+                "description": "Signals a request cancellation during its processing lifecycle.",
+                "synonyms": "abort, revoke, undo, terminate",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "subjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "targetEntity",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "executesAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "executedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "cancelledAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE",
+                "description": "Dismisses the erasure-requests overlay.",
+                "synonyms": "dismiss, hide, cancel, done",
+                "tier": "domain"
+              },
+              {
+                "event": "ErasureLoaded",
+                "description": "Indicates that erasure request data has been successfully loaded.",
+                "synonyms": "loaded, fetched, retrieved",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ErasureRequest]"
+                  }
+                ]
+              },
+              {
+                "event": "ErasureLoadFailed",
+                "description": "Indicates failure to load erasure request data.",
+                "synonyms": "load error, failed load, data error",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ErasureSaved",
+                "description": "Indicates a new erasure request has been successfully saved.",
+                "synonyms": "created, added, persisted",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "subjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "targetEntity",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "executesAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "executedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "cancelledAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ErasureSaveFailed",
+                "description": "Indicates that saving the erasure request failed.",
+                "synonyms": "failed, error, unsuccessful",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ExecuteErasure",
+                "description": "Instructs the target atom to perform the actual delete or PII scrub for a request whose grace period has elapsed.",
+                "synonyms": "execute, perform erasure, delete now, scrub, finalize erasure",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "requestId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "targetEntity",
+                    "type": "string"
+                  },
+                  {
+                    "name": "subjectId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ExecScanLoaded",
+                "description": "Internal: grace requests due for execution.",
+                "synonyms": "scan loaded, due requests",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ErasureRequest]"
+                  }
+                ]
+              },
+              {
+                "event": "ExecScanFailed",
+                "description": "Internal: execution scan failed.",
+                "synonyms": "scan error, scan failed",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ExecStepped",
+                "description": "Internal: one request executed; advances the scan loop.",
+                "synonyms": "stepped, next",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "execScanning"
+                },
+                {
+                  "name": "loading"
+                },
+                {
+                  "name": "browsing"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ErasureLoaded",
+                  "name": "Erasure loaded",
+                  "description": "Indicates that erasure request data has been successfully loaded.",
+                  "synonyms": "loaded, fetched, retrieved",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ErasureRequest]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ErasureLoadFailed",
+                  "name": "Erasure load failed",
+                  "description": "Indicates failure to load erasure request data.",
+                  "synonyms": "load error, failed load, data error",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "OPEN",
+                  "name": "Open",
+                  "description": "Summons the erasure-requests queue (host nav/affordance requests it).",
+                  "synonyms": "open, show, review, view queue, erasure requests",
+                  "tier": "domain"
+                },
+                {
+                  "key": "ExecScanLoaded",
+                  "name": "Exec scan loaded",
+                  "description": "Internal: grace requests due for execution.",
+                  "synonyms": "scan loaded, due requests",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ErasureRequest]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ExecScanFailed",
+                  "name": "Exec scan failed",
+                  "description": "Internal: execution scan failed.",
+                  "synonyms": "scan error, scan failed",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ExecStepped",
+                  "name": "Exec stepped",
+                  "description": "Internal: one request executed; advances the scan loop.",
+                  "synonyms": "stepped, next",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Dismisses the erasure-requests overlay.",
+                  "synonyms": "dismiss, hide, cancel, done",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CANCEL_ERASURE",
+                  "name": "Cancel Erasure",
+                  "description": "Signals a request cancellation during its processing lifecycle.",
+                  "synonyms": "abort, revoke, undo, terminate",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ErasureRequest"
+                    }
+                  ]
+                },
+                {
+                  "key": "ErasureSaved",
+                  "name": "Erasure saved",
+                  "description": "Indicates a new erasure request has been successfully saved.",
+                  "synonyms": "created, added, persisted",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "ErasureRequest"
+                    }
+                  ]
+                },
+                {
+                  "key": "ErasureSaveFailed",
+                  "name": "Erasure save failed",
+                  "description": "Indicates that saving the erasure request failed.",
+                  "synonyms": "failed, error, unsuccessful",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ExecuteErasure",
+                  "name": "Execute erasure",
+                  "description": "Instructs the target atom to perform the actual delete or PII scrub for a request whose grace period has elapsed.",
+                  "synonyms": "execute, perform erasure, delete now, scrub, finalize erasure",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "requestId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "targetEntity",
+                      "type": "string"
+                    },
+                    {
+                      "name": "subjectId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ErasureRequest",
+                      {
+                        "emit": {
+                          "failure": "ErasureLoadFailed",
+                          "success": "ErasureLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ErasureLoaded"
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ErasureLoadFailed"
+                },
+                {
+                  "from": "idle",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "fetch",
+                      "ErasureRequest",
+                      {
+                        "emit": {
+                          "failure": "ErasureLoadFailed",
+                          "success": "ErasureLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "stack",
+                        "gap": "md",
+                        "align": "center",
+                        "direction": "vertical",
+                        "className": "py-12",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "content": "Loading erasure requests…",
+                            "variant": "caption",
+                            "type": "typography",
+                            "color": "muted"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "execScanning",
+                  "event": "ExecScanLoaded",
+                  "guard": [
+                    "and",
+                    false,
+                    [
+                      ">",
+                      [
+                        "array/len",
+                        "@payload.data"
+                      ],
+                      0
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.targetEntity",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "targetEntity"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.subjectId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "subjectId"
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "ExecuteErasure",
+                      {
+                        "requestId": "@entity.id",
+                        "subjectId": "@entity.subjectId",
+                        "targetEntity": "@entity.targetEntity"
+                      }
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ErasureRequest",
+                      {
+                        "status": "executed",
+                        "id": "@entity.id",
+                        "executedAt": "@now"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ExecScanFailed",
+                          "success": "ExecStepped"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ExecScanLoaded",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ExecScanFailed"
+                },
+                {
+                  "from": "execScanning",
+                  "to": "execScanning",
+                  "event": "ExecStepped",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ErasureRequest",
+                      {
+                        "emit": {
+                          "success": "ExecScanLoaded",
+                          "failure": "ExecScanFailed"
+                        },
+                        "filter": [
+                          "and",
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              "status"
+                            ],
+                            "grace"
+                          ],
+                          [
+                            "<",
+                            [
+                              "object/get",
+                              "@entity",
+                              "executesAt"
+                            ],
+                            "@now"
+                          ]
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "execScanning",
+                  "to": "execScanning",
+                  "event": "ExecScanLoaded",
+                  "guard": [
+                    ">",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.targetEntity",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "targetEntity"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.subjectId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "subjectId"
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "ExecuteErasure",
+                      {
+                        "requestId": "@entity.id",
+                        "subjectId": "@entity.subjectId",
+                        "targetEntity": "@entity.targetEntity"
+                      }
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ErasureRequest",
+                      {
+                        "id": "@entity.id",
+                        "status": "executed",
+                        "executedAt": "@now"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ExecScanFailed",
+                          "success": "ExecStepped"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "execScanning",
+                  "to": "idle",
+                  "event": "ExecScanLoaded",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ]
+                },
+                {
+                  "from": "execScanning",
+                  "to": "idle",
+                  "event": "ExecScanFailed"
+                },
+                {
+                  "from": "loading",
+                  "to": "browsing",
+                  "event": "ErasureLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "direction": "vertical",
+                        "gap": "md",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "trash-2"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "Erasure requests",
+                                    "variant": "h3"
+                                  }
+                                ],
+                                "align": "center",
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "gap": "sm"
+                              },
+                              {
+                                "variant": "ghost",
+                                "action": "CLOSE",
+                                "label": "Close",
+                                "icon": "x",
+                                "type": "button"
+                              }
+                            ],
+                            "gap": "sm",
+                            "justify": "between",
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "align": "center"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "itemActions": [
+                              {
+                                "icon": "x",
+                                "variant": "secondary",
+                                "label": "Cancel",
+                                "event": "CANCEL_ERASURE"
+                              }
+                            ],
+                            "look": "dense",
+                            "cols": 1,
+                            "gap": "sm",
+                            "entity": "@payload.data",
+                            "type": "data-grid",
+                            "fields": [
+                              {
+                                "name": "subjectId",
+                                "label": "Subject",
+                                "variant": "caption"
+                              },
+                              {
+                                "label": "Status",
+                                "variant": "badge",
+                                "name": "status"
+                              },
+                              {
+                                "name": "executesAt",
+                                "label": "Executes",
+                                "variant": "caption"
+                              }
+                            ]
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "ErasureLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "message": "@payload.error",
+                        "variant": "error",
+                        "type": "alert"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "CANCEL_ERASURE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "cancelled"
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ErasureRequest",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "ErasureSaveFailed",
+                          "success": "ErasureSaved"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "ErasureSaved",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ErasureRequest",
+                      {
+                        "emit": {
+                          "success": "ErasureLoaded",
+                          "failure": "ErasureLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "ErasureSaveFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "message": "@payload.error",
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ErasureRequest",
+                      {
+                        "emit": {
+                          "failure": "ErasureLoadFailed",
+                          "success": "ErasureLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "spinner",
+                        "size": "sm"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "executionScan",
+                "interval": 3600000,
+                "effects": [
+                  [
+                    "fetch",
+                    "ErasureRequest",
+                    {
+                      "filter": [
+                        "and",
+                        [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "grace"
+                        ],
+                        [
+                          "<",
+                          [
+                            "object/get",
+                            "@entity",
+                            "executesAt"
+                          ],
+                          "@now"
+                        ]
+                      ],
+                      "emit": {
+                        "failure": "ExecScanFailed",
+                        "success": "ExecScanLoaded"
+                      }
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Allow data erasure (GDPR)",
+                "description": "Let people request that their data be permanently removed. Off by default.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, gdpr, erasure, right to be forgotten, data deletion, scheduled deletion, retention purge, account deletion, anonymize user data, scrub PII, delete user data",
+                "tier": "policy"
+              },
+              "targetEntity": {
+                "type": "string",
+                "default": "",
+                "label": "Target entity",
+                "description": "Entity name whose records erasure requests apply to (e.g. 'CustomerAccount').",
+                "tier": "internal"
+              },
+              "anonymizeVsDelete": {
+                "type": "string",
+                "default": "anonymize",
+                "label": "Anonymize or fully delete the record?",
+                "description": "anonymize = scrub PII fields and keep row for audit; delete = remove the row entirely.",
+                "synonyms": "deletion mode, anonymize, delete, scrub or remove, retention mode",
+                "tier": "policy",
+                "values": [
+                  "anonymize",
+                  "delete"
+                ]
+              },
+              "gracePeriodDays": {
+                "type": "number",
+                "default": 30,
+                "label": "How many days before deletion is carried out?",
+                "description": "Days between request submission and execution. The subject can cancel during this window.",
+                "synonyms": "grace period, cancellation window, deletion delay, days before delete",
+                "tier": "policy"
+              },
+              "piiFields": {
+                "type": "[string]",
+                "default": [],
+                "label": "Which fields contain personal data to scrub?",
+                "description": "Fields the target atom nulls when anonymizing (e.g. email, name, phone).",
+                "synonyms": "PII fields, personal data fields, sensitive fields, fields to scrub",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "reviewSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Review slot",
+                "description": "UI slot the erasure-requests queue renders into. Defaults to the modal overlay so it never seizes the host's main content; summoned via OPEN, cleared via CLOSE.",
+                "tier": "internal"
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Erasure queue table style",
+                "description": "Visual treatment for the erasure-requests data table.",
+                "synonyms": "table style, grid look, compact, spacious",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ErasureWorkflowPage",
+            "path": "/erasure/queue",
+            "traits": [
+              {
+                "ref": "ErasureWorkflow"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "DataErasureOrbital": [
+          {
+            "trait": "ErasureWorkflow",
+            "patternPath": "root.children.2",
+            "prop": "look",
+            "knob": "tableLook"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

@@ -1,0 +1,1277 @@
+{
+  "name": "std-mod-queue",
+  "description": "std-mod-queue — moderation queue for content review. Owns a ModQueueItem entity (one row per flagged target) and a single review trait that loads pending items, renders them in a data-grid with Approve / Reject / Escalate actions, and persists the reviewer's verdict back to the row.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-mod-queue",
+    "version": "1.0.0",
+    "description": "std-mod-queue — moderation queue for content review. Owns a ModQueueItem entity (one row per flagged target) and a single review trait that loads pending items, renders them in a data-grid with Approve / Reject / Escalate actions, and persists the reviewer's verdict back to the row.",
+    "orbitals": [
+      {
+        "name": "ModQueueItemOrbital",
+        "entity": {
+          "name": "ModQueueItem",
+          "collection": "modqueueitems",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "targetId",
+              "type": "string",
+              "required": true,
+              "description": "Unique identifier for the item being moderated.",
+              "synonyms": "item id, reference id, identifier"
+            },
+            {
+              "name": "targetType",
+              "type": "string",
+              "required": true,
+              "description": "Specifies the kind of item being moderated.",
+              "synonyms": "item type, content type, object type"
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "values": [
+                "spam",
+                "abuse",
+                "off-topic",
+                "misinformation",
+                "nsfw",
+                "other"
+              ],
+              "description": "The justification for flagging the content.",
+              "synonyms": "flag reason, justification, cause"
+            },
+            {
+              "name": "flagCount",
+              "type": "number",
+              "description": "The number of times this item has been flagged.",
+              "synonyms": "flags, flag_count, count"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "pending",
+              "values": [
+                "pending",
+                "approved",
+                "rejected",
+                "escalated"
+              ],
+              "description": "Current state of the moderation item.",
+              "synonyms": "state, condition, stage"
+            },
+            {
+              "name": "reviewedBy",
+              "type": "string",
+              "description": "The user who performed the review action.",
+              "synonyms": "reviewer, reviewerId, assignedTo"
+            },
+            {
+              "name": "reviewedAt",
+              "type": "string",
+              "description": "Timestamp indicating when the item was last reviewed.",
+              "synonyms": "review date, review time, last reviewed"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "description": "Free-text comments or observations related to the item.",
+              "synonyms": "comment, remark, observation, details"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ModQueueItemReview",
+            "category": "interaction",
+            "capabilities": [
+              "moderation"
+            ],
+            "linkedEntity": "ModQueueItem",
+            "emits": [
+              {
+                "event": "APPROVE",
+                "description": "Signals that a moderation item has been approved.",
+                "synonyms": "accept, confirm, pass",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetType",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "reason",
+                        "type": "string"
+                      },
+                      {
+                        "name": "flagCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "REJECT",
+                "description": "Signals that a moderation item has been rejected.",
+                "synonyms": "deny, dismiss, decline",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetType",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "reason",
+                        "type": "string"
+                      },
+                      {
+                        "name": "flagCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ESCALATE",
+                "description": "Signals a flagged item requires further review.",
+                "synonyms": "flag, defer, elevate",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetType",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "reason",
+                        "type": "string"
+                      },
+                      {
+                        "name": "flagCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE",
+                "description": "Dismisses the moderation queue overlay.",
+                "synonyms": "dismiss, hide, cancel, done",
+                "tier": "domain"
+              },
+              {
+                "event": "ModQueueItemLoaded",
+                "description": "A new moderation item is ready for review.",
+                "synonyms": "loaded, fetched, available, ready",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ModQueueItem]"
+                  }
+                ]
+              },
+              {
+                "event": "ModQueueItemLoadFailed",
+                "description": "Indicates failure to load moderation queue items.",
+                "synonyms": "error, failure, problem, failed",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ModQueueItemReviewed",
+                "description": "Signals a moderation queue item has been reviewed and a verdict recorded.",
+                "synonyms": "reviewed, processed, judged, completed",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "targetType",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "reason",
+                        "type": "string"
+                      },
+                      {
+                        "name": "flagCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewedAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ModQueueItemReviewFailed",
+                "description": "Indicates a failure to load or process a moderation queue item.",
+                "synonyms": "error, failure, problem, issue",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "loading"
+                },
+                {
+                  "name": "reviewing"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ModQueueItemLoaded",
+                  "name": "ModQueueItem loaded",
+                  "description": "A new moderation item is ready for review.",
+                  "synonyms": "loaded, fetched, available, ready",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ModQueueItem]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ModQueueItemLoadFailed",
+                  "name": "ModQueueItem load failed",
+                  "description": "Indicates failure to load moderation queue items.",
+                  "synonyms": "error, failure, problem, failed",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "OPEN",
+                  "name": "Open",
+                  "description": "Summons the moderation queue (host nav/affordance requests it).",
+                  "synonyms": "open, show, review, view queue, moderation queue",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Dismisses the moderation queue overlay.",
+                  "synonyms": "dismiss, hide, cancel, done",
+                  "tier": "domain"
+                },
+                {
+                  "key": "APPROVE",
+                  "name": "Approve",
+                  "description": "Signals that a moderation item has been approved.",
+                  "synonyms": "accept, confirm, pass",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ModQueueItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "REJECT",
+                  "name": "Reject",
+                  "description": "Signals that a moderation item has been rejected.",
+                  "synonyms": "deny, dismiss, decline",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ModQueueItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "ESCALATE",
+                  "name": "Escalate",
+                  "description": "Signals a flagged item requires further review.",
+                  "synonyms": "flag, defer, elevate",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ModQueueItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "ModQueueItemReviewed",
+                  "name": "ModQueueItem reviewed",
+                  "description": "Signals a moderation queue item has been reviewed and a verdict recorded.",
+                  "synonyms": "reviewed, processed, judged, completed",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "ModQueueItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "ModQueueItemReviewFailed",
+                  "name": "ModQueueItem review failed",
+                  "description": "Indicates a failure to load or process a moderation queue item.",
+                  "synonyms": "error, failure, problem, issue",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "success": "ModQueueItemLoaded",
+                          "failure": "ModQueueItemLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "name": "shield-alert",
+                                "type": "icon"
+                              },
+                              {
+                                "content": "Moderation Queue",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "spinner"
+                              },
+                              {
+                                "content": "Loading moderation queue…",
+                                "color": "muted",
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "className": "py-8",
+                            "align": "center",
+                            "direction": "vertical",
+                            "gap": "sm",
+                            "type": "stack"
+                          }
+                        ],
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ModQueueItemLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "md",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "name": "shield-alert",
+                                "type": "icon"
+                              },
+                              {
+                                "variant": "h3",
+                                "content": "Moderation Queue",
+                                "type": "typography"
+                              }
+                            ],
+                            "gap": "sm",
+                            "align": "center",
+                            "direction": "horizontal"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "entity": "@payload.data",
+                            "type": "entity-table",
+                            "fields": [
+                              "targetType",
+                              "reason",
+                              "flagCount",
+                              "status"
+                            ],
+                            "itemActions": [
+                              {
+                                "variant": "primary",
+                                "event": "APPROVE",
+                                "label": "Approve",
+                                "icon": "check"
+                              },
+                              {
+                                "variant": "danger",
+                                "label": "Reject",
+                                "icon": "x",
+                                "event": "REJECT"
+                              },
+                              {
+                                "label": "Escalate",
+                                "variant": "secondary",
+                                "icon": "alert-triangle",
+                                "event": "ESCALATE"
+                              }
+                            ]
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ModQueueItemLoadFailed"
+                },
+                {
+                  "from": "idle",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "failure": "ModQueueItemLoadFailed",
+                          "success": "ModQueueItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "gap": "md",
+                        "align": "center",
+                        "className": "py-12",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "color": "muted",
+                            "type": "typography",
+                            "variant": "caption",
+                            "content": "Loading moderation queue…"
+                          }
+                        ],
+                        "direction": "vertical"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "reviewing",
+                  "event": "ModQueueItemLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "gap": "md",
+                        "direction": "vertical",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "align": "center",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "name": "shield-alert",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "variant": "h3",
+                                    "content": "Moderation Queue"
+                                  }
+                                ],
+                                "align": "center",
+                                "gap": "sm",
+                                "direction": "horizontal",
+                                "type": "stack"
+                              },
+                              {
+                                "variant": "ghost",
+                                "icon": "x",
+                                "type": "button",
+                                "action": "CLOSE",
+                                "label": "Close"
+                              }
+                            ],
+                            "gap": "sm",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "data-grid",
+                            "itemActions": [
+                              {
+                                "event": "APPROVE",
+                                "label": "Approve",
+                                "icon": "check",
+                                "variant": "primary"
+                              },
+                              {
+                                "label": "Reject",
+                                "event": "REJECT",
+                                "icon": "x",
+                                "variant": "danger"
+                              },
+                              {
+                                "icon": "alert-triangle",
+                                "variant": "secondary",
+                                "event": "ESCALATE",
+                                "label": "Escalate"
+                              }
+                            ],
+                            "entity": "@payload.data",
+                            "fields": [
+                              {
+                                "label": "Type",
+                                "name": "targetType",
+                                "variant": "badge"
+                              },
+                              {
+                                "name": "reason",
+                                "label": "Reason",
+                                "variant": "caption"
+                              },
+                              {
+                                "label": "Flags",
+                                "name": "flagCount",
+                                "variant": "caption"
+                              },
+                              {
+                                "name": "status",
+                                "label": "Status",
+                                "variant": "badge"
+                              }
+                            ],
+                            "cols": 1,
+                            "gap": "sm",
+                            "look": "dense"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "ModQueueItemLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "alert",
+                        "message": "@payload.error",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "success": "ModQueueItemLoaded",
+                          "failure": "ModQueueItemLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "align": "center",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "name": "shield-alert",
+                                "type": "icon"
+                              },
+                              {
+                                "type": "typography",
+                                "content": "Moderation Queue",
+                                "variant": "h3"
+                              }
+                            ],
+                            "gap": "sm",
+                            "direction": "horizontal"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "type": "spinner"
+                              },
+                              {
+                                "color": "muted",
+                                "type": "typography",
+                                "variant": "caption",
+                                "content": "Loading moderation queue…"
+                              }
+                            ],
+                            "className": "py-8",
+                            "type": "stack",
+                            "direction": "vertical",
+                            "align": "center"
+                          }
+                        ],
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "APPROVE",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "ModQueueItem",
+                      {
+                        "id": "@payload.row.id",
+                        "status": "approved"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ModQueueItemReviewFailed",
+                          "success": "ModQueueItemReviewed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "REJECT",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "ModQueueItem",
+                      {
+                        "id": "@payload.row.id",
+                        "status": "rejected"
+                      },
+                      {
+                        "emit": {
+                          "success": "ModQueueItemReviewed",
+                          "failure": "ModQueueItemReviewFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "ESCALATE",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "ModQueueItem",
+                      {
+                        "status": "escalated",
+                        "id": "@payload.row.id"
+                      },
+                      {
+                        "emit": {
+                          "success": "ModQueueItemReviewed",
+                          "failure": "ModQueueItemReviewFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "loading",
+                  "event": "ModQueueItemReviewed",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "failure": "ModQueueItemLoadFailed",
+                          "success": "ModQueueItemLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "ModQueueItemReviewFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "alert",
+                        "message": "@payload.error",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "failure": "ModQueueItemLoadFailed",
+                          "success": "ModQueueItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "align": "center",
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "name": "shield-alert",
+                                "type": "icon"
+                              },
+                              {
+                                "content": "Moderation Queue",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "className": "py-8",
+                            "gap": "sm",
+                            "type": "stack",
+                            "align": "center",
+                            "children": [
+                              {
+                                "type": "spinner"
+                              },
+                              {
+                                "color": "muted",
+                                "type": "typography",
+                                "variant": "caption",
+                                "content": "Loading moderation queue…"
+                              }
+                            ],
+                            "direction": "vertical"
+                          }
+                        ],
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "success": "ModQueueItemLoaded",
+                          "failure": "ModQueueItemLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "spinner",
+                        "size": "sm"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "fetch",
+                      "ModQueueItem",
+                      {
+                        "emit": {
+                          "failure": "ModQueueItemLoadFailed",
+                          "success": "ModQueueItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "gap": "sm",
+                            "type": "stack",
+                            "align": "center",
+                            "children": [
+                              {
+                                "name": "shield-alert",
+                                "type": "icon"
+                              },
+                              {
+                                "content": "Moderation Queue",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ],
+                            "direction": "horizontal"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "className": "py-8",
+                            "direction": "vertical",
+                            "gap": "sm",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "type": "spinner"
+                              },
+                              {
+                                "content": "Loading moderation queue…",
+                                "type": "typography",
+                                "variant": "caption",
+                                "color": "muted"
+                              }
+                            ],
+                            "align": "center"
+                          }
+                        ],
+                        "type": "stack",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Enable moderation queue",
+                "description": "Send submissions to a review queue before they go live. Off by default.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, moderation, moderation queue, content review queue, flag for review, content moderation, review flagged content, abuse review, spam queue, report queue",
+                "tier": "policy"
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "autoEscalateThreshold": {
+                "type": "number",
+                "default": 5,
+                "label": "Auto-escalate at",
+                "description": "Flag count after which an item is auto-escalated to senior review",
+                "tier": "policy"
+              },
+              "reviewSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Review slot",
+                "description": "UI slot the moderation queue renders into. Defaults to the modal overlay so it never seizes the host's main content; summoned via OPEN, cleared via CLOSE.",
+                "tier": "internal"
+              },
+              "title": {
+                "type": "string",
+                "default": "Moderation Queue",
+                "label": "Section title",
+                "description": "Heading shown above the moderation queue",
+                "tier": "presentation"
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ModQueueItemReviewPage",
+            "path": "/modqueueitems/review",
+            "traits": [
+              {
+                "ref": "ModQueueItemReview"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ModQueueItemOrbital": [
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.2",
+            "prop": "look",
+            "knob": "tableLook"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ModQueueItemReview",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

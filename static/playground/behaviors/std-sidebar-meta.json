@@ -1,0 +1,627 @@
+{
+  "name": "std-sidebar-meta",
+  "description": "Right-rail meta panel — Linear/Jira/GitHub-style issue sidebar. Stacked label/value rows grouped with dividers. Standalone atom; fetches one SidebarRecord and renders inline.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-sidebar-meta",
+    "version": "1.0.0",
+    "description": "Right-rail meta panel — Linear/Jira/GitHub-style issue sidebar. Stacked label/value rows grouped with dividers. Standalone atom; fetches one SidebarRecord and renders inline.",
+    "orbitals": [
+      {
+        "name": "SidebarMetaOrbital",
+        "entity": {
+          "name": "SidebarRecord",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "default": "Untitled",
+              "description": "The descriptive name of the record.",
+              "synonyms": "name, heading, subject"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "open",
+              "values": [
+                "open",
+                "in_progress",
+                "closed"
+              ],
+              "description": "Current state of the record.",
+              "synonyms": "state, condition, phase"
+            },
+            {
+              "name": "priority",
+              "type": "string",
+              "default": "medium",
+              "values": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "description": "Indicates the level of importance or urgency.",
+              "synonyms": "severity, importance, urgency"
+            },
+            {
+              "name": "assignee",
+              "type": "string",
+              "default": "",
+              "description": "The user currently responsible for the item.",
+              "synonyms": "owner, responsible, assignedTo"
+            },
+            {
+              "name": "reporter",
+              "type": "string",
+              "default": "",
+              "description": "The user who initially reported the item.",
+              "synonyms": "owner, submitter, creator"
+            },
+            {
+              "name": "milestone",
+              "type": "string",
+              "default": "",
+              "description": "The target date for completing related work.",
+              "synonyms": "due date, target date, completion date"
+            },
+            {
+              "name": "labels",
+              "type": "string",
+              "default": "",
+              "description": "A collection of descriptive tags or categories.",
+              "synonyms": "tags, categories, keywords, markers"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "updatedAt",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "errorMessage",
+              "type": "string",
+              "default": "",
+              "description": "Error message associated with the record.",
+              "synonyms": "error, fault, issue"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "SidebarMeta",
+            "category": "interaction",
+            "linkedEntity": "SidebarRecord",
+            "emits": [
+              {
+                "event": "SidebarRecordLoaded",
+                "description": "Signals successful retrieval of data for the sidebar.",
+                "synonyms": "loaded, fetched, received, updated",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  }
+                ]
+              },
+              {
+                "event": "SidebarRecordLoadFailed",
+                "description": "Indicates failure to load the sidebar record.",
+                "synonyms": "error, failed, problem, unsuccessful",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SidebarRecordLoaded",
+                  "name": "SidebarRecord loaded",
+                  "description": "Signals successful retrieval of data for the sidebar.",
+                  "synonyms": "loaded, fetched, received, updated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[object]"
+                    }
+                  ]
+                },
+                {
+                  "key": "SidebarRecordLoadFailed",
+                  "name": "SidebarRecord load failed",
+                  "description": "Indicates failure to load the sidebar record.",
+                  "synonyms": "error, failed, problem, unsuccessful",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SidebarRecord",
+                      {
+                        "limit": 1,
+                        "emit": {
+                          "failure": "SidebarRecordLoadFailed",
+                          "success": "SidebarRecordLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Loading…"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "SidebarRecordLoaded",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "title"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "status"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.priority",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "priority"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.assignee",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "assignee"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.reporter",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "reporter"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.milestone",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "milestone"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.labels",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "labels"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.createdAt",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "createdAt"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.updatedAt",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "updatedAt"
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "look": "flat-bordered",
+                        "type": "card",
+                        "children": [
+                          {
+                            "gap": "md",
+                            "type": "stack",
+                            "direction": "vertical",
+                            "children": [
+                              {
+                                "gap": "xs",
+                                "direction": "vertical",
+                                "children": [
+                                  {
+                                    "color": "muted",
+                                    "content": "@entity.id",
+                                    "type": "typography",
+                                    "variant": "caption"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "weight": "semibold",
+                                    "variant": "h4",
+                                    "content": "@entity.title"
+                                  }
+                                ],
+                                "type": "stack"
+                              },
+                              {
+                                "type": "divider"
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "variant": "overline",
+                                    "content": "Status",
+                                    "color": "muted",
+                                    "type": "typography"
+                                  },
+                                  {
+                                    "size": "sm",
+                                    "type": "badge",
+                                    "label": "@entity.status",
+                                    "variant": "default"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "justify": "between"
+                              },
+                              {
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "color": "muted",
+                                    "type": "typography",
+                                    "content": "Priority",
+                                    "variant": "overline"
+                                  },
+                                  {
+                                    "size": "sm",
+                                    "type": "badge",
+                                    "variant": "neutral",
+                                    "label": "@entity.priority"
+                                  }
+                                ],
+                                "justify": "between",
+                                "align": "center",
+                                "type": "stack"
+                              },
+                              {
+                                "type": "divider"
+                              },
+                              {
+                                "direction": "vertical",
+                                "children": [
+                                  {
+                                    "color": "muted",
+                                    "content": "Assignee",
+                                    "type": "typography",
+                                    "variant": "overline"
+                                  },
+                                  {
+                                    "gap": "sm",
+                                    "children": [
+                                      {
+                                        "size": "xs",
+                                        "type": "avatar",
+                                        "name": "@entity.assignee"
+                                      },
+                                      {
+                                        "type": "typography",
+                                        "content": "@entity.assignee",
+                                        "variant": "body"
+                                      }
+                                    ],
+                                    "align": "center",
+                                    "type": "stack",
+                                    "direction": "horizontal"
+                                  }
+                                ],
+                                "gap": "xs",
+                                "type": "stack"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "type": "typography",
+                                    "color": "muted",
+                                    "content": "Reporter",
+                                    "variant": "overline"
+                                  },
+                                  {
+                                    "direction": "horizontal",
+                                    "type": "stack",
+                                    "gap": "sm",
+                                    "align": "center",
+                                    "children": [
+                                      {
+                                        "size": "xs",
+                                        "type": "avatar",
+                                        "name": "@entity.reporter"
+                                      },
+                                      {
+                                        "variant": "body",
+                                        "type": "typography",
+                                        "content": "@entity.reporter"
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "type": "stack",
+                                "direction": "vertical",
+                                "gap": "xs"
+                              },
+                              {
+                                "type": "divider"
+                              },
+                              {
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "color": "muted",
+                                    "content": "Milestone",
+                                    "type": "typography",
+                                    "variant": "overline"
+                                  },
+                                  {
+                                    "variant": "body",
+                                    "content": "@entity.milestone",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "justify": "between",
+                                "type": "stack",
+                                "gap": "sm"
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "vertical",
+                                "gap": "xs",
+                                "children": [
+                                  {
+                                    "variant": "overline",
+                                    "type": "typography",
+                                    "color": "muted",
+                                    "content": "Labels"
+                                  },
+                                  {
+                                    "size": "sm",
+                                    "type": "badge",
+                                    "variant": "neutral",
+                                    "label": "@entity.labels"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "divider"
+                              },
+                              {
+                                "justify": "between",
+                                "direction": "horizontal",
+                                "type": "stack",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "variant": "overline",
+                                    "color": "muted",
+                                    "content": "Created",
+                                    "type": "typography"
+                                  },
+                                  {
+                                    "color": "muted",
+                                    "content": "@entity.createdAt",
+                                    "variant": "caption",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "gap": "sm"
+                              },
+                              {
+                                "justify": "between",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "typography",
+                                    "content": "Updated",
+                                    "variant": "overline",
+                                    "color": "muted"
+                                  },
+                                  {
+                                    "variant": "caption",
+                                    "content": "@entity.updatedAt",
+                                    "color": "muted",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "align": "center",
+                                "gap": "sm"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "SidebarRecordLoadFailed",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.errorMessage",
+                      "@payload.error"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "error-state",
+                        "message": "@entity.errorMessage",
+                        "title": "Failed to load sidebar"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "loading-state",
+                        "title": "Retrying…"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "SidebarMetaPage",
+            "path": "/sidebar-meta",
+            "traits": [
+              {
+                "ref": "SidebarMeta"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

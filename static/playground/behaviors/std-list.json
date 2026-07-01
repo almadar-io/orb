@@ -1,0 +1,2056 @@
+{
+  "name": "std-list",
+  "description": "std-list as a Function",
+  "level": "molecule",
+  "topic": "core",
+  "schema": {
+    "name": "std-list",
+    "version": "1.0.0",
+    "description": "std-list as a Function",
+    "orbitals": [
+      {
+        "name": "ListItemOrbital",
+        "uses": [
+          {
+            "from": "std/behaviors/std-confirmation",
+            "as": "Confirmation"
+          },
+          {
+            "from": "std/behaviors/std-modal",
+            "as": "Modal"
+          }
+        ],
+        "entity": {
+          "name": "ListItem",
+          "collection": "listitems",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "The text displayed for this list item.",
+              "synonyms": "label, text, display"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "A brief explanation of the list item's content.",
+              "synonyms": "text, details, notes, explanation"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "description": "Current operational state of the item.",
+              "synonyms": "state, condition, flag"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "pendingId",
+              "type": "string",
+              "default": "",
+              "description": "Identifier for a related, pending item.",
+              "synonyms": "reference, relatedId, linkId"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ListItemBrowse",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "interaction",
+            "linkedEntity": "ListItem",
+            "emits": [
+              {
+                "event": "CREATE",
+                "description": "Signals a new item has been successfully created.",
+                "synonyms": "added, new, added, insert",
+                "tier": "domain"
+              },
+              {
+                "event": "EDIT",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "name",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "description",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "DELETE",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "name",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "description",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ListItemLoaded",
+                "description": "Signals a list item has been successfully loaded.",
+                "synonyms": "loaded, fetched, retrieved",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ListItem]"
+                  }
+                ]
+              },
+              {
+                "event": "ListItemLoadFailed",
+                "description": "Indicates a failure to load a list item.",
+                "synonyms": "error, failure, problem, unsuccessful",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "ITEM_CREATED",
+                "triggers": "INIT",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemPersistor"
+                }
+              },
+              {
+                "event": "ITEM_UPDATED",
+                "triggers": "INIT",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemPersistor"
+                }
+              },
+              {
+                "event": "ITEM_DELETED",
+                "triggers": "INIT",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemPersistor"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "browsing"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ListItemLoaded",
+                  "name": "ListItem loaded",
+                  "description": "Signals a list item has been successfully loaded.",
+                  "synonyms": "loaded, fetched, retrieved",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ListItem]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ListItemLoadFailed",
+                  "name": "ListItem load failed",
+                  "description": "Indicates a failure to load a list item.",
+                  "synonyms": "error, failure, problem, unsuccessful",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CREATE",
+                  "name": "Create",
+                  "description": "Signals a new item has been successfully created.",
+                  "synonyms": "added, new, added, insert",
+                  "tier": "domain"
+                },
+                {
+                  "key": "EDIT",
+                  "name": "Edit",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "name",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "DELETE",
+                  "name": "Delete",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "name",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ListItemLoadFailed",
+                          "success": "ListItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "caption",
+                            "content": "Loading list…",
+                            "color": "muted"
+                          }
+                        ],
+                        "className": "py-12",
+                        "gap": "md",
+                        "type": "stack",
+                        "direction": "vertical",
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "browsing",
+                  "event": "ListItemLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "direction": "horizontal",
+                                "type": "stack",
+                                "gap": "md",
+                                "children": [
+                                  {
+                                    "name": "list",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "variant": "h2",
+                                    "type": "typography",
+                                    "content": "ListItems"
+                                  }
+                                ]
+                              },
+                              {
+                                "action": "CREATE",
+                                "icon": "plus",
+                                "variant": "primary",
+                                "label": "Create",
+                                "type": "button"
+                              }
+                            ],
+                            "justify": "between",
+                            "direction": "horizontal",
+                            "gap": "md"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "data-grid",
+                            "entity": "@payload.data",
+                            "itemActions": [
+                              {
+                                "label": "Edit",
+                                "variant": "ghost",
+                                "event": "EDIT"
+                              },
+                              {
+                                "label": "Delete",
+                                "variant": "danger",
+                                "event": "DELETE"
+                              }
+                            ],
+                            "fields": [
+                              {
+                                "label": "Name",
+                                "name": "name",
+                                "variant": "h4",
+                                "icon": "list"
+                              },
+                              {
+                                "name": "description",
+                                "label": "Description",
+                                "variant": "caption"
+                              },
+                              {
+                                "label": "Status",
+                                "variant": "badge",
+                                "name": "status"
+                              }
+                            ]
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack",
+                        "className": "max-w-5xl mx-auto w-full"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "ListItemLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "className": "py-12",
+                        "type": "stack",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "name": "alert-triangle",
+                            "color": "error",
+                            "type": "icon"
+                          },
+                          {
+                            "type": "typography",
+                            "content": "Failed to load list",
+                            "variant": "h3"
+                          },
+                          {
+                            "color": "muted",
+                            "content": "@payload.error",
+                            "type": "typography",
+                            "variant": "body"
+                          },
+                          {
+                            "icon": "rotate-ccw",
+                            "variant": "primary",
+                            "action": "INIT",
+                            "type": "button",
+                            "label": "Retry"
+                          }
+                        ],
+                        "gap": "md",
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ListItemLoadFailed",
+                          "success": "ListItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ListItemLoadFailed",
+                          "success": "ListItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "collection"
+          },
+          {
+            "name": "ListItemCreate",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "interaction",
+            "linkedEntity": "ListItem",
+            "emits": [
+              {
+                "event": "LIST_ITEM_CREATED",
+                "description": "Indicates a successful data save operation.",
+                "synonyms": "submit, persist, confirm",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE",
+                "description": "Indicates the modal window is being closed.",
+                "synonyms": "dismiss, hide, cancel",
+                "tier": "domain"
+              },
+              {
+                "event": "ModalRecordLoadFailed",
+                "description": "Indicates a failure to load the record data.",
+                "synonyms": "error, failure, problem, unsuccessful",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ModalRecordLoaded",
+                "description": "Signals that the modal's data has been successfully loaded.",
+                "synonyms": "loaded, data ready, populated",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ListItem]"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "CREATE",
+                "triggers": "CREATE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemBrowse"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "closed",
+                  "isInitial": true
+                },
+                {
+                  "name": "open"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "CREATE",
+                  "name": "Open",
+                  "description": "A request to display the modal window.",
+                  "synonyms": "show, display, present, reveal",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "row",
+                      "type": "ListItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Indicates the modal window is being closed.",
+                  "synonyms": "dismiss, hide, cancel",
+                  "tier": "domain"
+                },
+                {
+                  "key": "LIST_ITEM_CREATED",
+                  "name": "Save",
+                  "description": "Indicates a successful data save operation.",
+                  "synonyms": "submit, persist, confirm",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ModalRecordLoadFailed",
+                  "name": "ModalRecord load failed",
+                  "description": "Indicates a failure to load the record data.",
+                  "synonyms": "error, failure, problem, unsuccessful",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ModalRecordLoaded",
+                  "name": "ModalRecord loaded",
+                  "description": "Signals that the modal's data has been successfully loaded.",
+                  "synonyms": "loaded, data ready, populated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ListItem]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "closed",
+                  "to": "closed",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ModalRecordLoadFailed",
+                          "success": "ModalRecordLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "closed",
+                  "to": "open",
+                  "event": "CREATE",
+                  "guard": [
+                    "or",
+                    [
+                      "=",
+                      "create",
+                      "create"
+                    ],
+                    "@payload.row"
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "gap": "md",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "name": "plus-circle",
+                                "type": "icon"
+                              },
+                              {
+                                "content": "Create ListItem",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "mode": "create",
+                            "cancelEvent": "CLOSE",
+                            "entity": "@payload.row",
+                            "submitEvent": "LIST_ITEM_CREATED",
+                            "type": "form-section",
+                            "fields": [
+                              "list",
+                              "name",
+                              "description",
+                              "status"
+                            ]
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "notify",
+                      "Cancelled",
+                      "info"
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "LIST_ITEM_CREATED",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "fields": {
+                "type": "[string]",
+                "default": [
+                  "name",
+                  "description",
+                  "status"
+                ],
+                "label": "Which fields appear in the form?",
+                "description": "Entity fields rendered as inputs inside the modal form.",
+                "synonyms": "form fields, inputs, editable fields, field list",
+                "tier": "domain",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "detailPattern": {
+                "type": "pattern",
+                "default": "stack",
+                "label": "Layout pattern",
+                "description": "Pattern used to arrange the form body",
+                "tier": "internal"
+              },
+              "detailSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Render slot",
+                "description": "UI slot the modal renders into",
+                "tier": "internal"
+              },
+              "icon": {
+                "type": "string",
+                "default": "plus-circle",
+                "label": "Which icon appears in the modal header?",
+                "description": "Lucide icon name shown next to the modal title.",
+                "synonyms": "header icon, modal icon, title icon",
+                "tier": "presentation"
+              },
+              "title": {
+                "type": "string",
+                "default": "Create ListItem",
+                "label": "What should the modal heading say?",
+                "description": "Heading displayed at the top of the modal.",
+                "synonyms": "modal title, dialog heading, panel title, form title",
+                "tier": "presentation"
+              },
+              "mode": {
+                "type": "string",
+                "default": "create",
+                "label": "Is this for creating or editing?",
+                "description": "create = blank form; edit = pre-filled from the selected row.",
+                "synonyms": "form mode, create or edit, new or update, add or modify",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-modal",
+              "alias": "Modal",
+              "originalName": "ModalRecordModal"
+            },
+            "sourceEntityDefinition": {
+              "name": "ModalRecord",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "description": "A user-facing identifier for the modal.",
+                  "synonyms": "title, label, identifier"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "description": "A textual explanation of the modal's content or function.",
+                  "synonyms": "details, explanation, notes, summary"
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "default": "active",
+                  "values": [
+                    "active",
+                    "inactive",
+                    "pending"
+                  ],
+                  "description": "Current operational state of the record.",
+                  "synonyms": "state, condition, flag"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ListItemEdit",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "interaction",
+            "linkedEntity": "ListItem",
+            "emits": [
+              {
+                "event": "LIST_ITEM_UPDATED",
+                "description": "Indicates a successful data save operation.",
+                "synonyms": "submit, persist, confirm",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE",
+                "description": "Indicates the modal window is being closed.",
+                "synonyms": "dismiss, hide, cancel",
+                "tier": "domain"
+              },
+              {
+                "event": "ModalRecordLoadFailed",
+                "description": "Indicates a failure to load the record data.",
+                "synonyms": "error, failure, problem, unsuccessful",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ModalRecordLoaded",
+                "description": "Signals that the modal's data has been successfully loaded.",
+                "synonyms": "loaded, data ready, populated",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ListItem]"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "EDIT",
+                "triggers": "EDIT",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemBrowse"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "closed",
+                  "isInitial": true
+                },
+                {
+                  "name": "open"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "EDIT",
+                  "name": "Open",
+                  "description": "A request to display the modal window.",
+                  "synonyms": "show, display, present, reveal",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "row",
+                      "type": "ListItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Indicates the modal window is being closed.",
+                  "synonyms": "dismiss, hide, cancel",
+                  "tier": "domain"
+                },
+                {
+                  "key": "LIST_ITEM_UPDATED",
+                  "name": "Save",
+                  "description": "Indicates a successful data save operation.",
+                  "synonyms": "submit, persist, confirm",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ModalRecordLoadFailed",
+                  "name": "ModalRecord load failed",
+                  "description": "Indicates a failure to load the record data.",
+                  "synonyms": "error, failure, problem, unsuccessful",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ModalRecordLoaded",
+                  "name": "ModalRecord loaded",
+                  "description": "Signals that the modal's data has been successfully loaded.",
+                  "synonyms": "loaded, data ready, populated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ListItem]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "closed",
+                  "to": "closed",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ModalRecordLoadFailed",
+                          "success": "ModalRecordLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "closed",
+                  "to": "open",
+                  "event": "EDIT",
+                  "guard": [
+                    "or",
+                    [
+                      "=",
+                      "edit",
+                      "create"
+                    ],
+                    "@payload.row"
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "gap": "md",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "name": "edit",
+                                "type": "icon"
+                              },
+                              {
+                                "content": "Edit ListItem",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "mode": "edit",
+                            "cancelEvent": "CLOSE",
+                            "entity": "@payload.row",
+                            "submitEvent": "LIST_ITEM_UPDATED",
+                            "type": "form-section",
+                            "fields": [
+                              "list",
+                              "name",
+                              "description",
+                              "status"
+                            ]
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "notify",
+                      "Cancelled",
+                      "info"
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "LIST_ITEM_UPDATED",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "fields": {
+                "type": "[string]",
+                "default": [
+                  "name",
+                  "description",
+                  "status"
+                ],
+                "label": "Which fields appear in the form?",
+                "description": "Entity fields rendered as inputs inside the modal form.",
+                "synonyms": "form fields, inputs, editable fields, field list",
+                "tier": "domain",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "detailPattern": {
+                "type": "pattern",
+                "default": "stack",
+                "label": "Layout pattern",
+                "description": "Pattern used to arrange the form body",
+                "tier": "internal"
+              },
+              "detailSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Render slot",
+                "description": "UI slot the modal renders into",
+                "tier": "internal"
+              },
+              "icon": {
+                "type": "string",
+                "default": "edit",
+                "label": "Which icon appears in the modal header?",
+                "description": "Lucide icon name shown next to the modal title.",
+                "synonyms": "header icon, modal icon, title icon",
+                "tier": "presentation"
+              },
+              "title": {
+                "type": "string",
+                "default": "Edit ListItem",
+                "label": "What should the modal heading say?",
+                "description": "Heading displayed at the top of the modal.",
+                "synonyms": "modal title, dialog heading, panel title, form title",
+                "tier": "presentation"
+              },
+              "mode": {
+                "type": "string",
+                "default": "edit",
+                "label": "Is this for creating or editing?",
+                "description": "create = blank form; edit = pre-filled from the selected row.",
+                "synonyms": "form mode, create or edit, new or update, add or modify",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-modal",
+              "alias": "Modal",
+              "originalName": "ModalRecordModal"
+            },
+            "sourceEntityDefinition": {
+              "name": "ModalRecord",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "description": "A user-facing identifier for the modal.",
+                  "synonyms": "title, label, identifier"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "description": "A textual explanation of the modal's content or function.",
+                  "synonyms": "details, explanation, notes, summary"
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "default": "active",
+                  "values": [
+                    "active",
+                    "inactive",
+                    "pending"
+                  ],
+                  "description": "Current operational state of the record.",
+                  "synonyms": "state, condition, flag"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ListItemDelete",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "name",
+                "pendingId"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "ListItem",
+            "emits": [
+              {
+                "event": "CONFIRM_DELETE",
+                "description": "Indicates the user has approved the action.",
+                "synonyms": "approve, accept, ok",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "CANCEL",
+                "description": "Indicates the action was cancelled by the user.",
+                "synonyms": "dismiss, reject, undo",
+                "tier": "domain"
+              },
+              {
+                "event": "ConfirmActionLoadFailed",
+                "description": "Indicates failure to load the confirmation action.",
+                "synonyms": "error, failure, failed, problem",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ConfirmActionLoaded",
+                "description": "Indicates the confirmation action has been successfully loaded.",
+                "synonyms": "loaded, ready, initialized",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ListItem]"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "DELETE",
+                "triggers": "DELETE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemBrowse"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "confirming"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "DELETE",
+                  "name": "Request",
+                  "description": "A request for confirmation before proceeding.",
+                  "synonyms": "prompt, ask, verify",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ListItem"
+                    }
+                  ]
+                },
+                {
+                  "key": "CONFIRM_DELETE",
+                  "name": "Confirm",
+                  "description": "Indicates the user has approved the action.",
+                  "synonyms": "approve, accept, ok",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CANCEL",
+                  "name": "Cancel",
+                  "description": "Indicates the action was cancelled by the user.",
+                  "synonyms": "dismiss, reject, undo",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Indicates the user dismissed the confirmation.",
+                  "synonyms": "dismiss, decline, reject",
+                  "tier": "domain"
+                },
+                {
+                  "key": "ConfirmActionLoadFailed",
+                  "name": "ConfirmAction load failed",
+                  "description": "Indicates failure to load the confirmation action.",
+                  "synonyms": "error, failure, failed, problem",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ConfirmActionLoaded",
+                  "name": "ConfirmAction loaded",
+                  "description": "Indicates the confirmation action has been successfully loaded.",
+                  "synonyms": "loaded, ready, initialized",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ListItem]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ListItem",
+                      {
+                        "emit": {
+                          "failure": "ConfirmActionLoadFailed",
+                          "success": "ConfirmActionLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "confirming",
+                  "event": "DELETE",
+                  "guard": "@payload.row",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pendingId",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.name",
+                      "@payload.row.name"
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "name": "alert-triangle",
+                                "type": "icon"
+                              },
+                              {
+                                "type": "typography",
+                                "variant": "h3",
+                                "content": "Delete ListItem"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "alert",
+                            "variant": "error",
+                            "message": "This action cannot be undone."
+                          },
+                          {
+                            "content": "@entity.name",
+                            "variant": "h4",
+                            "type": "typography"
+                          },
+                          {
+                            "content": "@entity.pendingId",
+                            "variant": "caption",
+                            "color": "muted",
+                            "type": "typography"
+                          },
+                          {
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "justify": "end",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "label": "Cancel",
+                                "type": "button",
+                                "variant": "ghost",
+                                "action": "CANCEL"
+                              },
+                              {
+                                "label": "Delete",
+                                "action": "CONFIRM_DELETE",
+                                "icon": "check",
+                                "type": "button",
+                                "actionPayload": {
+                                  "id": "@payload.id"
+                                },
+                                "variant": "danger"
+                              }
+                            ]
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "confirming",
+                  "to": "idle",
+                  "event": "CONFIRM_DELETE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "confirming",
+                  "to": "idle",
+                  "event": "CANCEL",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "confirming",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "title": {
+                "type": "string",
+                "default": "Delete ListItem",
+                "label": "Modal title",
+                "description": "Heading shown at the top of the confirmation modal",
+                "tier": "presentation"
+              },
+              "confirmLabel": {
+                "type": "string",
+                "default": "Delete",
+                "label": "Confirm button",
+                "description": "Label on the primary confirm action button",
+                "tier": "presentation"
+              },
+              "alertMessage": {
+                "type": "string",
+                "default": "This action cannot be undone.",
+                "label": "Alert message",
+                "description": "Body text explaining what the user is confirming",
+                "tier": "presentation"
+              },
+              "icon": {
+                "type": "string",
+                "default": "alert-triangle",
+                "label": "Icon",
+                "description": "Icon name displayed in the confirmation modal header",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-confirmation",
+              "alias": "Confirmation",
+              "originalName": "ConfirmActionConfirmation"
+            },
+            "sourceEntityDefinition": {
+              "name": "ConfirmAction",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "description": "A user-facing identifier for the confirmation action.",
+                  "synonyms": "label, title, identifier"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "description": "A detailed explanation of the action being confirmed.",
+                  "synonyms": "details, explanation, notes, information"
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "default": "active",
+                  "values": [
+                    "active",
+                    "inactive",
+                    "pending"
+                  ],
+                  "description": "Indicates the current operational state of the action.",
+                  "synonyms": "state, condition, enabled"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "pendingId",
+                  "type": "string",
+                  "default": "",
+                  "description": "Unique identifier for the pending confirmation request.",
+                  "synonyms": "requestId, referenceId, confirmationId"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ListItemPersistor",
+            "category": "lifecycle",
+            "linkedEntity": "ListItem",
+            "emits": [
+              {
+                "event": "ITEM_CREATED",
+                "description": "Signals a new item has been added to the list.",
+                "synonyms": "added, new, appended",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "ITEM_UPDATED",
+                "description": "Signals a change in an item's data.",
+                "synonyms": "modified, changed, refreshed",
+                "tier": "presentation",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "ITEM_DELETED",
+                "description": "Signals that a list item has been removed.",
+                "synonyms": "removed, discarded, purged",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "LIST_ITEM_CREATED",
+                "triggers": "DO_CREATE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemCreate"
+                }
+              },
+              {
+                "event": "LIST_ITEM_UPDATED",
+                "triggers": "DO_UPDATE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemEdit"
+                }
+              },
+              {
+                "event": "CONFIRM_DELETE",
+                "triggers": "DO_DELETE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ListItemDelete"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "DO_CREATE",
+                  "name": "Do Create",
+                  "description": "Indicates a request to create a new item.",
+                  "synonyms": "add, new, insert",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "ListItem",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "DO_UPDATE",
+                  "name": "Do Update",
+                  "description": "Indicates a data item has been modified.",
+                  "synonyms": "modified, changed, refreshed",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "ListItem",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "DO_DELETE",
+                  "name": "Do Delete",
+                  "description": "Indicates a request to remove an item from the list.",
+                  "synonyms": "remove, discard, erase",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ITEM_CREATED",
+                  "name": "Item Created",
+                  "description": "Signals a new item has been added to the list.",
+                  "synonyms": "added, new, appended",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ITEM_UPDATED",
+                  "name": "Item Updated",
+                  "description": "Signals a change in an item's data.",
+                  "synonyms": "modified, changed, refreshed",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ITEM_DELETED",
+                  "name": "Item Deleted",
+                  "description": "Signals that a list item has been removed.",
+                  "synonyms": "removed, discarded, purged",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT"
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "DO_CREATE",
+                  "effects": [
+                    [
+                      "persist",
+                      "create",
+                      "ListItem",
+                      "@payload.data",
+                      {
+                        "emit": {
+                          "success": "ITEM_CREATED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "DO_UPDATE",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "ListItem",
+                      "@payload.data",
+                      {
+                        "emit": {
+                          "success": "ITEM_UPDATED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "DO_DELETE",
+                  "effects": [
+                    [
+                      "persist",
+                      "delete",
+                      "ListItem",
+                      "@payload.id",
+                      {
+                        "emit": {
+                          "success": "ITEM_DELETED"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ListItemPage",
+            "path": "/listitems",
+            "traits": [
+              {
+                "ref": "ListItemBrowse"
+              },
+              {
+                "ref": "ListItemCreate"
+              },
+              {
+                "ref": "ListItemEdit"
+              },
+              {
+                "ref": "ListItemDelete"
+              },
+              {
+                "ref": "ListItemPersistor"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ListItemOrbital": [
+          {
+            "trait": "ListItemCreate",
+            "patternPath": "root.children.0.children.0",
+            "prop": "name",
+            "knob": "icon"
+          },
+          {
+            "trait": "ListItemCreate",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ListItemCreate",
+            "patternPath": "root.children.2",
+            "prop": "mode",
+            "knob": "mode"
+          },
+          {
+            "trait": "ListItemCreate",
+            "patternPath": "root.children.2",
+            "prop": "fields",
+            "knob": "fields"
+          },
+          {
+            "trait": "ListItemCreate",
+            "patternPath": "root",
+            "prop": "type",
+            "knob": "detailPattern"
+          },
+          {
+            "trait": "ListItemEdit",
+            "patternPath": "root.children.0.children.0",
+            "prop": "name",
+            "knob": "icon"
+          },
+          {
+            "trait": "ListItemEdit",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ListItemEdit",
+            "patternPath": "root.children.2",
+            "prop": "mode",
+            "knob": "mode"
+          },
+          {
+            "trait": "ListItemEdit",
+            "patternPath": "root.children.2",
+            "prop": "fields",
+            "knob": "fields"
+          },
+          {
+            "trait": "ListItemEdit",
+            "patternPath": "root",
+            "prop": "type",
+            "knob": "detailPattern"
+          },
+          {
+            "trait": "ListItemDelete",
+            "patternPath": "root.children.0.children.0",
+            "prop": "name",
+            "knob": "icon"
+          },
+          {
+            "trait": "ListItemDelete",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "ListItemDelete",
+            "patternPath": "root.children.2",
+            "prop": "message",
+            "knob": "alertMessage"
+          },
+          {
+            "trait": "ListItemDelete",
+            "patternPath": "root.children.5.children.1",
+            "prop": "label",
+            "knob": "confirmLabel"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

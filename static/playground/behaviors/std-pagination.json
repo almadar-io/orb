@@ -1,0 +1,303 @@
+{
+  "name": "std-pagination",
+  "description": "std-pagination — single primitive: pagination control. PAGE accepts the Pagination component's `{page}` emit; ITEMS_LOADED accepts an upstream `{data:[ObjectSpec]}` payload and derives totalPages = ceil(len/pageSize). Molecules wire `BrowseItemLoaded -> ITEMS_LOADED` to keep it in lockstep with the data hub.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-pagination",
+    "version": "1.0.0",
+    "description": "std-pagination — single primitive: pagination control. PAGE accepts the Pagination component's `{page}` emit; ITEMS_LOADED accepts an upstream `{data:[ObjectSpec]}` payload and derives totalPages = ceil(len/pageSize). Molecules wire `BrowseItemLoaded -> ITEMS_LOADED` to keep it in lockstep with the data hub.",
+    "orbitals": [
+      {
+        "name": "PagedItemOrbital",
+        "entity": {
+          "name": "PagedItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "currentPage",
+              "type": "number",
+              "default": 1,
+              "description": "The current page number being displayed.",
+              "synonyms": "page, current, index"
+            },
+            {
+              "name": "totalPages",
+              "type": "number",
+              "default": 1,
+              "description": "The total number of pages available.",
+              "synonyms": "page count, total pages, number of pages"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "PagedItemPagination",
+            "category": "interaction",
+            "linkedEntity": "PagedItem",
+            "emits": [
+              {
+                "event": "PAGE",
+                "description": "Indicates a change in the currently displayed page.",
+                "synonyms": "page-change, navigate, go-to",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "page",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "PagedItemLoaded",
+                "description": "Indicates a single item has been loaded within a paginated view.",
+                "synonyms": "item-loaded, data-received, entry-loaded",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[PagedItem]"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "PagedItemLoaded",
+                  "name": "PagedItem loaded",
+                  "description": "Indicates a single item has been loaded within a paginated view.",
+                  "synonyms": "item-loaded, data-received, entry-loaded",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[PagedItem]"
+                    }
+                  ]
+                },
+                {
+                  "key": "PAGE",
+                  "name": "Page",
+                  "description": "Indicates a change in the currently displayed page.",
+                  "synonyms": "page-change, navigate, go-to",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "page",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "ITEMS_LOADED",
+                  "name": "Items Loaded",
+                  "description": "Data has been loaded and pagination limits updated.",
+                  "synonyms": "data-ready, content-loaded, refresh",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ObjectSpec]"
+                    },
+                    {
+                      "name": "totalCount",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.currentPage",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.totalPages",
+                      1
+                    ],
+                    [
+                      "fetch",
+                      "PagedItem",
+                      {
+                        "emit": {
+                          "success": "PagedItemLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "pageChangeEvent": "PAGE",
+                        "currentPage": "@entity.currentPage",
+                        "showPageSize": false,
+                        "totalPages": "@entity.totalPages",
+                        "type": "pagination"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "PagedItemLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "currentPage": "@entity.currentPage",
+                        "pageChangeEvent": "PAGE",
+                        "showPageSize": false,
+                        "totalPages": "@entity.totalPages",
+                        "type": "pagination"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "PAGE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.currentPage",
+                      "@payload.page"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "showPageSize": false,
+                        "pageChangeEvent": "PAGE",
+                        "currentPage": "@entity.currentPage",
+                        "type": "pagination",
+                        "totalPages": "@entity.totalPages"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ITEMS_LOADED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.totalPages",
+                      [
+                        "math/ceil",
+                        [
+                          "/",
+                          "@payload.totalCount",
+                          10
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "totalPages": "@entity.totalPages",
+                        "currentPage": "@entity.currentPage",
+                        "showPageSize": false,
+                        "pageChangeEvent": "PAGE",
+                        "type": "pagination"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "event": {
+                "type": "string",
+                "default": "PAGE",
+                "label": "Page-change event",
+                "description": "Event emitted when the user picks a new page",
+                "tier": "internal"
+              },
+              "pageSize": {
+                "type": "number",
+                "default": 10,
+                "label": "Page size",
+                "description": "Rows per page used to derive total page count",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "PagedItemPaginationPage",
+            "path": "/pageditems/paginated",
+            "traits": [
+              {
+                "ref": "PagedItemPagination"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "PagedItemOrbital": [
+          {
+            "trait": "PagedItemPagination",
+            "patternPath": "root",
+            "prop": "pageChangeEvent",
+            "knob": "event"
+          },
+          {
+            "trait": "PagedItemPagination",
+            "patternPath": "root",
+            "prop": "pageChangeEvent",
+            "knob": "event"
+          },
+          {
+            "trait": "PagedItemPagination",
+            "patternPath": "root",
+            "prop": "pageChangeEvent",
+            "knob": "event"
+          },
+          {
+            "trait": "PagedItemPagination",
+            "patternPath": "root",
+            "prop": "pageChangeEvent",
+            "knob": "event"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

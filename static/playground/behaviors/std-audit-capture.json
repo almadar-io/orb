@@ -1,0 +1,377 @@
+{
+  "name": "std-audit-capture",
+  "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind (empty = capture all). Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-audit-capture",
+    "version": "1.2.0",
+    "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind (empty = capture all). Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
+    "orbitals": [
+      {
+        "name": "AuditCaptureOrbital",
+        "entity": {
+          "name": "AuditEntry",
+          "collection": "audit_entries",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "actor",
+              "type": "string",
+              "default": "",
+              "description": "The user or system performing the action.",
+              "synonyms": "user, source, originator"
+            },
+            {
+              "name": "action",
+              "type": "string",
+              "default": "",
+              "description": "The specific operation performed on the entity.",
+              "synonyms": "operation, event, activity, change"
+            },
+            {
+              "name": "entityType",
+              "type": "string",
+              "default": "",
+              "description": "The type of entity that was modified.",
+              "synonyms": "type, kind, class"
+            },
+            {
+              "name": "entityId",
+              "type": "string",
+              "default": "",
+              "description": "Unique identifier for the entity being audited.",
+              "synonyms": "entity identifier, record id, item id"
+            },
+            {
+              "name": "before",
+              "type": "object",
+              "default": {},
+              "description": "The state of the entity prior to the modification.",
+              "synonyms": "previous, original, old value"
+            },
+            {
+              "name": "after",
+              "type": "object",
+              "default": {},
+              "description": "The state of the entity after a modification.",
+              "synonyms": "new, updated, post, subsequent"
+            },
+            {
+              "name": "recordedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the audit event was recorded.",
+              "synonyms": "timestamp, date, time"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "AuditCaptureListener",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "action",
+                "actor",
+                "after",
+                "before",
+                "entityId",
+                "entityType",
+                "recordedAt"
+              ]
+            },
+            "category": "lifecycle",
+            "capabilities": [
+              "audit",
+              "compliance"
+            ],
+            "linkedEntity": "AuditEntry",
+            "emits": [
+              {
+                "event": "AuditRecorded",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "actor",
+                    "type": "string"
+                  },
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "entityType",
+                    "type": "string"
+                  },
+                  {
+                    "name": "entityId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "recordedAt",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "EntityMutated",
+                  "name": "Entity mutated",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "AuditRecorded",
+                  "name": "Audit recorded",
+                  "payloadSchema": [
+                    {
+                      "name": "actor",
+                      "type": "string"
+                    },
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "entityType",
+                      "type": "string"
+                    },
+                    {
+                      "name": "entityId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "recordedAt",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "EntityMutated",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "when",
+                      [
+                        "or",
+                        [
+                          "=",
+                          [
+                            "array/len",
+                            []
+                          ],
+                          0
+                        ],
+                        [
+                          "array/includes",
+                          [],
+                          [
+                            "object/get",
+                            "@payload.data",
+                            "kind",
+                            ""
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.actor",
+                          "@user.id"
+                        ],
+                        [
+                          "set",
+                          "@entity.action",
+                          [
+                            "object/get",
+                            "@payload.data",
+                            "kind",
+                            "EntityMutated"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.entityType",
+                          ""
+                        ],
+                        [
+                          "set",
+                          "@entity.entityId",
+                          [
+                            "object/get",
+                            "@payload.data",
+                            "id",
+                            ""
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.before",
+                          [
+                            "if",
+                            false,
+                            [
+                              "object/omit",
+                              [
+                                "object/get",
+                                "@payload.data",
+                                "before",
+                                {}
+                              ],
+                              []
+                            ],
+                            {}
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.after",
+                          [
+                            "if",
+                            false,
+                            [
+                              "object/omit",
+                              [
+                                "object/get",
+                                "@payload.data",
+                                "after",
+                                {}
+                              ],
+                              []
+                            ],
+                            {}
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.recordedAt",
+                          0
+                        ],
+                        [
+                          "persist",
+                          "create",
+                          "AuditEntry",
+                          {
+                            "before": "@entity.before",
+                            "entityId": "@entity.entityId",
+                            "entityType": "",
+                            "recordedAt": 0,
+                            "action": "@entity.action",
+                            "actor": "@user.id",
+                            "after": "@entity.after"
+                          }
+                        ],
+                        [
+                          "emit",
+                          "AuditRecorded",
+                          {
+                            "entityId": "@entity.entityId",
+                            "action": "@entity.action",
+                            "entityType": "",
+                            "actor": "@user.id",
+                            "recordedAt": 0
+                          }
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "captureEventTypes": {
+                "type": "[string]",
+                "default": [],
+                "label": "Event-kind filter",
+                "description": "When set, only @payload.data.kind values in this list are audited. Empty list = capture every event. Requires the upstream event to include a `kind` field on its payload.",
+                "tier": "internal",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "excludeFields": {
+                "type": "[string]",
+                "default": [],
+                "label": "Skip fields",
+                "description": "Entity fields to omit from the before/after snapshots — e.g. passwords or other sensitive fields you do not want copied into the audit trail.",
+                "tier": "internal",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "captureBeforeAfter": {
+                "type": "boolean",
+                "default": false,
+                "label": "Store before-and-after snapshots?",
+                "description": "Store a full before-and-after snapshot of each change. More detail, but a larger audit log.",
+                "synonyms": "before after, snapshot, diff, change snapshot, field diff",
+                "tier": "policy"
+              },
+              "captureEntity": {
+                "type": "string",
+                "default": "",
+                "label": "Entity to audit",
+                "description": "Type name of the entity whose mutations get logged",
+                "tier": "internal"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Track every change",
+                "description": "Keep an audit trail of every change to records — who changed what, and when. Off by default.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, audit, audit trail, log changes, track changes, who edited what, mutation log, change history, edit history, modification log, accountability log, record changes, log every edit, compliance log",
+                "tier": "policy"
+              },
+              "retentionDays": {
+                "type": "number",
+                "default": 2555,
+                "label": "How long should the audit log be kept (days)?",
+                "description": "Number of days to retain audit entries. Default 2555 ≈ 7 years, typical for compliance.",
+                "synonyms": "log retention, keep for, audit expiry, retention period, log lifetime",
+                "tier": "policy"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "AuditCapturePage",
+            "path": "/audit-capture",
+            "traits": [
+              {
+                "ref": "AuditCaptureListener"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

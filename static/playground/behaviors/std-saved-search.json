@@ -1,0 +1,899 @@
+{
+  "name": "std-saved-search",
+  "description": "std-saved-search — persisted query + alert subscription. Owns a SavedSearch entity (one row per saved query) and a single manage trait that lists saved searches in a data-grid, lets users toggle their alert subscription / rename the search / delete it, and persists each change.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-saved-search",
+    "version": "1.0.0",
+    "description": "std-saved-search — persisted query + alert subscription. Owns a SavedSearch entity (one row per saved query) and a single manage trait that lists saved searches in a data-grid, lets users toggle their alert subscription / rename the search / delete it, and persists each change.",
+    "orbitals": [
+      {
+        "name": "SavedSearchOrbital",
+        "entity": {
+          "name": "SavedSearch",
+          "collection": "savedsearches",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "A user-defined label for the saved search.",
+              "synonyms": "title, label, search name"
+            },
+            {
+              "name": "query",
+              "type": "string",
+              "description": "The text of the search query.",
+              "synonyms": "search, expression, criteria"
+            },
+            {
+              "name": "filters",
+              "type": "object",
+              "description": "Criteria used to define the search.",
+              "synonyms": "criteria, conditions, constraints"
+            },
+            {
+              "name": "alertEnabled",
+              "type": "boolean",
+              "default": false,
+              "description": "Indicates whether alerts are enabled for this saved search.",
+              "synonyms": "enabled, active, notification status"
+            },
+            {
+              "name": "alertFrequency",
+              "type": "string",
+              "default": "daily",
+              "values": [
+                "instant",
+                "daily",
+                "weekly"
+              ],
+              "description": "How often alerts are triggered.",
+              "synonyms": "frequency, interval, recurrence"
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "description": "Identifier of the user who created the saved search.",
+              "synonyms": "creator, owner, user_id"
+            },
+            {
+              "name": "lastNotifiedAt",
+              "type": "string",
+              "description": "Timestamp of the last notification sent.",
+              "synonyms": "last_notification, notified_at, last_alert"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "SavedSearchManage",
+            "category": "interaction",
+            "linkedEntity": "SavedSearch",
+            "emits": [
+              {
+                "event": "TOGGLE_ALERT",
+                "description": "Indicates the alert subscription status has been changed.",
+                "synonyms": "subscribe, unsubscribe, notify, alert-state",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "DELETE",
+                "description": "Signals a saved search has been removed.",
+                "synonyms": "remove, discard, clear",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "EDIT",
+                "description": "Indicates a saved search is being modified.",
+                "synonyms": "modify, update, change",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "RENAME",
+                "description": "Indicates a saved search has been renamed.",
+                "synonyms": "update, modify, change name",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CHANGE_FREQUENCY",
+                "description": "Indicates a change in the alert frequency setting.",
+                "synonyms": "update, modify, adjust, refresh",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "SAVE",
+                "description": "Indicates a saved search has been persisted.",
+                "synonyms": "persist, store, update",
+                "tier": "domain"
+              },
+              {
+                "event": "CANCEL",
+                "description": "Aborts the current operation.",
+                "synonyms": "abort, dismiss, undo",
+                "tier": "domain"
+              },
+              {
+                "event": "SavedSearchLoaded",
+                "description": "Signals that a saved search has been successfully retrieved.",
+                "synonyms": "loaded, retrieved, fetched",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[SavedSearch]"
+                  }
+                ]
+              },
+              {
+                "event": "SavedSearchLoadFailed",
+                "description": "Indicates a failure to load saved search data.",
+                "synonyms": "error, failure, load error",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "SavedSearchUpdated",
+                "description": "Indicates a saved search has been modified and persisted.",
+                "synonyms": "modified, changed, updated, persisted",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "name",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "query",
+                        "type": "string"
+                      },
+                      {
+                        "name": "filters",
+                        "type": "object"
+                      },
+                      {
+                        "name": "alertEnabled",
+                        "type": "boolean"
+                      },
+                      {
+                        "name": "alertFrequency",
+                        "type": "string"
+                      },
+                      {
+                        "name": "userId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "lastNotifiedAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "SavedSearchDeleted",
+                "description": "Indicates a saved search has been removed.",
+                "synonyms": "removed, purged, discarded",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "browsing"
+                },
+                {
+                  "name": "editing"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SavedSearchLoaded",
+                  "name": "SavedSearch loaded",
+                  "description": "Signals that a saved search has been successfully retrieved.",
+                  "synonyms": "loaded, retrieved, fetched",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[SavedSearch]"
+                    }
+                  ]
+                },
+                {
+                  "key": "SavedSearchLoadFailed",
+                  "name": "SavedSearch load failed",
+                  "description": "Indicates a failure to load saved search data.",
+                  "synonyms": "error, failure, load error",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "TOGGLE_ALERT",
+                  "name": "Toggle Alert",
+                  "description": "Indicates the alert subscription status has been changed.",
+                  "synonyms": "subscribe, unsubscribe, notify, alert-state",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "enabled",
+                      "type": "boolean",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "DELETE",
+                  "name": "Delete",
+                  "description": "Signals a saved search has been removed.",
+                  "synonyms": "remove, discard, clear",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "EDIT",
+                  "name": "Edit",
+                  "description": "Indicates a saved search is being modified.",
+                  "synonyms": "modify, update, change",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SavedSearchUpdated",
+                  "name": "SavedSearch updated",
+                  "description": "Indicates a saved search has been modified and persisted.",
+                  "synonyms": "modified, changed, updated, persisted",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "SavedSearch"
+                    }
+                  ]
+                },
+                {
+                  "key": "SavedSearchDeleted",
+                  "name": "SavedSearch deleted",
+                  "description": "Indicates a saved search has been removed.",
+                  "synonyms": "removed, purged, discarded",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RENAME",
+                  "name": "Rename",
+                  "description": "Indicates a saved search has been renamed.",
+                  "synonyms": "update, modify, change name",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CHANGE_FREQUENCY",
+                  "name": "Change Frequency",
+                  "description": "Indicates a change in the alert frequency setting.",
+                  "synonyms": "update, modify, adjust, refresh",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SAVE",
+                  "name": "Save",
+                  "description": "Indicates a saved search has been persisted.",
+                  "synonyms": "persist, store, update",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CANCEL",
+                  "name": "Cancel",
+                  "description": "Aborts the current operation.",
+                  "synonyms": "abort, dismiss, undo",
+                  "tier": "domain"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SavedSearch",
+                      {
+                        "emit": {
+                          "success": "SavedSearchLoaded",
+                          "failure": "SavedSearchLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "type": "typography",
+                            "content": "Loading saved searches…",
+                            "color": "muted",
+                            "variant": "caption"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack",
+                        "className": "py-12",
+                        "gap": "md",
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "browsing",
+                  "event": "SavedSearchLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "md",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "gap": "sm",
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "name": "bookmark",
+                                "type": "icon"
+                              },
+                              {
+                                "variant": "h3",
+                                "type": "typography",
+                                "content": "Saved Searches"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "itemActions": [
+                              {
+                                "variant": "secondary",
+                                "icon": "bell",
+                                "event": "TOGGLE_ALERT",
+                                "label": "Toggle alert"
+                              },
+                              {
+                                "icon": "pencil",
+                                "variant": "secondary",
+                                "event": "EDIT",
+                                "label": "Edit"
+                              },
+                              {
+                                "icon": "trash-2",
+                                "label": "Delete",
+                                "event": "DELETE",
+                                "variant": "danger"
+                              }
+                            ],
+                            "look": "dense",
+                            "entity": "@payload.data",
+                            "type": "data-grid",
+                            "gap": "sm",
+                            "fields": [
+                              {
+                                "variant": "h4",
+                                "name": "name",
+                                "label": "Name"
+                              },
+                              {
+                                "label": "Query",
+                                "variant": "caption",
+                                "name": "query"
+                              },
+                              {
+                                "name": "alertFrequency",
+                                "label": "Frequency",
+                                "variant": "badge"
+                              },
+                              {
+                                "label": "Alerts",
+                                "variant": "badge",
+                                "name": "alertEnabled"
+                              }
+                            ],
+                            "cols": 1
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "SavedSearchLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "alert",
+                        "variant": "error",
+                        "message": "@payload.error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "TOGGLE_ALERT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.alertEnabled",
+                      "@payload.enabled"
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "SavedSearch",
+                      "@entity",
+                      {
+                        "emit": {
+                          "success": "SavedSearchUpdated",
+                          "failure": "SavedSearchLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "DELETE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "persist",
+                      "delete",
+                      "SavedSearch",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "SavedSearchLoadFailed",
+                          "success": "SavedSearchDeleted"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "editing",
+                  "event": "EDIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "gap": "sm",
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "type": "icon",
+                                "name": "pencil"
+                              },
+                              {
+                                "content": "Edit saved search",
+                                "type": "typography",
+                                "variant": "h3"
+                              }
+                            ],
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "input",
+                            "placeholder": "Name",
+                            "action": "RENAME",
+                            "value": "@entity.name"
+                          },
+                          {
+                            "action": "CHANGE_FREQUENCY",
+                            "type": "select",
+                            "value": "@entity.alertFrequency",
+                            "options": [
+                              {
+                                "label": "Instant",
+                                "value": "instant"
+                              },
+                              {
+                                "value": "daily",
+                                "label": "Daily"
+                              },
+                              {
+                                "label": "Weekly",
+                                "value": "weekly"
+                              }
+                            ],
+                            "placeholder": "Alert frequency"
+                          },
+                          {
+                            "label": "Alerts enabled",
+                            "checked": "@entity.alertEnabled",
+                            "type": "switch"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "button",
+                                "variant": "primary",
+                                "action": "SAVE",
+                                "icon": "check",
+                                "label": "Save"
+                              },
+                              {
+                                "variant": "secondary",
+                                "icon": "x",
+                                "label": "Cancel",
+                                "action": "CANCEL",
+                                "type": "button"
+                              }
+                            ],
+                            "gap": "sm",
+                            "type": "stack",
+                            "direction": "horizontal"
+                          }
+                        ],
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "SavedSearchUpdated",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SavedSearch",
+                      {
+                        "emit": {
+                          "failure": "SavedSearchLoadFailed",
+                          "success": "SavedSearchLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "SavedSearchDeleted",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SavedSearch",
+                      {
+                        "emit": {
+                          "success": "SavedSearchLoaded",
+                          "failure": "SavedSearchLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "editing",
+                  "to": "editing",
+                  "event": "RENAME",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.name",
+                      "@payload.value"
+                    ]
+                  ]
+                },
+                {
+                  "from": "editing",
+                  "to": "editing",
+                  "event": "CHANGE_FREQUENCY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.alertFrequency",
+                      "@payload.value"
+                    ]
+                  ]
+                },
+                {
+                  "from": "editing",
+                  "to": "browsing",
+                  "event": "SAVE",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SavedSearch",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "SavedSearchLoadFailed",
+                          "success": "SavedSearchUpdated"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "editing",
+                  "to": "loading",
+                  "event": "CANCEL",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SavedSearch",
+                      {
+                        "emit": {
+                          "failure": "SavedSearchLoadFailed",
+                          "success": "SavedSearchLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SavedSearch",
+                      {
+                        "emit": {
+                          "failure": "SavedSearchLoadFailed",
+                          "success": "SavedSearchLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner",
+                        "size": "sm"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "default": "Saved Searches",
+                "label": "Section title",
+                "description": "Heading shown above the saved-search list",
+                "tier": "presentation"
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "SavedSearchManagePage",
+            "path": "/savedsearches",
+            "traits": [
+              {
+                "ref": "SavedSearchManage"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "SavedSearchOrbital": [
+          {
+            "trait": "SavedSearchManage",
+            "patternPath": "root.children.0.children.1",
+            "prop": "content",
+            "knob": "title"
+          },
+          {
+            "trait": "SavedSearchManage",
+            "patternPath": "root.children.2",
+            "prop": "look",
+            "knob": "tableLook"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

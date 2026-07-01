@@ -1,0 +1,951 @@
+{
+  "name": "ui-debugger-board",
+  "description": "DebuggerBoard — flag every bug line and no clean line to win (1:1 with the @almadar/ui debugger-board pattern).",
+  "level": "organism",
+  "topic": "ui/game/2d",
+  "schema": {
+    "name": "ui-debugger-board",
+    "version": "1.0.0",
+    "description": "DebuggerBoard — flag every bug line and no clean line to win (1:1 with the @almadar/ui debugger-board pattern).",
+    "orbitals": [
+      {
+        "name": "DebuggerBoardOrbital",
+        "entity": {
+          "name": "DebuggerBoardItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "lines",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "isFlagged": {
+                    "name": "isFlagged",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "isBug": {
+                    "name": "isBug",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "explanation": {
+                    "name": "explanation",
+                    "type": "string",
+                    "required": false
+                  },
+                  "content": {
+                    "name": "content",
+                    "type": "string",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "hint",
+              "type": "string"
+            },
+            {
+              "name": "attempts",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "result",
+              "type": "string",
+              "default": "none",
+              "values": [
+                "none",
+                "win"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "DebuggerBoardRender",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "attempts",
+                "description",
+                "hint",
+                "lines",
+                "result",
+                "title"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "DebuggerBoardItem",
+            "emits": [
+              {
+                "event": "COMPLETE",
+                "description": "completeEvent prop",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "required": true
+                  },
+                  {
+                    "name": "attempts",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "TOGGLE_FLAG",
+                "description": "Flip the flag on a reviewed code line",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "lineId",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CHECK",
+                "description": "Submit the current flag set for scoring",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PLAY_AGAIN",
+                "description": "Reset the puzzle and play again",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "playing",
+                  "isInitial": true
+                },
+                {
+                  "name": "menu"
+                },
+                {
+                  "name": "complete"
+                }
+              ],
+              "events": [
+                {
+                  "key": "START",
+                  "name": "Start"
+                },
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "TOGGLE_FLAG",
+                  "name": "Toggle Flag",
+                  "description": "Flip the flag on a reviewed code line",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "lineId",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CHECK",
+                  "name": "Check",
+                  "description": "Submit the current flag set for scoring",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PLAY_AGAIN",
+                  "name": "Play Again",
+                  "description": "Reset the puzzle and play again",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "COMPLETE",
+                  "name": "Complete",
+                  "description": "completeEvent prop",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "success",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "attempts",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "menu",
+                  "to": "playing",
+                  "event": "START",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lines",
+                      [
+                        {
+                          "isFlagged": false,
+                          "content": "function add(a, b) {",
+                          "isBug": false,
+                          "id": "l1"
+                        },
+                        {
+                          "isFlagged": false,
+                          "isBug": true,
+                          "explanation": "Should be a + b for an add function.",
+                          "id": "l2",
+                          "content": "  return a - b;"
+                        },
+                        {
+                          "content": "}",
+                          "isBug": false,
+                          "isFlagged": false,
+                          "id": "l3"
+                        },
+                        {
+                          "isBug": false,
+                          "id": "l4",
+                          "isFlagged": false,
+                          "content": "const total = add(2, 3);"
+                        },
+                        {
+                          "explanation": "Typo: 'totl' should be 'total'.",
+                          "isBug": true,
+                          "content": "console.log(totl);",
+                          "id": "l5",
+                          "isFlagged": false
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Debug the Add Function"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Flag every line that contains a bug. Flag no clean lines to win."
+                    ],
+                    [
+                      "set",
+                      "@entity.hint",
+                      "Check the operator in the return statement and the variable name in the log call."
+                    ],
+                    [
+                      "set",
+                      "@entity.attempts",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "toggleFlagEvent": "TOGGLE_FLAG",
+                        "checkEvent": "CHECK",
+                        "completeEvent": "COMPLETE",
+                        "type": "debugger-board",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "entity": "@entity"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "playing",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lines",
+                      [
+                        {
+                          "isFlagged": false,
+                          "content": "function add(a, b) {",
+                          "isBug": false,
+                          "id": "l1"
+                        },
+                        {
+                          "isFlagged": false,
+                          "isBug": true,
+                          "explanation": "Should be a + b for an add function.",
+                          "id": "l2",
+                          "content": "  return a - b;"
+                        },
+                        {
+                          "content": "}",
+                          "isBug": false,
+                          "isFlagged": false,
+                          "id": "l3"
+                        },
+                        {
+                          "isBug": false,
+                          "id": "l4",
+                          "isFlagged": false,
+                          "content": "const total = add(2, 3);"
+                        },
+                        {
+                          "explanation": "Typo: 'totl' should be 'total'.",
+                          "isBug": true,
+                          "content": "console.log(totl);",
+                          "id": "l5",
+                          "isFlagged": false
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Debug the Add Function"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Flag every line that contains a bug. Flag no clean lines to win."
+                    ],
+                    [
+                      "set",
+                      "@entity.hint",
+                      "Check the operator in the return statement and the variable name in the log call."
+                    ],
+                    [
+                      "set",
+                      "@entity.attempts",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "completeEvent": "COMPLETE",
+                        "entity": "@entity",
+                        "type": "debugger-board",
+                        "toggleFlagEvent": "TOGGLE_FLAG",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "checkEvent": "CHECK"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "playing",
+                  "event": "TOGGLE_FLAG",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lines",
+                      [
+                        "array/map",
+                        "@entity.lines",
+                        [
+                          "fn",
+                          "l",
+                          [
+                            "if",
+                            [
+                              "==",
+                              [
+                                "object/get",
+                                "l",
+                                "id"
+                              ],
+                              "@payload.lineId"
+                            ],
+                            [
+                              "object/merge",
+                              "l",
+                              {
+                                "isFlagged": [
+                                  "not",
+                                  [
+                                    "object/get",
+                                    "l",
+                                    "isFlagged"
+                                  ]
+                                ]
+                              }
+                            ],
+                            "l"
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "completeEvent": "COMPLETE",
+                        "entity": "@entity",
+                        "toggleFlagEvent": "TOGGLE_FLAG",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "type": "debugger-board",
+                        "checkEvent": "CHECK"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "complete",
+                  "event": "CHECK",
+                  "guard": [
+                    "and",
+                    [
+                      "==",
+                      [
+                        "array/len",
+                        [
+                          "array/filter",
+                          "@entity.lines",
+                          [
+                            "fn",
+                            "l",
+                            [
+                              "and",
+                              [
+                                "object/get",
+                                "l",
+                                "isBug"
+                              ],
+                              [
+                                "not",
+                                [
+                                  "object/get",
+                                  "l",
+                                  "isFlagged"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      0
+                    ],
+                    [
+                      "==",
+                      [
+                        "array/len",
+                        [
+                          "array/filter",
+                          "@entity.lines",
+                          [
+                            "fn",
+                            "l",
+                            [
+                              "and",
+                              [
+                                "not",
+                                [
+                                  "object/get",
+                                  "l",
+                                  "isBug"
+                                ]
+                              ],
+                              [
+                                "object/get",
+                                "l",
+                                "isFlagged"
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      0
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.attempts",
+                      [
+                        "+",
+                        "@entity.attempts",
+                        1
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "win"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "checkEvent": "CHECK",
+                        "completeEvent": "COMPLETE",
+                        "entity": "@entity",
+                        "type": "debugger-board",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "toggleFlagEvent": "TOGGLE_FLAG"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "playing",
+                  "event": "CHECK",
+                  "guard": [
+                    "or",
+                    [
+                      ">",
+                      [
+                        "array/len",
+                        [
+                          "array/filter",
+                          "@entity.lines",
+                          [
+                            "fn",
+                            "l",
+                            [
+                              "and",
+                              [
+                                "object/get",
+                                "l",
+                                "isBug"
+                              ],
+                              [
+                                "not",
+                                [
+                                  "object/get",
+                                  "l",
+                                  "isFlagged"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      0
+                    ],
+                    [
+                      ">",
+                      [
+                        "array/len",
+                        [
+                          "array/filter",
+                          "@entity.lines",
+                          [
+                            "fn",
+                            "l",
+                            [
+                              "and",
+                              [
+                                "not",
+                                [
+                                  "object/get",
+                                  "l",
+                                  "isBug"
+                                ]
+                              ],
+                              [
+                                "object/get",
+                                "l",
+                                "isFlagged"
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      0
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.attempts",
+                      [
+                        "+",
+                        "@entity.attempts",
+                        1
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "checkEvent": "CHECK",
+                        "entity": "@entity",
+                        "completeEvent": "COMPLETE",
+                        "toggleFlagEvent": "TOGGLE_FLAG",
+                        "type": "debugger-board",
+                        "playAgainEvent": "PLAY_AGAIN"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "complete",
+                  "to": "menu",
+                  "event": "PLAY_AGAIN",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lines",
+                      [
+                        {
+                          "isFlagged": false,
+                          "content": "function add(a, b) {",
+                          "isBug": false,
+                          "id": "l1"
+                        },
+                        {
+                          "isFlagged": false,
+                          "isBug": true,
+                          "explanation": "Should be a + b for an add function.",
+                          "id": "l2",
+                          "content": "  return a - b;"
+                        },
+                        {
+                          "content": "}",
+                          "isBug": false,
+                          "isFlagged": false,
+                          "id": "l3"
+                        },
+                        {
+                          "isBug": false,
+                          "id": "l4",
+                          "isFlagged": false,
+                          "content": "const total = add(2, 3);"
+                        },
+                        {
+                          "explanation": "Typo: 'totl' should be 'total'.",
+                          "isBug": true,
+                          "content": "console.log(totl);",
+                          "id": "l5",
+                          "isFlagged": false
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Debug the Add Function"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Flag every line that contains a bug. Flag no clean lines to win."
+                    ],
+                    [
+                      "set",
+                      "@entity.hint",
+                      "Check the operator in the return statement and the variable name in the log call."
+                    ],
+                    [
+                      "set",
+                      "@entity.attempts",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "entity": "@entity",
+                        "checkEvent": "CHECK",
+                        "completeEvent": "COMPLETE",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "toggleFlagEvent": "TOGGLE_FLAG",
+                        "type": "debugger-board"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "lines": {
+                "type": "[DebuggerBoardLinesItem]",
+                "default": [
+                  {
+                    "isFlagged": false,
+                    "content": "function add(a, b) {",
+                    "isBug": false,
+                    "id": "l1"
+                  },
+                  {
+                    "isFlagged": false,
+                    "isBug": true,
+                    "explanation": "Should be a + b for an add function.",
+                    "id": "l2",
+                    "content": "  return a - b;"
+                  },
+                  {
+                    "content": "}",
+                    "isBug": false,
+                    "isFlagged": false,
+                    "id": "l3"
+                  },
+                  {
+                    "isBug": false,
+                    "id": "l4",
+                    "isFlagged": false,
+                    "content": "const total = add(2, 3);"
+                  },
+                  {
+                    "explanation": "Typo: 'totl' should be 'total'.",
+                    "isBug": true,
+                    "content": "console.log(totl);",
+                    "id": "l5",
+                    "isFlagged": false
+                  }
+                ],
+                "label": "Lines",
+                "description": "Direct code-line data — takes priority over entity-derived lines.",
+                "tier": "presentation",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "explanation": {
+                      "name": "explanation",
+                      "type": "string",
+                      "required": false
+                    },
+                    "isBug": {
+                      "name": "isBug",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "content": {
+                      "name": "content",
+                      "type": "string",
+                      "required": false
+                    },
+                    "isFlagged": {
+                      "name": "isFlagged",
+                      "type": "boolean",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "pageSize": {
+                "type": "number",
+                "default": 0,
+                "label": "Page Size",
+                "description": "Number of items per page",
+                "tier": "presentation"
+              },
+              "selectedIds": {
+                "type": "[string]",
+                "default": [],
+                "label": "Selected Ids",
+                "description": "Currently selected item IDs",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "error": {
+                "type": "DebuggerBoardError",
+                "label": "Error",
+                "description": "Error state (UiError)",
+                "tier": "presentation",
+                "properties": {
+                  "code": {
+                    "name": "code",
+                    "type": "string",
+                    "required": false
+                  },
+                  "message": {
+                    "name": "message",
+                    "type": "string",
+                    "required": true
+                  },
+                  "name": {
+                    "name": "name",
+                    "type": "string",
+                    "required": false
+                  },
+                  "stack": {
+                    "name": "stack",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              },
+              "hint": {
+                "type": "string",
+                "default": "Check the operator in the return statement and the variable name in the log call.",
+                "label": "Hint",
+                "description": "Optional hint the player can reveal.",
+                "tier": "domain"
+              },
+              "title": {
+                "type": "string",
+                "default": "Debug the Add Function",
+                "label": "Title",
+                "description": "Puzzle title shown above the board.",
+                "tier": "domain"
+              },
+              "sortDirection": {
+                "type": "string",
+                "default": "asc",
+                "label": "Sort Direction",
+                "description": "Current sort direction",
+                "tier": "presentation",
+                "values": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              "pageProp": {
+                "type": "number",
+                "default": 0,
+                "label": "Page",
+                "description": "Current page number",
+                "synonyms": "page",
+                "tier": "presentation"
+              },
+              "className": {
+                "type": "string",
+                "default": "",
+                "label": "Class Name",
+                "description": "Additional CSS classes",
+                "tier": "presentation"
+              },
+              "searchValue": {
+                "type": "string",
+                "default": "Search Value",
+                "label": "Search Value",
+                "description": "Current search query value",
+                "tier": "presentation"
+              },
+              "totalCount": {
+                "type": "number",
+                "default": 0,
+                "label": "Total Count",
+                "description": "Total number of items",
+                "tier": "presentation"
+              },
+              "isLoading": {
+                "type": "boolean",
+                "default": false,
+                "label": "Is Loading",
+                "description": "Loading state indicator",
+                "tier": "presentation"
+              },
+              "sortBy": {
+                "type": "string",
+                "default": "Sort By",
+                "label": "Sort By",
+                "description": "Current sort field",
+                "tier": "presentation"
+              },
+              "description": {
+                "type": "string",
+                "default": "Flag every line that contains a bug. Flag no clean lines to win.",
+                "label": "Description",
+                "description": "One-line puzzle brief shown to the player.",
+                "tier": "domain"
+              },
+              "activeFilters": {
+                "type": "json",
+                "label": "Active Filters",
+                "description": "Active filters",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "DebuggerBoardPage",
+            "path": "/debugger-board",
+            "traits": [
+              {
+                "ref": "DebuggerBoardRender"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

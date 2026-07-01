@@ -1,0 +1,1027 @@
+{
+  "name": "ui-negotiator-board",
+  "description": "NegotiatorBoard — game-theory payoff gameplay state machine (1:1 with the @almadar/ui negotiator-board pattern).",
+  "level": "organism",
+  "topic": "ui/game/2d",
+  "schema": {
+    "name": "ui-negotiator-board",
+    "version": "1.0.0",
+    "description": "NegotiatorBoard — game-theory payoff gameplay state machine (1:1 with the @almadar/ui negotiator-board pattern).",
+    "orbitals": [
+      {
+        "name": "NegotiatorBoardOrbital",
+        "entity": {
+          "name": "NegotiatorBoardItem",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "score",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "round",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "targetScore",
+              "type": "number",
+              "default": 10
+            },
+            {
+              "name": "maxRounds",
+              "type": "number",
+              "default": 5
+            },
+            {
+              "name": "result",
+              "type": "string",
+              "default": "none",
+              "values": [
+                "none",
+                "win",
+                "lose"
+              ]
+            },
+            {
+              "name": "opponentStrategy",
+              "type": "string",
+              "default": "tit-for-tat"
+            },
+            {
+              "name": "actions",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": true
+                  },
+                  "description": {
+                    "name": "description",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              }
+            },
+            {
+              "name": "payoffMatrix",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "opponentAction": {
+                    "name": "opponentAction",
+                    "type": "string",
+                    "required": true
+                  },
+                  "playerPayoff": {
+                    "name": "playerPayoff",
+                    "type": "number",
+                    "required": true
+                  },
+                  "opponentPayoff": {
+                    "name": "opponentPayoff",
+                    "type": "number",
+                    "required": true
+                  },
+                  "playerAction": {
+                    "name": "playerAction",
+                    "type": "string",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "lastPlayerAction",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "lastOpponentAction",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "lastPayoff",
+              "type": "number",
+              "default": 0
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "NegotiatorBoardRender",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "actions",
+                "description",
+                "lastOpponentAction",
+                "lastPayoff",
+                "lastPlayerAction",
+                "maxRounds",
+                "opponentStrategy",
+                "payoffMatrix",
+                "result",
+                "round",
+                "score",
+                "targetScore",
+                "title"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "NegotiatorBoardItem",
+            "emits": [
+              {
+                "event": "PLAY_ROUND",
+                "description": "Emits one negotiation round; playerAction drives in-model opponent AI and payoff lookup (payoff field is UI-supplied but ignored by model).",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "playerAction",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "payoff",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "event": "FINISH",
+                "description": "Emits when all rounds are spent; routes to win/lose by score vs target.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PLAY_AGAIN",
+                "description": "Emits UI:{playAgainEvent} with {} on play again / reset",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "COMPLETE",
+                "description": "completeEvent prop",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "success",
+                    "type": "boolean",
+                    "required": true
+                  },
+                  {
+                    "name": "score",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "playing",
+                  "isInitial": true
+                },
+                {
+                  "name": "menu"
+                },
+                {
+                  "name": "complete"
+                }
+              ],
+              "events": [
+                {
+                  "key": "START",
+                  "name": "Start"
+                },
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "PLAY_ROUND",
+                  "name": "Play Round",
+                  "description": "Emits one negotiation round; playerAction drives in-model opponent AI and payoff lookup (payoff field is UI-supplied but ignored by model).",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "playerAction",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "payoff",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "FINISH",
+                  "name": "Finish",
+                  "description": "Emits when all rounds are spent; routes to win/lose by score vs target.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PLAY_AGAIN",
+                  "name": "Play Again",
+                  "description": "Emits UI:{playAgainEvent} with {} on play again / reset",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "COMPLETE",
+                  "name": "Complete",
+                  "description": "completeEvent prop",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "success",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "score",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "menu",
+                  "to": "playing",
+                  "event": "START",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.score",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.round",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Prisoner's Dilemma"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Choose Cooperate or Defect each round. Reach the target score before rounds run out."
+                    ],
+                    [
+                      "set",
+                      "@entity.targetScore",
+                      10
+                    ],
+                    [
+                      "set",
+                      "@entity.maxRounds",
+                      5
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "set",
+                      "@entity.actions",
+                      [
+                        {
+                          "label": "Cooperate",
+                          "description": "Work together for a moderate mutual gain.",
+                          "id": "cooperate"
+                        },
+                        {
+                          "description": "Betray your partner for a bigger personal gain — if they cooperate.",
+                          "label": "Defect",
+                          "id": "defect"
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.payoffMatrix",
+                      [
+                        {
+                          "opponentAction": "cooperate",
+                          "playerAction": "cooperate",
+                          "playerPayoff": 3,
+                          "opponentPayoff": 3
+                        },
+                        {
+                          "opponentAction": "defect",
+                          "opponentPayoff": 5,
+                          "playerAction": "cooperate",
+                          "playerPayoff": 0
+                        },
+                        {
+                          "playerAction": "defect",
+                          "playerPayoff": 5,
+                          "opponentPayoff": 0,
+                          "opponentAction": "cooperate"
+                        },
+                        {
+                          "opponentAction": "defect",
+                          "opponentPayoff": 1,
+                          "playerAction": "defect",
+                          "playerPayoff": 1
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.opponentStrategy",
+                      "tit-for-tat"
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPlayerAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastOpponentAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPayoff",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "playRoundEvent": "PLAY_ROUND",
+                        "completeEvent": "COMPLETE",
+                        "finishEvent": "FINISH",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "type": "negotiator-board",
+                        "entity": "@entity"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "playing",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.score",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.round",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Prisoner's Dilemma"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Choose Cooperate or Defect each round. Reach the target score before rounds run out."
+                    ],
+                    [
+                      "set",
+                      "@entity.targetScore",
+                      10
+                    ],
+                    [
+                      "set",
+                      "@entity.maxRounds",
+                      5
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "set",
+                      "@entity.opponentStrategy",
+                      "tit-for-tat"
+                    ],
+                    [
+                      "set",
+                      "@entity.actions",
+                      [
+                        {
+                          "label": "Cooperate",
+                          "description": "Work together for a moderate mutual gain.",
+                          "id": "cooperate"
+                        },
+                        {
+                          "description": "Betray your partner for a bigger personal gain — if they cooperate.",
+                          "label": "Defect",
+                          "id": "defect"
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.payoffMatrix",
+                      [
+                        {
+                          "opponentAction": "cooperate",
+                          "playerAction": "cooperate",
+                          "playerPayoff": 3,
+                          "opponentPayoff": 3
+                        },
+                        {
+                          "opponentAction": "defect",
+                          "opponentPayoff": 5,
+                          "playerAction": "cooperate",
+                          "playerPayoff": 0
+                        },
+                        {
+                          "playerAction": "defect",
+                          "playerPayoff": 5,
+                          "opponentPayoff": 0,
+                          "opponentAction": "cooperate"
+                        },
+                        {
+                          "opponentAction": "defect",
+                          "opponentPayoff": 1,
+                          "playerAction": "defect",
+                          "playerPayoff": 1
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPlayerAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastOpponentAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPayoff",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "finishEvent": "FINISH",
+                        "entity": "@entity",
+                        "completeEvent": "COMPLETE",
+                        "playRoundEvent": "PLAY_ROUND",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "type": "negotiator-board"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "playing",
+                  "event": "PLAY_ROUND",
+                  "guard": [
+                    "<",
+                    "@entity.round",
+                    "@entity.maxRounds"
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lastOpponentAction",
+                      [
+                        "if",
+                        [
+                          "==",
+                          "@entity.opponentStrategy",
+                          "always-cooperate"
+                        ],
+                        "cooperate",
+                        [
+                          "if",
+                          [
+                            "==",
+                            "@entity.opponentStrategy",
+                            "always-defect"
+                          ],
+                          "defect",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@entity.lastPlayerAction",
+                              ""
+                            ],
+                            "cooperate",
+                            "@entity.lastPlayerAction"
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPayoff",
+                      [
+                        "object/get",
+                        [
+                          "array/find",
+                          "@entity.payoffMatrix",
+                          [
+                            "fn",
+                            "r",
+                            [
+                              "and",
+                              [
+                                "==",
+                                "@r.playerAction",
+                                "@payload.playerAction"
+                              ],
+                              [
+                                "==",
+                                "@r.opponentAction",
+                                "@entity.lastOpponentAction"
+                              ]
+                            ]
+                          ]
+                        ],
+                        "playerPayoff",
+                        0
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.score",
+                      [
+                        "+",
+                        "@entity.score",
+                        "@entity.lastPayoff"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.round",
+                      [
+                        "+",
+                        "@entity.round",
+                        1
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPlayerAction",
+                      "@payload.playerAction"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "entity": "@entity",
+                        "completeEvent": "COMPLETE",
+                        "playRoundEvent": "PLAY_ROUND",
+                        "type": "negotiator-board",
+                        "finishEvent": "FINISH",
+                        "playAgainEvent": "PLAY_AGAIN"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "complete",
+                  "event": "FINISH",
+                  "guard": [
+                    ">=",
+                    "@entity.score",
+                    "@entity.targetScore"
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "win"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "completeEvent": "COMPLETE",
+                        "type": "negotiator-board",
+                        "playRoundEvent": "PLAY_ROUND",
+                        "finishEvent": "FINISH",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "entity": "@entity"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "playing",
+                  "to": "complete",
+                  "event": "FINISH",
+                  "guard": [
+                    "<",
+                    "@entity.score",
+                    "@entity.targetScore"
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "lose"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "negotiator-board",
+                        "playRoundEvent": "PLAY_ROUND",
+                        "entity": "@entity",
+                        "completeEvent": "COMPLETE",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "finishEvent": "FINISH"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "complete",
+                  "to": "menu",
+                  "event": "PLAY_AGAIN",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.score",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.round",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Prisoner's Dilemma"
+                    ],
+                    [
+                      "set",
+                      "@entity.description",
+                      "Choose Cooperate or Defect each round. Reach the target score before rounds run out."
+                    ],
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPlayerAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastOpponentAction",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastPayoff",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "finishEvent": "FINISH",
+                        "entity": "@entity",
+                        "playRoundEvent": "PLAY_ROUND",
+                        "type": "negotiator-board",
+                        "playAgainEvent": "PLAY_AGAIN",
+                        "completeEvent": "COMPLETE"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "error": {
+                "type": "NegotiatorBoardError",
+                "label": "Error",
+                "description": "Error state (UiError)",
+                "tier": "presentation",
+                "properties": {
+                  "message": {
+                    "name": "message",
+                    "type": "string",
+                    "required": true
+                  },
+                  "code": {
+                    "name": "code",
+                    "type": "string",
+                    "required": false
+                  },
+                  "name": {
+                    "name": "name",
+                    "type": "string",
+                    "required": false
+                  },
+                  "stack": {
+                    "name": "stack",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              },
+              "sortBy": {
+                "type": "string",
+                "default": "Sort By",
+                "label": "Sort By",
+                "description": "Current sort field",
+                "tier": "presentation"
+              },
+              "pageProp": {
+                "type": "number",
+                "default": 0,
+                "label": "Page",
+                "description": "Current page number",
+                "synonyms": "page",
+                "tier": "presentation"
+              },
+              "opponentStrategy": {
+                "type": "string",
+                "default": "tit-for-tat",
+                "label": "Opponent Strategy",
+                "description": "AI opponent strategy (always-cooperate | always-defect | tit-for-tat | random).",
+                "tier": "domain"
+              },
+              "sortDirection": {
+                "type": "string",
+                "default": "asc",
+                "label": "Sort Direction",
+                "description": "Current sort direction",
+                "tier": "presentation",
+                "values": [
+                  "asc",
+                  "desc"
+                ]
+              },
+              "totalCount": {
+                "type": "number",
+                "default": 0,
+                "label": "Total Count",
+                "description": "Total number of items",
+                "tier": "presentation"
+              },
+              "isLoading": {
+                "type": "boolean",
+                "default": false,
+                "label": "Is Loading",
+                "description": "Loading state indicator",
+                "tier": "presentation"
+              },
+              "selectedIds": {
+                "type": "[string]",
+                "default": [],
+                "label": "Selected Ids",
+                "description": "Currently selected item IDs",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "title": {
+                "type": "string",
+                "default": "Prisoner's Dilemma",
+                "label": "Title",
+                "description": "Game title shown above the board.",
+                "tier": "domain"
+              },
+              "description": {
+                "type": "string",
+                "default": "Choose Cooperate or Defect each round. Reach the target score before rounds run out.",
+                "label": "Description",
+                "description": "One-line game brief shown to the player.",
+                "tier": "domain"
+              },
+              "pageSize": {
+                "type": "number",
+                "default": 0,
+                "label": "Page Size",
+                "description": "Number of items per page",
+                "tier": "presentation"
+              },
+              "activeFilters": {
+                "type": "json",
+                "label": "Active Filters",
+                "description": "Active filters",
+                "tier": "presentation"
+              },
+              "actions": {
+                "type": "[NegotiatorBoardActionsItem]",
+                "default": [
+                  {
+                    "label": "Cooperate",
+                    "description": "Work together for a moderate mutual gain.",
+                    "id": "cooperate"
+                  },
+                  {
+                    "description": "Betray your partner for a bigger personal gain — if they cooperate.",
+                    "label": "Defect",
+                    "id": "defect"
+                  }
+                ],
+                "label": "Actions",
+                "description": "Selectable round actions (id/label/description).",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": true
+                    },
+                    "description": {
+                      "name": "description",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "targetScore": {
+                "type": "number",
+                "default": 10,
+                "label": "Target Score",
+                "description": "Total payoff the player must reach to win.",
+                "tier": "domain"
+              },
+              "payoffMatrix": {
+                "type": "[NegotiatorBoardPayoffItem]",
+                "default": [
+                  {
+                    "opponentAction": "cooperate",
+                    "playerAction": "cooperate",
+                    "playerPayoff": 3,
+                    "opponentPayoff": 3
+                  },
+                  {
+                    "opponentAction": "defect",
+                    "opponentPayoff": 5,
+                    "playerAction": "cooperate",
+                    "playerPayoff": 0
+                  },
+                  {
+                    "playerAction": "defect",
+                    "playerPayoff": 5,
+                    "opponentPayoff": 0,
+                    "opponentAction": "cooperate"
+                  },
+                  {
+                    "opponentAction": "defect",
+                    "opponentPayoff": 1,
+                    "playerAction": "defect",
+                    "playerPayoff": 1
+                  }
+                ],
+                "label": "Payoff Matrix",
+                "description": "Payoff-matrix cells (playerAction/opponentAction/playerPayoff/opponentPayoff).",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "opponentAction": {
+                      "name": "opponentAction",
+                      "type": "string",
+                      "required": true
+                    },
+                    "playerAction": {
+                      "name": "playerAction",
+                      "type": "string",
+                      "required": true
+                    },
+                    "playerPayoff": {
+                      "name": "playerPayoff",
+                      "type": "number",
+                      "required": true
+                    },
+                    "opponentPayoff": {
+                      "name": "opponentPayoff",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              },
+              "className": {
+                "type": "string",
+                "default": "",
+                "label": "Class Name",
+                "description": "Additional CSS classes",
+                "tier": "presentation"
+              },
+              "searchValue": {
+                "type": "string",
+                "default": "Search Value",
+                "label": "Search Value",
+                "description": "Current search query value",
+                "tier": "presentation"
+              },
+              "maxRounds": {
+                "type": "number",
+                "default": 5,
+                "label": "Max Rounds",
+                "description": "Number of negotiation rounds before the game finishes.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "NegotiatorBoardPage",
+            "path": "/negotiator-board",
+            "traits": [
+              {
+                "ref": "NegotiatorBoardRender"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

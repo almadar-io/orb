@@ -1,0 +1,386 @@
+{
+  "name": "std-notify-on-event",
+  "description": "std-notify-on-event — cross-orbital wiring atom. Subscribes to events from another orbital (e.g. CheckoutOrbital emits OrderPlaced, OrderRecordOrbital reacts via this atom) and dispatches a notification. Use when one orbital needs to react to or be notified about events that happen in another orbital — the wiring goes through this atom's `EventOccurred` listener which the molecule renames via traitOverrides.events to the upstream event name. Resolves recipient from `recipients` (first entry; multi-recipient fan-out is a future extension) or falls back to `@user.id`. Skips dispatch when the recipient is in `suppressionList`. Emits in-app `notify` when `notifyChannel` is `\"in-app\"`, or persists a `NotificationRecord` row for out-of-band delivery when channel is `\"email\"` or `\"sms\"`.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-notify-on-event",
+    "version": "1.3.0",
+    "description": "std-notify-on-event — cross-orbital wiring atom. Subscribes to events from another orbital (e.g. CheckoutOrbital emits OrderPlaced, OrderRecordOrbital reacts via this atom) and dispatches a notification. Use when one orbital needs to react to or be notified about events that happen in another orbital — the wiring goes through this atom's `EventOccurred` listener which the molecule renames via traitOverrides.events to the upstream event name. Resolves recipient from `recipients` (first entry; multi-recipient fan-out is a future extension) or falls back to `@user.id`. Skips dispatch when the recipient is in `suppressionList`. Emits in-app `notify` when `notifyChannel` is `\"in-app\"`, or persists a `NotificationRecord` row for out-of-band delivery when channel is `\"email\"` or `\"sms\"`.",
+    "orbitals": [
+      {
+        "name": "NotifyOnEventOrbital",
+        "entity": {
+          "name": "NotificationRecord",
+          "collection": "notifications",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "recipient",
+              "type": "string",
+              "default": "",
+              "description": "The identifier of the entity receiving the notification.",
+              "synonyms": "user, target, receiver, destination"
+            },
+            {
+              "name": "channel",
+              "type": "string",
+              "default": "in-app",
+              "description": "The delivery method for the notification (e.g., email, SMS, in-app).",
+              "synonyms": "delivery, medium, type"
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "default": "",
+              "description": "The content of the notification message.",
+              "synonyms": "text, content, body"
+            },
+            {
+              "name": "severity",
+              "type": "string",
+              "default": "info",
+              "description": "Indicates the importance or urgency level of the notification.",
+              "synonyms": "priority, level, importance"
+            },
+            {
+              "name": "dispatched",
+              "type": "boolean",
+              "default": false,
+              "description": "Indicates whether the notification has been successfully sent.",
+              "synonyms": "sent, delivered, status"
+            },
+            {
+              "name": "recordedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the notification record was created.",
+              "synonyms": "creation time, timestamp, date, when"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "NotifyOnEventListener",
+            "category": "lifecycle",
+            "linkedEntity": "NotificationRecord",
+            "emits": [
+              {
+                "event": "NotificationDispatched",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "recipient",
+                    "type": "string"
+                  },
+                  {
+                    "name": "channel",
+                    "type": "string"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "severity",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "EventOccurred",
+                  "name": "Event occurred",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "NotificationDispatched",
+                  "name": "Notification dispatched",
+                  "payloadSchema": [
+                    {
+                      "name": "recipient",
+                      "type": "string"
+                    },
+                    {
+                      "name": "channel",
+                      "type": "string"
+                    },
+                    {
+                      "name": "message",
+                      "type": "string"
+                    },
+                    {
+                      "name": "severity",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "EventOccurred",
+                  "guard": [
+                    "or",
+                    [
+                      "=",
+                      "",
+                      ""
+                    ],
+                    [
+                      "=",
+                      "@payload.status",
+                      ""
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.recipient",
+                      [
+                        "if",
+                        [
+                          "=",
+                          [
+                            "array/len",
+                            []
+                          ],
+                          0
+                        ],
+                        "@user.id",
+                        [
+                          "array/first",
+                          []
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.channel",
+                      "in-app"
+                    ],
+                    [
+                      "set",
+                      "@entity.message",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.severity",
+                      "info"
+                    ],
+                    [
+                      "set",
+                      "@entity.dispatched",
+                      [
+                        "and",
+                        [
+                          "=",
+                          "in-app",
+                          "in-app"
+                        ],
+                        [
+                          "not",
+                          [
+                            "array/includes",
+                            [],
+                            "@entity.recipient"
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.recordedAt",
+                      0
+                    ],
+                    [
+                      "when",
+                      [
+                        "not",
+                        [
+                          "array/includes",
+                          [],
+                          "@entity.recipient"
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          "=",
+                          "in-app",
+                          "in-app"
+                        ],
+                        [
+                          "notify",
+                          "info",
+                          ""
+                        ],
+                        [
+                          "persist",
+                          "create",
+                          "NotificationRecord",
+                          {
+                            "channel": "in-app",
+                            "severity": "info",
+                            "dispatched": false,
+                            "message": "",
+                            "recipient": "@entity.recipient",
+                            "recordedAt": 0
+                          }
+                        ]
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "NotificationDispatched",
+                      {
+                        "message": "",
+                        "severity": "info",
+                        "channel": "in-app",
+                        "recipient": "@entity.recipient"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "severity": {
+                "type": "string",
+                "default": "info",
+                "label": "Severity",
+                "description": "info, success, warning, or error — controls styling",
+                "synonyms": "alert level, priority, urgency",
+                "tier": "policy"
+              },
+              "notifyChannel": {
+                "type": "string",
+                "default": "in-app",
+                "label": "Channel",
+                "description": "Delivery channel: in-app, email, or sms",
+                "synonyms": "delivery method, notification channel, send via, dispatch through",
+                "tier": "policy"
+              },
+              "listensFor": {
+                "type": "[string]",
+                "default": [],
+                "label": "Trigger events",
+                "description": "Event names that should fire a notification. Set this to the upstream event name (e.g. OrderPlaced, CheckoutCompleted) so this atom listens for events from the orbital that emits them. The orbital owning this trait reacts whenever the named event fires anywhere in the schema.",
+                "synonyms": "subscribe to event, listen for event, react to event, watch for, wire upstream event, observe event from another orbital, cross-orbital subscription, on-event trigger",
+                "tier": "internal",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "recipients": {
+                "type": "[string]",
+                "default": [],
+                "label": "Recipients",
+                "description": "Recipient ids/addresses. v1.1 uses the first entry; multi-recipient fan-out lands in v1.2 (gap). When empty, falls back to the authenticated user.",
+                "synonyms": "targets, addressees, notify to",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "template": {
+                "type": "string",
+                "default": "",
+                "label": "Message template",
+                "description": "Text shown to the recipient; supports payload interpolation",
+                "synonyms": "notification text, message body, alert text",
+                "tier": "presentation"
+              },
+              "suppressionList": {
+                "type": "[string]",
+                "default": [],
+                "label": "Suppression list",
+                "description": "Recipient ids/addresses to skip (e.g. unsubscribed users). Suppression check runs before dispatch.",
+                "synonyms": "block list, unsubscribed, opt-out list",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "triggerStatus": {
+                "type": "string",
+                "default": "",
+                "label": "Trigger status",
+                "description": "When set, dispatch only when the upstream event's `status` field equals this value (e.g. fire only when a record becomes 'approved'). Empty = fire on every subscribed event.",
+                "synonyms": "on status, when status, status filter, only when, fire on, react on status",
+                "tier": "policy"
+              },
+              "frequencyCapPerWeek": {
+                "type": "number",
+                "default": 0,
+                "label": "Frequency cap (per week)",
+                "description": "Max sends per (channel, recipient) per rolling 7-day window. 0 = uncapped. WIRING DEFERRED: needs stateful history query (gap — docs/Almadar_Std_Factories.md).",
+                "tier": "policy"
+              },
+              "quietHours": {
+                "type": "QuietHoursSpec",
+                "default": {
+                  "start": "",
+                  "end": ""
+                },
+                "label": "Quiet hours",
+                "description": "Local-time window during which dispatch is suppressed. Both start and end required to activate. WIRING DEFERRED: needs @now-aware time comparison primitive (gap — docs/Almadar_Std_Factories.md).",
+                "tier": "policy",
+                "properties": {
+                  "end": {
+                    "name": "end",
+                    "type": "string",
+                    "required": false
+                  },
+                  "start": {
+                    "name": "start",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "NotifyOnEventPage",
+            "path": "/notify-on-event",
+            "traits": [
+              {
+                "ref": "NotifyOnEventListener"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

@@ -1,0 +1,226 @@
+{
+  "name": "std-cooldown",
+  "description": "std-cooldown — ability/action cooldown primitive; START begins the countdown, READY fires when it expires.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-cooldown",
+    "version": "1.0.0",
+    "description": "std-cooldown — ability/action cooldown primitive; START begins the countdown, READY fires when it expires.",
+    "orbitals": [
+      {
+        "name": "CooldownOrbital",
+        "entity": {
+          "name": "CooldownRecord",
+          "collection": "cooldown_states",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "remainingMs",
+              "type": "number",
+              "default": 0,
+              "description": "Milliseconds remaining on the active cooldown.",
+              "synonyms": "time left, remaining, countdown, ms left"
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "default": false,
+              "description": "Whether the cooldown is currently counting down.",
+              "synonyms": "cooling, on cooldown, busy, in progress"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "Cooldown",
+            "category": "game-core",
+            "linkedEntity": "CooldownRecord",
+            "emits": [
+              {
+                "event": "CooldownReady",
+                "description": "Fired when the cooldown expires; wire to re-enable the ability or action.",
+                "synonyms": "ready, cooldown-done, available, recharged, action-ready",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "entityId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "EXPIRE",
+                "description": "Internal: fired by the expiry tick to drive the cooling→ready transition."
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "ready",
+                  "isInitial": true
+                },
+                {
+                  "name": "cooling"
+                }
+              ],
+              "events": [
+                {
+                  "key": "START",
+                  "name": "Start",
+                  "payloadSchema": [
+                    {
+                      "name": "durationMs",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "EXPIRE",
+                  "name": "Expire",
+                  "description": "Internal: fired by the expiry tick to drive the cooling→ready transition."
+                },
+                {
+                  "key": "CooldownReady",
+                  "name": "Cooldown ready",
+                  "description": "Fired when the cooldown expires; wire to re-enable the ability or action.",
+                  "synonyms": "ready, cooldown-done, available, recharged, action-ready",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "entityId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "ready",
+                  "to": "cooling",
+                  "event": "START",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.remainingMs",
+                      3000
+                    ],
+                    [
+                      "set",
+                      "@entity.active",
+                      true
+                    ]
+                  ]
+                },
+                {
+                  "from": "cooling",
+                  "to": "ready",
+                  "event": "EXPIRE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.active",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.remainingMs",
+                      0
+                    ],
+                    [
+                      "emit",
+                      "CooldownReady",
+                      {
+                        "entityId": "@entity.id"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "cooldownTick",
+                "interval": 100,
+                "guard": [
+                  "==",
+                  "@entity.active",
+                  true
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.remainingMs",
+                    [
+                      "math/max",
+                      0,
+                      [
+                        "-",
+                        "@entity.remainingMs",
+                        100
+                      ]
+                    ]
+                  ]
+                ]
+              },
+              {
+                "name": "expiryCheck",
+                "interval": 100,
+                "guard": [
+                  "and",
+                  [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  [
+                    "<=",
+                    "@entity.remainingMs",
+                    0
+                  ]
+                ],
+                "effects": [
+                  [
+                    "emit",
+                    "EXPIRE",
+                    {}
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "defaultDurationMs": {
+                "type": "number",
+                "default": 3000,
+                "label": "Default cooldown duration (ms)",
+                "description": "Milliseconds the cooldown runs when START is received without an explicit durationMs payload.",
+                "synonyms": "cooldown time, duration, delay, recharge time, wait time",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CooldownPage",
+            "path": "/game/cooldown",
+            "traits": [
+              {
+                "ref": "Cooldown"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

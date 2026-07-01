@@ -1,0 +1,446 @@
+{
+  "name": "std-push",
+  "description": "std-push as a Function",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-push",
+    "version": "1.0.0",
+    "description": "std-push as a Function",
+    "orbitals": [
+      {
+        "name": "PushSubscriberOrbital",
+        "entity": {
+          "name": "PushSubscriber",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "description": "Current operational state of the subscriber.",
+              "synonyms": "state, condition, mode"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "PushSubscriberIndicator",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "status"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "PushSubscriber",
+            "emits": [
+              {
+                "event": "PUSH_RECEIVED",
+                "description": "Data has been successfully received and processed.",
+                "synonyms": "received, updated, ingested",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PUSH_DISCONNECTED",
+                "description": "Indicates the push connection has been lost.",
+                "synonyms": "disconnected, lost, dropped, offline",
+                "tier": "internal",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "reason",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PushSubscriberLoadFailed",
+                "description": "Indicates failure to load a subscriber.",
+                "synonyms": "error, failure, failed, problem",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PushSubscriberLoaded",
+                "description": "Signals successful initialization of a data subscription.",
+                "synonyms": "initialized, ready, connected",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[PushSubscriber]"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "connecting"
+                },
+                {
+                  "name": "subscribed"
+                },
+                {
+                  "name": "reconnecting"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "PUSH_RECEIVED",
+                  "name": "Push Received",
+                  "description": "Data has been successfully received and processed.",
+                  "synonyms": "received, updated, ingested",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PUSH_DISCONNECTED",
+                  "name": "Push Disconnected",
+                  "description": "Indicates the push connection has been lost.",
+                  "synonyms": "disconnected, lost, dropped, offline",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "reason",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PushSubscriberLoadFailed",
+                  "name": "PushSubscriber load failed",
+                  "description": "Indicates failure to load a subscriber.",
+                  "synonyms": "error, failure, failed, problem",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PushSubscriberLoaded",
+                  "name": "PushSubscriber loaded",
+                  "description": "Signals successful initialization of a data subscription.",
+                  "synonyms": "initialized, ready, connected",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[PushSubscriber]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "connecting",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "PushSubscriber",
+                      {
+                        "emit": {
+                          "failure": "PushSubscriberLoadFailed",
+                          "success": "PushSubscriberLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "os/watch-http",
+                      "wss://push.example.com",
+                      {
+                        "emit": {
+                          "failure": "PUSH_DISCONNECTED",
+                          "on_message": "PUSH_RECEIVED"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "content": "Connecting…",
+                            "type": "typography",
+                            "variant": "caption"
+                          }
+                        ],
+                        "direction": "horizontal",
+                        "gap": "sm",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "connecting",
+                  "to": "subscribed",
+                  "event": "PUSH_RECEIVED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "subscribed"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "wifi",
+                            "color": "success"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Connected",
+                            "type": "typography"
+                          }
+                        ],
+                        "direction": "horizontal",
+                        "gap": "sm",
+                        "align": "center",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "connecting",
+                  "to": "reconnecting",
+                  "event": "PUSH_DISCONNECTED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "reconnecting"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "direction": "horizontal",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "color": "warning",
+                            "name": "wifi-off"
+                          },
+                          {
+                            "content": "Reconnecting…",
+                            "type": "typography",
+                            "variant": "caption"
+                          }
+                        ],
+                        "gap": "sm",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "subscribed",
+                  "to": "subscribed",
+                  "event": "PUSH_RECEIVED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "subscribed"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "gap": "sm",
+                        "direction": "horizontal",
+                        "children": [
+                          {
+                            "name": "wifi",
+                            "color": "success",
+                            "type": "icon"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "caption",
+                            "content": "Connected"
+                          }
+                        ],
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "subscribed",
+                  "to": "reconnecting",
+                  "event": "PUSH_DISCONNECTED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "reconnecting"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "direction": "horizontal",
+                        "children": [
+                          {
+                            "color": "warning",
+                            "name": "wifi-off",
+                            "type": "icon"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Reconnecting…",
+                            "type": "typography"
+                          }
+                        ],
+                        "gap": "sm",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reconnecting",
+                  "to": "subscribed",
+                  "event": "PUSH_RECEIVED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "subscribed"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "align": "center",
+                        "children": [
+                          {
+                            "name": "wifi",
+                            "color": "success",
+                            "type": "icon"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Connected",
+                            "type": "typography"
+                          }
+                        ],
+                        "direction": "horizontal",
+                        "gap": "sm"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reconnecting",
+                  "to": "reconnecting",
+                  "event": "PUSH_DISCONNECTED",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "gap": "sm",
+                        "type": "stack",
+                        "direction": "horizontal",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "color": "error",
+                            "name": "wifi-off"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Disconnected",
+                            "type": "typography"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "Push",
+            "path": "/push",
+            "traits": [
+              {
+                "ref": "PushSubscriberIndicator"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

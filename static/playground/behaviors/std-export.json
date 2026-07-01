@@ -1,0 +1,331 @@
+{
+  "name": "std-export",
+  "description": "std-export — a row of export-format buttons. Predefined CSV/XLSX/PDF defaults; caller can override via config.formats. Emits EXPORT_REQUESTED { format, tileId } on the bus; host or sibling orbital generates the file.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-export",
+    "version": "3.0.0",
+    "description": "std-export — a row of export-format buttons. Predefined CSV/XLSX/PDF defaults; caller can override via config.formats. Emits EXPORT_REQUESTED { format, tileId } on the bus; host or sibling orbital generates the file.",
+    "orbitals": [
+      {
+        "name": "ExportOrbital",
+        "entity": {
+          "name": "ExportPanel",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "options",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "name": "format",
+                    "type": "string",
+                    "required": true
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": true
+                  }
+                }
+              },
+              "description": "Configuration settings for available export formats.",
+              "synonyms": "format, export-types, configurations"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ExportMenu",
+            "category": "interaction",
+            "linkedEntity": "ExportPanel",
+            "emits": [
+              {
+                "event": "EXPORT_REQUESTED",
+                "description": "Requests export of data in a specified format.",
+                "synonyms": "export, save, download, generate",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "format",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "tileId",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "OPEN_EXPORT",
+                  "name": "Open Export"
+                },
+                {
+                  "key": "EXPORT_REQUESTED",
+                  "name": "Export Requested",
+                  "description": "Requests export of data in a specified format.",
+                  "synonyms": "export, save, download, generate",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "format",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "tileId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.options",
+                      [
+                        {
+                          "id": "csv",
+                          "format": "csv",
+                          "label": "CSV"
+                        },
+                        {
+                          "format": "xlsx",
+                          "id": "xlsx",
+                          "label": "XLSX"
+                        },
+                        {
+                          "label": "PDF",
+                          "id": "pdf",
+                          "format": "pdf"
+                        }
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": {
+                          "icon": "download",
+                          "variant": "ghost",
+                          "action": "OPEN_EXPORT",
+                          "label": "Export",
+                          "type": "button",
+                          "size": "sm"
+                        },
+                        "content": {
+                          "renderItem": [
+                            "fn",
+                            "fmt",
+                            {
+                              "type": "button",
+                              "variant": "ghost",
+                              "size": "sm",
+                              "label": "@fmt.label",
+                              "actionPayload": {
+                                "tileId": "",
+                                "format": "@fmt.format"
+                              },
+                              "icon": "file-down",
+                              "action": "EXPORT_REQUESTED"
+                            }
+                          ],
+                          "entity": "@entity.options",
+                          "fields": [],
+                          "look": "dense",
+                          "type": "data-list"
+                        },
+                        "type": "popover",
+                        "position": "bottom"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "OPEN_EXPORT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.options",
+                      "@entity.options"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "EXPORT_REQUESTED",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.options",
+                      "@entity.options"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "tileId": {
+                "type": "string",
+                "default": "",
+                "label": "Tile id",
+                "description": "Identifier of the dashboard tile being exported",
+                "synonyms": "internal identifier — host orbital wires this; users rarely set it directly",
+                "tier": "internal"
+              },
+              "buttonLabel": {
+                "type": "string",
+                "default": "Export",
+                "label": "Button label",
+                "description": "Text shown on the toolbar button that opens the export popover",
+                "synonyms": "the text on the export trigger button. user phrases: 'rename export button to X' / 'set the button label to X' / 'call the button X' / 'change export button text to X' -> X (e.g. 'Download CSV', 'Download', 'Export Data')",
+                "tier": "presentation"
+              },
+              "formats": {
+                "type": "[FormatOption]",
+                "default": [
+                  {
+                    "id": "csv",
+                    "format": "csv",
+                    "label": "CSV"
+                  },
+                  {
+                    "format": "xlsx",
+                    "id": "xlsx",
+                    "label": "XLSX"
+                  },
+                  {
+                    "label": "PDF",
+                    "id": "pdf",
+                    "format": "pdf"
+                  }
+                ],
+                "label": "Available formats",
+                "description": "Export formats shown to the user in the popover",
+                "synonyms": "list of export format entries (csv / xlsx / pdf / png / json). user phrases: 'only CSV' -> keep only csv entry; 'add JSON' -> append json entry; 'no PNG' -> remove png; 'allow X and Y' -> set the array to those two",
+                "tier": "presentation",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": true
+                    },
+                    "format": {
+                      "name": "format",
+                      "type": "string",
+                      "required": true
+                    }
+                  }
+                }
+              },
+              "event": {
+                "type": "string",
+                "default": "EXPORT_REQUESTED",
+                "label": "Export event",
+                "description": "Event emitted when the user picks a format",
+                "synonyms": "bus event name. internal wiring; users rarely target directly",
+                "tier": "internal"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ExportMenuPage",
+            "path": "/exports/menu",
+            "traits": [
+              {
+                "ref": "ExportMenu"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ExportOrbital": [
+          {
+            "trait": "ExportMenu",
+            "patternPath": "root",
+            "prop": "content",
+            "knob": "tileId"
+          },
+          {
+            "trait": "ExportMenu",
+            "patternPath": "root",
+            "prop": "content",
+            "knob": "event"
+          },
+          {
+            "trait": "ExportMenu",
+            "patternPath": "root",
+            "prop": "content",
+            "knob": "tableLook"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

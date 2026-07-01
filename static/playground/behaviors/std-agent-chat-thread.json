@@ -1,0 +1,822 @@
+{
+  "name": "std-agent-chat-thread",
+  "description": "std-agent-chat-thread as a Function",
+  "level": "atom",
+  "topic": "agent",
+  "schema": {
+    "name": "std-agent-chat-thread",
+    "version": "1.0.0",
+    "description": "std-agent-chat-thread as a Function",
+    "orbitals": [
+      {
+        "name": "AgentChatThreadOrbital",
+        "entity": {
+          "name": "AgentChatThread",
+          "collection": "agentchatthreads",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "A user-friendly identifier for the chat thread.",
+              "synonyms": "title, label, identifier"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "A brief explanation of the thread's subject or purpose.",
+              "synonyms": "summary, explanation, details"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending",
+                "sent"
+              ],
+              "description": "Indicates the current operational state of the thread.",
+              "synonyms": "state, condition, mode"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string",
+              "default": "user",
+              "values": [
+                "user",
+                "assistant",
+                "system",
+                "tool"
+              ],
+              "description": "Indicates the actor responsible for the message.",
+              "synonyms": "actor, speaker, sender, originator"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "default": "",
+              "description": "The textual message or response within the thread.",
+              "synonyms": "message, text, body"
+            },
+            {
+              "name": "timestamp",
+              "type": "string",
+              "default": "",
+              "description": "The date and time when the event occurred.",
+              "synonyms": "date, time, when"
+            },
+            {
+              "name": "toolName",
+              "type": "string",
+              "default": "",
+              "description": "The name of the tool used to generate this message.",
+              "synonyms": "tool, application, source"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "AgentChatThreadThread",
+            "category": "interaction",
+            "linkedEntity": "AgentChatThread",
+            "emits": [
+              {
+                "event": "AgentChatThreadLoaded",
+                "description": "Fired when the chat thread finishes loading; payload.data holds the messages",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[AgentChatThread]"
+                  }
+                ]
+              },
+              {
+                "event": "AgentChatThreadLoadFailed",
+                "description": "Fired when the chat thread fails to load",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentChatThreadSaved",
+                "description": "Fired when a new message is persisted",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentChatThreadSaveFailed",
+                "description": "Fired when a message persist fails",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentChatThreadDeleted",
+                "description": "Fired when the chat thread is cleared",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentChatThreadDeleteFailed",
+                "description": "Fired when clearing the chat thread fails",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "idle"
+                },
+                {
+                  "name": "composing"
+                },
+                {
+                  "name": "persisting"
+                },
+                {
+                  "name": "deleting"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "AgentChatThreadLoaded",
+                  "name": "AgentChatThread loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[AgentChatThread]"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentChatThreadLoadFailed",
+                  "name": "AgentChatThread load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "COMPOSE",
+                  "name": "Compose"
+                },
+                {
+                  "key": "CLEAR",
+                  "name": "Clear"
+                },
+                {
+                  "key": "SEND",
+                  "name": "Send",
+                  "payloadSchema": [
+                    {
+                      "name": "content",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CANCEL_COMPOSE",
+                  "name": "Cancel Compose"
+                },
+                {
+                  "key": "AgentChatThreadSaved",
+                  "name": "AgentChatThread saved",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentChatThreadSaveFailed",
+                  "name": "AgentChatThread save failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentChatThreadDeleted",
+                  "name": "AgentChatThread deleted",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentChatThreadDeleteFailed",
+                  "name": "AgentChatThread delete failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "success": "AgentChatThreadLoaded",
+                          "failure": "AgentChatThreadLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "className": "py-12",
+                        "type": "stack",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "variant": "caption",
+                            "type": "typography",
+                            "color": "muted",
+                            "content": "Loading conversation…"
+                          }
+                        ],
+                        "align": "center",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "idle",
+                  "event": "AgentChatThreadLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "gap": "lg",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "direction": "horizontal",
+                                "type": "stack",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "message-circle"
+                                  },
+                                  {
+                                    "content": "Chat Thread",
+                                    "variant": "h2",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "gap": "sm"
+                              },
+                              {
+                                "icon": "plus",
+                                "variant": "primary",
+                                "label": "New Message",
+                                "action": "COMPOSE",
+                                "type": "button"
+                              }
+                            ],
+                            "gap": "sm",
+                            "direction": "horizontal",
+                            "align": "center",
+                            "justify": "between",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "renderItem": [
+                              "fn",
+                              "item",
+                              {
+                                "direction": "vertical",
+                                "gap": "xs",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "gap": "sm",
+                                    "align": "center",
+                                    "children": [
+                                      {
+                                        "label": "@item.role",
+                                        "type": "badge"
+                                      },
+                                      {
+                                        "label": "@item.status",
+                                        "type": "badge",
+                                        "variant": "secondary"
+                                      },
+                                      {
+                                        "type": "typography",
+                                        "variant": "caption",
+                                        "color": "muted",
+                                        "content": "@item.timestamp"
+                                      }
+                                    ],
+                                    "direction": "horizontal",
+                                    "type": "stack"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "@item.content",
+                                    "variant": "body"
+                                  }
+                                ]
+                              }
+                            ],
+                            "fields": [],
+                            "entity": "@payload.data",
+                            "type": "data-list"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "AgentChatThreadLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "name": "alert-triangle",
+                            "type": "icon",
+                            "color": "error"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "h3",
+                            "content": "Failed to load conversation"
+                          },
+                          {
+                            "content": "@payload.error",
+                            "type": "typography",
+                            "variant": "body",
+                            "color": "muted"
+                          },
+                          {
+                            "label": "Retry",
+                            "type": "button",
+                            "action": "INIT",
+                            "variant": "primary",
+                            "icon": "rotate-ccw"
+                          }
+                        ],
+                        "className": "py-12",
+                        "gap": "md",
+                        "direction": "vertical"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "composing",
+                  "event": "COMPOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "justify": "between",
+                            "align": "center",
+                            "gap": "sm",
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "gap": "sm",
+                                "type": "stack",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "message-circle"
+                                  },
+                                  {
+                                    "content": "Chat Thread",
+                                    "variant": "h2",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "direction": "horizontal"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "submitEvent": "SEND",
+                            "mode": "create",
+                            "type": "form-section",
+                            "fields": [
+                              "content"
+                            ],
+                            "cancelEvent": "CANCEL_COMPOSE"
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "deleting",
+                  "event": "CLEAR",
+                  "effects": [
+                    [
+                      "persist",
+                      "delete",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "success": "AgentChatThreadDeleted",
+                          "failure": "AgentChatThreadDeleteFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "align": "center",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "content": "Clearing conversation…",
+                            "variant": "caption",
+                            "color": "muted",
+                            "type": "typography"
+                          }
+                        ],
+                        "className": "py-12",
+                        "direction": "vertical",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "composing",
+                  "to": "persisting",
+                  "event": "SEND",
+                  "effects": [
+                    [
+                      "persist",
+                      "create",
+                      "AgentChatThread",
+                      {
+                        "timestamp": "@now",
+                        "content": "@payload.content",
+                        "status": "sent",
+                        "role": "user"
+                      },
+                      {
+                        "emit": {
+                          "failure": "AgentChatThreadSaveFailed",
+                          "success": "AgentChatThreadSaved"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "content": "Sending…",
+                            "type": "typography",
+                            "variant": "caption",
+                            "color": "muted"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "className": "py-12",
+                        "gap": "md",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "composing",
+                  "to": "loading",
+                  "event": "CANCEL_COMPOSE",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "failure": "AgentChatThreadLoadFailed",
+                          "success": "AgentChatThreadLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "persisting",
+                  "to": "loading",
+                  "event": "AgentChatThreadSaved",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "failure": "AgentChatThreadLoadFailed",
+                          "success": "AgentChatThreadLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "persisting",
+                  "to": "error",
+                  "event": "AgentChatThreadSaveFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "align": "center",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "alert-triangle",
+                            "color": "error"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "h3",
+                            "content": "Failed to send message"
+                          },
+                          {
+                            "content": "@payload.error",
+                            "type": "typography",
+                            "variant": "body",
+                            "color": "muted"
+                          },
+                          {
+                            "type": "button",
+                            "label": "Retry",
+                            "action": "INIT",
+                            "icon": "rotate-ccw",
+                            "variant": "primary"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "className": "py-12",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "deleting",
+                  "to": "loading",
+                  "event": "AgentChatThreadDeleted",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "failure": "AgentChatThreadLoadFailed",
+                          "success": "AgentChatThreadLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "deleting",
+                  "to": "error",
+                  "event": "AgentChatThreadDeleteFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "type": "icon",
+                            "color": "error",
+                            "name": "alert-triangle"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "h3",
+                            "content": "Failed to clear conversation"
+                          },
+                          {
+                            "color": "muted",
+                            "type": "typography",
+                            "variant": "body",
+                            "content": "@payload.error"
+                          },
+                          {
+                            "type": "button",
+                            "variant": "primary",
+                            "icon": "rotate-ccw",
+                            "label": "Retry",
+                            "action": "INIT"
+                          }
+                        ],
+                        "align": "center",
+                        "direction": "vertical",
+                        "gap": "md",
+                        "type": "stack",
+                        "className": "py-12"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentChatThread",
+                      {
+                        "emit": {
+                          "failure": "AgentChatThreadLoadFailed",
+                          "success": "AgentChatThreadLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "AgentChatThreadPage",
+            "path": "/agentchatthreads",
+            "traits": [
+              {
+                "ref": "AgentChatThreadThread"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

@@ -1,0 +1,187 @@
+{
+  "name": "std-game-clock",
+  "description": "std-game-clock — fixed-timestep authoritative clock games compose to drive time; emits GameClockTicked every 100ms while running.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-game-clock",
+    "version": "1.0.0",
+    "description": "std-game-clock — fixed-timestep authoritative clock games compose to drive time; emits GameClockTicked every 100ms while running.",
+    "orbitals": [
+      {
+        "name": "GameClockOrbital",
+        "entity": {
+          "name": "GameClockRecord",
+          "collection": "game_clock_states",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "elapsedMs",
+              "type": "number",
+              "default": 0,
+              "description": "Total milliseconds elapsed since the clock started.",
+              "synonyms": "elapsed, time, ms, total time"
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the clock is currently ticking.",
+              "synonyms": "active, playing, started"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "GameClock",
+            "category": "game-core",
+            "linkedEntity": "GameClockRecord",
+            "emits": [
+              {
+                "event": "GameClockTicked",
+                "description": "Fires every clock tick while running; consumers use elapsedMs to drive animations and game logic.",
+                "synonyms": "clock-tick, time-advance, tick, frame, elapsed",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "elapsedMs",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "running",
+                  "isInitial": true
+                },
+                {
+                  "name": "paused"
+                }
+              ],
+              "events": [
+                {
+                  "key": "PAUSE",
+                  "name": "Pause"
+                },
+                {
+                  "key": "RESUME",
+                  "name": "Resume"
+                },
+                {
+                  "key": "GameClockTicked",
+                  "name": "Game clock ticked",
+                  "description": "Fires every clock tick while running; consumers use elapsedMs to drive animations and game logic.",
+                  "synonyms": "clock-tick, time-advance, tick, frame, elapsed",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "elapsedMs",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "running",
+                  "to": "paused",
+                  "event": "PAUSE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      false
+                    ]
+                  ]
+                },
+                {
+                  "from": "running",
+                  "to": "running",
+                  "event": "RESUME"
+                },
+                {
+                  "from": "paused",
+                  "to": "running",
+                  "event": "RESUME",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ]
+                  ]
+                },
+                {
+                  "from": "paused",
+                  "to": "paused",
+                  "event": "PAUSE"
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "clockTick",
+                "interval": 100,
+                "guard": [
+                  "==",
+                  "@entity.running",
+                  true
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.elapsedMs",
+                    [
+                      "+",
+                      "@entity.elapsedMs",
+                      100
+                    ]
+                  ],
+                  [
+                    "emit",
+                    "GameClockTicked",
+                    {
+                      "elapsedMs": "@entity.elapsedMs"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "autoStart": {
+                "type": "boolean",
+                "default": true,
+                "label": "Auto-start clock",
+                "description": "When true the clock begins ticking immediately on INIT without waiting for a RESUME event.",
+                "synonyms": "start on init, auto-run, begin immediately",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "GameClockPage",
+            "path": "/game/clock",
+            "traits": [
+              {
+                "ref": "GameClock"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

@@ -1,0 +1,1524 @@
+{
+  "name": "std-agent-provider",
+  "description": "std-agent-provider as a Function",
+  "level": "atom",
+  "topic": "agent",
+  "schema": {
+    "name": "std-agent-provider",
+    "version": "1.0.0",
+    "description": "std-agent-provider as a Function",
+    "orbitals": [
+      {
+        "name": "AgentProviderOrbital",
+        "entity": {
+          "name": "AgentProvider",
+          "collection": "agentproviders",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "A human-readable identifier for the agent provider.",
+              "synonyms": "label, identifier, designation"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "A textual explanation of the agent provider's function.",
+              "synonyms": "explanation, details, notes"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "description": "Indicates the operational state of the agent provider.",
+              "synonyms": "state, condition, operationalStatus"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "currentProvider",
+              "type": "string",
+              "default": "anthropic",
+              "description": "The currently active provider implementation.",
+              "synonyms": "implementation, active, provider"
+            },
+            {
+              "name": "currentModel",
+              "type": "string",
+              "default": "claude-sonnet-4-20250514",
+              "description": "The currently active model identifier.",
+              "synonyms": "model, identifier, selection"
+            },
+            {
+              "name": "fallbackProvider",
+              "type": "string",
+              "default": "openai",
+              "description": "An alternative provider to use when the primary fails.",
+              "synonyms": "alternate, backup, secondary"
+            },
+            {
+              "name": "requestCount",
+              "type": "number",
+              "default": 0,
+              "description": "The number of times a request has been made.",
+              "synonyms": "count, requests, usage"
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "default": "",
+              "description": "A textual message associated with the agent provider.",
+              "synonyms": "text, content, details, note"
+            },
+            {
+              "name": "notificationType",
+              "type": "string",
+              "default": "info",
+              "values": [
+                "info",
+                "success",
+                "warning",
+                "error"
+              ],
+              "description": "Specifies the type of notification.",
+              "synonyms": "type, category, level"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "AgentProviderModal",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "currentModel",
+                "currentProvider"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "AgentProvider",
+            "emits": [
+              {
+                "event": "SWITCHED",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderLoaded",
+                "description": "Fired when AgentProvider finishes loading",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentModel",
+                    "type": "string"
+                  },
+                  {
+                    "name": "fallbackProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestCount",
+                    "type": "number"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderLoadFailed",
+                "description": "Fired when AgentProvider fails to load",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderRowLoaded",
+                "description": "Fired on modal open with the pre-fill row",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "AgentProvider"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderUpdated",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderUpdateFailed",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "closed",
+                  "isInitial": true
+                },
+                {
+                  "name": "loading"
+                },
+                {
+                  "name": "open"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SWITCH",
+                  "name": "Switch"
+                },
+                {
+                  "key": "AgentProviderRowLoaded",
+                  "name": "AgentProvider row loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "AgentProvider"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderLoadFailed",
+                  "name": "AgentProvider load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close"
+                },
+                {
+                  "key": "SAVE",
+                  "name": "Save",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SWITCHED",
+                  "name": "Switched",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderLoaded",
+                  "name": "AgentProvider loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "name",
+                      "type": "string"
+                    },
+                    {
+                      "name": "description",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    },
+                    {
+                      "name": "createdAt",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentModel",
+                      "type": "string"
+                    },
+                    {
+                      "name": "fallbackProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestCount",
+                      "type": "number"
+                    },
+                    {
+                      "name": "message",
+                      "type": "string"
+                    },
+                    {
+                      "name": "notificationType",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderUpdated",
+                  "name": "AgentProvider updated",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderUpdateFailed",
+                  "name": "AgentProvider update failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "closed",
+                  "to": "closed",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.currentModel",
+                      "claude-sonnet-4-20250514"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentProvider",
+                      "anthropic"
+                    ],
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "success": "AgentProviderLoaded",
+                          "failure": "AgentProviderLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "direction": "vertical",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "justify": "between",
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "gap": "md",
+                            "children": [
+                              {
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "repeat"
+                                  },
+                                  {
+                                    "content": "Switch Provider",
+                                    "type": "typography",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "gap": "md",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "variant": "primary",
+                                "action": "SWITCH",
+                                "icon": "repeat",
+                                "label": "Open",
+                                "type": "button"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "icon": "repeat",
+                            "title": "Nothing open",
+                            "type": "empty-state",
+                            "description": "Click Open to view details in a modal overlay."
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "closed",
+                  "to": "loading",
+                  "event": "SWITCH",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "success": "AgentProviderRowLoaded",
+                          "failure": "AgentProviderLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "variant": "caption",
+                            "color": "muted",
+                            "content": "Loading…",
+                            "type": "typography"
+                          }
+                        ],
+                        "className": "py-12",
+                        "type": "stack",
+                        "direction": "vertical",
+                        "align": "center",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "open",
+                  "event": "AgentProviderRowLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "gap": "md",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "name": "repeat",
+                                "type": "icon"
+                              },
+                              {
+                                "variant": "h3",
+                                "type": "typography",
+                                "content": "Switch Provider"
+                              }
+                            ],
+                            "gap": "sm",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "gap": "md",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "content": "Current:",
+                                "variant": "caption"
+                              },
+                              {
+                                "type": "badge",
+                                "label": "@entity.currentProvider"
+                              },
+                              {
+                                "type": "badge",
+                                "label": "@entity.currentModel"
+                              }
+                            ]
+                          },
+                          {
+                            "mode": "edit",
+                            "type": "form-section",
+                            "submitEvent": "SAVE",
+                            "cancelEvent": "CLOSE",
+                            "fields": [
+                              "currentProvider",
+                              "currentModel"
+                            ],
+                            "entity": "@payload.row"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "closed",
+                  "event": "AgentProviderLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "notify",
+                      "Failed to load provider",
+                      "error"
+                    ],
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "success": "AgentProviderLoaded",
+                          "failure": "AgentProviderLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "gap": "lg",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "justify": "between",
+                            "children": [
+                              {
+                                "gap": "md",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "repeat"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "Switch Provider",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "direction": "horizontal"
+                              },
+                              {
+                                "action": "SWITCH",
+                                "label": "Open",
+                                "icon": "repeat",
+                                "type": "button",
+                                "variant": "primary"
+                              }
+                            ],
+                            "gap": "md",
+                            "direction": "horizontal"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "title": "Nothing open",
+                            "description": "Click Open to view details in a modal overlay.",
+                            "type": "empty-state",
+                            "icon": "repeat"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "notify",
+                      "Cancelled",
+                      "info"
+                    ],
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "failure": "AgentProviderLoadFailed",
+                          "success": "AgentProviderLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "gap": "md",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "name": "repeat",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "variant": "h2",
+                                    "type": "typography",
+                                    "content": "Switch Provider"
+                                  }
+                                ],
+                                "direction": "horizontal"
+                              },
+                              {
+                                "action": "SWITCH",
+                                "label": "Open",
+                                "type": "button",
+                                "icon": "repeat",
+                                "variant": "primary"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "empty-state",
+                            "title": "Nothing open",
+                            "description": "Click Open to view details in a modal overlay.",
+                            "icon": "repeat"
+                          }
+                        ],
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "event": "SAVE",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "AgentProvider",
+                      "@payload.data",
+                      {
+                        "emit": {
+                          "success": "AgentProviderUpdated",
+                          "failure": "AgentProviderUpdateFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ],
+                    [
+                      "emit",
+                      "SWITCHED"
+                    ],
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "failure": "AgentProviderLoadFailed",
+                          "success": "AgentProviderLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "gap": "md",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "name": "repeat",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "Switch Provider",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "direction": "horizontal"
+                              },
+                              {
+                                "type": "button",
+                                "variant": "primary",
+                                "action": "SWITCH",
+                                "icon": "repeat",
+                                "label": "Open"
+                              }
+                            ],
+                            "gap": "md",
+                            "direction": "horizontal",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "empty-state",
+                            "icon": "repeat",
+                            "description": "Click Open to view details in a modal overlay.",
+                            "title": "Nothing open"
+                          }
+                        ],
+                        "direction": "vertical"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          },
+          {
+            "name": "AgentProviderNotification",
+            "category": "interaction",
+            "linkedEntity": "AgentProvider",
+            "emits": [
+              {
+                "event": "AgentProviderLoaded",
+                "description": "Fired when AgentProvider finishes loading",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentModel",
+                    "type": "string"
+                  },
+                  {
+                    "name": "fallbackProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestCount",
+                    "type": "number"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderLoadFailed",
+                "description": "Fired when AgentProvider fails to load",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "hidden",
+                  "isInitial": true
+                },
+                {
+                  "name": "visible"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SHOW",
+                  "name": "Show",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "notificationType",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "HIDE",
+                  "name": "Hide"
+                },
+                {
+                  "key": "AgentProviderLoaded",
+                  "name": "AgentProvider loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "name",
+                      "type": "string"
+                    },
+                    {
+                      "name": "description",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    },
+                    {
+                      "name": "createdAt",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentModel",
+                      "type": "string"
+                    },
+                    {
+                      "name": "fallbackProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestCount",
+                      "type": "number"
+                    },
+                    {
+                      "name": "message",
+                      "type": "string"
+                    },
+                    {
+                      "name": "notificationType",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderLoadFailed",
+                  "name": "AgentProvider load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "hidden",
+                  "to": "hidden",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "failure": "AgentProviderLoadFailed",
+                          "success": "AgentProviderLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "hidden",
+                  "to": "visible",
+                  "event": "SHOW",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.message",
+                      "@payload.message"
+                    ],
+                    [
+                      "set",
+                      "@entity.notificationType",
+                      "@payload.notificationType"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "type": "stack",
+                        "gap": "lg",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between",
+                            "align": "center",
+                            "children": [
+                              {
+                                "direction": "horizontal",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "server"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "Provider Status",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "gap": "md",
+                                "type": "stack"
+                              },
+                              {
+                                "action": "HIDE",
+                                "label": "Dismiss",
+                                "type": "button",
+                                "icon": "x",
+                                "variant": "ghost"
+                              }
+                            ],
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "variant": "@entity.notificationType",
+                            "type": "alert",
+                            "message": "@entity.message"
+                          },
+                          {
+                            "type": "toast-slot"
+                          },
+                          {
+                            "variant": "warning",
+                            "type": "alert",
+                            "message": "@entity.message"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "visible",
+                  "to": "visible",
+                  "event": "SHOW",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.message",
+                      "@payload.message"
+                    ],
+                    [
+                      "set",
+                      "@entity.notificationType",
+                      "@payload.notificationType"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "name": "server",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "variant": "h2",
+                                    "content": "Provider Status"
+                                  }
+                                ],
+                                "align": "center",
+                                "gap": "md"
+                              },
+                              {
+                                "type": "button",
+                                "label": "Dismiss",
+                                "icon": "x",
+                                "action": "HIDE",
+                                "variant": "ghost"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "align": "center",
+                            "justify": "between",
+                            "gap": "md"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "message": "@entity.message",
+                            "type": "alert",
+                            "variant": "@entity.notificationType"
+                          },
+                          {
+                            "type": "toast-slot"
+                          },
+                          {
+                            "message": "@entity.message",
+                            "variant": "warning",
+                            "type": "alert"
+                          }
+                        ],
+                        "type": "stack",
+                        "gap": "lg"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "visible",
+                  "to": "hidden",
+                  "event": "HIDE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.message",
+                      ""
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          },
+          {
+            "name": "AgentProviderAgent",
+            "category": "interaction",
+            "linkedEntity": "AgentProvider",
+            "emits": [
+              {
+                "event": "SHOW",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderLoaded",
+                "description": "Fired when AgentProvider finishes loading",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "createdAt",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "currentModel",
+                    "type": "string"
+                  },
+                  {
+                    "name": "fallbackProvider",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestCount",
+                    "type": "number"
+                  },
+                  {
+                    "name": "message",
+                    "type": "string"
+                  },
+                  {
+                    "name": "notificationType",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "AgentProviderLoadFailed",
+                "description": "Fired when AgentProvider fails to load",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "message",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "SWITCHED",
+                "triggers": "SWITCHED",
+                "source": {
+                  "kind": "trait",
+                  "trait": "AgentProviderModal"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "active"
+                },
+                {
+                  "name": "switching"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "DO_SWITCH",
+                  "name": "Do Switch",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SWITCHED",
+                  "name": "Switched"
+                },
+                {
+                  "key": "SWITCH_AUTO",
+                  "name": "Switch Auto"
+                },
+                {
+                  "key": "SHOW",
+                  "name": "Show",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "notificationType",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderLoaded",
+                  "name": "AgentProvider loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "name",
+                      "type": "string"
+                    },
+                    {
+                      "name": "description",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    },
+                    {
+                      "name": "createdAt",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentModel",
+                      "type": "string"
+                    },
+                    {
+                      "name": "fallbackProvider",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestCount",
+                      "type": "number"
+                    },
+                    {
+                      "name": "message",
+                      "type": "string"
+                    },
+                    {
+                      "name": "notificationType",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "AgentProviderLoadFailed",
+                  "name": "AgentProvider load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "message",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "active",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.fallbackProvider",
+                      "openai"
+                    ],
+                    [
+                      "fetch",
+                      "AgentProvider",
+                      {
+                        "emit": {
+                          "failure": "AgentProviderLoadFailed",
+                          "success": "AgentProviderLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "agent/provider"
+                    ],
+                    [
+                      "agent/model"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "description": "Provider is ready",
+                        "title": "Provider",
+                        "type": "empty-state",
+                        "icon": "repeat"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "switching",
+                  "event": "DO_SWITCH",
+                  "effects": [
+                    [
+                      "agent/switch-provider",
+                      "@payload.data.currentProvider",
+                      "@payload.data.currentModel"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentProvider",
+                      "@payload.data.currentProvider"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentModel",
+                      "@payload.data.currentModel"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "switching",
+                  "event": "DO_SWITCH",
+                  "effects": [
+                    [
+                      "agent/switch-provider",
+                      "@payload.data.currentProvider",
+                      "@payload.data.currentModel"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentProvider",
+                      "@payload.data.currentProvider"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentModel",
+                      "@payload.data.currentModel"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "switching",
+                  "event": "SWITCHED",
+                  "effects": [
+                    [
+                      "agent/switch-provider",
+                      "@entity.currentProvider",
+                      "@entity.currentModel"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "switching",
+                  "event": "SWITCH_AUTO",
+                  "effects": [
+                    [
+                      "agent/switch-provider",
+                      "@entity.fallbackProvider"
+                    ],
+                    [
+                      "set",
+                      "@entity.currentProvider",
+                      "@entity.fallbackProvider"
+                    ]
+                  ]
+                },
+                {
+                  "from": "switching",
+                  "to": "active",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "agent/provider"
+                    ],
+                    [
+                      "agent/model"
+                    ],
+                    [
+                      "set",
+                      "@entity.requestCount",
+                      [
+                        "+",
+                        "@entity.requestCount",
+                        1
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "SHOW",
+                      {
+                        "notificationType": "info",
+                        "message": "Provider switched"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "AgentProviderPage",
+            "path": "/agentproviders",
+            "traits": [
+              {
+                "ref": "AgentProviderModal"
+              },
+              {
+                "ref": "AgentProviderNotification"
+              },
+              {
+                "ref": "AgentProviderAgent"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

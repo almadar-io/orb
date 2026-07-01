@@ -1,0 +1,418 @@
+{
+  "name": "std-cascade-on-delete",
+  "description": "std-cascade-on-delete — relational `owns` cascade. Listens for a parent-deleted sentinel (`ParentDeleted` — rename via traitOverrides.events to the consumer's actual parent-deleted event), then deletes every dependent row whose `foreignKeyField` points at the deleted parent — via a self-driving loop (delete the head of the matching set, re-fetch until none remain). Emits `CascadeRowDeleted` per row and `CascadeCompleted` when done.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-cascade-on-delete",
+    "version": "1.1.0",
+    "description": "std-cascade-on-delete — relational `owns` cascade. Listens for a parent-deleted sentinel (`ParentDeleted` — rename via traitOverrides.events to the consumer's actual parent-deleted event), then deletes every dependent row whose `foreignKeyField` points at the deleted parent — via a self-driving loop (delete the head of the matching set, re-fetch until none remain). Emits `CascadeRowDeleted` per row and `CascadeCompleted` when done.",
+    "orbitals": [
+      {
+        "name": "CascadeOnDeleteOrbital",
+        "entity": {
+          "name": "CascadeLog",
+          "collection": "cascade_logs",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "parentId",
+              "type": "string",
+              "default": "",
+              "description": "Identifier of the deleted parent the cascade is clearing dependents for.",
+              "synonyms": "parent, source, origin"
+            },
+            {
+              "name": "parentEntity",
+              "type": "string",
+              "default": "",
+              "description": "Identifies the parent entity of the cascade.",
+              "synonyms": "related entity, source entity, parent"
+            },
+            {
+              "name": "rowCount",
+              "type": "number",
+              "default": 0,
+              "description": "The number of rows deleted by the cascade.",
+              "synonyms": "count, size, quantity"
+            },
+            {
+              "name": "headId",
+              "type": "string",
+              "default": "",
+              "description": "Scratch: id of the dependent row the loop is currently deleting.",
+              "synonyms": "current id, cursor"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "CascadeOnDeleteGate",
+            "category": "lifecycle",
+            "capabilities": [
+              "cascade-delete"
+            ],
+            "linkedEntity": "CascadeLog",
+            "emits": [
+              {
+                "event": "CascadeRowDeleted",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "CascadeCompleted",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "parentId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "DepsLoaded",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[object]"
+                  }
+                ]
+              },
+              {
+                "event": "CascadeStepped",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "CascadeFailed",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "scanning"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ParentDeleted",
+                  "name": "Parent deleted",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "DepsLoaded",
+                  "name": "Deps loaded",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[object]"
+                    }
+                  ]
+                },
+                {
+                  "key": "CascadeStepped",
+                  "name": "Cascade stepped",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CascadeFailed",
+                  "name": "Cascade failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CascadeRowDeleted",
+                  "name": "Cascade row deleted",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CascadeCompleted",
+                  "name": "Cascade completed",
+                  "payloadSchema": [
+                    {
+                      "name": "parentId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT"
+                },
+                {
+                  "from": "idle",
+                  "to": "scanning",
+                  "event": "ParentDeleted",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.parentId",
+                      "@payload.data.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.parentEntity",
+                      ""
+                    ],
+                    [
+                      "fetch",
+                      "CascadeLog",
+                      {
+                        "emit": {
+                          "failure": "CascadeFailed",
+                          "success": "DepsLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "scanning",
+                  "to": "scanning",
+                  "event": "DepsLoaded",
+                  "guard": [
+                    ">",
+                    [
+                      "array/len",
+                      [
+                        "array/filter",
+                        "@payload.data",
+                        [
+                          "fn",
+                          "row",
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@row",
+                              "parentId"
+                            ],
+                            "@entity.parentId"
+                          ]
+                        ]
+                      ]
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.headId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          [
+                            "array/filter",
+                            "@payload.data",
+                            [
+                              "fn",
+                              "row",
+                              [
+                                "=",
+                                [
+                                  "object/get",
+                                  "@row",
+                                  "parentId"
+                                ],
+                                "@entity.parentId"
+                              ]
+                            ]
+                          ]
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "CascadeRowDeleted",
+                      {
+                        "id": "@entity.headId"
+                      }
+                    ],
+                    [
+                      "persist",
+                      "delete",
+                      "CascadeLog",
+                      "@entity.headId",
+                      {
+                        "emit": {
+                          "failure": "CascadeFailed",
+                          "success": "CascadeStepped"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "scanning",
+                  "to": "idle",
+                  "event": "DepsLoaded",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      [
+                        "array/filter",
+                        "@payload.data",
+                        [
+                          "fn",
+                          "row",
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@row",
+                              "parentId"
+                            ],
+                            "@entity.parentId"
+                          ]
+                        ]
+                      ]
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "emit",
+                      "CascadeCompleted",
+                      {
+                        "parentId": "@entity.parentId"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "scanning",
+                  "to": "scanning",
+                  "event": "CascadeStepped",
+                  "effects": [
+                    [
+                      "fetch",
+                      "CascadeLog",
+                      {
+                        "emit": {
+                          "success": "DepsLoaded",
+                          "failure": "CascadeFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "scanning",
+                  "to": "idle",
+                  "event": "CascadeFailed"
+                }
+              ]
+            },
+            "config": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Delete related records too",
+                "description": "When a record is deleted, also delete the records that belong to it. Off by default.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, cascade delete, delete children, on delete cascade, cascade on delete, remove related, soft delete cascade, dependent deletes, integrity cascade",
+                "tier": "infra"
+              },
+              "dependentEntity": {
+                "type": "string",
+                "default": "CascadeLog",
+                "label": "Dependent entity",
+                "description": "Entity holding rows that point at the parent (compose one cascade trait per dependent type). Defaults to the atom's own log so the standalone validates; rebind per composition.",
+                "tier": "internal"
+              },
+              "parentEntity": {
+                "type": "string",
+                "default": "",
+                "label": "Parent entity",
+                "description": "Entity whose deletion triggers the cascade.",
+                "tier": "internal"
+              },
+              "foreignKeyField": {
+                "type": "string",
+                "default": "parentId",
+                "label": "Foreign-key field",
+                "description": "Field on dependent rows that holds the parent's id.",
+                "tier": "internal"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CascadeOnDeletePage",
+            "path": "/cascade-on-delete",
+            "traits": [
+              {
+                "ref": "CascadeOnDeleteGate"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

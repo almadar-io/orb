@@ -1,0 +1,981 @@
+{
+  "name": "std-approval-gate",
+  "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-approval-gate",
+    "version": "1.0.1",
+    "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
+    "orbitals": [
+      {
+        "name": "ApprovalGateOrbital",
+        "entity": {
+          "name": "ApprovalRequest",
+          "collection": "approval_requests",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "gatedEvent",
+              "type": "string",
+              "default": "",
+              "description": "The event that triggered the approval request.",
+              "synonyms": "trigger, event, source"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "pending",
+              "values": [
+                "pending",
+                "approved",
+                "denied",
+                "escalated"
+              ],
+              "description": "Current state of the approval process.",
+              "synonyms": "approval status, state, condition"
+            },
+            {
+              "name": "reviewer",
+              "type": "string",
+              "default": "",
+              "description": "The user or system responsible for reviewing the request.",
+              "synonyms": "assignee, owner, approver, responsible party"
+            },
+            {
+              "name": "requestedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the approval request was initiated.",
+              "synonyms": "creation time, request date, submission time"
+            },
+            {
+              "name": "decidedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when a decision was made on the request.",
+              "synonyms": "decision time, resolved at, completed at"
+            },
+            {
+              "name": "escalatedAt",
+              "type": "number",
+              "default": 0,
+              "description": "Timestamp indicating when the request was escalated.",
+              "synonyms": "escalation time, escalation timestamp, escalated time"
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "default": "",
+              "description": "Free-form text providing additional context or details.",
+              "synonyms": "comments, remarks, explanation, details"
+            },
+            {
+              "name": "payload",
+              "type": "object",
+              "default": {},
+              "description": "The held data of the gated action, replayed by the downstream listener when the request is granted.",
+              "synonyms": "request data, held payload, pending data, gated data"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ApprovalGateReview",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "reviewer",
+                "status"
+              ]
+            },
+            "category": "interaction",
+            "capabilities": [
+              "approval"
+            ],
+            "linkedEntity": "ApprovalRequest",
+            "emits": [
+              {
+                "event": "APPROVE",
+                "description": "Signals that an approval request has been approved.",
+                "synonyms": "accept, authorize, confirm, pass",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "gatedEvent",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewer",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "decidedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "escalatedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      },
+                      {
+                        "name": "payload",
+                        "type": "object"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "DENY",
+                "description": "Signals that an approval request has been denied.",
+                "synonyms": "reject, decline",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "gatedEvent",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewer",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "decidedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "escalatedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      },
+                      {
+                        "name": "payload",
+                        "type": "object"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "CLOSE",
+                "description": "Dismisses the review queue overlay.",
+                "synonyms": "dismiss, hide, cancel, done",
+                "tier": "domain"
+              },
+              {
+                "event": "ApprovalGranted",
+                "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay.",
+                "synonyms": "approved, authorized, confirmed, validated",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "requestId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "payload",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "event": "ApprovalDenied",
+                "description": "Indicates an approval request has been denied.",
+                "synonyms": "rejected, declined",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "requestId",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ApprovalRequestLoaded",
+                "description": "Indicates an approval request has been successfully loaded.",
+                "synonyms": "loaded, fetched, retrieved",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ApprovalRequest]"
+                  }
+                ]
+              },
+              {
+                "event": "ApprovalRequestLoadFailed",
+                "description": "Indicates failure to load an approval request.",
+                "synonyms": "load error, failed load, request failure",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ApprovalRequestReviewed",
+                "description": "Signals that an approval request has been reviewed.",
+                "synonyms": "reviewed, processed, examined",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "gatedEvent",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "reviewer",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "decidedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "escalatedAt",
+                        "type": "number"
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      },
+                      {
+                        "name": "payload",
+                        "type": "object"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ApprovalRequestReviewFailed",
+                "description": "Indicates a failure to load or process an approval request for review.",
+                "synonyms": "load error, failed review, processing failure",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "loading"
+                },
+                {
+                  "name": "reviewing"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ApprovalRequestLoaded",
+                  "name": "ApprovalRequest loaded",
+                  "description": "Indicates an approval request has been successfully loaded.",
+                  "synonyms": "loaded, fetched, retrieved",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ApprovalRequest]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ApprovalRequestLoadFailed",
+                  "name": "ApprovalRequest load failed",
+                  "description": "Indicates failure to load an approval request.",
+                  "synonyms": "load error, failed load, request failure",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "OPEN",
+                  "name": "Open",
+                  "description": "Summons the review queue (host nav/affordance requests it).",
+                  "synonyms": "open, show, review, view queue, open approvals",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CLOSE",
+                  "name": "Close",
+                  "description": "Dismisses the review queue overlay.",
+                  "synonyms": "dismiss, hide, cancel, done",
+                  "tier": "domain"
+                },
+                {
+                  "key": "APPROVE",
+                  "name": "Approve",
+                  "description": "Signals that an approval request has been approved.",
+                  "synonyms": "accept, authorize, confirm, pass",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ApprovalRequest"
+                    }
+                  ]
+                },
+                {
+                  "key": "DENY",
+                  "name": "Deny",
+                  "description": "Signals that an approval request has been denied.",
+                  "synonyms": "reject, decline",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "ApprovalRequest"
+                    }
+                  ]
+                },
+                {
+                  "key": "ApprovalRequestReviewed",
+                  "name": "ApprovalRequest reviewed",
+                  "description": "Signals that an approval request has been reviewed.",
+                  "synonyms": "reviewed, processed, examined",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "ApprovalRequest"
+                    }
+                  ]
+                },
+                {
+                  "key": "ApprovalRequestReviewFailed",
+                  "name": "ApprovalRequest review failed",
+                  "description": "Indicates a failure to load or process an approval request for review.",
+                  "synonyms": "load error, failed review, processing failure",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ApprovalGranted",
+                  "name": "Approval granted",
+                  "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay.",
+                  "synonyms": "approved, authorized, confirmed, validated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "requestId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "payload",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "ApprovalDenied",
+                  "name": "Approval denied",
+                  "description": "Indicates an approval request has been denied.",
+                  "synonyms": "rejected, declined",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "requestId",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "emit": {
+                          "success": "ApprovalRequestLoaded",
+                          "failure": "ApprovalRequestLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ApprovalRequestLoaded"
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ApprovalRequestLoadFailed"
+                },
+                {
+                  "from": "idle",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "emit": {
+                          "failure": "ApprovalRequestLoadFailed",
+                          "success": "ApprovalRequestLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "className": "py-12",
+                        "align": "center",
+                        "gap": "md",
+                        "direction": "vertical",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "variant": "caption",
+                            "content": "Loading approval queue…",
+                            "type": "typography",
+                            "color": "muted"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "reviewing",
+                  "event": "ApprovalRequestLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "direction": "vertical",
+                        "type": "stack",
+                        "gap": "md",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "justify": "between",
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "shield-check"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "variant": "h3",
+                                    "content": "Approval queue"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "align": "center",
+                                "type": "stack",
+                                "gap": "sm"
+                              },
+                              {
+                                "action": "CLOSE",
+                                "variant": "ghost",
+                                "icon": "x",
+                                "label": "Close",
+                                "type": "button"
+                              }
+                            ],
+                            "align": "center",
+                            "gap": "sm",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "fields": [
+                              {
+                                "label": "Action",
+                                "variant": "badge",
+                                "name": "gatedEvent"
+                              },
+                              {
+                                "label": "Requested",
+                                "variant": "caption",
+                                "name": "requestedAt"
+                              },
+                              {
+                                "name": "status",
+                                "label": "Status",
+                                "variant": "badge"
+                              }
+                            ],
+                            "entity": "@payload.data",
+                            "itemActions": [
+                              {
+                                "label": "Approve",
+                                "event": "APPROVE",
+                                "icon": "check",
+                                "variant": "primary"
+                              },
+                              {
+                                "label": "Deny",
+                                "variant": "danger",
+                                "event": "DENY",
+                                "icon": "x"
+                              }
+                            ],
+                            "look": "dense",
+                            "gap": "sm",
+                            "type": "data-grid",
+                            "cols": 1
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "ApprovalRequestLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "message": "@payload.error",
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "APPROVE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "approved"
+                    ],
+                    [
+                      "set",
+                      "@entity.reviewer",
+                      "@user.id"
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ApprovalRequest",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "ApprovalRequestReviewFailed",
+                          "success": "ApprovalRequestReviewed"
+                        }
+                      }
+                    ],
+                    [
+                      "emit",
+                      "ApprovalGranted",
+                      {
+                        "payload": "@payload.row.payload",
+                        "requestId": "@payload.id"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "DENY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "denied"
+                    ],
+                    [
+                      "set",
+                      "@entity.reviewer",
+                      "@user.id"
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ApprovalRequest",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "ApprovalRequestReviewFailed",
+                          "success": "ApprovalRequestReviewed"
+                        }
+                      }
+                    ],
+                    [
+                      "emit",
+                      "ApprovalDenied",
+                      {
+                        "requestId": "@payload.id"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "loading",
+                  "event": "ApprovalRequestReviewed",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "emit": {
+                          "success": "ApprovalRequestLoaded",
+                          "failure": "ApprovalRequestLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "ApprovalRequestReviewFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "message": "@payload.error",
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "OPEN",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "emit": {
+                          "failure": "ApprovalRequestLoadFailed",
+                          "success": "ApprovalRequestLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "size": "sm",
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "escalationRoles": {
+                "type": "[string]",
+                "default": [],
+                "label": "Who gets notified when a request escalates?",
+                "description": "Roles notified on escalation (compose sibling std-notify-on-event to deliver).",
+                "synonyms": "escalation contacts, escalate to, notify roles, escalated approver",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Require approval",
+                "description": "Require sign-off before a record is finalized. Off by default.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, approval, needs approval, sign-off, signed off, review before, gatekeeper, editor approval, publishing approval, draft approval, content review, requires approval, manager approval, supervisor approval, admin approval, before going live",
+                "tier": "policy"
+              },
+              "reviewSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Review slot",
+                "description": "UI slot the review queue renders into. Defaults to the modal overlay so the queue never seizes the host's main content; summoned via OPEN, cleared via CLOSE.",
+                "tier": "internal"
+              },
+              "threshold": {
+                "type": "number",
+                "default": 0,
+                "label": "Auto-approve below this value",
+                "description": "Requests whose gated value is below this threshold are auto-approved. v1.0 declarative only.",
+                "synonyms": "auto approve amount, skip review under, threshold, limit",
+                "tier": "policy"
+              },
+              "approverRoles": {
+                "type": "[string]",
+                "default": [],
+                "label": "Who can approve requests?",
+                "description": "Roles eligible to approve. The host application enforces role-gating on the page.",
+                "synonyms": "approver, reviewer, authorized roles, sign-off roles, who approves",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Review queue table style",
+                "description": "Visual treatment for the approval-queue data table.",
+                "synonyms": "table style, grid look, compact, spacious, striped",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "valueField": {
+                "type": "string",
+                "default": "",
+                "label": "Value field",
+                "description": "Payload field name to compare against threshold (e.g. 'amount' on a RefundRequested event). v1.0 declarative only.",
+                "tier": "internal"
+              },
+              "autoApproveBelowThreshold": {
+                "type": "boolean",
+                "default": true,
+                "label": "Skip review queue for low-value requests?",
+                "description": "When true, auto-approves requests below the threshold without queuing. v1.0 declarative only.",
+                "synonyms": "auto approve, skip review, bypass queue, automatic approval",
+                "tier": "policy"
+              },
+              "escalationHours": {
+                "type": "number",
+                "default": 0,
+                "label": "Escalate after how many hours pending?",
+                "description": "Hours a request can sit pending before escalating. v1.0 declarative only.",
+                "synonyms": "escalation time, SLA hours, pending timeout, escalate after",
+                "tier": "policy"
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ApprovalGateReviewPage",
+            "path": "/approvals/queue",
+            "traits": [
+              {
+                "ref": "ApprovalGateReview"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ApprovalGateOrbital": [
+          {
+            "trait": "ApprovalGateReview",
+            "patternPath": "root.children.2",
+            "prop": "look",
+            "knob": "tableLook"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

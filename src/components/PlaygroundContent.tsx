@@ -14,8 +14,14 @@ import {
   ArrowRight,
   RotateCcw,
 } from "lucide-react";
-import { BEHAVIOR_CATALOG, type BehaviorEntry } from "../data/behavior-catalog";
-import { MODULE_CATALOG } from "../data/module-catalog";
+import {
+  loadBehaviorIndex,
+  loadBehavior,
+  loadModules,
+  type BehaviorIndexEntry,
+  type BehaviorDetail,
+  type ModuleCatalog,
+} from "../data/playground-catalog";
 import type { SExpr } from "@almadar/evaluator";
 import { isInlineTrait } from "@almadar/core";
 import type { OrbitalSchema, Trait, OrbitalEntity } from "@almadar/core";
@@ -194,29 +200,6 @@ function inlineEntity(schema: OrbitalSchema): OrbitalEntity | undefined {
     : undefined;
 }
 
-function schemaToGlyphProps(entry: BehaviorEntry) {
-  const entity = inlineEntity(entry.schema);
-  const traits = inlineTraits(entry.schema);
-  let stateCount = 0;
-  const effectTypes: string[] = [];
-  for (const trait of traits) {
-    stateCount += trait.stateMachine?.states.length ?? 0;
-    for (const t of trait.stateMachine?.transitions ?? []) {
-      for (const eff of t.effects ?? []) {
-        const effType = Array.isArray(eff) ? (eff[0] as string | undefined) : undefined;
-        if (effType && !effectTypes.includes(effType)) effectTypes.push(effType);
-      }
-    }
-  }
-  return {
-    fieldCount: entity?.fields?.length ?? 0,
-    stateCount,
-    effectTypes,
-    persistence: entity?.persistence ?? "persistent",
-    level: entry.level,
-  };
-}
-
 // ─── State machine extraction ─────────────────────────────────────────────────
 
 function extractStateMachineInfo(schema: OrbitalSchema): { stateCount: number; eventCount: number } {
@@ -235,10 +218,9 @@ function extractStateMachineInfo(schema: OrbitalSchema): { stateCount: number; e
 // DATA: BEHAVIORS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const BEHAVIOR_LIST = Object.values(BEHAVIOR_CATALOG).map((b: BehaviorEntry) => ({
-  name: b.name,
-  description: b.description || "",
-}));
+function useBehaviorMap(index: BehaviorIndexEntry[]) {
+  return useMemo(() => new Map(index.map((b) => [b.name, b])), [index]);
+}
 
 const LEVEL_LABELS: Record<string, string> = {
   atom: "ATOMS",
@@ -246,18 +228,35 @@ const LEVEL_LABELS: Record<string, string> = {
   organism: "ORGANISMS",
 };
 
-// Behaviors group primarily by topic. The orb-website registry ships only
-// `core` and `service` topics (`agent`, `app`, `game`, `probes` are filtered
-// out by scripts/generate-behavior-catalog.ts). Level is preserved as a
+// Behaviors group primarily by topic. The orb-website registry ships every
+// topic under packages/almadar-std/behaviors/registry. Level is preserved as a
 // per-item glyph + secondary sort key inside each topic group.
 const TOPIC_LABELS: Record<string, string> = {
   core: "CORE",
-  service: "SERVICE",
+  agent: "AGENT",
+  "core-variations": "VARIATIONS",
+  infra: "INFRA",
+  "ui/core": "UI CORE",
+  "ui/marketing": "UI MARKETING",
+  "ui/game": "UI GAME",
+  "ui/game/2d": "UI GAME 2D",
+  "ui/game/3d": "UI GAME 3D",
+  "ui/avl": "UI AVL",
+  "ui/learning": "UI LEARNING",
 };
 
 const TOPIC_ORDER: Record<string, number> = {
   CORE: 0,
-  SERVICE: 1,
+  AGENT: 1,
+  VARIATIONS: 2,
+  INFRA: 3,
+  "UI CORE": 4,
+  "UI MARKETING": 5,
+  "UI GAME": 6,
+  "UI GAME 2D": 7,
+  "UI GAME 3D": 8,
+  "UI AVL": 9,
+  "UI LEARNING": 10,
 };
 
 const LEVEL_SUB_ORDER: Record<string, number> = {
@@ -266,8 +265,8 @@ const LEVEL_SUB_ORDER: Record<string, number> = {
   atom: 2,
 };
 
-function getBehaviorCategory(name: string): string {
-  const entry = BEHAVIOR_CATALOG[name];
+function getBehaviorCategory(name: string, indexMap: Map<string, BehaviorIndexEntry>): string {
+  const entry = indexMap.get(name);
   if (!entry) return "OTHER";
   return TOPIC_LABELS[entry.topic] ?? "OTHER";
 }
@@ -281,30 +280,34 @@ function fnToKebab(fn: string): string {
 }
 
 /** Extract which std* behaviors a behavior composes by parsing its source code */
-function extractComposedBehaviors(entry: BehaviorEntry): string[] {
+function extractComposedBehaviors(
+  entry: BehaviorDetail,
+  indexMap: Map<string, BehaviorIndexEntry>,
+): string[] {
   const calls = (entry.source.match(/\bstd[A-Z]\w+\s*\(/g) ?? [])
     .map((c: string) => c.replace(/\s*\(/, ''))
     .map((c: string) => fnToKebab(c))
-    .filter((c: string) => c !== entry.name && BEHAVIOR_CATALOG[c]);
+    .filter((c: string) => c !== entry.name && indexMap.has(c));
   return [...new Set(calls)];
 }
 
 // ─── Composition View ────────────────────────────────────────────────────────
 
-function CompositionView({ entry, onSelect }: {
-  entry: BehaviorEntry;
+function CompositionView({ entry, indexMap, onSelect }: {
+  entry: BehaviorDetail;
+  indexMap: Map<string, BehaviorIndexEntry>;
   onSelect: (name: string) => void;
 }) {
-  const children = useMemo(() => extractComposedBehaviors(entry), [entry]);
+  const children = useMemo(() => extractComposedBehaviors(entry, indexMap), [entry, indexMap]);
   const isAtom = entry.level === 'atom';
 
-  // For each child, also get its children (one level deeper)
+  // For each child, surface metadata from the index. Grandchildren require
+  // the child's source, which we no longer preload for the whole catalog.
   const childEntries = useMemo(() => children.map(name => {
-    const child = BEHAVIOR_CATALOG[name];
+    const child = indexMap.get(name);
     if (!child) return null;
-    const grandchildren = extractComposedBehaviors(child);
-    return { name, level: child.level, description: child.description, grandchildren };
-  }).filter(Boolean) as { name: string; level: string; description: string; grandchildren: string[] }[], [children]);
+    return { name, level: child.level, description: child.description, grandchildren: [] as string[] };
+  }).filter(Boolean) as { name: string; level: string; description: string; grandchildren: string[] }[], [children, indexMap]);
 
   return (
     <VStack className="p-6 gap-6 h-full overflow-y-auto">
@@ -382,7 +385,7 @@ function CompositionView({ entry, onSelect }: {
 
 // ─── Code Panel (shows lolo source for each behavior) ────────────────────────
 
-function CodePanel({ entry }: { entry: BehaviorEntry }) {
+function CodePanel({ entry }: { entry: BehaviorDetail }) {
   return (
     <VStack className="h-full">
       <HStack className="border-b border-[var(--color-border)] flex-shrink-0 px-4 py-1.5">
@@ -411,13 +414,15 @@ function CodePanel({ entry }: { entry: BehaviorEntry }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function BehaviorBrowser({
-  items,
+  index,
+  indexMap,
   selected,
   onSelect,
   collapsed,
   onToggleCollapse,
 }: {
-  items: { name: string; description: string }[];
+  index: BehaviorIndexEntry[];
+  indexMap: Map<string, BehaviorIndexEntry>;
   selected: string;
   onSelect: (name: string) => void;
   collapsed: boolean;
@@ -430,6 +435,8 @@ function BehaviorBrowser({
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const defaultCollapsed = useCallback((cat: string): boolean => cat !== "CORE", []);
 
+  const items = useMemo(() => index.map((b) => ({ name: b.name, description: b.description || "" })), [index]);
+
   const filtered = items.filter(
     (b) =>
       b.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -438,7 +445,7 @@ function BehaviorBrowser({
 
   const byCategory: Record<string, typeof items> = {};
   for (const b of filtered) {
-    const cat = getBehaviorCategory(b.name);
+    const cat = getBehaviorCategory(b.name, indexMap);
     (byCategory[cat] ||= []).push(b);
   }
   const sortedCategories = Object.keys(byCategory).sort(
@@ -449,8 +456,8 @@ function BehaviorBrowser({
   // mirrors the old level-only ordering inside the new topic groups.
   for (const cat of sortedCategories) {
     byCategory[cat].sort((a, b) => {
-      const la = BEHAVIOR_CATALOG[a.name]?.level ?? 'atom';
-      const lb = BEHAVIOR_CATALOG[b.name]?.level ?? 'atom';
+      const la = indexMap.get(a.name)?.level ?? 'atom';
+      const lb = indexMap.get(b.name)?.level ?? 'atom';
       const da = LEVEL_SUB_ORDER[la] ?? 99;
       const db = LEVEL_SUB_ORDER[lb] ?? 99;
       if (da !== db) return da - db;
@@ -517,8 +524,10 @@ function BehaviorBrowser({
                 </HStack>
               </Box>
               {!isCollapsed && byCategory[cat].map((b) => {
-                const entry = BEHAVIOR_CATALOG[b.name];
-                const glyphProps = entry ? schemaToGlyphProps(entry) : null;
+                const entry = indexMap.get(b.name);
+                const glyphProps = entry
+                  ? { level: entry.level, fieldCount: 0, stateCount: 0, persistence: 'persistent' }
+                  : null;
                 const isSelected = b.name === selected;
                 return (
                   <HStack
@@ -572,15 +581,55 @@ function BehaviorBrowser({
 // BEHAVIORS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeChange, onModeToggle }: {
+function useBehaviorDetail(name: string) {
+  const [entry, setEntry] = useState<BehaviorDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!name) {
+      setEntry(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    loadBehavior(name)
+      .then((detail) => {
+        if (!cancelled) setEntry(detail);
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  return { entry, loading, error };
+}
+
+function BehaviorsTab({
+  index,
+  indexMap,
+  initialSelected,
+  selectedTheme,
+  selectedMode,
+  onThemeChange,
+  onModeToggle,
+}: {
+  index: BehaviorIndexEntry[];
+  indexMap: Map<string, BehaviorIndexEntry>;
   initialSelected?: string | null;
   selectedTheme: string;
   selectedMode: "light" | "dark";
   onThemeChange: (t: string) => void;
   onModeToggle: () => void;
 }) {
+  const firstName = index[0]?.name ?? "";
   const [selected, setSelected] = useState(
-    initialSelected && BEHAVIOR_CATALOG[initialSelected] ? initialSelected : "std-cart"
+    initialSelected && indexMap.has(initialSelected) ? initialSelected : firstName
   );
   const [previewKey, setPreviewKey] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -588,9 +637,9 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
   const [smBarExpanded, setSmBarExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<"preview" | "composition">("preview");
 
-  const entry = BEHAVIOR_CATALOG[selected] ?? null;
+  const { entry, loading, error } = useBehaviorDetail(selected);
   const previewSchema = entry?.schema ?? null;
-  const smInfo = previewSchema ? extractStateMachineInfo(previewSchema) : null;
+  const smInfo = previewSchema ? extractStateMachineInfo(previewSchema as OrbitalSchema) : null;
 
   const appliedTheme = `${selectedTheme}-${selectedMode}`;
 
@@ -610,7 +659,8 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
     <HStack className="flex-1 min-h-0 overflow-hidden">
       {/* Left: Behavior Browser */}
       <BehaviorBrowser
-        items={BEHAVIOR_LIST}
+        index={index}
+        indexMap={indexMap}
         selected={selected}
         onSelect={handleSelect}
         collapsed={panelCollapsed}
@@ -691,14 +741,22 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
         </Box>
 
         {/* Main content area */}
-        {showCode && entry ? (
+        {loading ? (
+          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-[var(--color-border)]">
+            <Typography color="muted" size="sm">Loading behavior...</Typography>
+          </Box>
+        ) : error ? (
+          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-[var(--color-border)]">
+            <Typography color="error" size="sm">{error}</Typography>
+          </Box>
+        ) : showCode && entry ? (
           <Box className="flex-[1_1_0] h-0 overflow-hidden border-x border-[var(--color-border)]">
             <CodePanel entry={entry} />
           </Box>
         ) : viewMode === "composition" ? (
           <Box className="flex-[1_1_0] h-0 overflow-auto border-x border-[var(--color-border)]">
             {entry ? (
-              <CompositionView entry={entry} onSelect={handleSelect} />
+              <CompositionView entry={entry} indexMap={indexMap} onSelect={handleSelect} />
             ) : (
               <Box className="flex items-center justify-center h-full">
                 <Typography color="muted">Select a behavior to view its composition</Typography>
@@ -729,7 +787,7 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
             {previewSchema ? (
               <BrowserPlayground
                 key={previewKey}
-                schema={previewSchema}
+                schema={previewSchema as OrbitalSchema}
                 mode="mock"
                 height="100%"
                 className="border-0 rounded-none"
@@ -758,7 +816,7 @@ function BehaviorsTab({ initialSelected, selectedTheme, selectedMode, onThemeCha
               {smBarExpanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
             </Box>
             {smBarExpanded && previewSchema && (
-              <StateMachineDetail schema={previewSchema} />
+              <StateMachineDetail schema={previewSchema as OrbitalSchema} />
             )}
           </Box>
         )}
@@ -821,10 +879,12 @@ const MODULE_GROUP: Record<string, string> = {
   prob: "ML", nn: "ML", tensor: "ML", train: "ML",
 };
 
-const MODULE_LIST = Object.keys(MODULE_CATALOG).map((m) => ({
-  name: m,
-  description: `${Object.keys(MODULE_CATALOG[m]).length} operators`,
-}));
+function useModuleList(modules: ModuleCatalog) {
+  return useMemo(() => Object.keys(modules).map((m) => ({
+    name: m,
+    description: `${Object.keys(modules[m]).length} operators`,
+  })), [modules]);
+}
 
 function getModuleCategory(name: string): string {
   return MODULE_GROUP[name] ?? "Other";
@@ -946,14 +1006,14 @@ function ModuleOperatorPanel({ moduleName, opName, op }: {
   );
 }
 
-function ModuleDetail({ moduleName }: { moduleName: string }) {
-  const ops = MODULE_CATALOG[moduleName] ?? {};
+function ModuleDetail({ modules, moduleName }: { modules: ModuleCatalog; moduleName: string }) {
+  const ops = modules[moduleName] ?? {};
   const opNames = Object.keys(ops);
   const [selectedOp, setSelectedOp] = useState(opNames[0] ?? "");
 
   useEffect(() => {
-    setSelectedOp(Object.keys(MODULE_CATALOG[moduleName] ?? {})[0] ?? "");
-  }, [moduleName]);
+    setSelectedOp(Object.keys(modules[moduleName] ?? {})[0] ?? "");
+  }, [modules, moduleName]);
 
   return (
     <HStack className="flex-col md:flex-row flex-1 overflow-hidden">
@@ -1003,9 +1063,10 @@ function ModuleDetail({ moduleName }: { moduleName: string }) {
   );
 }
 
-function ModulesTab({ initialSelected }: { initialSelected?: string | null }) {
+function ModulesTab({ modules, initialSelected }: { modules: ModuleCatalog; initialSelected?: string | null }) {
+  const moduleList = useModuleList(modules);
   const [selected, setSelected] = useState(
-    initialSelected && MODULE_CATALOG[initialSelected] ? initialSelected : "math"
+    initialSelected && modules[initialSelected] ? initialSelected : "math"
   );
 
   return (
@@ -1013,8 +1074,8 @@ function ModulesTab({ initialSelected }: { initialSelected?: string | null }) {
       <VStack className="w-full md:w-[260px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-hidden">
         <Box className="flex-1 overflow-y-auto py-2">
           {(() => {
-            const byCategory: Record<string, typeof MODULE_LIST> = {};
-            for (const m of MODULE_LIST) {
+            const byCategory: Record<string, ReturnType<typeof useModuleList>> = {};
+            for (const m of moduleList) {
               const cat = getModuleCategory(m.name);
               (byCategory[cat] ||= []).push(m);
             }
@@ -1070,11 +1131,11 @@ function ModulesTab({ initialSelected }: { initialSelected?: string | null }) {
               {selected}
             </Typography>
             <Typography variant="caption" color="muted" className="text-[0.8rem] mt-0.5">
-              {Object.keys(MODULE_CATALOG[selected] ?? {}).length} operators - executed live via the Orbital evaluator
+              {Object.keys(modules[selected] ?? {}).length} operators - executed live via the Orbital evaluator
             </Typography>
           </VStack>
         </HStack>
-        <ModuleDetail moduleName={selected} />
+        <ModuleDetail modules={modules} moduleName={selected} />
       </VStack>
     </HStack>
   );
@@ -1098,15 +1159,60 @@ const PAGE_TABS: TabItem[] = [
   { id: "modules", label: "Modules" },
 ];
 
+function useCatalogs() {
+  const [index, setIndex] = useState<BehaviorIndexEntry[]>([]);
+  const [indexMap, setIndexMap] = useState<Map<string, BehaviorIndexEntry>>(new Map());
+  const [modules, setModules] = useState<ModuleCatalog>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([loadBehaviorIndex(), loadModules()])
+      .then(([idx, mods]) => {
+        if (cancelled) return;
+        setIndex(idx);
+        setIndexMap(new Map(idx.map((b) => [b.name, b])));
+        setModules(mods);
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  return { index, indexMap, modules, loading, error };
+}
+
 function PlaygroundInner(): ReactNode {
   const urlParams = useUrlParams();
   const [activeTab, setActiveTab] = useState<PlaygroundTab>(urlParams.tab);
   const [selectedTheme, setSelectedTheme] = useState("wireframe");
   const [selectedMode, setSelectedMode] = useState<"light" | "dark">("light");
+  const { index, indexMap, modules, loading, error } = useCatalogs();
 
   const handleModeToggle = useCallback(() => {
     setSelectedMode((m) => (m === "light" ? "dark" : "light"));
   }, []);
+
+  if (loading) {
+    return (
+      <Box className="p-16 text-center">
+        <Typography color="muted">Loading playground catalog...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box className="p-16 text-center">
+        <Typography color="error">Failed to load playground catalog: {error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <VStack className="min-h-[calc(100vh-60px)]">
@@ -1161,6 +1267,8 @@ function PlaygroundInner(): ReactNode {
           {() => activeTab === "behaviors"
             ? (
               <BehaviorsTab
+                index={index}
+                indexMap={indexMap}
                 initialSelected={urlParams.tab === "behaviors" ? urlParams.selected : null}
                 selectedTheme={selectedTheme}
                 selectedMode={selectedMode}
@@ -1168,7 +1276,7 @@ function PlaygroundInner(): ReactNode {
                 onModeToggle={handleModeToggle}
               />
             )
-            : <ModulesTab initialSelected={urlParams.tab === "modules" ? urlParams.selected : null} />
+            : <ModulesTab modules={modules} initialSelected={urlParams.tab === "modules" ? urlParams.selected : null} />
           }
         </BrowserOnly>
       </Box>

@@ -1,0 +1,928 @@
+{
+  "name": "std-rate-limiter",
+  "description": "std-rate-limiter as a Function",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-rate-limiter",
+    "version": "1.0.0",
+    "description": "std-rate-limiter as a Function",
+    "orbitals": [
+      {
+        "name": "RateBucketOrbital",
+        "entity": {
+          "name": "RateBucket",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "A user-defined identifier for the rate limiting bucket.",
+              "synonyms": "label, identifier, alias"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "A textual explanation of the rate bucket's purpose.",
+              "synonyms": "explanation, details, notes"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "description": "Current operational state of the rate limiting bucket.",
+              "synonyms": "state, condition, operationalStatus"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "count",
+              "type": "number",
+              "default": 0,
+              "description": "The current value of a counter.",
+              "synonyms": "value, amount, total"
+            },
+            {
+              "name": "window",
+              "type": "number",
+              "default": 0,
+              "description": "The duration of the rate limiting window, in seconds.",
+              "synonyms": "duration, time, interval, period"
+            },
+            {
+              "name": "limiterStatus",
+              "type": "string",
+              "default": "open",
+              "description": "Current operational state of the rate limiter.",
+              "synonyms": "state, condition, mode"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "RateBucketRateLimiter",
+            "category": "interaction",
+            "capabilities": [
+              "rate-limit"
+            ],
+            "linkedEntity": "RateBucket",
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "open",
+                  "isInitial": true
+                },
+                {
+                  "name": "throttled"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "REQUEST",
+                  "name": "Request"
+                },
+                {
+                  "key": "THROTTLE",
+                  "name": "Throttle"
+                },
+                {
+                  "key": "RESET",
+                  "name": "Reset"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "open",
+                  "to": "open",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.count",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.window",
+                      60
+                    ],
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "open"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "align": "center",
+                                "gap": "md",
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "name": "shield",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "content": "RateBucket Rate Limiter",
+                                    "variant": "h2",
+                                    "type": "typography"
+                                  }
+                                ]
+                              },
+                              {
+                                "label": "Open",
+                                "pulse": false,
+                                "type": "status-dot",
+                                "status": "online"
+                              }
+                            ],
+                            "type": "stack",
+                            "align": "center",
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "children": [
+                              {
+                                "label": "Requests",
+                                "look": "elevated",
+                                "type": "stat-display",
+                                "value": "@entity.count"
+                              },
+                              {
+                                "label": "Window",
+                                "type": "stat-display",
+                                "value": "@entity.window",
+                                "look": "elevated"
+                              }
+                            ],
+                            "cols": 2,
+                            "type": "simple-grid"
+                          },
+                          {
+                            "min": 0,
+                            "type": "meter",
+                            "value": "@entity.count",
+                            "max": 100
+                          },
+                          {
+                            "type": "progress-bar",
+                            "max": 100,
+                            "showPercentage": true,
+                            "value": "@entity.count"
+                          },
+                          {
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "justify": "center",
+                            "children": [
+                              {
+                                "label": "Request",
+                                "action": "REQUEST",
+                                "icon": "send",
+                                "type": "button",
+                                "variant": "primary"
+                              },
+                              {
+                                "action": "RESET",
+                                "type": "button",
+                                "variant": "ghost",
+                                "label": "Reset",
+                                "icon": "rotate-ccw"
+                              }
+                            ],
+                            "type": "stack"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "gap": "lg"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "open",
+                  "event": "REQUEST",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "align": "center",
+                            "gap": "md",
+                            "children": [
+                              {
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "name": "shield",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "content": "RateBucket Rate Limiter",
+                                    "variant": "h2",
+                                    "type": "typography"
+                                  }
+                                ],
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "gap": "md"
+                              },
+                              {
+                                "pulse": false,
+                                "label": "Open",
+                                "status": "online",
+                                "type": "status-dot"
+                              }
+                            ],
+                            "type": "stack",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "children": [
+                              {
+                                "value": "@entity.count",
+                                "type": "stat-display",
+                                "label": "Requests",
+                                "look": "elevated"
+                              },
+                              {
+                                "type": "stat-display",
+                                "look": "elevated",
+                                "value": "@entity.window",
+                                "label": "Window"
+                              }
+                            ],
+                            "cols": 2,
+                            "type": "simple-grid"
+                          },
+                          {
+                            "value": "@entity.count",
+                            "max": 100,
+                            "type": "meter",
+                            "min": 0
+                          },
+                          {
+                            "value": "@entity.count",
+                            "max": 100,
+                            "type": "progress-bar",
+                            "showPercentage": true
+                          },
+                          {
+                            "type": "stack",
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "type": "button",
+                                "label": "Request",
+                                "icon": "send",
+                                "variant": "primary",
+                                "action": "REQUEST"
+                              },
+                              {
+                                "icon": "rotate-ccw",
+                                "variant": "ghost",
+                                "action": "RESET",
+                                "label": "Reset",
+                                "type": "button"
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "justify": "center"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "gap": "lg"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "throttled",
+                  "event": "THROTTLE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "throttled"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "type": "stack",
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "direction": "horizontal",
+                                "align": "center",
+                                "type": "stack",
+                                "gap": "md",
+                                "children": [
+                                  {
+                                    "name": "shield",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "content": "RateBucket Rate Limiter",
+                                    "variant": "h2",
+                                    "type": "typography"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "status-dot",
+                                "status": "critical",
+                                "label": "Throttled",
+                                "pulse": true
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "message": "Rate limit exceeded. Requests are being throttled.",
+                            "type": "alert",
+                            "variant": "error"
+                          },
+                          {
+                            "children": [
+                              {
+                                "label": "Requests",
+                                "value": "@entity.count",
+                                "type": "stat-display",
+                                "look": "elevated"
+                              },
+                              {
+                                "look": "elevated",
+                                "label": "Window",
+                                "value": "@entity.window",
+                                "type": "stat-display"
+                              }
+                            ],
+                            "type": "simple-grid",
+                            "cols": 2
+                          },
+                          {
+                            "min": 0,
+                            "max": 100,
+                            "type": "meter",
+                            "value": "@entity.count"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "button",
+                                "variant": "primary",
+                                "action": "RESET",
+                                "label": "Reset",
+                                "icon": "rotate-ccw"
+                              }
+                            ],
+                            "gap": "sm",
+                            "justify": "center",
+                            "type": "stack",
+                            "direction": "horizontal"
+                          }
+                        ],
+                        "direction": "vertical"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "open",
+                  "event": "RESET",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.count",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "open"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "stack",
+                        "direction": "vertical",
+                        "gap": "lg",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "align": "center",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "shield"
+                                  },
+                                  {
+                                    "content": "RateBucket Rate Limiter",
+                                    "type": "typography",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "gap": "md",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "label": "Open",
+                                "status": "online",
+                                "type": "status-dot",
+                                "pulse": false
+                              }
+                            ],
+                            "gap": "md",
+                            "justify": "between",
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "align": "center"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "cols": 2,
+                            "children": [
+                              {
+                                "label": "Requests",
+                                "type": "stat-display",
+                                "value": "@entity.count",
+                                "look": "elevated"
+                              },
+                              {
+                                "label": "Window",
+                                "look": "elevated",
+                                "value": "@entity.window",
+                                "type": "stat-display"
+                              }
+                            ],
+                            "type": "simple-grid"
+                          },
+                          {
+                            "value": "@entity.count",
+                            "type": "meter",
+                            "min": 0,
+                            "max": 100
+                          },
+                          {
+                            "max": 100,
+                            "showPercentage": true,
+                            "type": "progress-bar",
+                            "value": "@entity.count"
+                          },
+                          {
+                            "type": "stack",
+                            "justify": "center",
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "icon": "send",
+                                "label": "Request",
+                                "variant": "primary",
+                                "type": "button",
+                                "action": "REQUEST"
+                              },
+                              {
+                                "icon": "rotate-ccw",
+                                "label": "Reset",
+                                "type": "button",
+                                "action": "RESET",
+                                "variant": "ghost"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "throttled",
+                  "to": "open",
+                  "event": "RESET",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "open"
+                    ],
+                    [
+                      "set",
+                      "@entity.count",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "name": "shield",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "variant": "h2",
+                                    "content": "RateBucket Rate Limiter"
+                                  }
+                                ],
+                                "align": "center",
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "gap": "md"
+                              },
+                              {
+                                "label": "Open",
+                                "type": "status-dot",
+                                "status": "online",
+                                "pulse": false
+                              }
+                            ],
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between",
+                            "type": "stack"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "cols": 2,
+                            "children": [
+                              {
+                                "look": "elevated",
+                                "value": "@entity.count",
+                                "type": "stat-display",
+                                "label": "Requests"
+                              },
+                              {
+                                "value": "@entity.window",
+                                "label": "Window",
+                                "type": "stat-display",
+                                "look": "elevated"
+                              }
+                            ],
+                            "type": "simple-grid"
+                          },
+                          {
+                            "type": "meter",
+                            "value": "@entity.count",
+                            "max": 100,
+                            "min": 0
+                          },
+                          {
+                            "max": 100,
+                            "showPercentage": true,
+                            "type": "progress-bar",
+                            "value": "@entity.count"
+                          },
+                          {
+                            "children": [
+                              {
+                                "action": "REQUEST",
+                                "icon": "send",
+                                "variant": "primary",
+                                "type": "button",
+                                "label": "Request"
+                              },
+                              {
+                                "icon": "rotate-ccw",
+                                "label": "Reset",
+                                "type": "button",
+                                "action": "RESET",
+                                "variant": "ghost"
+                              }
+                            ],
+                            "justify": "center",
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "type": "stack"
+                          }
+                        ],
+                        "type": "stack",
+                        "gap": "lg"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "throttled",
+                  "to": "throttled",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "children": [
+                              {
+                                "gap": "md",
+                                "type": "stack",
+                                "align": "center",
+                                "children": [
+                                  {
+                                    "name": "shield",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "content": "RateBucket Rate Limiter",
+                                    "type": "typography",
+                                    "variant": "h2"
+                                  }
+                                ],
+                                "direction": "horizontal"
+                              },
+                              {
+                                "pulse": true,
+                                "label": "Throttled",
+                                "status": "critical",
+                                "type": "status-dot"
+                              }
+                            ],
+                            "type": "stack",
+                            "gap": "md",
+                            "align": "center",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "message": "Rate limit exceeded. Requests are being throttled.",
+                            "type": "alert",
+                            "variant": "error"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "stat-display",
+                                "value": "@entity.count",
+                                "label": "Requests",
+                                "look": "elevated"
+                              },
+                              {
+                                "type": "stat-display",
+                                "value": "@entity.window",
+                                "label": "Window",
+                                "look": "elevated"
+                              }
+                            ],
+                            "type": "simple-grid",
+                            "cols": 2
+                          },
+                          {
+                            "value": "@entity.count",
+                            "max": 100,
+                            "min": 0,
+                            "type": "meter"
+                          },
+                          {
+                            "children": [
+                              {
+                                "label": "Reset",
+                                "variant": "primary",
+                                "action": "RESET",
+                                "type": "button",
+                                "icon": "rotate-ccw"
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "horizontal",
+                            "justify": "center",
+                            "gap": "sm"
+                          }
+                        ],
+                        "gap": "lg",
+                        "type": "stack",
+                        "direction": "vertical"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "requestsPerMinute": {
+                "type": "number",
+                "default": 60,
+                "label": "Requests per minute",
+                "description": "Maximum number of requests allowed per minute before throttling begins.",
+                "synonyms": "rate limit, request cap, RPS, throttle threshold",
+                "tier": "domain"
+              },
+              "overrideRoles": {
+                "type": "[string]",
+                "default": [],
+                "label": "Override roles",
+                "description": "Roles exempt from rate limiting (e.g. internal services, admin override). Empty = no exemptions.",
+                "synonyms": "exempt roles, bypass list",
+                "tier": "domain",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "statLook": {
+                "type": "string",
+                "default": "elevated",
+                "label": "Stat display look",
+                "description": "Layer 2 visual treatment for stat / KPI cards.",
+                "tier": "presentation",
+                "values": [
+                  "elevated",
+                  "flat",
+                  "progress-backed",
+                  "gauge",
+                  "sparkline"
+                ]
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Enabled",
+                "description": "Whether rate limiting is active for the host orbital. Off by default; turn on to throttle requests.",
+                "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, rate limit, throttle, requests per minute, slow down, cap usage, request cap, limit traffic, prevent abuse",
+                "tier": "domain"
+              },
+              "keyStrategy": {
+                "type": "string",
+                "default": "user",
+                "label": "Rate-limit key strategy",
+                "description": "What identifier the per-bucket counter is keyed on: source IP, authenticated user, API key, or one global bucket.",
+                "synonyms": "limiter key, bucket key",
+                "tier": "domain",
+                "values": [
+                  "ip",
+                  "user",
+                  "api-key",
+                  "global"
+                ]
+              },
+              "burstSize": {
+                "type": "number",
+                "default": 10,
+                "label": "Burst size",
+                "description": "Requests allowed to burst above the per-minute rate before steady-state throttling kicks in. Lower burst = strict/no-spikes; higher burst = forgiving/allow-spikes.",
+                "synonyms": "burst capacity, allowance, spike allowance, no-spike (low) vs allow-bursts (high)",
+                "tier": "domain"
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "RateBucketRateLimiterPage",
+            "path": "/ratebuckets/rate-limiter",
+            "traits": [
+              {
+                "ref": "RateBucketRateLimiter"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "RateBucketOrbital": [
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.3.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.3.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.2.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.3.children.0",
+            "prop": "look",
+            "knob": "statLook"
+          },
+          {
+            "trait": "RateBucketRateLimiter",
+            "patternPath": "root.children.3.children.1",
+            "prop": "look",
+            "knob": "statLook"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

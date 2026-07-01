@@ -1,0 +1,1317 @@
+{
+  "name": "std-thread-chat-bubbles",
+  "description": "Chat-bubbles thread — iMessage/WhatsApp DM style: two-party back-and-forth with sender-vs-receiver bubble alignment and tint.",
+  "level": "atom",
+  "topic": "core-variations",
+  "schema": {
+    "name": "std-thread-chat-bubbles",
+    "version": "1.0.3",
+    "description": "Chat-bubbles thread — iMessage/WhatsApp DM style: two-party back-and-forth with sender-vs-receiver bubble alignment and tint.",
+    "orbitals": [
+      {
+        "name": "ChatBubblesThreadOrbital",
+        "uses": [
+          {
+            "from": "std/behaviors/std-thread",
+            "as": "Thread"
+          }
+        ],
+        "entity": {
+          "name": "ChatBubblesPost",
+          "collection": "chatbubblesposts",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "parentId",
+              "type": "string",
+              "description": "Reference to the preceding message in the conversation.",
+              "synonyms": "previous, predecessor, parent"
+            },
+            {
+              "name": "threadRootId",
+              "type": "string",
+              "required": true,
+              "description": "Identifier for the initial message in the conversation.",
+              "synonyms": "rootId, originalId, startingMessageId"
+            },
+            {
+              "name": "authorId",
+              "type": "string",
+              "default": "them",
+              "values": [
+                "me",
+                "them"
+              ],
+              "description": "Identifies the user who created the message.",
+              "synonyms": "user, sender, creator"
+            },
+            {
+              "name": "authorName",
+              "type": "string",
+              "required": true,
+              "description": "The name of the user who created the post.",
+              "synonyms": "username, user, creator, poster"
+            },
+            {
+              "name": "recipientId",
+              "type": "string",
+              "description": "Identifier of the message recipient.",
+              "synonyms": "receiver, target, addressee"
+            },
+            {
+              "name": "content",
+              "type": "string",
+              "required": true,
+              "description": "The text content of the message.",
+              "synonyms": "message, text, body"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "voteCount",
+              "type": "number",
+              "default": 0,
+              "description": "The number of votes or ratings associated with this item.",
+              "synonyms": "rating, score, likes, upvotes"
+            },
+            {
+              "name": "replyCount",
+              "type": "number",
+              "default": 0,
+              "description": "The number of replies to this post.",
+              "synonyms": "count, number of replies, responses"
+            },
+            {
+              "name": "replies",
+              "type": "relation",
+              "relation": {
+                "entity": "ChatBubblesPost",
+                "cardinality": "many"
+              },
+              "description": "A list of child posts in a conversation thread.",
+              "synonyms": "child posts, responses, replies, sub-messages"
+            },
+            {
+              "name": "focusedRow",
+              "type": "object",
+              "default": {},
+              "description": "The currently selected or active row within the chat thread.",
+              "synonyms": "selection, active, current"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ChatBubblesThread",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "content",
+                "focusedRow",
+                "parentId"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "ChatBubblesPost",
+            "emits": [
+              {
+                "event": "SELECT",
+                "description": "Indicates a post or reply has been chosen for interaction.",
+                "synonyms": "choose, highlight, focus, activate",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "REPLY",
+                "description": "Indicates a new reply has been created and added to the thread.",
+                "synonyms": "add, post, respond, submit",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "parentId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "parentNodeId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "content",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "EDIT_REPLY",
+                "description": "Indicates a reply has been modified.",
+                "synonyms": "update, change, modify",
+                "tier": "presentation",
+                "payloadSchema": [
+                  {
+                    "name": "value",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "SUBMIT_REPLY",
+                "description": "Signals a new reply has been successfully submitted.",
+                "synonyms": "post, send, add, publish",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CANCEL_REPLY",
+                "description": "Indicates a reply creation was aborted by the user.",
+                "synonyms": "abort, dismiss, undo, cancel",
+                "tier": "presentation"
+              },
+              {
+                "event": "ThreadPostLoaded",
+                "description": "Signals a thread post has been successfully retrieved.",
+                "synonyms": "loaded, fetched, retrieved",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[ChatBubblesPost]"
+                  }
+                ]
+              },
+              {
+                "event": "ThreadPostLoadFailed",
+                "description": "Indicates a failure to load a thread post.",
+                "synonyms": "load error, fetch failed, retrieval failed",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ThreadPostCreated",
+                "description": "A new post has been added to the thread.",
+                "synonyms": "new post, added, created",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "parentId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "threadRootId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "authorId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "authorName",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "content",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "voteCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "replyCount",
+                        "type": "number"
+                      },
+                      {
+                        "name": "replies",
+                        "type": "[ThreadPost]"
+                      },
+                      {
+                        "name": "focusedRow",
+                        "type": "object"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "ThreadPostCreateFailed",
+                "description": "Indicates a failure to create a new thread post.",
+                "synonyms": "error, failed, creation failed",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "browsing"
+                },
+                {
+                  "name": "replying"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "ThreadPostLoaded",
+                  "name": "ThreadPost loaded",
+                  "description": "Signals a thread post has been successfully retrieved.",
+                  "synonyms": "loaded, fetched, retrieved",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[ChatBubblesPost]"
+                    }
+                  ]
+                },
+                {
+                  "key": "ThreadPostLoadFailed",
+                  "name": "ThreadPost load failed",
+                  "description": "Indicates a failure to load a thread post.",
+                  "synonyms": "load error, fetch failed, retrieval failed",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "REPLY",
+                  "name": "Reply",
+                  "description": "Indicates a new reply has been created and added to the thread.",
+                  "synonyms": "add, post, respond, submit",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "parentId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "parentNodeId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "content",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ThreadPostCreated",
+                  "name": "ThreadPost created",
+                  "description": "A new post has been added to the thread.",
+                  "synonyms": "new post, added, created",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "ChatBubblesPost"
+                    }
+                  ]
+                },
+                {
+                  "key": "SELECT",
+                  "name": "Select",
+                  "description": "Indicates a post or reply has been chosen for interaction.",
+                  "synonyms": "choose, highlight, focus, activate",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "EDIT_REPLY",
+                  "name": "Edit Reply",
+                  "description": "Indicates a reply has been modified.",
+                  "synonyms": "update, change, modify",
+                  "tier": "presentation",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SUBMIT_REPLY",
+                  "name": "Submit Reply",
+                  "description": "Signals a new reply has been successfully submitted.",
+                  "synonyms": "post, send, add, publish",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CANCEL_REPLY",
+                  "name": "Cancel Reply",
+                  "description": "Indicates a reply creation was aborted by the user.",
+                  "synonyms": "abort, dismiss, undo, cancel",
+                  "tier": "presentation"
+                },
+                {
+                  "key": "ThreadPostCreateFailed",
+                  "name": "ThreadPost create failed",
+                  "description": "Indicates a failure to create a new thread post.",
+                  "synonyms": "error, failed, creation failed",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "emit": {
+                          "failure": "ThreadPostLoadFailed",
+                          "success": "ThreadPostLoaded"
+                        },
+                        "include": [
+                          "replies"
+                        ]
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner",
+                        "size": "sm"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "browsing",
+                  "event": "ThreadPostLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "gap": "none",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "align": "center",
+                            "children": [
+                              {
+                                "type": "avatar",
+                                "size": "md",
+                                "name": "Alex Rivera"
+                              },
+                              {
+                                "className": "flex-1",
+                                "gap": "xs",
+                                "type": "stack",
+                                "direction": "vertical",
+                                "children": [
+                                  {
+                                    "weight": "medium",
+                                    "type": "typography",
+                                    "content": "Alex Rivera",
+                                    "variant": "body"
+                                  },
+                                  {
+                                    "color": "muted",
+                                    "content": "Active now",
+                                    "type": "typography",
+                                    "variant": "caption"
+                                  }
+                                ]
+                              }
+                            ],
+                            "className": "pb-md border-b border-[var(--color-border)]",
+                            "direction": "horizontal",
+                            "gap": "sm"
+                          },
+                          {
+                            "currentUser": "me",
+                            "className": "flex-1 overflow-y-auto py-md",
+                            "fields": [
+                              {
+                                "variant": "body",
+                                "name": "content"
+                              },
+                              {
+                                "name": "createdAt",
+                                "format": "date"
+                              }
+                            ],
+                            "variant": "message",
+                            "entity": "@payload.data",
+                            "type": "data-list",
+                            "gap": "sm",
+                            "senderField": "authorId"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "form-section",
+                                "submitLabel": "Send",
+                                "entity": "@entity",
+                                "mode": "edit",
+                                "fields": [
+                                  "content"
+                                ],
+                                "submitEvent": "REPLY"
+                              }
+                            ],
+                            "className": "mt-md border-t border-[var(--color-border)] pt-md",
+                            "direction": "vertical",
+                            "type": "stack",
+                            "gap": "sm"
+                          }
+                        ],
+                        "className": "w-full px-card-md py-section h-full",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "ThreadPostLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "alert",
+                        "variant": "error",
+                        "message": "@payload.error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "include": [
+                          "replies"
+                        ],
+                        "emit": {
+                          "failure": "ThreadPostLoadFailed",
+                          "success": "ThreadPostLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner",
+                        "size": "sm"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "ThreadPostLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "gap": "none",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "align": "center",
+                            "children": [
+                              {
+                                "type": "avatar",
+                                "size": "md",
+                                "name": "Alex Rivera"
+                              },
+                              {
+                                "className": "flex-1",
+                                "gap": "xs",
+                                "type": "stack",
+                                "direction": "vertical",
+                                "children": [
+                                  {
+                                    "weight": "medium",
+                                    "type": "typography",
+                                    "content": "Alex Rivera",
+                                    "variant": "body"
+                                  },
+                                  {
+                                    "color": "muted",
+                                    "content": "Active now",
+                                    "type": "typography",
+                                    "variant": "caption"
+                                  }
+                                ]
+                              }
+                            ],
+                            "className": "pb-md border-b border-[var(--color-border)]",
+                            "direction": "horizontal",
+                            "gap": "sm"
+                          },
+                          {
+                            "currentUser": "me",
+                            "className": "flex-1 overflow-y-auto py-md",
+                            "fields": [
+                              {
+                                "variant": "body",
+                                "name": "content"
+                              },
+                              {
+                                "name": "createdAt",
+                                "format": "date"
+                              }
+                            ],
+                            "variant": "message",
+                            "entity": "@payload.data",
+                            "type": "data-list",
+                            "gap": "sm",
+                            "senderField": "authorId"
+                          },
+                          {
+                            "children": [
+                              {
+                                "type": "form-section",
+                                "submitLabel": "Send",
+                                "entity": "@entity",
+                                "mode": "edit",
+                                "fields": [
+                                  "content"
+                                ],
+                                "submitEvent": "REPLY"
+                              }
+                            ],
+                            "className": "mt-md border-t border-[var(--color-border)] pt-md",
+                            "direction": "vertical",
+                            "type": "stack",
+                            "gap": "sm"
+                          }
+                        ],
+                        "className": "w-full px-card-md py-section h-full",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "REPLY",
+                  "guard": [
+                    "not",
+                    [
+                      "=",
+                      [
+                        "str/default",
+                        "@payload.content",
+                        ""
+                      ],
+                      ""
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "persist",
+                      "create",
+                      "ChatBubblesPost",
+                      {
+                        "authorName": "You",
+                        "content": "@payload.content",
+                        "authorId": "me",
+                        "parentId": [
+                          "str/default",
+                          "@payload.parentNodeId",
+                          "@payload.parentId"
+                        ],
+                        "threadRootId": [
+                          "str/default",
+                          "@payload.parentNodeId",
+                          "root"
+                        ]
+                      },
+                      {
+                        "emit": {
+                          "success": "ThreadPostCreated",
+                          "failure": "ThreadPostCreateFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "replying",
+                  "event": "REPLY",
+                  "guard": [
+                    "=",
+                    [
+                      "str/default",
+                      "@payload.content",
+                      ""
+                    ],
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.parentId",
+                      [
+                        "str/default",
+                        "@payload.parentNodeId",
+                        "@payload.parentId"
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "variant": "h4",
+                            "type": "typography",
+                            "content": "Write a reply"
+                          },
+                          {
+                            "type": "textarea",
+                            "action": "EDIT_REPLY",
+                            "placeholder": "Your reply…"
+                          },
+                          {
+                            "children": [
+                              {
+                                "label": "Submit",
+                                "type": "button",
+                                "action": "SUBMIT_REPLY",
+                                "icon": "send",
+                                "variant": "primary"
+                              },
+                              {
+                                "label": "Cancel",
+                                "type": "button",
+                                "variant": "secondary",
+                                "action": "CANCEL_REPLY"
+                              }
+                            ],
+                            "gap": "sm",
+                            "direction": "horizontal",
+                            "type": "stack"
+                          }
+                        ],
+                        "type": "stack",
+                        "direction": "vertical",
+                        "gap": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "browsing",
+                  "event": "ThreadPostCreated",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "include": [
+                          "replies"
+                        ],
+                        "emit": {
+                          "success": "ThreadPostLoaded",
+                          "failure": "ThreadPostLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "browsing",
+                  "to": "loading",
+                  "event": "SELECT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.focusedRow",
+                      "@payload.row"
+                    ],
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "include": [
+                          "replies"
+                        ],
+                        "emit": {
+                          "failure": "ThreadPostLoadFailed",
+                          "success": "ThreadPostLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "replying",
+                  "to": "replying",
+                  "event": "EDIT_REPLY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.content",
+                      "@payload.value"
+                    ]
+                  ]
+                },
+                {
+                  "from": "replying",
+                  "to": "browsing",
+                  "event": "SUBMIT_REPLY",
+                  "effects": [
+                    [
+                      "persist",
+                      "create",
+                      "ChatBubblesPost",
+                      "@payload.data",
+                      {
+                        "emit": {
+                          "success": "ThreadPostCreated",
+                          "failure": "ThreadPostCreateFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "replying",
+                  "to": "browsing",
+                  "event": "CANCEL_REPLY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.content",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.parentId",
+                      ""
+                    ]
+                  ]
+                },
+                {
+                  "from": "replying",
+                  "to": "browsing",
+                  "event": "ThreadPostCreated",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.content",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.parentId",
+                      ""
+                    ],
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "emit": {
+                          "failure": "ThreadPostLoadFailed",
+                          "success": "ThreadPostLoaded"
+                        },
+                        "include": [
+                          "replies"
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "replying",
+                  "to": "replying",
+                  "event": "ThreadPostCreateFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "alert",
+                        "message": "@payload.error",
+                        "variant": "error"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ChatBubblesPost",
+                      {
+                        "emit": {
+                          "failure": "ThreadPostLoadFailed",
+                          "success": "ThreadPostLoaded"
+                        },
+                        "include": [
+                          "replies"
+                        ]
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "size": "sm",
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "flat": {
+                "type": "boolean",
+                "default": false,
+                "label": "Flat thread",
+                "description": "Render replies as a linear list instead of nested tree",
+                "tier": "presentation"
+              },
+              "detailFromBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.fromAddress",
+                "label": "detailFromBinding",
+                "description": "Detail-pane binding for the From address.",
+                "tier": "presentation"
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "detailAuthorBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.authorName",
+                "label": "detailAuthorBinding",
+                "description": "Detail-pane binding for the focused message author.",
+                "tier": "presentation"
+              },
+              "detailContentBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.content",
+                "label": "detailContentBinding",
+                "description": "Detail-pane binding for the message body.",
+                "tier": "presentation"
+              },
+              "detailToBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.toAddress",
+                "label": "detailToBinding",
+                "description": "Detail-pane binding for the To address.",
+                "tier": "presentation"
+              },
+              "emailAuthorBinding": {
+                "type": "string",
+                "default": "@item.authorName",
+                "label": "emailAuthorBinding",
+                "description": "List-pane binding for the message author.",
+                "tier": "presentation"
+              },
+              "threadRootId": {
+                "type": "string",
+                "default": "",
+                "label": "Root post id",
+                "description": "Top-level post whose descendants are loaded (blank = all roots)",
+                "tier": "domain"
+              },
+              "recipientName": {
+                "type": "string",
+                "default": "Alex Rivera",
+                "label": "recipientName",
+                "description": "Header/recipient label for chat-style threads.",
+                "tier": "presentation"
+              },
+              "emailPreviewBinding": {
+                "type": "string",
+                "default": "@item.preview",
+                "label": "emailPreviewBinding",
+                "description": "List-pane binding for the message preview text.",
+                "tier": "presentation"
+              },
+              "bodyContent": {
+                "type": "render-ui",
+                "default": {
+                  "direction": "vertical",
+                  "gap": "none",
+                  "children": [
+                    {
+                      "type": "stack",
+                      "align": "center",
+                      "children": [
+                        {
+                          "type": "avatar",
+                          "size": "md",
+                          "name": "@config.recipientName"
+                        },
+                        {
+                          "className": "flex-1",
+                          "gap": "xs",
+                          "type": "stack",
+                          "direction": "vertical",
+                          "children": [
+                            {
+                              "weight": "medium",
+                              "type": "typography",
+                              "content": "@config.recipientName",
+                              "variant": "body"
+                            },
+                            {
+                              "color": "muted",
+                              "content": "Active now",
+                              "type": "typography",
+                              "variant": "caption"
+                            }
+                          ]
+                        }
+                      ],
+                      "className": "pb-md border-b border-[var(--color-border)]",
+                      "direction": "horizontal",
+                      "gap": "sm"
+                    },
+                    {
+                      "currentUser": "me",
+                      "className": "flex-1 overflow-y-auto py-md",
+                      "fields": [
+                        {
+                          "variant": "body",
+                          "name": "content"
+                        },
+                        {
+                          "name": "createdAt",
+                          "format": "date"
+                        }
+                      ],
+                      "variant": "message",
+                      "entity": "@payload.data",
+                      "type": "data-list",
+                      "gap": "sm",
+                      "senderField": "authorId"
+                    },
+                    {
+                      "children": [
+                        {
+                          "type": "form-section",
+                          "submitLabel": "Send",
+                          "entity": "@entity",
+                          "mode": "edit",
+                          "fields": [
+                            "content"
+                          ],
+                          "submitEvent": "REPLY"
+                        }
+                      ],
+                      "className": "mt-md border-t border-[var(--color-border)] pt-md",
+                      "direction": "vertical",
+                      "type": "stack",
+                      "gap": "sm"
+                    }
+                  ],
+                  "className": "w-full px-card-md py-section h-full",
+                  "type": "stack"
+                },
+                "label": "Body content tree",
+                "description": "Render-ui SExpr rendered after thread posts load. Default is the canonical forum-style data-list. Layer 3 variants override this with their own tree (chat bubbles, email-threaded cards, linear comment stacks, etc.) to deliver entirely different thread UX while inheriting the same trait, state machine, emits, and listens.",
+                "tier": "internal"
+              },
+              "replyDateBinding": {
+                "type": "string",
+                "default": "@reply.createdAt",
+                "label": "replyDateBinding",
+                "description": "Reply binding for the reply timestamp.",
+                "tier": "presentation"
+              },
+              "sectionTitle": {
+                "type": "string",
+                "default": "Discussion",
+                "label": "sectionTitle",
+                "description": "Section header for linear-comment threads.",
+                "tier": "presentation"
+              },
+              "detailDateBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.createdAt",
+                "label": "detailDateBinding",
+                "description": "Detail-pane binding for the timestamp.",
+                "tier": "presentation"
+              },
+              "replyContentBinding": {
+                "type": "string",
+                "default": "@reply.content",
+                "label": "replyContentBinding",
+                "description": "Reply binding for the reply body.",
+                "tier": "presentation"
+              },
+              "replyFromBinding": {
+                "type": "string",
+                "default": "@reply.fromAddress",
+                "label": "replyFromBinding",
+                "description": "Reply binding for the reply From address.",
+                "tier": "presentation"
+              },
+              "emailSubjectBinding": {
+                "type": "string",
+                "default": "@item.subject",
+                "label": "emailSubjectBinding",
+                "description": "List-pane binding for the message subject.",
+                "tier": "presentation"
+              },
+              "replyAuthorBinding": {
+                "type": "string",
+                "default": "@reply.authorName",
+                "label": "replyAuthorBinding",
+                "description": "Reply binding for the reply author.",
+                "tier": "presentation"
+              },
+              "detailSubjectBinding": {
+                "type": "string",
+                "default": "@entity.focusedRow.subject",
+                "label": "detailSubjectBinding",
+                "description": "Detail-pane binding for the focused message subject.",
+                "tier": "presentation"
+              }
+            },
+            "scope": "collection",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-thread",
+              "alias": "Thread",
+              "originalName": "ThreadPostBrowse"
+            },
+            "sourceEntityDefinition": {
+              "name": "ThreadPost",
+              "collection": "threadposts",
+              "persistence": "persistent",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "parentId",
+                  "type": "string",
+                  "description": "Identifier of the parent ThreadPost in a nested thread.",
+                  "synonyms": "parent, ancestor, source"
+                },
+                {
+                  "name": "threadRootId",
+                  "type": "string",
+                  "required": true,
+                  "description": "Identifier of the top-level thread this post belongs to.",
+                  "synonyms": "rootId, topLevelId, parentThreadId"
+                },
+                {
+                  "name": "authorId",
+                  "type": "string",
+                  "required": true,
+                  "description": "Unique identifier for the post's author.",
+                  "synonyms": "user id, creator id, author"
+                },
+                {
+                  "name": "authorName",
+                  "type": "string",
+                  "required": true,
+                  "description": "The name of the post's author.",
+                  "synonyms": "author, username, poster"
+                },
+                {
+                  "name": "content",
+                  "type": "string",
+                  "required": true,
+                  "description": "The main text content of the post.",
+                  "synonyms": "text, message, body"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "voteCount",
+                  "type": "number",
+                  "default": 0,
+                  "description": "The number of votes associated with this item.",
+                  "synonyms": "votes, rating, score"
+                },
+                {
+                  "name": "replyCount",
+                  "type": "number",
+                  "default": 0,
+                  "description": "The number of replies to this post.",
+                  "synonyms": "count, number of replies, child posts"
+                },
+                {
+                  "name": "replies",
+                  "type": "relation",
+                  "relation": {
+                    "entity": "ThreadPost",
+                    "cardinality": "many"
+                  },
+                  "description": "A list of child ThreadPost entities.",
+                  "synonyms": "children, descendants, sub-posts"
+                },
+                {
+                  "name": "focusedRow",
+                  "type": "object",
+                  "default": {},
+                  "description": "The currently selected or active row within the thread.",
+                  "synonyms": "selection, active, current"
+                }
+              ]
+            }
+          }
+        ],
+        "pages": [
+          {
+            "name": "ChatBubblesThreadPage",
+            "path": "/chat-thread",
+            "traits": [
+              {
+                "ref": "ChatBubblesThread"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

@@ -1,0 +1,672 @@
+{
+  "name": "std-calendar-week-timeline",
+  "description": "Week-timeline calendar — events grouped by weekday in a 7-column timeline. The visible window normalizes to the payload's actual date range, so events stack into whichever day-of-week they fall on. Same CalendarEventCalendar trait, same state machine as std-calendar — only bodyContent differs. For weekly schedule views (fitness class week, healthcare appointment week).",
+  "level": "atom",
+  "topic": "core-variations",
+  "schema": {
+    "name": "std-calendar-week-timeline",
+    "version": "1.2.0",
+    "description": "Week-timeline calendar — events grouped by weekday in a 7-column timeline. The visible window normalizes to the payload's actual date range, so events stack into whichever day-of-week they fall on. Same CalendarEventCalendar trait, same state machine as std-calendar — only bodyContent differs. For weekly schedule views (fitness class week, healthcare appointment week).",
+    "orbitals": [
+      {
+        "name": "WeekTimelineCalendarOrbital",
+        "uses": [
+          {
+            "from": "std/behaviors/std-calendar",
+            "as": "Calendar"
+          }
+        ],
+        "entity": {
+          "name": "WeekTimelineEvent",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "description": "A user-friendly identifier for the event.",
+              "synonyms": "title, label, eventName, name"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "A textual explanation of the event.",
+              "synonyms": "details, notes, explanation, summary"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "description": "Indicates the current operational state of the event.",
+              "synonyms": "state, condition, flag"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "date",
+              "type": "datetime",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "startTime",
+              "type": "string",
+              "default": "",
+              "description": "The time of day the event occurs.",
+              "synonyms": "hour, start time, scheduled time, time, start"
+            },
+            {
+              "name": "duration",
+              "type": "number",
+              "default": 60,
+              "description": "The length of time for the event, typically in minutes.",
+              "synonyms": "length, time, span"
+            },
+            {
+              "name": "weekday",
+              "type": "string",
+              "default": "",
+              "description": "The day of the week this event occurs on.",
+              "synonyms": "day, dayOfWeek"
+            },
+            {
+              "name": "selectedRange",
+              "type": "string",
+              "default": "week",
+              "intrinsic": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "event title shown on the calendar",
+              "synonyms": "title, label, summary, subject"
+            },
+            {
+              "name": "time",
+              "type": "string",
+              "default": "",
+              "description": "event start time of day",
+              "synonyms": "start, scheduled time, begins, when, start time"
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "WeekTimelineCalendar",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "date",
+                "selectedRange"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "WeekTimelineEvent",
+            "emits": [
+              {
+                "event": "CalendarEventLoaded",
+                "description": "Indicates that calendar events have been successfully retrieved.",
+                "synonyms": "loaded, fetched, retrieved, populated",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[WeekTimelineEvent]"
+                  }
+                ]
+              },
+              {
+                "event": "CalendarEventLoadFailed",
+                "description": "Indicates a failure to load calendar events.",
+                "synonyms": "error, failed, problem, loading issue",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "month-view"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "CalendarEventLoaded",
+                  "name": "CalendarEvent loaded",
+                  "description": "Indicates that calendar events have been successfully retrieved.",
+                  "synonyms": "loaded, fetched, retrieved, populated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[WeekTimelineEvent]"
+                    }
+                  ]
+                },
+                {
+                  "key": "CalendarEventLoadFailed",
+                  "name": "CalendarEvent load failed",
+                  "description": "Indicates a failure to load calendar events.",
+                  "synonyms": "error, failed, problem, loading issue",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "SELECT_DAY",
+                  "name": "Select Day",
+                  "description": "A day has been chosen within the calendar view.",
+                  "synonyms": "choose, pick, set, highlight",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SELECT_SLOT",
+                  "name": "Select Slot",
+                  "description": "A time slot has been chosen for an event.",
+                  "synonyms": "choose, pick, schedule, book",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "time",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "WeekTimelineEvent",
+                      {
+                        "emit": {
+                          "success": "CalendarEventLoaded",
+                          "failure": "CalendarEventLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "md",
+                        "className": "py-12",
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "color": "muted",
+                            "variant": "caption",
+                            "type": "typography",
+                            "content": "Loading calendar…"
+                          }
+                        ],
+                        "type": "stack",
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "month-view",
+                  "event": "CalendarEventLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "type": "stack",
+                        "gap": "md",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "align": "center",
+                            "children": [
+                              {
+                                "direction": "horizontal",
+                                "type": "stack",
+                                "align": "center",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "calendar"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "content": "Week",
+                                    "variant": "h2"
+                                  }
+                                ]
+                              },
+                              {
+                                "selected": "@entity.selectedRange",
+                                "onSelect": "SELECT_DAY",
+                                "type": "date-range-selector"
+                              }
+                            ],
+                            "gap": "md",
+                            "type": "stack",
+                            "justify": "between"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "className": "w-full",
+                            "type": "calendar-grid",
+                            "dayWindow": 7,
+                            "events": "@payload.data"
+                          }
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "CalendarEventLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "children": [
+                          {
+                            "color": "error",
+                            "name": "alert-triangle",
+                            "type": "icon"
+                          },
+                          {
+                            "type": "typography",
+                            "content": "Failed to load",
+                            "variant": "h3"
+                          },
+                          {
+                            "color": "muted",
+                            "variant": "body",
+                            "type": "typography",
+                            "content": "@payload.error"
+                          },
+                          {
+                            "action": "INIT",
+                            "label": "Retry",
+                            "icon": "rotate-ccw",
+                            "type": "button",
+                            "variant": "primary"
+                          }
+                        ],
+                        "type": "stack",
+                        "direction": "vertical",
+                        "gap": "md",
+                        "className": "py-12"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "month-view",
+                  "to": "loading",
+                  "event": "SELECT_DAY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.date",
+                      "@payload.value"
+                    ],
+                    [
+                      "set",
+                      "@entity.selectedRange",
+                      "@payload.value"
+                    ],
+                    [
+                      "fetch",
+                      "WeekTimelineEvent",
+                      {
+                        "filter": [
+                          "time/isAfter",
+                          [
+                            "time/parse",
+                            "@entity.date"
+                          ],
+                          [
+                            "if",
+                            [
+                              "=",
+                              "@payload.value",
+                              "week"
+                            ],
+                            [
+                              "time/subtract",
+                              [
+                                "time/now"
+                              ],
+                              1,
+                              "week"
+                            ],
+                            [
+                              "if",
+                              [
+                                "=",
+                                "@payload.value",
+                                "3months"
+                              ],
+                              [
+                                "time/subtract",
+                                [
+                                  "time/now"
+                                ],
+                                3,
+                                "month"
+                              ],
+                              [
+                                "if",
+                                [
+                                  "=",
+                                  "@payload.value",
+                                  "year"
+                                ],
+                                [
+                                  "time/subtract",
+                                  [
+                                    "time/now"
+                                  ],
+                                  1,
+                                  "year"
+                                ],
+                                [
+                                  "time/subtract",
+                                  [
+                                    "time/now"
+                                  ],
+                                  1,
+                                  "month"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        "emit": {
+                          "failure": "CalendarEventLoadFailed",
+                          "success": "CalendarEventLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "WeekTimelineEvent",
+                      {
+                        "emit": {
+                          "failure": "CalendarEventLoadFailed",
+                          "success": "CalendarEventLoaded"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "badgeBinding": {
+                "type": "string",
+                "default": "@item.status",
+                "label": "Badge binding",
+                "description": "Per-row binding for the event status/badge slot.",
+                "tier": "presentation"
+              },
+              "titleBinding": {
+                "type": "string",
+                "default": "@item.name",
+                "label": "Title binding",
+                "description": "Per-row binding for the event title slot.",
+                "tier": "presentation"
+              },
+              "descriptionBinding": {
+                "type": "string",
+                "default": "@item.description",
+                "label": "Description binding",
+                "description": "Per-row binding for the event description slot.",
+                "tier": "presentation"
+              },
+              "timeBinding": {
+                "type": "string",
+                "default": "@item.time",
+                "label": "Time binding",
+                "description": "Per-row binding for the event time slot.",
+                "tier": "presentation"
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "bodyContent": {
+                "type": "render-ui",
+                "default": {
+                  "direction": "vertical",
+                  "type": "stack",
+                  "gap": "md",
+                  "children": [
+                    {
+                      "direction": "horizontal",
+                      "align": "center",
+                      "children": [
+                        {
+                          "direction": "horizontal",
+                          "type": "stack",
+                          "align": "center",
+                          "gap": "sm",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar"
+                            },
+                            {
+                              "type": "typography",
+                              "content": "Week",
+                              "variant": "h2"
+                            }
+                          ]
+                        },
+                        {
+                          "selected": "@entity.selectedRange",
+                          "onSelect": "SELECT_DAY",
+                          "type": "date-range-selector"
+                        }
+                      ],
+                      "gap": "md",
+                      "type": "stack",
+                      "justify": "between"
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "className": "w-full",
+                      "type": "calendar-grid",
+                      "dayWindow": 7,
+                      "events": "@payload.data"
+                    }
+                  ]
+                },
+                "label": "Body content tree",
+                "description": "Render-ui SExpr rendered after events load. Default is the month-grid + upcoming-events list. Layer 3 variants override this with their own tree (agenda list, week timeline, etc.) to deliver entirely different calendar UX while inheriting the same trait, state machine, emits, and listens.",
+                "tier": "internal"
+              }
+            },
+            "scope": "collection",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-calendar",
+              "alias": "Calendar",
+              "originalName": "CalendarEventCalendar"
+            },
+            "sourceEntityDefinition": {
+              "name": "CalendarEvent",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "required": true,
+                  "description": "event title shown on the calendar",
+                  "synonyms": "title, label, summary, subject"
+                },
+                {
+                  "name": "description",
+                  "type": "string",
+                  "description": "event details or notes",
+                  "synonyms": "details, notes, body, summary"
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "default": "active",
+                  "values": [
+                    "active",
+                    "inactive",
+                    "pending"
+                  ],
+                  "description": "event lifecycle status",
+                  "synonyms": "state, stage, phase"
+                },
+                {
+                  "name": "createdAt",
+                  "type": "string"
+                },
+                {
+                  "name": "date",
+                  "type": "datetime",
+                  "default": "",
+                  "intrinsic": true
+                },
+                {
+                  "name": "time",
+                  "type": "string",
+                  "default": "",
+                  "description": "event start time of day",
+                  "synonyms": "start, scheduled time, begins, when, start time"
+                },
+                {
+                  "name": "duration",
+                  "type": "number",
+                  "default": 60,
+                  "description": "event length in minutes",
+                  "synonyms": "minutes, length, span, duration"
+                },
+                {
+                  "name": "selectedRange",
+                  "type": "string",
+                  "default": "month",
+                  "intrinsic": true
+                }
+              ]
+            }
+          }
+        ],
+        "pages": [
+          {
+            "name": "WeekTimelineCalendarPage",
+            "path": "/calendarevents/week",
+            "traits": [
+              {
+                "ref": "WeekTimelineCalendar"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}

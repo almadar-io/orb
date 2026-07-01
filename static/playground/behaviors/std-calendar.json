@@ -1,0 +1,656 @@
+{
+  "name": "std-calendar",
+  "description": "std-calendar as a Function — owns the fetch + SELECT_DAY state machine; default bodyContent renders the month-grid + upcoming-events tree. Layer 3 variants override bodyContent to deliver agenda, week-timeline, etc. while inheriting the same trait, state machine, emits, and listens.",
+  "level": "atom",
+  "topic": "core",
+  "schema": {
+    "name": "std-calendar",
+    "version": "1.3.0",
+    "description": "std-calendar as a Function — owns the fetch + SELECT_DAY state machine; default bodyContent renders the month-grid + upcoming-events tree. Layer 3 variants override bodyContent to deliver agenda, week-timeline, etc. while inheriting the same trait, state machine, emits, and listens.",
+    "orbitals": [
+      {
+        "name": "CalendarEventOrbital",
+        "entity": {
+          "name": "CalendarEvent",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "required": true,
+              "description": "event title shown on the calendar",
+              "synonyms": "title, label, summary, subject"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "description": "event details or notes",
+              "synonyms": "details, notes, body, summary"
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "active",
+              "values": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "description": "event lifecycle status",
+              "synonyms": "state, stage, phase"
+            },
+            {
+              "name": "createdAt",
+              "type": "string"
+            },
+            {
+              "name": "date",
+              "type": "datetime",
+              "default": "",
+              "intrinsic": true
+            },
+            {
+              "name": "time",
+              "type": "string",
+              "default": "",
+              "description": "event start time of day",
+              "synonyms": "start, scheduled time, begins, when, start time"
+            },
+            {
+              "name": "duration",
+              "type": "number",
+              "default": 60,
+              "description": "event length in minutes",
+              "synonyms": "minutes, length, span, duration"
+            },
+            {
+              "name": "selectedRange",
+              "type": "string",
+              "default": "month",
+              "intrinsic": true
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "CalendarEventCalendar",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "date",
+                "selectedRange"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "CalendarEvent",
+            "emits": [
+              {
+                "event": "CalendarEventLoaded",
+                "description": "Indicates that calendar events have been successfully retrieved.",
+                "synonyms": "loaded, fetched, retrieved, populated",
+                "tier": "domain",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[CalendarEvent]"
+                  }
+                ]
+              },
+              {
+                "event": "CalendarEventLoadFailed",
+                "description": "Indicates a failure to load calendar events.",
+                "synonyms": "error, failed, problem, loading issue",
+                "tier": "internal",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "loading",
+                  "isInitial": true
+                },
+                {
+                  "name": "month-view"
+                },
+                {
+                  "name": "error"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "CalendarEventLoaded",
+                  "name": "CalendarEvent loaded",
+                  "description": "Indicates that calendar events have been successfully retrieved.",
+                  "synonyms": "loaded, fetched, retrieved, populated",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[CalendarEvent]"
+                    }
+                  ]
+                },
+                {
+                  "key": "CalendarEventLoadFailed",
+                  "name": "CalendarEvent load failed",
+                  "description": "Indicates a failure to load calendar events.",
+                  "synonyms": "error, failed, problem, loading issue",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "SELECT_DAY",
+                  "name": "Select Day",
+                  "description": "A day has been chosen within the calendar view.",
+                  "synonyms": "choose, pick, set, highlight",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SELECT_SLOT",
+                  "name": "Select Slot",
+                  "description": "A time slot has been chosen for an event.",
+                  "synonyms": "choose, pick, schedule, book",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "time",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "loading",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "emit": {
+                          "success": "CalendarEventLoaded",
+                          "failure": "CalendarEventLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "center",
+                        "children": [
+                          {
+                            "type": "spinner"
+                          },
+                          {
+                            "type": "typography",
+                            "color": "muted",
+                            "content": "Loading calendar…",
+                            "variant": "caption"
+                          }
+                        ],
+                        "gap": "md",
+                        "type": "stack",
+                        "direction": "vertical",
+                        "className": "py-12"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "month-view",
+                  "event": "CalendarEventLoaded",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "gap": "lg",
+                        "children": [
+                          {
+                            "direction": "horizontal",
+                            "justify": "between",
+                            "gap": "md",
+                            "type": "stack",
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "name": "calendar",
+                                    "type": "icon"
+                                  },
+                                  {
+                                    "type": "typography",
+                                    "variant": "h2",
+                                    "content": "CalendarEvents Calendar"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "align": "center",
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "selected": "@entity.selectedRange",
+                                "onSelect": "SELECT_DAY",
+                                "type": "date-range-selector"
+                              }
+                            ],
+                            "align": "center"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "calendar-grid"
+                          },
+                          {
+                            "type": "divider"
+                          },
+                          {
+                            "type": "typography",
+                            "content": "Upcoming Events",
+                            "variant": "h4"
+                          },
+                          {
+                            "fields": [
+                              {
+                                "icon": "calendar",
+                                "name": "name",
+                                "variant": "h4",
+                                "label": "Event"
+                              },
+                              {
+                                "name": "time",
+                                "variant": "badge",
+                                "label": "Time"
+                              },
+                              {
+                                "name": "date",
+                                "label": "Date",
+                                "variant": "caption",
+                                "format": "date"
+                              },
+                              {
+                                "label": "Status",
+                                "name": "status",
+                                "variant": "badge"
+                              }
+                            ],
+                            "entity": "@payload.data",
+                            "itemActions": [
+                              {
+                                "label": "View",
+                                "event": "SELECT_DAY",
+                                "icon": "eye"
+                              }
+                            ],
+                            "look": "dense",
+                            "type": "data-list"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "type": "stack"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "loading",
+                  "to": "error",
+                  "event": "CalendarEventLoadFailed",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "alert-triangle",
+                            "color": "error"
+                          },
+                          {
+                            "type": "typography",
+                            "variant": "h3",
+                            "content": "Failed to load"
+                          },
+                          {
+                            "type": "typography",
+                            "color": "muted",
+                            "variant": "body",
+                            "content": "@payload.error"
+                          },
+                          {
+                            "icon": "rotate-ccw",
+                            "label": "Retry",
+                            "action": "INIT",
+                            "type": "button",
+                            "variant": "primary"
+                          }
+                        ],
+                        "gap": "md",
+                        "type": "stack",
+                        "className": "py-12",
+                        "align": "center"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "month-view",
+                  "to": "loading",
+                  "event": "SELECT_DAY",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.date",
+                      "@payload.value"
+                    ],
+                    [
+                      "set",
+                      "@entity.selectedRange",
+                      "@payload.value"
+                    ],
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "filter": [
+                          "time/isAfter",
+                          [
+                            "time/parse",
+                            "@entity.date"
+                          ],
+                          [
+                            "if",
+                            [
+                              "=",
+                              "@payload.value",
+                              "week"
+                            ],
+                            [
+                              "time/subtract",
+                              [
+                                "time/now"
+                              ],
+                              1,
+                              "week"
+                            ],
+                            [
+                              "if",
+                              [
+                                "=",
+                                "@payload.value",
+                                "3months"
+                              ],
+                              [
+                                "time/subtract",
+                                [
+                                  "time/now"
+                                ],
+                                3,
+                                "month"
+                              ],
+                              [
+                                "if",
+                                [
+                                  "=",
+                                  "@payload.value",
+                                  "year"
+                                ],
+                                [
+                                  "time/subtract",
+                                  [
+                                    "time/now"
+                                  ],
+                                  1,
+                                  "year"
+                                ],
+                                [
+                                  "time/subtract",
+                                  [
+                                    "time/now"
+                                  ],
+                                  1,
+                                  "month"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        "emit": {
+                          "success": "CalendarEventLoaded",
+                          "failure": "CalendarEventLoadFailed"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "emit": {
+                          "success": "CalendarEventLoaded",
+                          "failure": "CalendarEventLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "bodyContent": {
+                "type": "render-ui",
+                "default": {
+                  "gap": "lg",
+                  "children": [
+                    {
+                      "direction": "horizontal",
+                      "justify": "between",
+                      "gap": "md",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "name": "calendar",
+                              "type": "icon"
+                            },
+                            {
+                              "type": "typography",
+                              "variant": "h2",
+                              "content": "CalendarEvents Calendar"
+                            }
+                          ],
+                          "direction": "horizontal",
+                          "align": "center",
+                          "gap": "sm",
+                          "type": "stack"
+                        },
+                        {
+                          "selected": "@entity.selectedRange",
+                          "onSelect": "SELECT_DAY",
+                          "type": "date-range-selector"
+                        }
+                      ],
+                      "align": "center"
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "calendar-grid"
+                    },
+                    {
+                      "type": "divider"
+                    },
+                    {
+                      "type": "typography",
+                      "content": "Upcoming Events",
+                      "variant": "h4"
+                    },
+                    {
+                      "fields": [
+                        {
+                          "icon": "calendar",
+                          "name": "name",
+                          "variant": "h4",
+                          "label": "Event"
+                        },
+                        {
+                          "name": "time",
+                          "variant": "badge",
+                          "label": "Time"
+                        },
+                        {
+                          "name": "date",
+                          "label": "Date",
+                          "variant": "caption",
+                          "format": "date"
+                        },
+                        {
+                          "label": "Status",
+                          "name": "status",
+                          "variant": "badge"
+                        }
+                      ],
+                      "entity": "@payload.data",
+                      "itemActions": [
+                        {
+                          "label": "View",
+                          "event": "SELECT_DAY",
+                          "icon": "eye"
+                        }
+                      ],
+                      "look": "@config.tableLook",
+                      "type": "data-list"
+                    }
+                  ],
+                  "direction": "vertical",
+                  "type": "stack"
+                },
+                "label": "Body content tree",
+                "description": "Render-ui SExpr rendered after events load. Default is the month-grid + upcoming-events list. Layer 3 variants override this with their own tree (agenda list, week timeline, etc.) to deliver entirely different calendar UX while inheriting the same trait, state machine, emits, and listens.",
+                "tier": "internal"
+              },
+              "descriptionBinding": {
+                "type": "string",
+                "default": "@item.description",
+                "label": "Description binding",
+                "description": "Per-row binding for the event description slot.",
+                "tier": "presentation"
+              },
+              "titleBinding": {
+                "type": "string",
+                "default": "@item.name",
+                "label": "Title binding",
+                "description": "Per-row binding for the event title slot.",
+                "tier": "presentation"
+              },
+              "tableLook": {
+                "type": "string",
+                "default": "dense",
+                "label": "Table look",
+                "description": "Layer 2 visual treatment for the data table rendered by this atom.",
+                "tier": "presentation",
+                "values": [
+                  "dense",
+                  "spacious",
+                  "striped",
+                  "borderless",
+                  "card-rows"
+                ]
+              },
+              "timeBinding": {
+                "type": "string",
+                "default": "@item.time",
+                "label": "Time binding",
+                "description": "Per-row binding for the event time slot.",
+                "tier": "presentation"
+              },
+              "badgeBinding": {
+                "type": "string",
+                "default": "@item.status",
+                "label": "Badge binding",
+                "description": "Per-row binding for the event status/badge slot.",
+                "tier": "presentation"
+              }
+            },
+            "scope": "collection"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CalendarEventCalendarPage",
+            "path": "/calendarevents/calendar",
+            "traits": [
+              {
+                "ref": "CalendarEventCalendar"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "source": "",
+  "lolo": ""
+}
