@@ -136,6 +136,14 @@ export function createConfig(opts: SiteConfig): Config {
                   // (dist/index.cjs.js) that throws "exports is not defined"
                   // under Docusaurus's ESM webpack. Force the ESM build.
                   '@phosphor-icons/react$': path.resolve(siteDir, 'node_modules/@phosphor-icons/react/dist/index.es.js'),
+                  // The Docusaurus site is browser-only. @almadar/runtime's server-side
+                  // code (and its Node-only transitive deps like @almadar-io/rabit)
+                  // is dead code in the client bundle, but webpack still resolves its
+                  // static imports. Stub the whole server package so the build doesn't
+                  // need to install or bundle packages that require Node at runtime.
+                  '@almadar/server': false,
+                  '@almadar-io/rabit': false,
+                  '@almadar-io/skills': false,
                 },
                 // Node core modules are not available in the browser; stub them
                 // out. `@almadar/runtime`'s `OrbitalServerRuntime` guards every
@@ -154,6 +162,7 @@ export function createConfig(opts: SiteConfig): Config {
                   net: false,
                   child_process: false,
                   express: false,
+                  url: false,
                 },
               },
               plugins: [
