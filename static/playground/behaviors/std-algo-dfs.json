@@ -1,0 +1,878 @@
+{
+  "name": "std-algo-dfs",
+  "description": "Depth-first search engine — pops one node per tick off a LIFO stack, pushes its unseen neighbours, recolours the graph on biology-canvas.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-algo-dfs",
+    "version": "1.0.0",
+    "description": "Depth-first search engine — pops one node per tick off a LIFO stack, pushes its unseen neighbours, recolours the graph on biology-canvas.",
+    "orbitals": [
+      {
+        "name": "DfsEngineOrbital",
+        "entity": {
+          "name": "DfsScene",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "nodes",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "radius": {
+                    "name": "radius",
+                    "type": "number",
+                    "required": false
+                  },
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "kind": {
+                    "name": "kind",
+                    "type": "string",
+                    "required": false,
+                    "values": [
+                      "cell",
+                      "organelle",
+                      "molecule",
+                      "organism"
+                    ]
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              }
+            },
+            {
+              "name": "edges",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "name": "from",
+                    "type": "string",
+                    "required": true
+                  },
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": false
+                  },
+                  "to": {
+                    "name": "to",
+                    "type": "string",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "stack",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "seen",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "visited",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "cur",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "newIds",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "done",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": true
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "DfsSim",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "cur",
+                "done",
+                "edges",
+                "newIds",
+                "nodes",
+                "running",
+                "seen",
+                "stack",
+                "visited"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "DfsScene",
+            "emits": [
+              {
+                "event": "NODES_UPDATED",
+                "description": "The graph each step — a composed listener can subscribe; a harmless no-op standalone.",
+                "synonyms": "tick, frame, step, visit, traverse",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "nodes",
+                    "type": "[GraphNode]"
+                  },
+                  {
+                    "name": "edges",
+                    "type": "[GraphEdge]"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "NODES_UPDATED",
+                  "name": "Nodes Updated",
+                  "description": "The graph each step — a composed listener can subscribe; a harmless no-op standalone.",
+                  "synonyms": "tick, frame, step, visit, traverse",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "nodes",
+                      "type": "[GraphNode]"
+                    },
+                    {
+                      "name": "edges",
+                      "type": "[GraphEdge]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.nodes",
+                      [
+                        {
+                          "x": 300,
+                          "radius": 20,
+                          "label": "A",
+                          "color": "#f59e0b",
+                          "kind": "cell",
+                          "id": "A",
+                          "y": 60
+                        },
+                        {
+                          "color": "#cbd5e1",
+                          "label": "B",
+                          "x": 150,
+                          "y": 160,
+                          "id": "B",
+                          "radius": 20,
+                          "kind": "cell"
+                        },
+                        {
+                          "label": "C",
+                          "id": "C",
+                          "radius": 20,
+                          "y": 160,
+                          "color": "#cbd5e1",
+                          "kind": "cell",
+                          "x": 450
+                        },
+                        {
+                          "x": 90,
+                          "id": "D",
+                          "y": 300,
+                          "kind": "cell",
+                          "color": "#cbd5e1",
+                          "label": "D",
+                          "radius": 20
+                        },
+                        {
+                          "label": "E",
+                          "radius": 20,
+                          "x": 240,
+                          "y": 300,
+                          "color": "#cbd5e1",
+                          "kind": "cell",
+                          "id": "E"
+                        },
+                        {
+                          "id": "F",
+                          "radius": 20,
+                          "x": 400,
+                          "y": 300,
+                          "color": "#cbd5e1",
+                          "label": "F",
+                          "kind": "cell"
+                        },
+                        {
+                          "color": "#cbd5e1",
+                          "kind": "cell",
+                          "id": "G",
+                          "radius": 20,
+                          "label": "G",
+                          "x": 520,
+                          "y": 300
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.edges",
+                      [
+                        {
+                          "from": "A",
+                          "color": "#9ca3af",
+                          "to": "B",
+                          "label": ""
+                        },
+                        {
+                          "to": "C",
+                          "from": "A",
+                          "color": "#9ca3af",
+                          "label": ""
+                        },
+                        {
+                          "color": "#9ca3af",
+                          "label": "",
+                          "from": "B",
+                          "to": "D"
+                        },
+                        {
+                          "label": "",
+                          "to": "E",
+                          "color": "#9ca3af",
+                          "from": "B"
+                        },
+                        {
+                          "color": "#9ca3af",
+                          "label": "",
+                          "to": "F",
+                          "from": "C"
+                        },
+                        {
+                          "to": "G",
+                          "label": "",
+                          "from": "C",
+                          "color": "#9ca3af"
+                        },
+                        {
+                          "from": "E",
+                          "color": "#9ca3af",
+                          "label": "",
+                          "to": "F"
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.stack",
+                      [
+                        "A"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.seen",
+                      [
+                        "A"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.visited",
+                      []
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "backgroundColor": "#f8fafc",
+                        "edges": "@entity.edges",
+                        "height": 400,
+                        "type": "biology-canvas",
+                        "width": 600,
+                        "nodes": "@entity.nodes"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "NODES_UPDATED",
+                      {
+                        "edges": "@entity.edges",
+                        "nodes": "@entity.nodes"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "dfsTick",
+                "interval": 400,
+                "guard": [
+                  "and",
+                  "@entity.running",
+                  [
+                    "not",
+                    "@entity.done"
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.cur",
+                    [
+                      "array/last",
+                      "@entity.stack"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.newIds",
+                    [
+                      "let",
+                      [
+                        [
+                          "u",
+                          "@entity.cur"
+                        ]
+                      ],
+                      [
+                        "array/filter",
+                        [
+                          "array/map",
+                          [
+                            "array/filter",
+                            "@entity.edges",
+                            [
+                              "or",
+                              [
+                                "==",
+                                [
+                                  "object/get",
+                                  "@item",
+                                  "from"
+                                ],
+                                "@u"
+                              ],
+                              [
+                                "==",
+                                [
+                                  "object/get",
+                                  "@item",
+                                  "to"
+                                ],
+                                "@u"
+                              ]
+                            ]
+                          ],
+                          [
+                            "if",
+                            [
+                              "==",
+                              [
+                                "object/get",
+                                "@item",
+                                "from"
+                              ],
+                              "@u"
+                            ],
+                            [
+                              "object/get",
+                              "@item",
+                              "to"
+                            ],
+                            [
+                              "object/get",
+                              "@item",
+                              "from"
+                            ]
+                          ]
+                        ],
+                        [
+                          "not",
+                          [
+                            "array/includes",
+                            "@entity.seen",
+                            "@item"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.visited",
+                    [
+                      "array/append",
+                      "@entity.visited",
+                      "@entity.cur"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.seen",
+                    [
+                      "array/concat",
+                      "@entity.seen",
+                      "@entity.newIds"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.stack",
+                    [
+                      "array/concat",
+                      [
+                        "array/dropLast",
+                        "@entity.stack",
+                        1
+                      ],
+                      "@entity.newIds"
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.done",
+                    [
+                      "==",
+                      [
+                        "array/len",
+                        "@entity.stack"
+                      ],
+                      0
+                    ]
+                  ],
+                  [
+                    "set",
+                    "@entity.nodes",
+                    [
+                      "array/map",
+                      "@entity.nodes",
+                      [
+                        "object/merge",
+                        "@item",
+                        {
+                          "color": [
+                            "if",
+                            [
+                              "array/includes",
+                              "@entity.visited",
+                              [
+                                "object/get",
+                                "@item",
+                                "id"
+                              ]
+                            ],
+                            "#22c55e",
+                            [
+                              "if",
+                              [
+                                "array/includes",
+                                "@entity.seen",
+                                [
+                                  "object/get",
+                                  "@item",
+                                  "id"
+                                ]
+                              ],
+                              "#f59e0b",
+                              "#cbd5e1"
+                            ]
+                          ]
+                        }
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "width": 600,
+                      "height": 400,
+                      "type": "biology-canvas",
+                      "backgroundColor": "#f8fafc",
+                      "edges": "@entity.edges",
+                      "nodes": "@entity.nodes"
+                    }
+                  ],
+                  [
+                    "emit",
+                    "NODES_UPDATED",
+                    {
+                      "edges": "@entity.edges",
+                      "nodes": "@entity.nodes"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the tick visits one node per step; toggle to start/pause the traversal.",
+                "tier": "domain"
+              },
+              "width": {
+                "type": "number",
+                "default": 600,
+                "label": "Width",
+                "description": "Canvas width in pixels.",
+                "tier": "presentation"
+              },
+              "nodes": {
+                "type": "[GraphNode]",
+                "default": [
+                  {
+                    "x": 300,
+                    "radius": 20,
+                    "label": "A",
+                    "color": "#f59e0b",
+                    "kind": "cell",
+                    "id": "A",
+                    "y": 60
+                  },
+                  {
+                    "color": "#cbd5e1",
+                    "label": "B",
+                    "x": 150,
+                    "y": 160,
+                    "id": "B",
+                    "radius": 20,
+                    "kind": "cell"
+                  },
+                  {
+                    "label": "C",
+                    "id": "C",
+                    "radius": 20,
+                    "y": 160,
+                    "color": "#cbd5e1",
+                    "kind": "cell",
+                    "x": 450
+                  },
+                  {
+                    "x": 90,
+                    "id": "D",
+                    "y": 300,
+                    "kind": "cell",
+                    "color": "#cbd5e1",
+                    "label": "D",
+                    "radius": 20
+                  },
+                  {
+                    "label": "E",
+                    "radius": 20,
+                    "x": 240,
+                    "y": 300,
+                    "color": "#cbd5e1",
+                    "kind": "cell",
+                    "id": "E"
+                  },
+                  {
+                    "id": "F",
+                    "radius": 20,
+                    "x": 400,
+                    "y": 300,
+                    "color": "#cbd5e1",
+                    "label": "F",
+                    "kind": "cell"
+                  },
+                  {
+                    "color": "#cbd5e1",
+                    "kind": "cell",
+                    "id": "G",
+                    "radius": 20,
+                    "label": "G",
+                    "x": 520,
+                    "y": 300
+                  }
+                ],
+                "label": "Nodes",
+                "description": "Graph vertices; DFS recolours them slate→amber(frontier)→green(visited).",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "name": "kind",
+                      "type": "string",
+                      "required": false,
+                      "values": [
+                        "cell",
+                        "organelle",
+                        "molecule",
+                        "organism"
+                      ]
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "color": {
+                      "name": "color",
+                      "type": "string",
+                      "required": false
+                    },
+                    "radius": {
+                      "name": "radius",
+                      "type": "number",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "start": {
+                "type": "string",
+                "default": "A",
+                "label": "Start Node",
+                "description": "Id of the node DFS starts from.",
+                "tier": "domain"
+              },
+              "backgroundColor": {
+                "type": "string",
+                "default": "#f8fafc",
+                "label": "Background Color",
+                "description": "Canvas background color.",
+                "tier": "presentation"
+              },
+              "edges": {
+                "type": "[GraphEdge]",
+                "default": [
+                  {
+                    "from": "A",
+                    "color": "#9ca3af",
+                    "to": "B",
+                    "label": ""
+                  },
+                  {
+                    "to": "C",
+                    "from": "A",
+                    "color": "#9ca3af",
+                    "label": ""
+                  },
+                  {
+                    "color": "#9ca3af",
+                    "label": "",
+                    "from": "B",
+                    "to": "D"
+                  },
+                  {
+                    "label": "",
+                    "to": "E",
+                    "color": "#9ca3af",
+                    "from": "B"
+                  },
+                  {
+                    "color": "#9ca3af",
+                    "label": "",
+                    "to": "F",
+                    "from": "C"
+                  },
+                  {
+                    "to": "G",
+                    "label": "",
+                    "from": "C",
+                    "color": "#9ca3af"
+                  },
+                  {
+                    "from": "E",
+                    "color": "#9ca3af",
+                    "label": "",
+                    "to": "F"
+                  }
+                ],
+                "label": "Edges",
+                "description": "Undirected adjacency; each tick pushes the deepest frontier along them.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "to": {
+                      "name": "to",
+                      "type": "string",
+                      "required": true
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "from": {
+                      "name": "from",
+                      "type": "string",
+                      "required": true
+                    },
+                    "color": {
+                      "name": "color",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "height": {
+                "type": "number",
+                "default": 400,
+                "label": "Height",
+                "description": "Canvas height in pixels.",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "DfsEnginePage",
+            "path": "/algo-dfs",
+            "traits": [
+              {
+                "ref": "DfsSim"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "DfsEngineOrbital": [
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          },
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "DfsSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

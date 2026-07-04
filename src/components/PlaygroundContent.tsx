@@ -93,9 +93,15 @@ import {
 } from "@almadar/ui";
 import type { TabItem } from "@almadar/ui";
 import { BrowserPlayground } from "@almadar/ui/runtime";
+import { setLogLevel } from "@almadar/logger";
 
 // Load all theme CSS so data-theme attributes resolve to actual variables
 import "@almadar/ui/themes/index.css";
+
+// @almadar/runtime effect loggers default to DEBUG in dev, logging every emit/
+// persist/notify — the flood stalls the playground. Cap to WARN once, up front,
+// before BrowserPlayground mounts the runtime. (This module is browser-only.)
+setLogLevel("WARN");
 
 // ─── Mini Behavior Glyph (inline, no external import) ────────────────────────
 // A tiny (32x32) SVG glyph that encodes behavior properties as visual marks:

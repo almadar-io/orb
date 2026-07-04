@@ -1,0 +1,680 @@
+{
+  "name": "std-physics-freefall",
+  "description": "Free-fall engine — bodies drop under gravity, bounce off floor/walls losing energy; composed via `uses`.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-physics-freefall",
+    "version": "1.0.0",
+    "description": "Free-fall engine — bodies drop under gravity, bounce off floor/walls losing energy; composed via `uses`.",
+    "orbitals": [
+      {
+        "name": "FreeFallEngineOrbital",
+        "entity": {
+          "name": "FreeFallState",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "bodies",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fx": {
+                    "name": "fx",
+                    "type": "number",
+                    "required": false
+                  },
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "fy": {
+                    "name": "fy",
+                    "type": "number",
+                    "required": false
+                  },
+                  "vy": {
+                    "name": "vy",
+                    "type": "number",
+                    "required": false
+                  },
+                  "vx": {
+                    "name": "vx",
+                    "type": "number",
+                    "required": false
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "radius": {
+                    "name": "radius",
+                    "type": "number",
+                    "required": false
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": false
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              }
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": false
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "FreeFallSim",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "bodies",
+                "running"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "FreeFallState",
+            "emits": [
+              {
+                "event": "BODIES_UPDATED",
+                "description": "The current scene each tick — a composed listener (graph, readout, mirror canvas) can subscribe; a harmless no-op when the atom runs standalone.",
+                "synonyms": "tick, frame, step, redraw",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "bodies",
+                    "type": "[FreeFallBody]"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODIES_UPDATED",
+                  "name": "Bodies Updated",
+                  "description": "The current scene each tick — a composed listener (graph, readout, mirror canvas) can subscribe; a harmless no-op when the atom runs standalone.",
+                  "synonyms": "tick, frame, step, redraw",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "bodies",
+                      "type": "[FreeFallBody]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        {
+                          "y": 40,
+                          "label": "A",
+                          "radius": 16,
+                          "fy": 0,
+                          "id": "ball-a",
+                          "fx": 0,
+                          "vy": 0,
+                          "vx": 0,
+                          "x": 100,
+                          "color": "#2563eb"
+                        },
+                        {
+                          "id": "ball-b",
+                          "vy": 0,
+                          "y": 70,
+                          "fy": 0,
+                          "label": "B",
+                          "radius": 13,
+                          "x": 300,
+                          "vx": 0,
+                          "color": "#16a34a",
+                          "fx": 0
+                        },
+                        {
+                          "y": 100,
+                          "radius": 10,
+                          "color": "#dc2626",
+                          "fy": 0,
+                          "label": "C",
+                          "vy": 0,
+                          "vx": 0,
+                          "id": "ball-c",
+                          "fx": 0,
+                          "x": 480
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "width": 600,
+                        "showForces": false,
+                        "velocityScale": 8,
+                        "backgroundColor": "#f8fafc",
+                        "showVelocity": true,
+                        "type": "physics-canvas",
+                        "bodies": "@entity.bodies",
+                        "height": 400
+                      }
+                    ],
+                    [
+                      "emit",
+                      "BODIES_UPDATED",
+                      {
+                        "bodies": "@entity.bodies"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "freefallTick",
+                "interval": 32,
+                "guard": "@entity.running",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.bodies",
+                    [
+                      "array/map",
+                      "@entity.bodies",
+                      [
+                        "fn",
+                        "b",
+                        [
+                          "let",
+                          [
+                            [
+                              "r",
+                              [
+                                "object/get",
+                                "@b",
+                                "radius"
+                              ]
+                            ],
+                            [
+                              "nvx",
+                              [
+                                "*",
+                                [
+                                  "object/get",
+                                  "@b",
+                                  "vx"
+                                ],
+                                0.995
+                              ]
+                            ],
+                            [
+                              "nvy",
+                              [
+                                "*",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "vy"
+                                  ],
+                                  0.5
+                                ],
+                                0.995
+                              ]
+                            ]
+                          ],
+                          [
+                            "let",
+                            [
+                              [
+                                "nx",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "x"
+                                  ],
+                                  "@nvx"
+                                ]
+                              ],
+                              [
+                                "ny",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "y"
+                                  ],
+                                  "@nvy"
+                                ]
+                              ]
+                            ],
+                            [
+                              "let",
+                              [
+                                [
+                                  "hitx",
+                                  [
+                                    "or",
+                                    [
+                                      "<",
+                                      "@nx",
+                                      "@r"
+                                    ],
+                                    [
+                                      ">",
+                                      "@nx",
+                                      [
+                                        "-",
+                                        600,
+                                        "@r"
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "hity",
+                                  [
+                                    "or",
+                                    [
+                                      "<",
+                                      "@ny",
+                                      "@r"
+                                    ],
+                                    [
+                                      ">",
+                                      "@ny",
+                                      [
+                                        "-",
+                                        400,
+                                        "@r"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "object/merge",
+                                "@b",
+                                {
+                                  "y": [
+                                    "math/clamp",
+                                    "@ny",
+                                    "@r",
+                                    [
+                                      "-",
+                                      400,
+                                      "@r"
+                                    ]
+                                  ],
+                                  "vy": [
+                                    "if",
+                                    "@hity",
+                                    [
+                                      "*",
+                                      "@nvy",
+                                      [
+                                        "*",
+                                        -1,
+                                        0.8
+                                      ]
+                                    ],
+                                    "@nvy"
+                                  ],
+                                  "x": [
+                                    "math/clamp",
+                                    "@nx",
+                                    "@r",
+                                    [
+                                      "-",
+                                      600,
+                                      "@r"
+                                    ]
+                                  ],
+                                  "vx": [
+                                    "if",
+                                    "@hitx",
+                                    [
+                                      "*",
+                                      "@nvx",
+                                      [
+                                        "*",
+                                        -1,
+                                        0.8
+                                      ]
+                                    ],
+                                    "@nvx"
+                                  ]
+                                }
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "bodies": "@entity.bodies",
+                      "height": 400,
+                      "backgroundColor": "#f8fafc",
+                      "showForces": false,
+                      "type": "physics-canvas",
+                      "velocityScale": 8,
+                      "showVelocity": true,
+                      "width": 600
+                    }
+                  ],
+                  [
+                    "emit",
+                    "BODIES_UPDATED",
+                    {
+                      "bodies": "@entity.bodies"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "showVelocity": {
+                "type": "boolean",
+                "default": true,
+                "label": "Show Velocity",
+                "description": "Draw each body's velocity vector as an arrow.",
+                "tier": "presentation"
+              },
+              "bodies": {
+                "type": "[FreeFallBody]",
+                "default": [
+                  {
+                    "y": 40,
+                    "label": "A",
+                    "radius": 16,
+                    "fy": 0,
+                    "id": "ball-a",
+                    "fx": 0,
+                    "vy": 0,
+                    "vx": 0,
+                    "x": 100,
+                    "color": "#2563eb"
+                  },
+                  {
+                    "id": "ball-b",
+                    "vy": 0,
+                    "y": 70,
+                    "fy": 0,
+                    "label": "B",
+                    "radius": 13,
+                    "x": 300,
+                    "vx": 0,
+                    "color": "#16a34a",
+                    "fx": 0
+                  },
+                  {
+                    "y": 100,
+                    "radius": 10,
+                    "color": "#dc2626",
+                    "fy": 0,
+                    "label": "C",
+                    "vy": 0,
+                    "vx": 0,
+                    "id": "ball-c",
+                    "fx": 0,
+                    "x": 480
+                  }
+                ],
+                "label": "Bodies",
+                "description": "Initial bodies; each starts high with zero velocity so it drops straight down and bounces.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "radius": {
+                      "name": "radius",
+                      "type": "number",
+                      "required": false
+                    },
+                    "vx": {
+                      "name": "vx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "vy": {
+                      "name": "vy",
+                      "type": "number",
+                      "required": false
+                    },
+                    "color": {
+                      "name": "color",
+                      "type": "string",
+                      "required": false
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "fy": {
+                      "name": "fy",
+                      "type": "number",
+                      "required": false
+                    },
+                    "fx": {
+                      "name": "fx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "damping": {
+                "type": "number",
+                "default": 0.995,
+                "label": "Damping",
+                "description": "Fraction of velocity retained each tick (air resistance).",
+                "tier": "domain"
+              },
+              "gravity": {
+                "type": "number",
+                "default": 0.5,
+                "label": "Gravity",
+                "description": "Downward acceleration added to each body's vy every tick.",
+                "tier": "domain"
+              },
+              "velocityScale": {
+                "type": "number",
+                "default": 8,
+                "label": "Velocity Scale",
+                "description": "Length multiplier for the velocity arrows.",
+                "tier": "presentation"
+              },
+              "backgroundColor": {
+                "type": "string",
+                "default": "#f8fafc",
+                "label": "Background Color",
+                "description": "Canvas background color.",
+                "tier": "presentation"
+              },
+              "height": {
+                "type": "number",
+                "default": 400,
+                "label": "Height",
+                "description": "Simulation height in pixels; bounds the bounce.",
+                "tier": "presentation"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the tick integrates; toggle to start/pause the sim.",
+                "tier": "domain"
+              },
+              "restitution": {
+                "type": "number",
+                "default": 0.8,
+                "label": "Restitution",
+                "description": "Fraction of speed kept when a body bounces off the floor or a wall.",
+                "tier": "domain"
+              },
+              "width": {
+                "type": "number",
+                "default": 600,
+                "label": "Width",
+                "description": "Simulation width in pixels; bounds the bounce.",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "FreeFallEnginePage",
+            "path": "/physics-freefall",
+            "traits": [
+              {
+                "ref": "FreeFallSim"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "FreeFallEngineOrbital": [
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "velocityScale",
+            "knob": "velocityScale"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "showVelocity",
+            "knob": "showVelocity"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "velocityScale",
+            "knob": "velocityScale"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "showVelocity",
+            "knob": "showVelocity"
+          },
+          {
+            "trait": "FreeFallSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}

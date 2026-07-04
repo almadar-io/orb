@@ -1,0 +1,656 @@
+{
+  "name": "std-physics-projectile",
+  "description": "Projectile-motion engine — integrates bodies under constant gravity with wall-bounce every tick and renders a physics-canvas; composed by a learning orbital via `uses`, controls auto-derived from @config.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-physics-projectile",
+    "version": "1.0.0",
+    "description": "Projectile-motion engine — integrates bodies under constant gravity with wall-bounce every tick and renders a physics-canvas; composed by a learning orbital via `uses`, controls auto-derived from @config.",
+    "orbitals": [
+      {
+        "name": "ProjectileEngineOrbital",
+        "entity": {
+          "name": "ProjectileState",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "bodies",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": false
+                  },
+                  "fx": {
+                    "name": "fx",
+                    "type": "number",
+                    "required": false
+                  },
+                  "vx": {
+                    "name": "vx",
+                    "type": "number",
+                    "required": false
+                  },
+                  "fy": {
+                    "name": "fy",
+                    "type": "number",
+                    "required": false
+                  },
+                  "vy": {
+                    "name": "vy",
+                    "type": "number",
+                    "required": false
+                  },
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "radius": {
+                    "name": "radius",
+                    "type": "number",
+                    "required": false
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": false
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": false
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ProjectileSim",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "bodies",
+                "running"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "ProjectileState",
+            "emits": [
+              {
+                "event": "BODIES_UPDATED",
+                "description": "The current scene each tick — a composed listener (graph, readout, mirror canvas) can subscribe; a harmless no-op when the atom runs standalone.",
+                "synonyms": "tick, frame, step, redraw",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "bodies",
+                    "type": "[ProjectileBody]"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODIES_UPDATED",
+                  "name": "Bodies Updated",
+                  "description": "The current scene each tick — a composed listener (graph, readout, mirror canvas) can subscribe; a harmless no-op when the atom runs standalone.",
+                  "synonyms": "tick, frame, step, redraw",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "bodies",
+                      "type": "[ProjectileBody]"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        {
+                          "vx": 5,
+                          "color": "#2563eb",
+                          "radius": 16,
+                          "id": "ball-a",
+                          "fx": 0,
+                          "x": 90,
+                          "label": "A",
+                          "y": 70,
+                          "fy": 0,
+                          "vy": 0
+                        },
+                        {
+                          "id": "ball-b",
+                          "radius": 11,
+                          "label": "B",
+                          "y": 50,
+                          "fx": 0,
+                          "color": "#16a34a",
+                          "fy": 0,
+                          "vy": 3,
+                          "x": 320,
+                          "vx": -4
+                        }
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "bodies": "@entity.bodies",
+                        "showVelocity": true,
+                        "backgroundColor": "#f8fafc",
+                        "type": "physics-canvas",
+                        "width": 600,
+                        "height": 400,
+                        "velocityScale": 8,
+                        "showForces": false
+                      }
+                    ],
+                    [
+                      "emit",
+                      "BODIES_UPDATED",
+                      {
+                        "bodies": "@entity.bodies"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "physicsTick",
+                "interval": 32,
+                "guard": "@entity.running",
+                "effects": [
+                  [
+                    "set",
+                    "@entity.bodies",
+                    [
+                      "array/map",
+                      "@entity.bodies",
+                      [
+                        "fn",
+                        "b",
+                        [
+                          "let",
+                          [
+                            [
+                              "r",
+                              [
+                                "object/get",
+                                "@b",
+                                "radius"
+                              ]
+                            ],
+                            [
+                              "nvx",
+                              [
+                                "*",
+                                [
+                                  "object/get",
+                                  "@b",
+                                  "vx"
+                                ],
+                                0.995
+                              ]
+                            ],
+                            [
+                              "nvy",
+                              [
+                                "*",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "vy"
+                                  ],
+                                  0.4
+                                ],
+                                0.995
+                              ]
+                            ]
+                          ],
+                          [
+                            "let",
+                            [
+                              [
+                                "nx",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "x"
+                                  ],
+                                  "@nvx"
+                                ]
+                              ],
+                              [
+                                "ny",
+                                [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "y"
+                                  ],
+                                  "@nvy"
+                                ]
+                              ]
+                            ],
+                            [
+                              "let",
+                              [
+                                [
+                                  "hitx",
+                                  [
+                                    "or",
+                                    [
+                                      "<",
+                                      "@nx",
+                                      "@r"
+                                    ],
+                                    [
+                                      ">",
+                                      "@nx",
+                                      [
+                                        "-",
+                                        600,
+                                        "@r"
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "hity",
+                                  [
+                                    "or",
+                                    [
+                                      "<",
+                                      "@ny",
+                                      "@r"
+                                    ],
+                                    [
+                                      ">",
+                                      "@ny",
+                                      [
+                                        "-",
+                                        400,
+                                        "@r"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "object/merge",
+                                "@b",
+                                {
+                                  "vx": [
+                                    "if",
+                                    "@hitx",
+                                    [
+                                      "*",
+                                      "@nvx",
+                                      [
+                                        "*",
+                                        -1,
+                                        0.78
+                                      ]
+                                    ],
+                                    "@nvx"
+                                  ],
+                                  "vy": [
+                                    "if",
+                                    "@hity",
+                                    [
+                                      "*",
+                                      "@nvy",
+                                      [
+                                        "*",
+                                        -1,
+                                        0.78
+                                      ]
+                                    ],
+                                    "@nvy"
+                                  ],
+                                  "y": [
+                                    "math/clamp",
+                                    "@ny",
+                                    "@r",
+                                    [
+                                      "-",
+                                      400,
+                                      "@r"
+                                    ]
+                                  ],
+                                  "x": [
+                                    "math/clamp",
+                                    "@nx",
+                                    "@r",
+                                    [
+                                      "-",
+                                      600,
+                                      "@r"
+                                    ]
+                                  ]
+                                }
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "render-ui",
+                    "main",
+                    {
+                      "bodies": "@entity.bodies",
+                      "showVelocity": true,
+                      "height": 400,
+                      "backgroundColor": "#f8fafc",
+                      "showForces": false,
+                      "type": "physics-canvas",
+                      "velocityScale": 8,
+                      "width": 600
+                    }
+                  ],
+                  [
+                    "emit",
+                    "BODIES_UPDATED",
+                    {
+                      "bodies": "@entity.bodies"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "velocityScale": {
+                "type": "number",
+                "default": 8,
+                "label": "Velocity Scale",
+                "description": "Length multiplier for the velocity arrows.",
+                "tier": "presentation"
+              },
+              "backgroundColor": {
+                "type": "string",
+                "default": "#f8fafc",
+                "label": "Background Color",
+                "description": "Canvas background color.",
+                "tier": "presentation"
+              },
+              "width": {
+                "type": "number",
+                "default": 600,
+                "label": "Width",
+                "description": "Simulation width in pixels; bounds the bounce.",
+                "tier": "presentation"
+              },
+              "restitution": {
+                "type": "number",
+                "default": 0.78,
+                "label": "Restitution",
+                "description": "Fraction of speed kept when a body bounces off a wall.",
+                "tier": "domain"
+              },
+              "showVelocity": {
+                "type": "boolean",
+                "default": true,
+                "label": "Show Velocity",
+                "description": "Draw each body's velocity vector as an arrow.",
+                "tier": "presentation"
+              },
+              "damping": {
+                "type": "number",
+                "default": 0.995,
+                "label": "Damping",
+                "description": "Fraction of velocity retained each tick (air resistance).",
+                "tier": "domain"
+              },
+              "bodies": {
+                "type": "[ProjectileBody]",
+                "default": [
+                  {
+                    "vx": 5,
+                    "color": "#2563eb",
+                    "radius": 16,
+                    "id": "ball-a",
+                    "fx": 0,
+                    "x": 90,
+                    "label": "A",
+                    "y": 70,
+                    "fy": 0,
+                    "vy": 0
+                  },
+                  {
+                    "id": "ball-b",
+                    "radius": 11,
+                    "label": "B",
+                    "y": 50,
+                    "fx": 0,
+                    "color": "#16a34a",
+                    "fy": 0,
+                    "vy": 3,
+                    "x": 320,
+                    "vx": -4
+                  }
+                ],
+                "label": "Bodies",
+                "description": "Initial bodies; each carries position (x,y) and velocity (vx,vy).",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "radius": {
+                      "name": "radius",
+                      "type": "number",
+                      "required": false
+                    },
+                    "vy": {
+                      "name": "vy",
+                      "type": "number",
+                      "required": false
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "vx": {
+                      "name": "vx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": false
+                    },
+                    "fx": {
+                      "name": "fx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "fy": {
+                      "name": "fy",
+                      "type": "number",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "color": {
+                      "name": "color",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "gravity": {
+                "type": "number",
+                "default": 0.4,
+                "label": "Gravity",
+                "description": "Downward acceleration added to each body's vy every tick.",
+                "tier": "domain"
+              },
+              "height": {
+                "type": "number",
+                "default": 400,
+                "label": "Height",
+                "description": "Simulation height in pixels; bounds the bounce.",
+                "tier": "presentation"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the tick integrates; toggle to start/pause the sim.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ProjectileEnginePage",
+            "path": "/physics-projectile",
+            "traits": [
+              {
+                "ref": "ProjectileSim"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ProjectileEngineOrbital": [
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "showVelocity",
+            "knob": "showVelocity"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "velocityScale",
+            "knob": "velocityScale"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "showVelocity",
+            "knob": "showVelocity"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "backgroundColor",
+            "knob": "backgroundColor"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "velocityScale",
+            "knob": "velocityScale"
+          },
+          {
+            "trait": "ProjectileSim",
+            "patternPath": "root",
+            "prop": "width",
+            "knob": "width"
+          }
+        ]
+      }
+    }
+  },
+  "source": "",
+  "lolo": ""
+}
