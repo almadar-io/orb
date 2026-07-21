@@ -27,6 +27,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     let unsubscribe: (() => void) | undefined;
 
     initializeFirebase().then(() => {
+      // Auth disabled (no Firebase config) — render without a listener.
+      if (!auth) {
+        setLoading(false);
+        return;
+      }
       unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
         setLoading(false);

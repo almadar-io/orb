@@ -4,8 +4,14 @@
 
 import { initializeFirebase, env, logger } from '@almadar/server';
 
-// Initialize Firebase before anything else uses it
-initializeFirebase();
+// Initialize Firebase before anything else uses it. When no credentials
+// are configured (local dev without FIREBASE_*/FIRESTORE_EMULATOR_HOST),
+// boot anyway — a purely client-side app must still serve.
+try {
+  initializeFirebase();
+} catch (e) {
+  logger.warn(`Firebase not configured — auth/db routes disabled: ${e instanceof Error ? e.message : String(e)}`);
+}
 
 import { app } from './app.js';
 

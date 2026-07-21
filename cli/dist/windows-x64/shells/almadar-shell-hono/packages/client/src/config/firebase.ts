@@ -1,8 +1,8 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 
-let app: FirebaseApp;
-let auth: Auth;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 
 export async function initializeFirebase(): Promise<void> {
   if (getApps().length > 0) {
@@ -30,8 +30,29 @@ export async function initializeFirebase(): Promise<void> {
     };
   }
 
+  // No credentials anywhere — auth stays disabled instead of crashing
+  // the app boot with auth/invalid-api-key.
+  if (!config.apiKey) {
+    console.warn('Firebase not configured — auth disabled (set VITE_APP_FIREBASE_* env vars)');
+    return;
+  }
+
   app = initializeApp(config);
   auth = getAuth(app);
+}
+
+export function requireAuth(): Auth {
+  if (!auth) {
+    throw new Error('Firebase auth is not configured — set VITE_APP_FIREBASE_* env vars');
+  }
+  return auth;
+}
+
+// True once Firebase initialized with real credentials. When false the
+// app runs in auth-disabled mode: route guards pass through and sign-in
+// actions report the missing config instead of crashing the boot.
+export function isAuthEnabled(): boolean {
+  return auth !== undefined;
 }
 
 export { auth, app };
