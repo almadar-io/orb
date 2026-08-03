@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
 import { auth, initializeFirebase } from '../../config/firebase';
+import { initMockAuth, mockAuth } from '../../config/mockAuth';
 import { authService } from './authService';
-import { AuthContextType } from './types';
+import { AuthContextType, AuthViewer } from './types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -19,7 +19,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthViewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +27,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     let unsubscribe: (() => void) | undefined;
 
     initializeFirebase().then(() => {
-      // Auth disabled (no Firebase config) — render without a listener.
+      // No Firebase config — subscribe to the persona-backed mock instead of
+      // rendering signed-out forever, so the app can be viewed as each persona.
       if (!auth) {
-        setLoading(false);
+        // Subscribe first: the listener fires immediately with the current
+        // (signed-out) state so the app paints, then again once the roster has
+        // arrived and a persisted session is restored.
+        unsubscribe = mockAuth.onAuthStateChanged((mockUser) => {
+          setUser(mockUser);
+          setLoading(false);
+        });
+        void initMockAuth();
         return;
       }
       unsubscribe = auth.onAuthStateChanged((firebaseUser) => {

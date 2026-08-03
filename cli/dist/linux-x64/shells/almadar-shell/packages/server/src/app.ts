@@ -12,6 +12,7 @@ import {
   errorHandler,
   notFoundHandler,
   debugEventsRouter,
+  personasRouter,
 } from '@almadar/server';
 import { registerRoutes } from './routes.js';
 
@@ -32,6 +33,11 @@ app.get('/health', (_req, res) => {
 
 // Debug event bus endpoints (dev-only, no-op in production)
 app.use('/api/debug', debugEventsRouter());
+
+// Dev persona roster (no-op unless ALLOW_DEV_AUTH_BYPASS). Mounted BEFORE
+// registerRoutes, which applies authenticateFirebase to /api — a pre-login
+// persona picker cannot present a token it does not have yet.
+app.use('/api', personasRouter());
 
 // Register generated routes
 registerRoutes(app);

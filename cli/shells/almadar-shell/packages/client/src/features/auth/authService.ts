@@ -10,13 +10,22 @@ import {
   signInWithEmailLink as firebaseSignInWithEmailLink,
   ActionCodeSettings,
 } from 'firebase/auth';
-import { auth, requireAuth } from '../../config/firebase';
+import { auth, isAuthEnabled, requireAuth } from '../../config/firebase';
+import { mockAuth } from '../../config/mockAuth';
+
+// With no Firebase credentials the real calls throw "not configured", which
+// leaves a generated app impossible to sign into — and therefore impossible to
+// view as anyone, since @user.id/@user.role drive ownership and role gates.
+// Route to the persona-backed mock in exactly that case.
+const useMock = (): boolean => !isAuthEnabled();
 
 const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
   // Google Sign In
   signInWithGoogle: async () => {
+    // No popup to show without Firebase — sign in as the seeded end-user.
+    if (useMock()) return mockAuth.signInAsPersona('member');
     try {
       const result = await signInWithPopup(requireAuth(), googleProvider);
       return result.user;
@@ -27,6 +36,7 @@ export const authService = {
 
   // Email/Password Sign In
   signInWithEmail: async (email: string, password: string) => {
+    if (useMock()) return mockAuth.signInWithEmail(email, password);
     try {
       const result = await signInWithEmailAndPassword(requireAuth(), email, password);
       return result.user;
@@ -37,6 +47,7 @@ export const authService = {
 
   // Email/Password Sign Up
   signUpWithEmail: async (email: string, password: string, displayName?: string) => {
+    if (useMock()) return mockAuth.signUpWithEmail(email, password, displayName);
     try {
       const result = await createUserWithEmailAndPassword(requireAuth(), email, password);
 
@@ -52,6 +63,7 @@ export const authService = {
 
   // Sign Out
   signOut: async () => {
+    if (useMock()) return mockAuth.signOut();
     try {
       await firebaseSignOut(requireAuth());
     } catch (error) {
@@ -82,5 +94,11 @@ export const authService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  /** Sign in as a named seeded persona (dev only; no-op with real Firebase). */
+  signInAsPersona: async (idOrRole: string) => {
+    if (useMock()) return mockAuth.signInAsPersona(idOrRole);
+    throw new Error('Persona sign-in is a dev-only affordance; real auth is configured');
   },
 };

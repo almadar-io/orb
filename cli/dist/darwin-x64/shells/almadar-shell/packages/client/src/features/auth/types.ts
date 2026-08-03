@@ -1,4 +1,20 @@
-import { User } from 'firebase/auth';
+/**
+ * The signed-in viewer, as the auth UI reads it. Firebase's `User` and the mocked
+ * `MockUser` are both structurally assignable to this, so the provider carries
+ * either without a cast and without the UI knowing which one is live.
+ *
+ * A type alias, not an interface: only aliases get TS's implicit index signature,
+ * which is what lets this be passed to `normalizeUserContext(claims: RawUserClaims)`
+ * without a cast.
+ */
+export type AuthViewer = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  /** Present only for mocked personas; real Firebase claims carry no role. */
+  role?: string;
+};
 
 export interface LoginCredentials {
   email: string;
@@ -10,7 +26,7 @@ export interface SignUpCredentials extends LoginCredentials {
 }
 
 export interface AuthContextType {
-  user: User | null;
+  user: AuthViewer | null;
   loading: boolean;
   error: string | null;
   signInWithGoogle: () => Promise<void>;

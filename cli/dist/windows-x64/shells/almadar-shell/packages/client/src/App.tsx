@@ -11,14 +11,19 @@
  * - react-router is optional for URL bookmarkability
  */
 
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, UISlotProvider } from '@almadar/ui/context';
 import { UISlotComponent, NotifyListener } from '@almadar/ui/components';
 import {
   EventBusProvider,
+  UserProvider,
   VerificationProvider,
 } from '@almadar/ui/providers';
+import { normalizeUserContext } from '@almadar/core';
+import { AuthProvider, useAuthContext } from './features/auth';
+import { PersonaSwitcher } from './features/auth/components/PersonaSwitcher';
 import { NavigationProvider } from '@almadar/ui/renderer';
 import { I18nProvider, createTranslate } from '@almadar/ui/hooks';
 import defaultLocale from '@almadar/ui/locales/en.json';
@@ -43,11 +48,25 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Bridges the signed-in viewer into `UserProvider`. Generated trait hooks read
+ * `@user.x` through `useUser()`, so without this every role gate takes its
+ * negative branch and every "only mine" list renders empty — with no error, since
+ * `useUser()` falls back to anonymous. `normalizeUserContext` maps the provider's
+ * `uid`/`displayName` onto the `id`/`name` the behaviors read.
+ */
+function ViewerProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext();
+  return <UserProvider user={normalizeUserContext(user) ?? null}>{children}</UserProvider>;
+}
+
 function App() {
   return (
     <I18nProvider value={i18nValue}>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="minimalist">
+       <AuthProvider>
+        <ViewerProvider>
         <EventBusProvider>
           <VerificationProvider>
             <UISlotProvider>
@@ -67,11 +86,14 @@ function App() {
                   {/* Toast notifications (non-overlapping, always safe to render here) */}
                   <UISlotComponent slot="toast" portal />
                   <NotifyListener />
+                  <PersonaSwitcher />
                 </BrowserRouter>
               </NavigationProvider>
             </UISlotProvider>
           </VerificationProvider>
         </EventBusProvider>
+        </ViewerProvider>
+       </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
     </I18nProvider>

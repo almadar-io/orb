@@ -15,8 +15,10 @@ import { join } from 'path';
 const PORT = Number(env.PORT) || 3030;
 const clientDist = join(import.meta.dir, '../../client/dist');
 
-// Seed mock data
-if (env.USE_MOCK_DATA || env.NODE_ENV !== 'production') {
+// Seed mock data. Gated on USE_MOCK_DATA alone, matching the three other server
+// entry points — "not production" is a different question from "is the data
+// source mock", and conflating them seeds a store nothing reads.
+if (env.USE_MOCK_DATA) {
   try {
     const { initializeMockData } = await import(/* @vite-ignore */ './seedMockData.js' as string);
     await initializeMockData();
