@@ -1,0 +1,344 @@
+{
+  "name": "std-survival-flow",
+  "description": "Headless win/lose authority for the nature-survival board: owns only result. Listens RESOURCES (movesLeft) and sets result to lost when the move budget runs out before the camp is built; listens BUILD_CAMP (the render-gated win intent) and sets result to won. Renders nothing.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-survival-flow",
+    "version": "1.0.0",
+    "description": "Headless win/lose authority for the nature-survival board: owns only result. Listens RESOURCES (movesLeft) and sets result to lost when the move budget runs out before the camp is built; listens BUILD_CAMP (the render-gated win intent) and sets result to won. Renders nothing.",
+    "orbitals": [
+      {
+        "name": "SurvivalFlowOrbital",
+        "id": "orb_01KXG04TP63MGTX1X460SC0BYC",
+        "entity": {
+          "name": "SurvivalFlowData",
+          "id": "ent_01KXG04TP606Z9Y15XFV49JRM1",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "result",
+              "type": "string",
+              "default": "none"
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "SurvivalFlow",
+            "id": "trt_01KXG04TP6E5JMZ7QFF41F69Y8",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "result"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "SurvivalFlowData",
+            "linkedEntityId": "ent_01KXG04TP606Z9Y15XFV49JRM1",
+            "entityRefIds": {
+              "SurvivalFlowData": "ent_01KXG04TP606Z9Y15XFV49JRM1"
+            },
+            "emits": [
+              {
+                "event": "GAME_END",
+                "eventId": "evt_01KXG04TP7C5BMCZFMDX3QPQAJ",
+                "description": "Emitted once the match resolves to won or lost",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04TP6J5FE40M1YQV9VA07",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "RESOURCES",
+                  "id": "evt_01KXG04TP721PV00N6M3YKS1HK",
+                  "name": "Resources",
+                  "payloadSchema": [
+                    {
+                      "name": "wood",
+                      "type": "number"
+                    },
+                    {
+                      "name": "stone",
+                      "type": "number"
+                    },
+                    {
+                      "name": "movesLeft",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "BUILD_CAMP",
+                  "id": "evt_01KXG04TP7EHQ70A2ZFR7W5PA1",
+                  "name": "Build Camp",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01KXG04TP7CWSFCQJMY8CAEM9B",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "GAME_END",
+                  "id": "evt_01KXG04TP7C5BMCZFMDX3QPQAJ",
+                  "name": "Game End",
+                  "description": "Emitted once the match resolves to won or lost",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04TP6J5FE40M1YQV9VA07",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESOURCES",
+                  "eventId": "evt_01KXG04TP721PV00N6M3YKS1HK",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      [
+                        "if",
+                        [
+                          "and",
+                          [
+                            "<=",
+                            "@payload.movesLeft",
+                            0
+                          ],
+                          [
+                            "!=",
+                            "@entity.result",
+                            "won"
+                          ]
+                        ],
+                        "lost",
+                        "@entity.result"
+                      ]
+                    ],
+                    [
+                      "if",
+                      [
+                        "!=",
+                        "@entity.result",
+                        "none"
+                      ],
+                      [
+                        "emit",
+                        "GAME_END",
+                        {
+                          "result": "@entity.result"
+                        }
+                      ],
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BUILD_CAMP",
+                  "eventId": "evt_01KXG04TP7EHQ70A2ZFR7W5PA1",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "won"
+                    ],
+                    [
+                      "emit",
+                      "GAME_END",
+                      {
+                        "result": "@entity.result"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01KXG04TP7CWSFCQJMY8CAEM9B",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, RESOURCES/BUILD_CAMP signals resolve win/lose; toggle to freeze",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "SurvivalFlowPage",
+            "id": "pag_01KXG04TP7ZYKHCQJZ0JZ0YJZW",
+            "path": "/survival-flow",
+            "traits": [
+              {
+                "ref": "SurvivalFlow",
+                "refId": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KXG04TP7C5BMCZFMDX3QPQAJ": {
+          "id": "evt_01KXG04TP7C5BMCZFMDX3QPQAJ",
+          "kind": "event",
+          "bakedName": "GAME_END",
+          "curName": "GAME_END",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+        },
+        "ent_01KXG04TP606Z9Y15XFV49JRM1": {
+          "id": "ent_01KXG04TP606Z9Y15XFV49JRM1",
+          "kind": "entity",
+          "bakedName": "SurvivalFlowData",
+          "curName": "SurvivalFlowData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TP6J5FE40M1YQV9VA07": {
+          "id": "evt_01KXG04TP6J5FE40M1YQV9VA07",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+        },
+        "pag_01KXG04TP7ZYKHCQJZ0JZ0YJZW": {
+          "id": "pag_01KXG04TP7ZYKHCQJZ0JZ0YJZW",
+          "kind": "page",
+          "bakedName": "SurvivalFlowPage",
+          "curName": "SurvivalFlowPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TP7EHQ70A2ZFR7W5PA1": {
+          "id": "evt_01KXG04TP7EHQ70A2ZFR7W5PA1",
+          "kind": "event",
+          "bakedName": "BUILD_CAMP",
+          "curName": "BUILD_CAMP",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+        },
+        "trt_01KXG04TP6E5JMZ7QFF41F69Y8": {
+          "id": "trt_01KXG04TP6E5JMZ7QFF41F69Y8",
+          "kind": "trait",
+          "bakedName": "SurvivalFlow",
+          "curName": "SurvivalFlow",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TP721PV00N6M3YKS1HK": {
+          "id": "evt_01KXG04TP721PV00N6M3YKS1HK",
+          "kind": "event",
+          "bakedName": "RESOURCES",
+          "curName": "RESOURCES",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+        },
+        "orb_01KXG04TP63MGTX1X460SC0BYC": {
+          "id": "orb_01KXG04TP63MGTX1X460SC0BYC",
+          "kind": "orbital",
+          "bakedName": "SurvivalFlowOrbital",
+          "curName": "SurvivalFlowOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TP7CWSFCQJMY8CAEM9B": {
+          "id": "evt_01KXG04TP7CWSFCQJMY8CAEM9B",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TP6E5JMZ7QFF41F69Y8"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-survival-flow \"1.0.0\"\n\"Headless win/lose authority for the nature-survival board: owns only result. Listens RESOURCES (movesLeft) and sets result to lost when the move budget runs out before the camp is built; listens BUILD_CAMP (the render-gated win intent) and sets result to won. Renders nothing.\"\norbital SurvivalFlowOrbital {\n  entity SurvivalFlowData [runtime, shared] {\n    id : string!\n    result : string = \"none\"\n  }\n\n  trait SurvivalFlow -> @rebindable SurvivalFlowData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.result \"none\")\n\n      RESOURCES -> active when @config.running\n        (set @entity.result (if (and (<= @payload.movesLeft 0) (!= @entity.result \"won\")) \"lost\" @entity.result))\n        (if (!= @entity.result \"none\") (emit GAME_END { result: @entity.result }) null)\n\n      BUILD_CAMP -> active when @config.running\n        (set @entity.result \"won\")\n        (emit GAME_END { result: @entity.result })\n\n      RESTART -> active\n        (set @entity.result \"none\")\n    }\n\n    emits {\n      GAME_END -> external {\n        result : string!\n      }\n        @description \"Emitted once the match resolves to won or lost\"\n        @tier \"domain\"\n    }\n\n    listens {\n      RESOURCES { wood : number, stone : number, movesLeft : number }\n      BUILD_CAMP { id : string }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, RESOURCES/BUILD_CAMP signals resolve win/lose; toggle to freeze\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/survival-flow\" as SurvivalFlowPage -> SurvivalFlow\n}\n"
+}

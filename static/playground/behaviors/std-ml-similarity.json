@@ -1,0 +1,925 @@
+{
+  "name": "std-ml-similarity",
+  "description": "Retrieval rung (R3) — embed a candidate against references and gate on cosine floor + margin; abstains when not confident.",
+  "level": "atom",
+  "topic": "ml",
+  "schema": {
+    "name": "std-ml-similarity",
+    "version": "1.0.0",
+    "description": "Retrieval rung (R3) — embed a candidate against references and gate on cosine floor + margin; abstains when not confident.",
+    "orbitals": [
+      {
+        "name": "MlSimilarityOrbital",
+        "id": "orb_01KYBN0QT97QXM5727TNZZSS1B",
+        "entity": {
+          "name": "SimilarityComparison",
+          "id": "ent_01KYBN0QT9997QBWPF6WFF1CMM",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "query",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "candidates",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "embeddings",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            },
+            {
+              "name": "queryVector",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "number"
+              }
+            },
+            {
+              "name": "candidateVectors",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            },
+            {
+              "name": "matchIndex",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "matchScore",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "matchMargin",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "request",
+              "type": "object",
+              "default": {}
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "embedding",
+                "resolved"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "SimilarityRun",
+            "id": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X",
+            "category": "lifecycle",
+            "linkedEntity": "SimilarityComparison",
+            "linkedEntityId": "ent_01KYBN0QT9997QBWPF6WFF1CMM",
+            "entityRefIds": {
+              "SimilarityComparison": "ent_01KYBN0QT9997QBWPF6WFF1CMM"
+            },
+            "emits": [
+              {
+                "event": "EMBEDDED",
+                "eventId": "evt_01KYBN0QT9WZDN3FMC3T36ACHS",
+                "description": "Raw embeddings from llm/embed — query vector at index 0, candidate vectors following in input order",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "[[float]]",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "SIMILARITY_MATCHED",
+                "eventId": "evt_01KYBN0QT9KC3AMM14E9M55ACF",
+                "description": "Candidate matched with high confidence — score at or above floor, with a clear margin over the runner-up",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "index",
+                    "type": "int",
+                    "required": true
+                  },
+                  {
+                    "name": "score",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "SIMILARITY_ABSTAINED",
+                "eventId": "evt_01KYBN0QT9K8NXCX7AMQ2VTNWX",
+                "description": "No confident match — reason is one of: empty candidate list, below floor, thin margin, embedding unavailable. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "request",
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "embedding"
+                },
+                {
+                  "name": "resolved"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBN0QT9ZTTW50RCT84MH8H1",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "COMPARE",
+                  "id": "evt_01KYBN0QT9FX93HBXP52KRNVX6",
+                  "name": "Compare",
+                  "payloadSchema": [
+                    {
+                      "name": "query",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "candidates",
+                      "type": "[string]",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "EMBEDDED",
+                  "id": "evt_01KYBN0QT9WZDN3FMC3T36ACHS",
+                  "name": "Embedded",
+                  "description": "Raw embeddings from llm/embed — query vector at index 0, candidate vectors following in input order",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "[[float]]",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "EMBED_FAILED",
+                  "id": "evt_01KYBN0QT9ACZNZH01MYKGTXYX",
+                  "name": "Embed Failed"
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KYBN0QT9A6WZFFTCVGBHF2BT",
+                  "name": "Reset"
+                },
+                {
+                  "key": "SIMILARITY_MATCHED",
+                  "id": "evt_01KYBN0QT9KC3AMM14E9M55ACF",
+                  "name": "Similarity Matched",
+                  "description": "Candidate matched with high confidence — score at or above floor, with a clear margin over the runner-up",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "index",
+                      "type": "int",
+                      "required": true
+                    },
+                    {
+                      "name": "score",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SIMILARITY_ABSTAINED",
+                  "id": "evt_01KYBN0QT9K8NXCX7AMQ2VTNWX",
+                  "name": "Similarity Abstained",
+                  "description": "No confident match — reason is one of: empty candidate list, below floor, thin margin, embedding unavailable. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "reason",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBN0QT9ZTTW50RCT84MH8H1",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.query",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.candidates",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.embeddings",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.queryVector",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.candidateVectors",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.matchIndex",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchScore",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchMargin",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "embedding",
+                  "event": "COMPARE",
+                  "eventId": "evt_01KYBN0QT9FX93HBXP52KRNVX6",
+                  "guard": [
+                    ">",
+                    [
+                      "array/len",
+                      "@payload.candidates"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.query",
+                      "@payload.query"
+                    ],
+                    [
+                      "set",
+                      "@entity.candidates",
+                      "@payload.candidates"
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      "@payload.request"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "embedding"
+                    ],
+                    [
+                      "llm/embed",
+                      [
+                        "array/prepend",
+                        "@payload.candidates",
+                        "@payload.query"
+                      ],
+                      {
+                        "emit": {
+                          "success": "EMBEDDED",
+                          "failure": "EMBED_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "resolved",
+                  "event": "COMPARE",
+                  "eventId": "evt_01KYBN0QT9FX93HBXP52KRNVX6",
+                  "guard": [
+                    "==",
+                    [
+                      "array/len",
+                      "@payload.candidates"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.query",
+                      "@payload.query"
+                    ],
+                    [
+                      "set",
+                      "@entity.candidates",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.embeddings",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.queryVector",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.candidateVectors",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.matchIndex",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchScore",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchMargin",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      "empty candidate list"
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      "@payload.request"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ],
+                    [
+                      "emit",
+                      "SIMILARITY_ABSTAINED",
+                      {
+                        "reason": "empty candidate list",
+                        "request": "@entity.request"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "embedding",
+                  "to": "resolved",
+                  "event": "EMBEDDED",
+                  "eventId": "evt_01KYBN0QT9WZDN3FMC3T36ACHS",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.embeddings",
+                      "@payload.result"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ],
+                    [
+                      "if",
+                      [
+                        "<",
+                        [
+                          "array/len",
+                          "@payload.result"
+                        ],
+                        2
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.queryVector",
+                          []
+                        ],
+                        [
+                          "set",
+                          "@entity.candidateVectors",
+                          []
+                        ],
+                        [
+                          "set",
+                          "@entity.matchIndex",
+                          0
+                        ],
+                        [
+                          "set",
+                          "@entity.matchScore",
+                          0
+                        ],
+                        [
+                          "set",
+                          "@entity.matchMargin",
+                          0
+                        ],
+                        [
+                          "set",
+                          "@entity.reason",
+                          "embedding result incomplete"
+                        ],
+                        [
+                          "emit",
+                          "SIMILARITY_ABSTAINED",
+                          {
+                            "reason": "embedding result incomplete",
+                            "request": "@entity.request"
+                          }
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.queryVector",
+                          [
+                            "array/first",
+                            "@entity.embeddings"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.candidateVectors",
+                          [
+                            "array/drop",
+                            "@entity.embeddings",
+                            1
+                          ]
+                        ],
+                        [
+                          "let",
+                          [
+                            [
+                              "nearest",
+                              [
+                                "array/nearest",
+                                "@entity.queryVector",
+                                "@entity.candidateVectors"
+                              ]
+                            ]
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.matchIndex",
+                              [
+                                "object/get",
+                                "@nearest",
+                                "index"
+                              ]
+                            ],
+                            [
+                              "set",
+                              "@entity.matchScore",
+                              [
+                                "object/get",
+                                "@nearest",
+                                "score"
+                              ]
+                            ],
+                            [
+                              "set",
+                              "@entity.matchMargin",
+                              [
+                                "object/get",
+                                "@nearest",
+                                "margin"
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "and",
+                                [
+                                  ">=",
+                                  "@entity.matchScore",
+                                  0.82
+                                ],
+                                [
+                                  ">=",
+                                  "@entity.matchMargin",
+                                  0.05
+                                ]
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.reason",
+                                  ""
+                                ],
+                                [
+                                  "emit",
+                                  "SIMILARITY_MATCHED",
+                                  {
+                                    "index": "@entity.matchIndex",
+                                    "score": "@entity.matchScore"
+                                  }
+                                ]
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.reason",
+                                  [
+                                    "if",
+                                    [
+                                      "<",
+                                      "@entity.matchScore",
+                                      0.82
+                                    ],
+                                    "below floor",
+                                    "thin margin"
+                                  ]
+                                ],
+                                [
+                                  "emit",
+                                  "SIMILARITY_ABSTAINED",
+                                  {
+                                    "reason": "@entity.reason",
+                                    "request": "@entity.request"
+                                  }
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "embedding",
+                  "to": "resolved",
+                  "event": "EMBED_FAILED",
+                  "eventId": "evt_01KYBN0QT9ACZNZH01MYKGTXYX",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.embeddings",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.queryVector",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.candidateVectors",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.matchIndex",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchScore",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchMargin",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      "embedding unavailable"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ],
+                    [
+                      "emit",
+                      "SIMILARITY_ABSTAINED",
+                      {
+                        "reason": "embedding unavailable",
+                        "request": "@entity.request"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "resolved",
+                  "to": "resolved",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBN0QT9ZTTW50RCT84MH8H1",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ]
+                  ]
+                },
+                {
+                  "from": "resolved",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01KYBN0QT9A6WZFFTCVGBHF2BT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.query",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.candidates",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.embeddings",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.queryVector",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.candidateVectors",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.matchIndex",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchScore",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.matchMargin",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "floor": {
+                "type": "float",
+                "default": 0.82,
+                "label": "Match floor",
+                "description": "Minimum cosine score for a confident match",
+                "tier": "policy"
+              },
+              "embedModel": {
+                "type": "string",
+                "default": "",
+                "label": "Embedding model",
+                "description": "Reserved for embedding-model selection; llm/embed takes only a texts array today, so this knob is not yet wired into the call",
+                "tier": "infra"
+              },
+              "margin": {
+                "type": "float",
+                "default": 0.05,
+                "label": "Match margin",
+                "description": "Minimum gap between the best and second-best score required to trust the match",
+                "tier": "policy"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MlSimilarityPage",
+            "id": "pag_01KYBN0QT9YB0Q6ZEZWC560YEN",
+            "path": "/ml-similarity",
+            "traits": [
+              {
+                "ref": "SimilarityRun",
+                "refId": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KYBN0QT9ACZNZH01MYKGTXYX": {
+          "id": "evt_01KYBN0QT9ACZNZH01MYKGTXYX",
+          "kind": "event",
+          "bakedName": "EMBED_FAILED",
+          "curName": "EMBED_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "evt_01KYBN0QT9FX93HBXP52KRNVX6": {
+          "id": "evt_01KYBN0QT9FX93HBXP52KRNVX6",
+          "kind": "event",
+          "bakedName": "COMPARE",
+          "curName": "COMPARE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "evt_01KYBN0QT9A6WZFFTCVGBHF2BT": {
+          "id": "evt_01KYBN0QT9A6WZFFTCVGBHF2BT",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "trt_01KYBN0QT9C1SZTVGAG9X3YA5X": {
+          "id": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X",
+          "kind": "trait",
+          "bakedName": "SimilarityRun",
+          "curName": "SimilarityRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBN0QT9K8NXCX7AMQ2VTNWX": {
+          "id": "evt_01KYBN0QT9K8NXCX7AMQ2VTNWX",
+          "kind": "event",
+          "bakedName": "SIMILARITY_ABSTAINED",
+          "curName": "SIMILARITY_ABSTAINED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "ent_01KYBN0QT9997QBWPF6WFF1CMM": {
+          "id": "ent_01KYBN0QT9997QBWPF6WFF1CMM",
+          "kind": "entity",
+          "bakedName": "SimilarityComparison",
+          "curName": "SimilarityComparison",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01KYBN0QT9YB0Q6ZEZWC560YEN": {
+          "id": "pag_01KYBN0QT9YB0Q6ZEZWC560YEN",
+          "kind": "page",
+          "bakedName": "MlSimilarityPage",
+          "curName": "MlSimilarityPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBN0QT9WZDN3FMC3T36ACHS": {
+          "id": "evt_01KYBN0QT9WZDN3FMC3T36ACHS",
+          "kind": "event",
+          "bakedName": "EMBEDDED",
+          "curName": "EMBEDDED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "evt_01KYBN0QT9KC3AMM14E9M55ACF": {
+          "id": "evt_01KYBN0QT9KC3AMM14E9M55ACF",
+          "kind": "event",
+          "bakedName": "SIMILARITY_MATCHED",
+          "curName": "SIMILARITY_MATCHED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        },
+        "orb_01KYBN0QT97QXM5727TNZZSS1B": {
+          "id": "orb_01KYBN0QT97QXM5727TNZZSS1B",
+          "kind": "orbital",
+          "bakedName": "MlSimilarityOrbital",
+          "curName": "MlSimilarityOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBN0QT9ZTTW50RCT84MH8H1": {
+          "id": "evt_01KYBN0QT9ZTTW50RCT84MH8H1",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBN0QT9C1SZTVGAG9X3YA5X"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-ml-similarity \"1.0.0\"\n\"Retrieval rung (R3) — embed a candidate against references and gate on cosine floor + margin; abstains when not confident.\"\n\norbital MlSimilarityOrbital {\n\n  entity SimilarityComparison [runtime] {\n    query            : string    = \"\"\n    candidates       : [string]  = []\n    embeddings       : [[float]] = []\n    queryVector      : [float]   = []\n    candidateVectors : [[float]] = []\n    matchIndex       : int       = 0\n    matchScore       : float     = 0\n    matchMargin      : float     = 0\n    reason           : string    = \"\"\n    request          : object    = {}\n    status           : \"idle\" | \"embedding\" | \"resolved\" = idle\n  }\n\n  trait SimilarityRun -> SimilarityComparison [lifecycle, instance] {\n    initial: idle\n\n    config {\n      floor : float = 0.82\n        @label \"Match floor\"\n        @description \"Minimum cosine score for a confident match\"\n        @tier \"policy\"\n      margin : float = 0.05\n        @label \"Match margin\"\n        @description \"Minimum gap between the best and second-best score required to trust the match\"\n        @tier \"policy\"\n      embedModel : string = \"\"\n        @label \"Embedding model\"\n        @description \"Reserved for embedding-model selection; llm/embed takes only a texts array today, so this knob is not yet wired into the call\"\n        @tier \"infra\"\n    }\n\n    state idle {\n      INIT -> idle\n        (set @entity.query \"\")\n        (set @entity.candidates [])\n        (set @entity.embeddings [])\n        (set @entity.queryVector [])\n        (set @entity.candidateVectors [])\n        (set @entity.matchIndex 0)\n        (set @entity.matchScore 0)\n        (set @entity.matchMargin 0)\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n\n      COMPARE -> embedding when (> (array/len ?candidates) 0)\n        (set @entity.query ?query)\n        (set @entity.candidates ?candidates)\n        (set @entity.request ?request)\n        (set @entity.status embedding)\n        (llm/embed (array/prepend ?candidates ?query) { emit: { success: EMBEDDED, failure: EMBED_FAILED } })\n\n      COMPARE -> resolved when (== (array/len ?candidates) 0)\n        (set @entity.query ?query)\n        (set @entity.candidates [])\n        (set @entity.embeddings [])\n        (set @entity.queryVector [])\n        (set @entity.candidateVectors [])\n        (set @entity.matchIndex 0)\n        (set @entity.matchScore 0)\n        (set @entity.matchMargin 0)\n        (set @entity.reason \"empty candidate list\")\n        (set @entity.request ?request)\n        (set @entity.status resolved)\n        (emit SIMILARITY_ABSTAINED { reason: \"empty candidate list\", request: @entity.request })\n    }\n\n    state embedding {\n      EMBEDDED -> resolved\n        (set @entity.embeddings ?result)\n        (set @entity.status resolved)\n        ;; An embed result without query + at least one candidate vector is an\n        ;; abstain, not a crash — the rung can prove nothing from it.\n        (if (< (array/len ?result) 2)\n          (do\n            (set @entity.queryVector [])\n            (set @entity.candidateVectors [])\n            (set @entity.matchIndex 0)\n            (set @entity.matchScore 0)\n            (set @entity.matchMargin 0)\n            (set @entity.reason \"embedding result incomplete\")\n            (emit SIMILARITY_ABSTAINED { reason: \"embedding result incomplete\", request: @entity.request }))\n          (do\n            (set @entity.queryVector (array/first @entity.embeddings))\n            (set @entity.candidateVectors (array/drop @entity.embeddings 1))\n            (let ((nearest (array/nearest @entity.queryVector @entity.candidateVectors)))\n              (do\n                (set @entity.matchIndex (object/get @nearest \"index\"))\n                (set @entity.matchScore (object/get @nearest \"score\"))\n                (set @entity.matchMargin (object/get @nearest \"margin\"))\n                (if (and (>= @entity.matchScore @config.floor) (>= @entity.matchMargin @config.margin))\n                    (do\n                      (set @entity.reason \"\")\n                      (emit SIMILARITY_MATCHED { index: @entity.matchIndex, score: @entity.matchScore }))\n                    (do\n                      (set @entity.reason (if (< @entity.matchScore @config.floor) \"below floor\" \"thin margin\"))\n                      (emit SIMILARITY_ABSTAINED { reason: @entity.reason, request: @entity.request })))))))\n\n      EMBED_FAILED -> resolved\n        (set @entity.embeddings [])\n        (set @entity.queryVector [])\n        (set @entity.candidateVectors [])\n        (set @entity.matchIndex 0)\n        (set @entity.matchScore 0)\n        (set @entity.matchMargin 0)\n        (set @entity.reason \"embedding unavailable\")\n        (set @entity.status resolved)\n        (emit SIMILARITY_ABSTAINED { reason: \"embedding unavailable\", request: @entity.request })\n    }\n\n    state resolved {\n      INIT -> resolved\n        (set @entity.status resolved)\n      RESET -> idle\n        (set @entity.query \"\")\n        (set @entity.candidates [])\n        (set @entity.embeddings [])\n        (set @entity.queryVector [])\n        (set @entity.candidateVectors [])\n        (set @entity.matchIndex 0)\n        (set @entity.matchScore 0)\n        (set @entity.matchMargin 0)\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n    }\n\n    emits {\n      EMBEDDED {\n        result : [[float]]!\n      }\n        @description \"Raw embeddings from llm/embed — query vector at index 0, candidate vectors following in input order\"\n        @tier \"secondary\"\n\n      SIMILARITY_MATCHED -> external {\n        index : int!\n        score : float!\n      }\n        @description \"Candidate matched with high confidence — score at or above floor, with a clear margin over the runner-up\"\n        @tier \"primary\"\n\n      SIMILARITY_ABSTAINED -> external {\n        reason : string!\n        request : object\n      }\n        @description \"No confident match — reason is one of: empty candidate list, below floor, thin margin, embedding unavailable. request echoes the originating request untouched so the next rung can project its own inputs out of it\"\n        @tier \"primary\"\n    }\n\n    listens {\n      COMPARE {\n        query : string!\n        candidates : [string]!\n        request : object\n      }\n    }\n  }\n\n  page \"/ml-similarity\" as MlSimilarityPage -> SimilarityRun\n}\n"
+}

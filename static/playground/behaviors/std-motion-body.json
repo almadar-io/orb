@@ -1,0 +1,1023 @@
+{
+  "name": "std-motion-body",
+  "description": "Headless continuous-motion authority: the SOLE writer of bodies + gravity + bias on physics boards. Every 50ms motion tick it integrates each body — thrust acceleration plus the board-wide bias field (biasAx/biasAy — the hill-force / wind / conveyor-belt channel, written only through the SET_BIAS intent) plus gravity feed velocity, damping bleeds it, maxSpeed caps it, velocity steps position, and the world walls clamp it (a clamped axis kills that axis's velocity). Intents: THRUST sets a body's acceleration (hold-to-push input: keydown pushes, keyup zeroes), IMPULSE kicks velocity instantly (jumps, d-pad nudges), PLACE teleports (spawns, curve-riding pins), SET_GRAVITY retunes the pull live, SET_BIAS steers the bias field, RESTART reseeds. Emits BODY_MOVED for the lead body (bodies[0]) every tick so boards that subscribe can react — boards that don't subscribe pay nothing. Renders nothing.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-motion-body",
+    "version": "1.1.0",
+    "description": "Headless continuous-motion authority: the SOLE writer of bodies + gravity + bias on physics boards. Every 50ms motion tick it integrates each body — thrust acceleration plus the board-wide bias field (biasAx/biasAy — the hill-force / wind / conveyor-belt channel, written only through the SET_BIAS intent) plus gravity feed velocity, damping bleeds it, maxSpeed caps it, velocity steps position, and the world walls clamp it (a clamped axis kills that axis's velocity). Intents: THRUST sets a body's acceleration (hold-to-push input: keydown pushes, keyup zeroes), IMPULSE kicks velocity instantly (jumps, d-pad nudges), PLACE teleports (spawns, curve-riding pins), SET_GRAVITY retunes the pull live, SET_BIAS steers the bias field, RESTART reseeds. Emits BODY_MOVED for the lead body (bodies[0]) every tick so boards that subscribe can react — boards that don't subscribe pay nothing. Renders nothing.",
+    "orbitals": [
+      {
+        "name": "MotionBodyOrbital",
+        "id": "orb_01M0F15750P5ST6DKE8H23JASA",
+        "entity": {
+          "name": "MotionBodyData",
+          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "bodies",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ay": {
+                    "name": "ay",
+                    "type": "number",
+                    "required": false
+                  },
+                  "vx": {
+                    "name": "vx",
+                    "type": "number",
+                    "required": false
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "ax": {
+                    "name": "ax",
+                    "type": "number",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "vy": {
+                    "name": "vy",
+                    "type": "number",
+                    "required": false
+                  }
+                }
+              }
+            },
+            {
+              "name": "gravity",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "biasAx",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "biasAy",
+              "type": "number",
+              "default": 0
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "MotionBody",
+            "id": "trt_01M0F15750C0XA5RAB80SZVBFD",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "biasAx",
+                "biasAy",
+                "bodies",
+                "gravity"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "MotionBodyData",
+            "linkedEntityId": "ent_01M0F15750RMAD8B3BNR5GE99X",
+            "entityRefIds": {
+              "MotionBodyData": "ent_01M0F15750RMAD8B3BNR5GE99X"
+            },
+            "emits": [
+              {
+                "event": "BODY_MOVED",
+                "eventId": "evt_01M0F15750J898T28N2T7C5DW6",
+                "description": "Lead body (bodies[0]) after this motion tick: position, velocity, and scalar speed; boards render it, objective mechanics score it, game rules adapt from it",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "vx",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "vy",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "speed",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0F15750D79SW7SYK0MEJ1C8",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "THRUST",
+                  "id": "evt_01M0F1575079YFH1R7XXJ6NS4H",
+                  "name": "Thrust",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "ax",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "ay",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "IMPULSE",
+                  "id": "evt_01M0F15750F9TZKR47X63EBW01",
+                  "name": "Impulse",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "dvx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "dvy",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "PLACE",
+                  "id": "evt_01M0F15750PGMWJG31ZQB877NC",
+                  "name": "Place",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_GRAVITY",
+                  "id": "evt_01M0F157501DXC9CR3QRNT8SXB",
+                  "name": "Set Gravity",
+                  "payloadSchema": [
+                    {
+                      "name": "gravity",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_BIAS",
+                  "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
+                  "name": "Set Bias",
+                  "payloadSchema": [
+                    {
+                      "name": "biasAx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "biasAy",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M0F15750TJ4X6Y99S6H34892",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M0F15750J898T28N2T7C5DW6",
+                  "name": "Body Moved",
+                  "description": "Lead body (bodies[0]) after this motion tick: position, velocity, and scalar speed; boards render it, objective mechanics score it, game rules adapt from it",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M0F15750D79SW7SYK0MEJ1C8",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.gravity",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "THRUST",
+                  "eventId": "evt_01M0F1575079YFH1R7XXJ6NS4H",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        "array/map",
+                        "@entity.bodies",
+                        [
+                          "fn",
+                          "b",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@b.id",
+                              "@payload.id"
+                            ],
+                            [
+                              "object/merge",
+                              "@b",
+                              {
+                                "ax": "@payload.ax",
+                                "ay": "@payload.ay"
+                              }
+                            ],
+                            "@b"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "IMPULSE",
+                  "eventId": "evt_01M0F15750F9TZKR47X63EBW01",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        "array/map",
+                        "@entity.bodies",
+                        [
+                          "fn",
+                          "b",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@b.id",
+                              "@payload.id"
+                            ],
+                            [
+                              "object/merge",
+                              "@b",
+                              {
+                                "vx": [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "vx"
+                                  ],
+                                  "@payload.dvx"
+                                ],
+                                "vy": [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "vy"
+                                  ],
+                                  "@payload.dvy"
+                                ]
+                              }
+                            ],
+                            "@b"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "PLACE",
+                  "eventId": "evt_01M0F15750PGMWJG31ZQB877NC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        "array/map",
+                        "@entity.bodies",
+                        [
+                          "fn",
+                          "b",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@b.id",
+                              "@payload.id"
+                            ],
+                            [
+                              "object/merge",
+                              "@b",
+                              {
+                                "y": "@payload.y",
+                                "x": "@payload.x"
+                              }
+                            ],
+                            "@b"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SET_GRAVITY",
+                  "eventId": "evt_01M0F157501DXC9CR3QRNT8SXB",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.gravity",
+                      "@payload.gravity"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SET_BIAS",
+                  "eventId": "evt_01M0F15750TYJ70MCGET9ERBWE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.biasAx",
+                      "@payload.biasAx"
+                    ],
+                    [
+                      "set",
+                      "@entity.biasAy",
+                      "@payload.biasAy"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M0F15750TJ4X6Y99S6H34892",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.bodies",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.gravity",
+                      0
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "motionTick",
+                "interval": 50,
+                "guard": [
+                  "and",
+                  true,
+                  [
+                    ">",
+                    [
+                      "array/len",
+                      "@entity.bodies"
+                    ],
+                    0
+                  ]
+                ],
+                "effects": [
+                  [
+                    "do",
+                    [
+                      "set",
+                      "@entity.bodies",
+                      [
+                        "array/map",
+                        "@entity.bodies",
+                        [
+                          "fn",
+                          "b",
+                          [
+                            "let",
+                            [
+                              [
+                                "nvx",
+                                [
+                                  "math/clamp",
+                                  [
+                                    "*",
+                                    [
+                                      "+",
+                                      [
+                                        "object/get",
+                                        "@b",
+                                        "vx"
+                                      ],
+                                      [
+                                        "*",
+                                        [
+                                          "+",
+                                          [
+                                            "object/get",
+                                            "@b",
+                                            "ax"
+                                          ],
+                                          "@entity.biasAx"
+                                        ],
+                                        0.05
+                                      ]
+                                    ],
+                                    0.98
+                                  ],
+                                  [
+                                    "-",
+                                    0,
+                                    8
+                                  ],
+                                  8
+                                ]
+                              ]
+                            ],
+                            [
+                              "let",
+                              [
+                                [
+                                  "nvy",
+                                  [
+                                    "math/clamp",
+                                    [
+                                      "*",
+                                      [
+                                        "+",
+                                        [
+                                          "object/get",
+                                          "@b",
+                                          "vy"
+                                        ],
+                                        [
+                                          "*",
+                                          [
+                                            "+",
+                                            [
+                                              "+",
+                                              [
+                                                "object/get",
+                                                "@b",
+                                                "ay"
+                                              ],
+                                              "@entity.biasAy"
+                                            ],
+                                            "@entity.gravity"
+                                          ],
+                                          0.05
+                                        ]
+                                      ],
+                                      0.98
+                                    ],
+                                    [
+                                      "-",
+                                      0,
+                                      8
+                                    ],
+                                    8
+                                  ]
+                                ]
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "nx",
+                                    [
+                                      "math/clamp",
+                                      [
+                                        "+",
+                                        [
+                                          "object/get",
+                                          "@b",
+                                          "x"
+                                        ],
+                                        [
+                                          "*",
+                                          "@nvx",
+                                          0.05
+                                        ]
+                                      ],
+                                      -1000000,
+                                      1000000
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "let",
+                                  [
+                                    [
+                                      "ny",
+                                      [
+                                        "math/clamp",
+                                        [
+                                          "+",
+                                          [
+                                            "object/get",
+                                            "@b",
+                                            "y"
+                                          ],
+                                          [
+                                            "*",
+                                            "@nvy",
+                                            0.05
+                                          ]
+                                        ],
+                                        -1000000,
+                                        1000000
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "object/merge",
+                                    "@b",
+                                    {
+                                      "y": "@ny",
+                                      "vx": [
+                                        "if",
+                                        [
+                                          "or",
+                                          [
+                                            "==",
+                                            "@nx",
+                                            -1000000
+                                          ],
+                                          [
+                                            "==",
+                                            "@nx",
+                                            1000000
+                                          ]
+                                        ],
+                                        0,
+                                        "@nvx"
+                                      ],
+                                      "x": "@nx",
+                                      "vy": [
+                                        "if",
+                                        [
+                                          "or",
+                                          [
+                                            "==",
+                                            "@ny",
+                                            -1000000
+                                          ],
+                                          [
+                                            "==",
+                                            "@ny",
+                                            1000000
+                                          ]
+                                        ],
+                                        0,
+                                        "@nvy"
+                                      ]
+                                    }
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "BODY_MOVED",
+                      {
+                        "vx": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "vx"
+                        ],
+                        "id": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "id"
+                        ],
+                        "y": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "y"
+                        ],
+                        "speed": [
+                          "math/hypot",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.bodies"
+                            ],
+                            "vx"
+                          ],
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.bodies"
+                            ],
+                            "vy"
+                          ]
+                        ],
+                        "vy": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "vy"
+                        ],
+                        "x": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "x"
+                        ]
+                      }
+                    ]
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the 50ms motion tick integrates; toggle to freeze all bodies",
+                "tier": "domain"
+              },
+              "xMin": {
+                "type": "number",
+                "default": -1000000,
+                "label": "Left Wall",
+                "description": "Smallest x a body may hold; hitting it zeroes vx",
+                "tier": "presentation"
+              },
+              "bodies": {
+                "type": "[Body]",
+                "default": [],
+                "label": "Initial Bodies",
+                "description": "Seed roster — bodies[0] is the lead body reported by BODY_MOVED",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "ax": {
+                      "name": "ax",
+                      "type": "number",
+                      "required": false
+                    },
+                    "ay": {
+                      "name": "ay",
+                      "type": "number",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "vx": {
+                      "name": "vx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "vy": {
+                      "name": "vy",
+                      "type": "number",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "xMax": {
+                "type": "number",
+                "default": 1000000,
+                "label": "Right Wall",
+                "description": "Largest x a body may hold; hitting it zeroes vx",
+                "tier": "presentation"
+              },
+              "yMax": {
+                "type": "number",
+                "default": 1000000,
+                "label": "Ceiling",
+                "description": "Largest y a body may hold; hitting it zeroes vy",
+                "tier": "presentation"
+              },
+              "damping": {
+                "type": "number",
+                "default": 0.98,
+                "label": "Damping",
+                "description": "Velocity retained each 50ms tick (1 = frictionless coast, 0.9 = quick stop); the ice-to-mud feel knob",
+                "tier": "presentation"
+              },
+              "gravity": {
+                "type": "number",
+                "default": 0,
+                "label": "Gravity",
+                "description": "Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live",
+                "tier": "domain"
+              },
+              "maxSpeed": {
+                "type": "number",
+                "default": 8,
+                "label": "Max Speed",
+                "description": "Per-axis speed cap in world units per second",
+                "tier": "presentation"
+              },
+              "yMin": {
+                "type": "number",
+                "default": -1000000,
+                "label": "Floor",
+                "description": "Smallest y a body may hold; hitting it zeroes vy",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MotionBodyPage",
+            "id": "pag_01M0F157501TQFSRR5CVBKJTT3",
+            "path": "/motion-body",
+            "traits": [
+              {
+                "ref": "MotionBody",
+                "refId": "trt_01M0F15750C0XA5RAB80SZVBFD"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "pag_01M0F157501TQFSRR5CVBKJTT3": {
+          "id": "pag_01M0F157501TQFSRR5CVBKJTT3",
+          "kind": "page",
+          "bakedName": "MotionBodyPage",
+          "curName": "MotionBodyPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0F15750TYJ70MCGET9ERBWE": {
+          "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
+          "kind": "event",
+          "bakedName": "SET_BIAS",
+          "curName": "SET_BIAS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F1575079YFH1R7XXJ6NS4H": {
+          "id": "evt_01M0F1575079YFH1R7XXJ6NS4H",
+          "kind": "event",
+          "bakedName": "THRUST",
+          "curName": "THRUST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750D79SW7SYK0MEJ1C8": {
+          "id": "evt_01M0F15750D79SW7SYK0MEJ1C8",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "trt_01M0F15750C0XA5RAB80SZVBFD": {
+          "id": "trt_01M0F15750C0XA5RAB80SZVBFD",
+          "kind": "trait",
+          "bakedName": "MotionBody",
+          "curName": "MotionBody",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0F15750TJ4X6Y99S6H34892": {
+          "id": "evt_01M0F15750TJ4X6Y99S6H34892",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750PGMWJG31ZQB877NC": {
+          "id": "evt_01M0F15750PGMWJG31ZQB877NC",
+          "kind": "event",
+          "bakedName": "PLACE",
+          "curName": "PLACE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750F9TZKR47X63EBW01": {
+          "id": "evt_01M0F15750F9TZKR47X63EBW01",
+          "kind": "event",
+          "bakedName": "IMPULSE",
+          "curName": "IMPULSE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "ent_01M0F15750RMAD8B3BNR5GE99X": {
+          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
+          "kind": "entity",
+          "bakedName": "MotionBodyData",
+          "curName": "MotionBodyData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0F157501DXC9CR3QRNT8SXB": {
+          "id": "evt_01M0F157501DXC9CR3QRNT8SXB",
+          "kind": "event",
+          "bakedName": "SET_GRAVITY",
+          "curName": "SET_GRAVITY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750J898T28N2T7C5DW6": {
+          "id": "evt_01M0F15750J898T28N2T7C5DW6",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "orb_01M0F15750P5ST6DKE8H23JASA": {
+          "id": "orb_01M0F15750P5ST6DKE8H23JASA",
+          "kind": "orbital",
+          "bakedName": "MotionBodyOrbital",
+          "curName": "MotionBodyOrbital",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-motion-body \"1.1.0\"\n\"Headless continuous-motion authority: the SOLE writer of bodies + gravity + bias on physics boards. Every 50ms motion tick it integrates each body — thrust acceleration plus the board-wide bias field (biasAx/biasAy — the hill-force / wind / conveyor-belt channel, written only through the SET_BIAS intent) plus gravity feed velocity, damping bleeds it, maxSpeed caps it, velocity steps position, and the world walls clamp it (a clamped axis kills that axis's velocity). Intents: THRUST sets a body's acceleration (hold-to-push input: keydown pushes, keyup zeroes), IMPULSE kicks velocity instantly (jumps, d-pad nudges), PLACE teleports (spawns, curve-riding pins), SET_GRAVITY retunes the pull live, SET_BIAS steers the bias field, RESTART reseeds. Emits BODY_MOVED for the lead body (bodies[0]) every tick so boards that subscribe can react — boards that don't subscribe pay nothing. Renders nothing.\"\norbital MotionBodyOrbital {\n  type Body = {\n    id : string!\n    x : number!\n    y : number!\n    vx : number\n    vy : number\n    ax : number\n    ay : number\n  }\n\n  entity MotionBodyData [runtime, shared] {\n    id : string!\n    bodies : [Body]\n    gravity : number = 0\n    biasAx : number = 0\n    biasAy : number = 0\n  }\n\n  trait MotionBody -> @rebindable MotionBodyData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.bodies @config.bodies)\n        (set @entity.gravity @config.gravity)\n\n      THRUST -> active\n        (set @entity.bodies (array/map @entity.bodies (fn b (if (== @b.id @payload.id) (object/merge @b { ax: @payload.ax, ay: @payload.ay }) @b))))\n\n      IMPULSE -> active\n        (set @entity.bodies (array/map @entity.bodies (fn b (if (== @b.id @payload.id) (object/merge @b { vx: (+ (object/get @b vx) @payload.dvx), vy: (+ (object/get @b vy) @payload.dvy) }) @b))))\n\n      PLACE -> active\n        (set @entity.bodies (array/map @entity.bodies (fn b (if (== @b.id @payload.id) (object/merge @b { x: @payload.x, y: @payload.y }) @b))))\n\n      SET_GRAVITY -> active\n        (set @entity.gravity @payload.gravity)\n\n      SET_BIAS -> active\n        (set @entity.biasAx @payload.biasAx)\n        (set @entity.biasAy @payload.biasAy)\n\n      RESTART -> active\n        (set @entity.bodies @config.bodies)\n        (set @entity.gravity @config.gravity)\n    }\n\n    ticks {\n      motionTick every 50ms\n        when (and @config.running (> (array/len @entity.bodies) 0))\n        (do\n          (set @entity.bodies (array/map @entity.bodies (fn b\n            (let ((nvx (math/clamp (* (+ (object/get @b vx) (* (+ (object/get @b ax) @entity.biasAx) 0.05)) @config.damping) (- 0 @config.maxSpeed) @config.maxSpeed)))\n            (let ((nvy (math/clamp (* (+ (object/get @b vy) (* (+ (+ (object/get @b ay) @entity.biasAy) @entity.gravity) 0.05)) @config.damping) (- 0 @config.maxSpeed) @config.maxSpeed)))\n            (let ((nx (math/clamp (+ (object/get @b x) (* @nvx 0.05)) @config.xMin @config.xMax)))\n            (let ((ny (math/clamp (+ (object/get @b y) (* @nvy 0.05)) @config.yMin @config.yMax)))\n              (object/merge @b {\n                x: @nx,\n                y: @ny,\n                vx: (if (or (== @nx @config.xMin) (== @nx @config.xMax)) 0 @nvx),\n                vy: (if (or (== @ny @config.yMin) (== @ny @config.yMax)) 0 @nvy)\n              }))))))))\n          (emit BODY_MOVED {\n            id: (object/get (array/first @entity.bodies) id),\n            x: (object/get (array/first @entity.bodies) x),\n            y: (object/get (array/first @entity.bodies) y),\n            vx: (object/get (array/first @entity.bodies) vx),\n            vy: (object/get (array/first @entity.bodies) vy),\n            speed: (math/hypot (object/get (array/first @entity.bodies) vx) (object/get (array/first @entity.bodies) vy))\n          }))\n    }\n\n    emits {\n      BODY_MOVED -> external {\n        id : string!\n        x : number!\n        y : number!\n        vx : number!\n        vy : number!\n        speed : number!\n      }\n        @description \"Lead body (bodies[0]) after this motion tick: position, velocity, and scalar speed; boards render it, objective mechanics score it, game rules adapt from it\"\n        @tier \"domain\"\n    }\n\n    listens {\n      THRUST { id : string!, ax : number!, ay : number! }\n      IMPULSE { id : string!, dvx : number!, dvy : number! }\n      PLACE { id : string!, x : number!, y : number! }\n      SET_GRAVITY { gravity : number! }\n      SET_BIAS { biasAx : number!, biasAy : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the 50ms motion tick integrates; toggle to freeze all bodies\"\n        @tier \"domain\"\n      bodies : [Body] = []\n        @label \"Initial Bodies\"\n        @description \"Seed roster — bodies[0] is the lead body reported by BODY_MOVED\"\n        @tier \"domain\"\n      gravity : number = 0\n        @label \"Gravity\"\n        @description \"Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live\"\n        @tier \"domain\"\n      damping : number = 0.98\n        @label \"Damping\"\n        @description \"Velocity retained each 50ms tick (1 = frictionless coast, 0.9 = quick stop); the ice-to-mud feel knob\"\n        @tier \"presentation\"\n      maxSpeed : number = 8\n        @label \"Max Speed\"\n        @description \"Per-axis speed cap in world units per second\"\n        @tier \"presentation\"\n      xMin : number = -1000000\n        @label \"Left Wall\"\n        @description \"Smallest x a body may hold; hitting it zeroes vx\"\n        @tier \"presentation\"\n      xMax : number = 1000000\n        @label \"Right Wall\"\n        @description \"Largest x a body may hold; hitting it zeroes vx\"\n        @tier \"presentation\"\n      yMin : number = -1000000\n        @label \"Floor\"\n        @description \"Smallest y a body may hold; hitting it zeroes vy\"\n        @tier \"presentation\"\n      yMax : number = 1000000\n        @label \"Ceiling\"\n        @description \"Largest y a body may hold; hitting it zeroes vy\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/motion-body\" as MotionBodyPage -> MotionBody\n}\n"
+}

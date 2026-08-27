@@ -1,0 +1,677 @@
+{
+  "name": "std-ml-posterior",
+  "description": "std-ml-posterior — the statistical rung (R2) of the intelligence ladder. Holds a Beta(alpha, beta) belief over an unknown success rate and updates it from boolean observations (Bayesian updating, knowledge tracing, Thompson-sampling prior). After each observation it draws samples from the posterior, computes a credible interval, and decides: MASTERY_REACHED when the mean clears the floor with a tight interval, REMEDIATION_NEEDED when the mean sits at or below the ceiling with the same confidence, or EVIDENCE_INSUFFICIENT — the abstain — when the interval is still too wide to trust. Use when a hand-tuned score needs to become a belief that can say 'not enough evidence yet' (mastery, skill, risk, preference, difficulty).",
+  "level": "atom",
+  "topic": "ml",
+  "schema": {
+    "name": "std-ml-posterior",
+    "version": "1.0.0",
+    "description": "std-ml-posterior — the statistical rung (R2) of the intelligence ladder. Holds a Beta(alpha, beta) belief over an unknown success rate and updates it from boolean observations (Bayesian updating, knowledge tracing, Thompson-sampling prior). After each observation it draws samples from the posterior, computes a credible interval, and decides: MASTERY_REACHED when the mean clears the floor with a tight interval, REMEDIATION_NEEDED when the mean sits at or below the ceiling with the same confidence, or EVIDENCE_INSUFFICIENT — the abstain — when the interval is still too wide to trust. Use when a hand-tuned score needs to become a belief that can say 'not enough evidence yet' (mastery, skill, risk, preference, difficulty).",
+    "orbitals": [
+      {
+        "name": "MlPosteriorOrbital",
+        "id": "orb_01KYBM8SPCWYRYTP9GG343Z4JN",
+        "entity": {
+          "name": "Posterior",
+          "id": "ent_01KYBM8SPD24VMR9HBQY0RM82A",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "alpha",
+              "type": "number",
+              "default": 1,
+              "description": "Beta distribution success count (prior + observed successes)."
+            },
+            {
+              "name": "beta",
+              "type": "number",
+              "default": 1,
+              "description": "Beta distribution failure count (prior + observed failures)."
+            },
+            {
+              "name": "mean",
+              "type": "number",
+              "default": 0,
+              "description": "Posterior mean: alpha / (alpha + beta)."
+            },
+            {
+              "name": "intervalLow",
+              "type": "number",
+              "default": 0,
+              "description": "Lower bound of the last computed credible interval."
+            },
+            {
+              "name": "intervalHigh",
+              "type": "number",
+              "default": 0,
+              "description": "Upper bound of the last computed credible interval."
+            },
+            {
+              "name": "observations",
+              "type": "number",
+              "default": 0,
+              "description": "Number of observations folded into the posterior so far."
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "insufficient",
+                "mastered",
+                "remediate"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "PosteriorBelief",
+            "id": "trt_01KYBM8SPDR0V9Y61Y00APN1PT",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "alpha",
+                "beta",
+                "intervalHigh",
+                "intervalLow",
+                "mean",
+                "observations",
+                "status"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "Posterior",
+            "linkedEntityId": "ent_01KYBM8SPD24VMR9HBQY0RM82A",
+            "entityRefIds": {
+              "Posterior": "ent_01KYBM8SPD24VMR9HBQY0RM82A"
+            },
+            "emits": [
+              {
+                "event": "MASTERY_REACHED",
+                "eventId": "evt_01KYBM8SPDPGKNPVWPME4HZA7C",
+                "description": "The posterior mean clears masteryFloor with a credible interval narrow enough to trust.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "REMEDIATION_NEEDED",
+                "eventId": "evt_01KYBM8SPDW5ZGB5SDCQD74JSB",
+                "description": "The posterior mean is at or below remediationCeiling with a credible interval narrow enough to trust.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "EVIDENCE_INSUFFICIENT",
+                "eventId": "evt_01KYBM8SPDSVKBPWV2V0GTMS44",
+                "description": "The abstain — the credible interval is still wider than intervalWidthMax, so no verdict is licensed yet.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "OBSERVE",
+                  "id": "evt_01KYBM8SPDZNET4JJKM8MJ8TYE",
+                  "name": "Observe",
+                  "payloadSchema": [
+                    {
+                      "name": "outcome",
+                      "type": "boolean",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MASTERY_REACHED",
+                  "id": "evt_01KYBM8SPDPGKNPVWPME4HZA7C",
+                  "name": "Mastery Reached",
+                  "description": "The posterior mean clears masteryFloor with a credible interval narrow enough to trust.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "REMEDIATION_NEEDED",
+                  "id": "evt_01KYBM8SPDW5ZGB5SDCQD74JSB",
+                  "name": "Remediation Needed",
+                  "description": "The posterior mean is at or below remediationCeiling with a credible interval narrow enough to trust.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "EVIDENCE_INSUFFICIENT",
+                  "id": "evt_01KYBM8SPDSVKBPWV2V0GTMS44",
+                  "name": "Evidence Insufficient",
+                  "description": "The abstain — the credible interval is still wider than intervalWidthMax, so no verdict is licensed yet.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.alpha",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.beta",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.mean",
+                      [
+                        "/",
+                        1,
+                        [
+                          "+",
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.intervalLow",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.intervalHigh",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.observations",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "OBSERVE",
+                  "eventId": "evt_01KYBM8SPDZNET4JJKM8MJ8TYE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.alpha",
+                      [
+                        "if",
+                        "@payload.outcome",
+                        [
+                          "+",
+                          "@entity.alpha",
+                          1
+                        ],
+                        "@entity.alpha"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.beta",
+                      [
+                        "if",
+                        "@payload.outcome",
+                        "@entity.beta",
+                        [
+                          "+",
+                          "@entity.beta",
+                          1
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.observations",
+                      [
+                        "+",
+                        "@entity.observations",
+                        1
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.mean",
+                      [
+                        "/",
+                        "@entity.alpha",
+                        [
+                          "+",
+                          "@entity.alpha",
+                          "@entity.beta"
+                        ]
+                      ]
+                    ],
+                    [
+                      "let",
+                      [
+                        [
+                          "samples",
+                          [
+                            "prob/sample",
+                            200,
+                            [
+                              "prob/beta",
+                              "@entity.alpha",
+                              "@entity.beta"
+                            ]
+                          ]
+                        ],
+                        [
+                          "interval",
+                          [
+                            "prob/credible-interval",
+                            "@samples",
+                            0.05
+                          ]
+                        ],
+                        [
+                          "low",
+                          [
+                            "array/nth",
+                            "@interval",
+                            0
+                          ]
+                        ],
+                        [
+                          "high",
+                          [
+                            "array/nth",
+                            "@interval",
+                            1
+                          ]
+                        ],
+                        [
+                          "width",
+                          [
+                            "-",
+                            "@high",
+                            "@low"
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.intervalLow",
+                          "@low"
+                        ],
+                        [
+                          "set",
+                          "@entity.intervalHigh",
+                          "@high"
+                        ],
+                        [
+                          "if",
+                          [
+                            ">",
+                            "@width",
+                            0.3
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.status",
+                              "insufficient"
+                            ],
+                            [
+                              "emit",
+                              "EVIDENCE_INSUFFICIENT",
+                              {
+                                "intervalHigh": "@high",
+                                "intervalLow": "@low",
+                                "mean": "@entity.mean"
+                              }
+                            ]
+                          ],
+                          [
+                            "if",
+                            [
+                              ">=",
+                              "@entity.mean",
+                              0.8
+                            ],
+                            [
+                              "do",
+                              [
+                                "set",
+                                "@entity.status",
+                                "mastered"
+                              ],
+                              [
+                                "emit",
+                                "MASTERY_REACHED",
+                                {
+                                  "intervalLow": "@low",
+                                  "mean": "@entity.mean",
+                                  "intervalHigh": "@high"
+                                }
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "<=",
+                                "@entity.mean",
+                                0.4
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.status",
+                                  "remediate"
+                                ],
+                                [
+                                  "emit",
+                                  "REMEDIATION_NEEDED",
+                                  {
+                                    "mean": "@entity.mean",
+                                    "intervalHigh": "@high",
+                                    "intervalLow": "@low"
+                                  }
+                                ]
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.status",
+                                  "insufficient"
+                                ],
+                                [
+                                  "emit",
+                                  "EVIDENCE_INSUFFICIENT",
+                                  {
+                                    "intervalHigh": "@high",
+                                    "intervalLow": "@low",
+                                    "mean": "@entity.mean"
+                                  }
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "priorAlpha": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior alpha",
+                "description": "Beta prior success pseudo-count before any observation.",
+                "tier": "domain"
+              },
+              "priorBeta": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior beta",
+                "description": "Beta prior failure pseudo-count before any observation.",
+                "tier": "domain"
+              },
+              "remediationCeiling": {
+                "type": "float",
+                "default": 0.4,
+                "label": "Remediation ceiling",
+                "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
+                "tier": "policy"
+              },
+              "sampleCount": {
+                "type": "int",
+                "default": 200,
+                "label": "Posterior sample count",
+                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
+                "tier": "infra"
+              },
+              "masteryFloor": {
+                "type": "float",
+                "default": 0.8,
+                "label": "Mastery floor",
+                "description": "Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.",
+                "tier": "policy"
+              },
+              "intervalWidthMax": {
+                "type": "float",
+                "default": 0.3,
+                "label": "Max credible-interval width",
+                "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
+                "tier": "policy"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MlPosteriorPage",
+            "id": "pag_01KYBM8SPEWW6AQ9C7AXCKFTJM",
+            "path": "/ml-posterior",
+            "traits": [
+              {
+                "ref": "PosteriorBelief",
+                "refId": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "trt_01KYBM8SPDR0V9Y61Y00APN1PT": {
+          "id": "trt_01KYBM8SPDR0V9Y61Y00APN1PT",
+          "kind": "trait",
+          "bakedName": "PosteriorBelief",
+          "curName": "PosteriorBelief",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KYBM8SPD24VMR9HBQY0RM82A": {
+          "id": "ent_01KYBM8SPD24VMR9HBQY0RM82A",
+          "kind": "entity",
+          "bakedName": "Posterior",
+          "curName": "Posterior",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBM8SPDPGKNPVWPME4HZA7C": {
+          "id": "evt_01KYBM8SPDPGKNPVWPME4HZA7C",
+          "kind": "event",
+          "bakedName": "MASTERY_REACHED",
+          "curName": "MASTERY_REACHED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+        },
+        "evt_01KYBM8SPDSVKBPWV2V0GTMS44": {
+          "id": "evt_01KYBM8SPDSVKBPWV2V0GTMS44",
+          "kind": "event",
+          "bakedName": "EVIDENCE_INSUFFICIENT",
+          "curName": "EVIDENCE_INSUFFICIENT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+        },
+        "evt_01KYBM8SPDZNET4JJKM8MJ8TYE": {
+          "id": "evt_01KYBM8SPDZNET4JJKM8MJ8TYE",
+          "kind": "event",
+          "bakedName": "OBSERVE",
+          "curName": "OBSERVE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+        },
+        "orb_01KYBM8SPCWYRYTP9GG343Z4JN": {
+          "id": "orb_01KYBM8SPCWYRYTP9GG343Z4JN",
+          "kind": "orbital",
+          "bakedName": "MlPosteriorOrbital",
+          "curName": "MlPosteriorOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1": {
+          "id": "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+        },
+        "pag_01KYBM8SPEWW6AQ9C7AXCKFTJM": {
+          "id": "pag_01KYBM8SPEWW6AQ9C7AXCKFTJM",
+          "kind": "page",
+          "bakedName": "MlPosteriorPage",
+          "curName": "MlPosteriorPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBM8SPDW5ZGB5SDCQD74JSB": {
+          "id": "evt_01KYBM8SPDW5ZGB5SDCQD74JSB",
+          "kind": "event",
+          "bakedName": "REMEDIATION_NEEDED",
+          "curName": "REMEDIATION_NEEDED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-ml-posterior \"1.0.0\"\n\"std-ml-posterior — the statistical rung (R2) of the intelligence ladder. Holds a Beta(alpha, beta) belief over an unknown success rate and updates it from boolean observations (Bayesian updating, knowledge tracing, Thompson-sampling prior). After each observation it draws samples from the posterior, computes a credible interval, and decides: MASTERY_REACHED when the mean clears the floor with a tight interval, REMEDIATION_NEEDED when the mean sits at or below the ceiling with the same confidence, or EVIDENCE_INSUFFICIENT — the abstain — when the interval is still too wide to trust. Use when a hand-tuned score needs to become a belief that can say 'not enough evidence yet' (mastery, skill, risk, preference, difficulty).\"\norbital MlPosteriorOrbital {\n\n  entity Posterior [runtime] {\n    alpha : float @description \"Beta distribution success count (prior + observed successes).\" = 1\n    beta : float @description \"Beta distribution failure count (prior + observed failures).\" = 1\n    mean : float @description \"Posterior mean: alpha / (alpha + beta).\" = 0\n    intervalLow : float @description \"Lower bound of the last computed credible interval.\" = 0\n    intervalHigh : float @description \"Upper bound of the last computed credible interval.\" = 0\n    observations : int @description \"Number of observations folded into the posterior so far.\" = 0\n    status : \"idle\" | \"insufficient\" | \"mastered\" | \"remediate\" = idle\n  }\n\n  trait PosteriorBelief -> @rebindable Posterior [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (set @entity.alpha @config.priorAlpha)\n        (set @entity.beta @config.priorBeta)\n        (set @entity.mean (/ @config.priorAlpha (+ @config.priorAlpha @config.priorBeta)))\n        (set @entity.intervalLow 0)\n        (set @entity.intervalHigh 0)\n        (set @entity.observations 0)\n        (set @entity.status idle)\n      OBSERVE -> idle\n        (set @entity.alpha (if ?outcome (+ @entity.alpha 1) @entity.alpha))\n        (set @entity.beta (if ?outcome @entity.beta (+ @entity.beta 1)))\n        (set @entity.observations (+ @entity.observations 1))\n        (set @entity.mean (/ @entity.alpha (+ @entity.alpha @entity.beta)))\n        (let ((samples (prob/sample @config.sampleCount (prob/beta @entity.alpha @entity.beta)))\n              (interval (prob/credible-interval @samples 0.05))\n              (low (array/nth @interval 0))\n              (high (array/nth @interval 1))\n              (width (- @high @low)))\n          (do\n            (set @entity.intervalLow @low)\n            (set @entity.intervalHigh @high)\n            (if (> @width @config.intervalWidthMax)\n                (do\n                  (set @entity.status insufficient)\n                  (emit EVIDENCE_INSUFFICIENT { mean: @entity.mean, intervalLow: @low, intervalHigh: @high }))\n                (if (>= @entity.mean @config.masteryFloor)\n                    (do\n                      (set @entity.status mastered)\n                      (emit MASTERY_REACHED { mean: @entity.mean, intervalLow: @low, intervalHigh: @high }))\n                    (if (<= @entity.mean @config.remediationCeiling)\n                        (do\n                          (set @entity.status remediate)\n                          (emit REMEDIATION_NEEDED { mean: @entity.mean, intervalLow: @low, intervalHigh: @high }))\n                        (do\n                          (set @entity.status insufficient)\n                          (emit EVIDENCE_INSUFFICIENT { mean: @entity.mean, intervalLow: @low, intervalHigh: @high })))))))\n    }\n\n    emits {\n      MASTERY_REACHED -> external { mean : float!, intervalLow : float!, intervalHigh : float! }\n        @description \"The posterior mean clears masteryFloor with a credible interval narrow enough to trust.\"\n        @tier \"primary\"\n      REMEDIATION_NEEDED -> external { mean : float!, intervalLow : float!, intervalHigh : float! }\n        @description \"The posterior mean is at or below remediationCeiling with a credible interval narrow enough to trust.\"\n        @tier \"primary\"\n      EVIDENCE_INSUFFICIENT -> external { mean : float!, intervalLow : float!, intervalHigh : float! }\n        @description \"The abstain — the credible interval is still wider than intervalWidthMax, so no verdict is licensed yet.\"\n        @tier \"primary\"\n    }\n\n    listens {\n      OBSERVE {\n        outcome : boolean!\n      }\n    }\n\n    config {\n      priorAlpha : float = 1\n        @label \"Prior alpha\"\n        @description \"Beta prior success pseudo-count before any observation.\"\n        @tier \"domain\"\n      priorBeta : float = 1\n        @label \"Prior beta\"\n        @description \"Beta prior failure pseudo-count before any observation.\"\n        @tier \"domain\"\n      masteryFloor : float = 0.8\n        @label \"Mastery floor\"\n        @description \"Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.\"\n        @tier \"policy\"\n      remediationCeiling : float = 0.4\n        @label \"Remediation ceiling\"\n        @description \"Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.\"\n        @tier \"policy\"\n      intervalWidthMax : float = 0.3\n        @label \"Max credible-interval width\"\n        @description \"Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.\"\n        @tier \"policy\"\n      sampleCount : int = 200\n        @label \"Posterior sample count\"\n        @description \"Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.\"\n        @tier \"infra\"\n    }\n  }\n\n  page \"/ml-posterior\" as MlPosteriorPage -> PosteriorBelief\n}\n"
+}

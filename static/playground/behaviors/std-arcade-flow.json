@@ -1,0 +1,307 @@
+{
+  "name": "std-arcade-flow",
+  "description": "Headless win/lose authority for the arcade play-for-tickets loop: owns only result. Listens SCORE_CHANGED (tickets + tokens) and sets result to won once tickets reach the target, lost when tokens run out first, else none. Renders nothing.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-arcade-flow",
+    "version": "1.0.0",
+    "description": "Headless win/lose authority for the arcade play-for-tickets loop: owns only result. Listens SCORE_CHANGED (tickets + tokens) and sets result to won once tickets reach the target, lost when tokens run out first, else none. Renders nothing.",
+    "orbitals": [
+      {
+        "name": "ArcadeFlowOrbital",
+        "id": "orb_01KXG04TDXRZ6R91KVPFJSDJYX",
+        "entity": {
+          "name": "ArcadeFlowData",
+          "id": "ent_01KXG04TDX07HTCNYVNDHC53RK",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "result",
+              "type": "string",
+              "default": "none"
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "ArcadeFlow",
+            "id": "trt_01KXG04TDX1HTTKS1GM6Q2593N",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "result"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "ArcadeFlowData",
+            "linkedEntityId": "ent_01KXG04TDX07HTCNYVNDHC53RK",
+            "entityRefIds": {
+              "ArcadeFlowData": "ent_01KXG04TDX07HTCNYVNDHC53RK"
+            },
+            "emits": [
+              {
+                "event": "GAME_END",
+                "eventId": "evt_01KXG04TDXCZZGJC01VE1AN2J6",
+                "description": "Emitted when the play loop resolves to won or lost",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04TDXJHKBDEC9XZ0DJDP4",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SCORE_CHANGED",
+                  "id": "evt_01KXG04TDXC1KEDRGZFY6D1XQC",
+                  "name": "Score Changed",
+                  "payloadSchema": [
+                    {
+                      "name": "tickets",
+                      "type": "number"
+                    },
+                    {
+                      "name": "tokens",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01KXG04TDX09EXRXWGB6VGV90H",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "GAME_END",
+                  "id": "evt_01KXG04TDXCZZGJC01VE1AN2J6",
+                  "name": "Game End",
+                  "description": "Emitted when the play loop resolves to won or lost",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04TDXJHKBDEC9XZ0DJDP4",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SCORE_CHANGED",
+                  "eventId": "evt_01KXG04TDXC1KEDRGZFY6D1XQC",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      [
+                        "if",
+                        [
+                          ">=",
+                          "@payload.tickets",
+                          5
+                        ],
+                        "won",
+                        [
+                          "if",
+                          [
+                            "<=",
+                            "@payload.tokens",
+                            0
+                          ],
+                          "lost",
+                          "none"
+                        ]
+                      ]
+                    ],
+                    [
+                      "if",
+                      [
+                        "!=",
+                        "@entity.result",
+                        "none"
+                      ],
+                      [
+                        "emit",
+                        "GAME_END",
+                        {
+                          "result": "@entity.result"
+                        }
+                      ],
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01KXG04TDX09EXRXWGB6VGV90H",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.result",
+                      "none"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, SCORE_CHANGED signals resolve win/lose; toggle to freeze",
+                "tier": "domain"
+              },
+              "ticketsToWin": {
+                "type": "number",
+                "default": 5,
+                "label": "Tickets To Win",
+                "description": "Ticket count that ends the round in a win",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ArcadeFlowPage",
+            "id": "pag_01KXG04TDXK4JRD68PCBESHGQT",
+            "path": "/arcade-flow",
+            "traits": [
+              {
+                "ref": "ArcadeFlow",
+                "refId": "trt_01KXG04TDX1HTTKS1GM6Q2593N"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "orb_01KXG04TDXRZ6R91KVPFJSDJYX": {
+          "id": "orb_01KXG04TDXRZ6R91KVPFJSDJYX",
+          "kind": "orbital",
+          "bakedName": "ArcadeFlowOrbital",
+          "curName": "ArcadeFlowOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TDXCZZGJC01VE1AN2J6": {
+          "id": "evt_01KXG04TDXCZZGJC01VE1AN2J6",
+          "kind": "event",
+          "bakedName": "GAME_END",
+          "curName": "GAME_END",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TDX1HTTKS1GM6Q2593N"
+        },
+        "ent_01KXG04TDX07HTCNYVNDHC53RK": {
+          "id": "ent_01KXG04TDX07HTCNYVNDHC53RK",
+          "kind": "entity",
+          "bakedName": "ArcadeFlowData",
+          "curName": "ArcadeFlowData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TDX09EXRXWGB6VGV90H": {
+          "id": "evt_01KXG04TDX09EXRXWGB6VGV90H",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TDX1HTTKS1GM6Q2593N"
+        },
+        "pag_01KXG04TDXK4JRD68PCBESHGQT": {
+          "id": "pag_01KXG04TDXK4JRD68PCBESHGQT",
+          "kind": "page",
+          "bakedName": "ArcadeFlowPage",
+          "curName": "ArcadeFlowPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TDXC1KEDRGZFY6D1XQC": {
+          "id": "evt_01KXG04TDXC1KEDRGZFY6D1XQC",
+          "kind": "event",
+          "bakedName": "SCORE_CHANGED",
+          "curName": "SCORE_CHANGED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TDX1HTTKS1GM6Q2593N"
+        },
+        "evt_01KXG04TDXJHKBDEC9XZ0DJDP4": {
+          "id": "evt_01KXG04TDXJHKBDEC9XZ0DJDP4",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TDX1HTTKS1GM6Q2593N"
+        },
+        "trt_01KXG04TDX1HTTKS1GM6Q2593N": {
+          "id": "trt_01KXG04TDX1HTTKS1GM6Q2593N",
+          "kind": "trait",
+          "bakedName": "ArcadeFlow",
+          "curName": "ArcadeFlow",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-arcade-flow \"1.0.0\"\n\"Headless win/lose authority for the arcade play-for-tickets loop: owns only result. Listens SCORE_CHANGED (tickets + tokens) and sets result to won once tickets reach the target, lost when tokens run out first, else none. Renders nothing.\"\norbital ArcadeFlowOrbital {\n  entity ArcadeFlowData [runtime, shared] {\n    id : string!\n    result : string = \"none\"\n  }\n\n  trait ArcadeFlow -> @rebindable ArcadeFlowData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.result \"none\")\n\n      SCORE_CHANGED -> active when @config.running\n        (set @entity.result (if (>= @payload.tickets @config.ticketsToWin) \"won\" (if (<= @payload.tokens 0) \"lost\" \"none\")))\n        (if (!= @entity.result \"none\") (emit GAME_END { result: @entity.result }) null)\n\n      RESTART -> active\n        (set @entity.result \"none\")\n    }\n\n    emits {\n      GAME_END -> external {\n        result : string!\n      }\n        @description \"Emitted when the play loop resolves to won or lost\"\n        @tier \"domain\"\n    }\n\n    listens {\n      SCORE_CHANGED { tickets : number, tokens : number }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, SCORE_CHANGED signals resolve win/lose; toggle to freeze\"\n        @tier \"domain\"\n      ticketsToWin : number = 5\n        @label \"Tickets To Win\"\n        @description \"Ticket count that ends the round in a win\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/arcade-flow\" as ArcadeFlowPage -> ArcadeFlow\n}\n"
+}

@@ -1,0 +1,994 @@
+{
+  "name": "std-learn-transport",
+  "description": "Generic 2D step-transport (clock) instrument — the substrate twin of std-learn-sim-3d for discrete-step instruments. Contract: the atom owns the Step/Run-Pause/Reset transport and the clock but NOT the subject computation — STEP advances one step manually, TOGGLE_RUN engages a 32ms tick that accumulates elapsed time and fires one step every stepIntervalMs, RESET zeroes the counters and restores autoRun. Every step (button or clock) broadcasts LEARN_STEP; a composed sibling trait transitions directly on the LEARN_STEP / LEARN_RESET / LEARN_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain computation, halts the clock by setting the shared entity's done flag (the sibling is done's ONLY writer — it must also clear it on LEARN_RESET), and owns the scene render — this atom renders only its control strip and step caption. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-learn-transport",
+    "version": "1.0.0",
+    "description": "Generic 2D step-transport (clock) instrument — the substrate twin of std-learn-sim-3d for discrete-step instruments. Contract: the atom owns the Step/Run-Pause/Reset transport and the clock but NOT the subject computation — STEP advances one step manually, TOGGLE_RUN engages a 32ms tick that accumulates elapsed time and fires one step every stepIntervalMs, RESET zeroes the counters and restores autoRun. Every step (button or clock) broadcasts LEARN_STEP; a composed sibling trait transitions directly on the LEARN_STEP / LEARN_RESET / LEARN_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain computation, halts the clock by setting the shared entity's done flag (the sibling is done's ONLY writer — it must also clear it on LEARN_RESET), and owns the scene render — this atom renders only its control strip and step caption. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+    "orbitals": [
+      {
+        "name": "LearnTransportOrbital",
+        "id": "orb_01M0C2M9G3WP1MHJ10WMCT0BS7",
+        "entity": {
+          "name": "LearnTransportScene",
+          "id": "ent_01M0C2M9G3WH9K6WHNYM56MNKD",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "steps",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "elapsedMs",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "done",
+              "type": "boolean",
+              "default": false
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "LearnTransportSim",
+            "id": "trt_01M0C2M9G3FNPHJAAS054FS7PK",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [
+                "done"
+              ],
+              "provides": [
+                "active",
+                "elapsedMs",
+                "running",
+                "steps",
+                "title"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "LearnTransportScene",
+            "linkedEntityId": "ent_01M0C2M9G3WH9K6WHNYM56MNKD",
+            "entityRefIds": {
+              "LearnTransportScene": "ent_01M0C2M9G3WH9K6WHNYM56MNKD"
+            },
+            "emits": [
+              {
+                "event": "LEARN_STEP",
+                "eventId": "evt_01M0C2M9G42KN0FDTE418X0G6B",
+                "description": "Fires once per domain step — from the Step button or every stepIntervalMs of running clock — with the step counter; the composed subject trait transitions on it and applies one step of the domain computation. A harmless no-op when the atom runs standalone.",
+                "synonyms": "step, advance, tick, iterate, next",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "steps",
+                    "type": "int"
+                  }
+                ]
+              },
+              {
+                "event": "LEARN_RESET",
+                "eventId": "evt_01M0C2M9G4JB8HF1DFKR55JGSA",
+                "description": "Fires on Reset after the transport counters re-zero; the composed subject trait reseeds its domain state from config on it. A harmless no-op when the atom runs standalone.",
+                "synonyms": "reset, reseed, restart, clear",
+                "tier": "domain",
+                "scope": "external"
+              },
+              {
+                "event": "LEARN_UPDATED",
+                "eventId": "evt_01M0C2M9G44093Q65HQCN3FC3E",
+                "description": "Fires on INIT/MODE_SELECTED/Run-Pause toggle with the transport state — running flag and step counter — so the composed subject trait can repaint its shell (Run/Pause label, step readout). A harmless no-op when the atom runs standalone.",
+                "synonyms": "run, pause, transport, running state",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "running",
+                    "type": "boolean"
+                  },
+                  {
+                    "name": "steps",
+                    "type": "int"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0C2M9G37EVWAFJ3K2C6W59R",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "MODE_SELECTED",
+                  "id": "evt_01M0C2M9G4HNV8FV40D0DZFWA6",
+                  "name": "Mode Selected",
+                  "description": "Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "STEP",
+                  "id": "evt_01M0C2M9G4BS9264PK361XE9TH",
+                  "name": "Step"
+                },
+                {
+                  "key": "TOGGLE_RUN",
+                  "id": "evt_01M0C2M9G4CM05SFKCFDNMWXXA",
+                  "name": "Toggle Run"
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01M0C2M9G4JTJHKWQEKYXE4MEC",
+                  "name": "Reset"
+                },
+                {
+                  "key": "LEARN_STEP",
+                  "id": "evt_01M0C2M9G42KN0FDTE418X0G6B",
+                  "name": "Learn Step",
+                  "description": "Fires once per domain step — from the Step button or every stepIntervalMs of running clock — with the step counter; the composed subject trait transitions on it and applies one step of the domain computation. A harmless no-op when the atom runs standalone.",
+                  "synonyms": "step, advance, tick, iterate, next",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "steps",
+                      "type": "int"
+                    }
+                  ]
+                },
+                {
+                  "key": "LEARN_RESET",
+                  "id": "evt_01M0C2M9G4JB8HF1DFKR55JGSA",
+                  "name": "Learn Reset",
+                  "description": "Fires on Reset after the transport counters re-zero; the composed subject trait reseeds its domain state from config on it. A harmless no-op when the atom runs standalone.",
+                  "synonyms": "reset, reseed, restart, clear",
+                  "tier": "domain"
+                },
+                {
+                  "key": "LEARN_UPDATED",
+                  "id": "evt_01M0C2M9G44093Q65HQCN3FC3E",
+                  "name": "Learn Updated",
+                  "description": "Fires on INIT/MODE_SELECTED/Run-Pause toggle with the transport state — running flag and step counter — so the composed subject trait can repaint its shell (Run/Pause label, step readout). A harmless no-op when the atom runs standalone.",
+                  "synonyms": "run, pause, transport, running state",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "running",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "steps",
+                      "type": "int"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M0C2M9G37EVWAFJ3K2C6W59R",
+                  "guard": [
+                    "==",
+                    "",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.active",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Learning Instrument"
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.elapsedMs",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "box",
+                        "padding": "md",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "variant": "h4",
+                                "content": "@entity.title",
+                                "type": "typography"
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "action": "STEP",
+                                    "label": "Step",
+                                    "variant": "primary"
+                                  },
+                                  {
+                                    "action": "TOGGLE_RUN",
+                                    "label": [
+                                      "if",
+                                      "@entity.running",
+                                      "Pause",
+                                      "Run"
+                                    ],
+                                    "type": "button",
+                                    "variant": "secondary"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "type": "button",
+                                    "action": "RESET",
+                                    "label": "Reset"
+                                  }
+                                ],
+                                "gap": "sm"
+                              },
+                              {
+                                "type": "typography",
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  [
+                                    "if",
+                                    "@entity.done",
+                                    " — done",
+                                    [
+                                      "if",
+                                      "@entity.running",
+                                      " — auto-stepping",
+                                      " — paused"
+                                    ]
+                                  ]
+                                ]
+                              }
+                            ],
+                            "direction": "vertical",
+                            "gap": "sm",
+                            "type": "stack"
+                          }
+                        ]
+                      }
+                    ],
+                    [
+                      "emit",
+                      "LEARN_UPDATED",
+                      {
+                        "running": "@entity.running",
+                        "steps": "@entity.steps"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "MODE_SELECTED",
+                  "eventId": "evt_01M0C2M9G4HNV8FV40D0DZFWA6",
+                  "guard": [
+                    "==",
+                    "@payload.mode",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.active",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "Learning Instrument"
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.elapsedMs",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "box",
+                        "children": [
+                          {
+                            "gap": "sm",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "variant": "h4",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "action": "STEP",
+                                    "label": "Step",
+                                    "variant": "primary",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "TOGGLE_RUN",
+                                    "label": [
+                                      "if",
+                                      "@entity.running",
+                                      "Pause",
+                                      "Run"
+                                    ],
+                                    "type": "button",
+                                    "variant": "secondary"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "RESET",
+                                    "label": "Reset",
+                                    "type": "button"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "type": "stack",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "type": "typography",
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  [
+                                    "if",
+                                    "@entity.done",
+                                    " — done",
+                                    [
+                                      "if",
+                                      "@entity.running",
+                                      " — auto-stepping",
+                                      " — paused"
+                                    ]
+                                  ]
+                                ]
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "vertical"
+                          }
+                        ],
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "LEARN_UPDATED",
+                      {
+                        "steps": "@entity.steps",
+                        "running": "@entity.running"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "STEP",
+                  "eventId": "evt_01M0C2M9G4BS9264PK361XE9TH",
+                  "guard": [
+                    "and",
+                    [
+                      "==",
+                      "@entity.active",
+                      true
+                    ],
+                    [
+                      "not",
+                      [
+                        "==",
+                        "@entity.done",
+                        true
+                      ]
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.steps",
+                      [
+                        "+",
+                        "@entity.steps",
+                        1
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "direction": "vertical",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "content": "@entity.title",
+                                "variant": "h4"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "label": "Step",
+                                    "type": "button",
+                                    "variant": "primary",
+                                    "action": "STEP"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "label": [
+                                      "if",
+                                      "@entity.running",
+                                      "Pause",
+                                      "Run"
+                                    ],
+                                    "variant": "secondary",
+                                    "action": "TOGGLE_RUN"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "label": "Reset",
+                                    "action": "RESET",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "direction": "horizontal",
+                                "type": "stack"
+                              },
+                              {
+                                "variant": "caption",
+                                "type": "typography",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  [
+                                    "if",
+                                    "@entity.done",
+                                    " — done",
+                                    [
+                                      "if",
+                                      "@entity.running",
+                                      " — auto-stepping",
+                                      " — paused"
+                                    ]
+                                  ]
+                                ]
+                              }
+                            ],
+                            "gap": "sm",
+                            "type": "stack"
+                          }
+                        ],
+                        "padding": "md",
+                        "type": "box"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "LEARN_STEP",
+                      {
+                        "steps": "@entity.steps"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "TOGGLE_RUN",
+                  "eventId": "evt_01M0C2M9G4CM05SFKCFDNMWXXA",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      [
+                        "not",
+                        "@entity.running"
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "gap": "sm",
+                            "direction": "vertical",
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "action": "STEP",
+                                    "variant": "primary",
+                                    "type": "button",
+                                    "label": "Step"
+                                  },
+                                  {
+                                    "label": [
+                                      "if",
+                                      "@entity.running",
+                                      "Pause",
+                                      "Run"
+                                    ],
+                                    "type": "button",
+                                    "action": "TOGGLE_RUN",
+                                    "variant": "secondary"
+                                  },
+                                  {
+                                    "label": "Reset",
+                                    "action": "RESET",
+                                    "type": "button",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "direction": "horizontal",
+                                "type": "stack"
+                              },
+                              {
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  [
+                                    "if",
+                                    "@entity.done",
+                                    " — done",
+                                    [
+                                      "if",
+                                      "@entity.running",
+                                      " — auto-stepping",
+                                      " — paused"
+                                    ]
+                                  ]
+                                ],
+                                "type": "typography"
+                              }
+                            ],
+                            "type": "stack"
+                          }
+                        ],
+                        "type": "box",
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "LEARN_UPDATED",
+                      {
+                        "steps": "@entity.steps",
+                        "running": "@entity.running"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01M0C2M9G4JTJHKWQEKYXE4MEC",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.elapsedMs",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "label": "Step",
+                                    "variant": "primary",
+                                    "action": "STEP",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "action": "TOGGLE_RUN",
+                                    "label": [
+                                      "if",
+                                      "@entity.running",
+                                      "Pause",
+                                      "Run"
+                                    ],
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "RESET",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "Reset"
+                                  }
+                                ]
+                              },
+                              {
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  [
+                                    "if",
+                                    "@entity.done",
+                                    " — done",
+                                    [
+                                      "if",
+                                      "@entity.running",
+                                      " — auto-stepping",
+                                      " — paused"
+                                    ]
+                                  ]
+                                ],
+                                "type": "typography"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "gap": "sm",
+                            "type": "stack"
+                          }
+                        ],
+                        "type": "box",
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "LEARN_RESET",
+                      {}
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "transportTick",
+                "interval": 32,
+                "guard": [
+                  "and",
+                  [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  [
+                    "and",
+                    [
+                      "==",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "not",
+                      [
+                        "==",
+                        "@entity.done",
+                        true
+                      ]
+                    ]
+                  ]
+                ],
+                "effects": [
+                  [
+                    "set",
+                    "@entity.elapsedMs",
+                    [
+                      "+",
+                      "@entity.elapsedMs",
+                      32
+                    ]
+                  ],
+                  [
+                    "when",
+                    [
+                      ">=",
+                      "@entity.elapsedMs",
+                      500
+                    ],
+                    [
+                      "do",
+                      [
+                        "set",
+                        "@entity.elapsedMs",
+                        0
+                      ],
+                      [
+                        "set",
+                        "@entity.steps",
+                        [
+                          "+",
+                          "@entity.steps",
+                          1
+                        ]
+                      ],
+                      [
+                        "emit",
+                        "LEARN_STEP",
+                        {
+                          "steps": "@entity.steps"
+                        }
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "stepIntervalMs": {
+                "type": "number",
+                "default": 500,
+                "label": "Step Interval (ms)",
+                "description": "Milliseconds of running clock per domain step — the 32ms base tick accumulates elapsed time and fires LEARN_STEP each time this interval elapses. 300-900 suits narrated steppers; 32 fires every frame for continuous sims.",
+                "tier": "domain"
+              },
+              "matchMode": {
+                "type": "string",
+                "default": "",
+                "label": "Match Mode",
+                "description": "When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.",
+                "tier": "presentation"
+              },
+              "title": {
+                "type": "string",
+                "default": "Learning Instrument",
+                "label": "Title",
+                "description": "Title shown above the transport controls.",
+                "tier": "presentation"
+              },
+              "autoRun": {
+                "type": "boolean",
+                "default": false,
+                "label": "Auto Run",
+                "description": "When true the clock starts stepping on INIT; the Reset arm restores this value.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "LearnTransportPage",
+            "id": "pag_01M0C2M9G53B3D0AF88VMV0D78",
+            "path": "/learn-transport",
+            "traits": [
+              {
+                "ref": "LearnTransportSim",
+                "refId": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M0C2M9G4HNV8FV40D0DZFWA6": {
+          "id": "evt_01M0C2M9G4HNV8FV40D0DZFWA6",
+          "kind": "event",
+          "bakedName": "MODE_SELECTED",
+          "curName": "MODE_SELECTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G4BS9264PK361XE9TH": {
+          "id": "evt_01M0C2M9G4BS9264PK361XE9TH",
+          "kind": "event",
+          "bakedName": "STEP",
+          "curName": "STEP",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G4JTJHKWQEKYXE4MEC": {
+          "id": "evt_01M0C2M9G4JTJHKWQEKYXE4MEC",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "orb_01M0C2M9G3WP1MHJ10WMCT0BS7": {
+          "id": "orb_01M0C2M9G3WP1MHJ10WMCT0BS7",
+          "kind": "orbital",
+          "bakedName": "LearnTransportOrbital",
+          "curName": "LearnTransportOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M0C2M9G3FNPHJAAS054FS7PK": {
+          "id": "trt_01M0C2M9G3FNPHJAAS054FS7PK",
+          "kind": "trait",
+          "bakedName": "LearnTransportSim",
+          "curName": "LearnTransportSim",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M0C2M9G3WH9K6WHNYM56MNKD": {
+          "id": "ent_01M0C2M9G3WH9K6WHNYM56MNKD",
+          "kind": "entity",
+          "bakedName": "LearnTransportScene",
+          "curName": "LearnTransportScene",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0C2M9G44093Q65HQCN3FC3E": {
+          "id": "evt_01M0C2M9G44093Q65HQCN3FC3E",
+          "kind": "event",
+          "bakedName": "LEARN_UPDATED",
+          "curName": "LEARN_UPDATED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G37EVWAFJ3K2C6W59R": {
+          "id": "evt_01M0C2M9G37EVWAFJ3K2C6W59R",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G42KN0FDTE418X0G6B": {
+          "id": "evt_01M0C2M9G42KN0FDTE418X0G6B",
+          "kind": "event",
+          "bakedName": "LEARN_STEP",
+          "curName": "LEARN_STEP",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G4JB8HF1DFKR55JGSA": {
+          "id": "evt_01M0C2M9G4JB8HF1DFKR55JGSA",
+          "kind": "event",
+          "bakedName": "LEARN_RESET",
+          "curName": "LEARN_RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "evt_01M0C2M9G4CM05SFKCFDNMWXXA": {
+          "id": "evt_01M0C2M9G4CM05SFKCFDNMWXXA",
+          "kind": "event",
+          "bakedName": "TOGGLE_RUN",
+          "curName": "TOGGLE_RUN",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0C2M9G3FNPHJAAS054FS7PK"
+        },
+        "pag_01M0C2M9G53B3D0AF88VMV0D78": {
+          "id": "pag_01M0C2M9G53B3D0AF88VMV0D78",
+          "kind": "page",
+          "bakedName": "LearnTransportPage",
+          "curName": "LearnTransportPage",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-learn-transport \"1.0.0\"\n\"Generic 2D step-transport (clock) instrument — the substrate twin of std-learn-sim-3d for discrete-step instruments. Contract: the atom owns the Step/Run-Pause/Reset transport and the clock but NOT the subject computation — STEP advances one step manually, TOGGLE_RUN engages a 32ms tick that accumulates elapsed time and fires one step every stepIntervalMs, RESET zeroes the counters and restores autoRun. Every step (button or clock) broadcasts LEARN_STEP; a composed sibling trait transitions directly on the LEARN_STEP / LEARN_RESET / LEARN_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain computation, halts the clock by setting the shared entity's done flag (the sibling is done's ONLY writer — it must also clear it on LEARN_RESET), and owns the scene render — this atom renders only its control strip and step caption. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.\"\norbital LearnTransportOrbital {\n  entity LearnTransportScene [runtime, shared] {\n    id : string!\n    active : boolean = false\n    title : string\n    running : boolean = false\n    steps : int = 0\n    elapsedMs : number = 0\n    done : boolean = false\n  }\n\n  trait LearnTransportSim -> @rebindable LearnTransportScene [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle when (== @config.matchMode \"\")\n        (set @entity.active true)\n        (set @entity.title @config.title)\n        (set @entity.running @config.autoRun)\n        (set @entity.steps 0)\n        (set @entity.elapsedMs 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: sm, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: STEP, label: \"Step\", variant: primary },\n                    { type: button, action: TOGGLE_RUN, label: (if @entity.running \"Pause\" \"Run\"), variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps (if @entity.done \" — done\" (if @entity.running \" — auto-stepping\" \" — paused\"))) }\n              ] }\n          ]\n        })\n        (emit LEARN_UPDATED { running: @entity.running, steps: @entity.steps })\n\n      MODE_SELECTED -> idle when (== ?mode @config.matchMode)\n        (set @entity.active true)\n        (set @entity.title @config.title)\n        (set @entity.running @config.autoRun)\n        (set @entity.steps 0)\n        (set @entity.elapsedMs 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: sm, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: STEP, label: \"Step\", variant: primary },\n                    { type: button, action: TOGGLE_RUN, label: (if @entity.running \"Pause\" \"Run\"), variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps (if @entity.done \" — done\" (if @entity.running \" — auto-stepping\" \" — paused\"))) }\n              ] }\n          ]\n        })\n        (emit LEARN_UPDATED { running: @entity.running, steps: @entity.steps })\n\n      STEP -> idle when (and (== @entity.active true) (not (== @entity.done true)))\n        (set @entity.steps (+ @entity.steps 1))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: sm, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: STEP, label: \"Step\", variant: primary },\n                    { type: button, action: TOGGLE_RUN, label: (if @entity.running \"Pause\" \"Run\"), variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps (if @entity.done \" — done\" (if @entity.running \" — auto-stepping\" \" — paused\"))) }\n              ] }\n          ]\n        })\n        (emit LEARN_STEP { steps: @entity.steps })\n\n      TOGGLE_RUN -> idle when (== @entity.active true)\n        (set @entity.running (not @entity.running))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: sm, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: STEP, label: \"Step\", variant: primary },\n                    { type: button, action: TOGGLE_RUN, label: (if @entity.running \"Pause\" \"Run\"), variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps (if @entity.done \" — done\" (if @entity.running \" — auto-stepping\" \" — paused\"))) }\n              ] }\n          ]\n        })\n        (emit LEARN_UPDATED { running: @entity.running, steps: @entity.steps })\n\n      RESET -> idle when (== @entity.active true)\n        (set @entity.running @config.autoRun)\n        (set @entity.steps 0)\n        (set @entity.elapsedMs 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: sm, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: STEP, label: \"Step\", variant: primary },\n                    { type: button, action: TOGGLE_RUN, label: (if @entity.running \"Pause\" \"Run\"), variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps (if @entity.done \" — done\" (if @entity.running \" — auto-stepping\" \" — paused\"))) }\n              ] }\n          ]\n        })\n        (emit LEARN_RESET { })\n    }\n\n    ticks {\n      transportTick every 32ms\n        when (and (== @entity.active true) (and (== @entity.running true) (not (== @entity.done true))))\n        (set @entity.elapsedMs (+ @entity.elapsedMs 32))\n        (when (>= @entity.elapsedMs @config.stepIntervalMs)\n          (do\n            (set @entity.elapsedMs 0)\n            (set @entity.steps (+ @entity.steps 1))\n            (emit LEARN_STEP { steps: @entity.steps })\n          ))\n    }\n\n    listens {\n      MODE_SELECTED {\n        mode : string\n      }\n        @description \"Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.\"\n        @tier \"domain\"\n    }\n\n    emits {\n      LEARN_STEP -> external {\n        steps : int\n      }\n        @description \"Fires once per domain step — from the Step button or every stepIntervalMs of running clock — with the step counter; the composed subject trait transitions on it and applies one step of the domain computation. A harmless no-op when the atom runs standalone.\"\n        @synonyms \"step, advance, tick, iterate, next\"\n        @tier \"domain\"\n      LEARN_RESET -> external {\n      }\n        @description \"Fires on Reset after the transport counters re-zero; the composed subject trait reseeds its domain state from config on it. A harmless no-op when the atom runs standalone.\"\n        @synonyms \"reset, reseed, restart, clear\"\n        @tier \"domain\"\n      LEARN_UPDATED -> external {\n        running : boolean\n        steps : int\n      }\n        @description \"Fires on INIT/MODE_SELECTED/Run-Pause toggle with the transport state — running flag and step counter — so the composed subject trait can repaint its shell (Run/Pause label, step readout). A harmless no-op when the atom runs standalone.\"\n        @synonyms \"run, pause, transport, running state\"\n        @tier \"domain\"\n    }\n\n    config {\n      matchMode : string = \"\"\n        @label \"Match Mode\"\n        @description \"When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.\"\n        @tier \"presentation\"\n      title : string = \"Learning Instrument\"\n        @label \"Title\"\n        @description \"Title shown above the transport controls.\"\n        @tier \"presentation\"\n      autoRun : boolean = false\n        @label \"Auto Run\"\n        @description \"When true the clock starts stepping on INIT; the Reset arm restores this value.\"\n        @tier \"domain\"\n      stepIntervalMs : number = 500\n        @label \"Step Interval (ms)\"\n        @description \"Milliseconds of running clock per domain step — the 32ms base tick accumulates elapsed time and fires LEARN_STEP each time this interval elapses. 300-900 suits narrated steppers; 32 fires every frame for continuous sims.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/learn-transport\" as LearnTransportPage -> LearnTransportSim\n}\n"
+}

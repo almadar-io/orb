@@ -1,0 +1,747 @@
+{
+  "name": "std-lives",
+  "description": "Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-lives",
+    "version": "1.0.0",
+    "description": "Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity.",
+    "orbitals": [
+      {
+        "name": "LivesOrbital",
+        "id": "orb_01M0PCAKN65YEGE28DED3T3JRW",
+        "entity": {
+          "name": "LivesData",
+          "id": "ent_01M0PCAKN6E2Z14AYWA1MGF3TS",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "lives",
+              "type": "number",
+              "default": 3
+            },
+            {
+              "name": "respawnX",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "respawnY",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "cpX",
+              "type": "number",
+              "default": -1000000
+            },
+            {
+              "name": "lastHitAt",
+              "type": "number",
+              "default": 0
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "Lives",
+            "id": "trt_01M0PCAKN664P8DZK7E18JCX38",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "cpX",
+                "lastHitAt",
+                "lives",
+                "respawnX",
+                "respawnY"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "LivesData",
+            "linkedEntityId": "ent_01M0PCAKN6E2Z14AYWA1MGF3TS",
+            "entityRefIds": {
+              "LivesData": "ent_01M0PCAKN6E2Z14AYWA1MGF3TS"
+            },
+            "emits": [
+              {
+                "event": "LIFE_LOST",
+                "eventId": "evt_01M0PCAKN6ZV52F19HYZXHATFD",
+                "description": "A life was spent (post-invulnerability check); carries the lives remaining. Boards layer damage fx / HUD heartbeat.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "lives",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "RESPAWN",
+                "eventId": "evt_01M0PCAKN6GA9CBJDE8T7FS2F0",
+                "description": "The checkpoint the body should restart from after this life loss; boards forward it to the body authority's PLACE.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "GAME_OVER",
+                "eventId": "evt_01M0PCAKN6XEC33A41ZQW64MFX",
+                "description": "The last life was spent; boards show the game-over overlay and wait for RESTART.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CHECKPOINT_REACHED",
+                "eventId": "evt_01M0PCAKN6QFXHSDW8XJ4ET8NS",
+                "description": "The player crossed a checkpoint's atX for the first time this run; the respawn point moved to it. Boards layer flag/save fx.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0PCAKN6RFTB5YXC3TCYZZ01",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "DAMAGE",
+                  "id": "evt_01M0PCAKN6YZDSBX3W71KH98JK",
+                  "name": "Damage",
+                  "payloadSchema": [
+                    {
+                      "name": "source",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M0PCAKN640DKPRK56HB2D016",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M0PCAKN6NHVZTD3B1YJBP9MN",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "LIFE_LOST",
+                  "id": "evt_01M0PCAKN6ZV52F19HYZXHATFD",
+                  "name": "Life Lost",
+                  "description": "A life was spent (post-invulnerability check); carries the lives remaining. Boards layer damage fx / HUD heartbeat.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "lives",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESPAWN",
+                  "id": "evt_01M0PCAKN6GA9CBJDE8T7FS2F0",
+                  "name": "Respawn",
+                  "description": "The checkpoint the body should restart from after this life loss; boards forward it to the body authority's PLACE.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "GAME_OVER",
+                  "id": "evt_01M0PCAKN6XEC33A41ZQW64MFX",
+                  "name": "Game Over",
+                  "description": "The last life was spent; boards show the game-over overlay and wait for RESTART.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CHECKPOINT_REACHED",
+                  "id": "evt_01M0PCAKN6QFXHSDW8XJ4ET8NS",
+                  "name": "Checkpoint Reached",
+                  "description": "The player crossed a checkpoint's atX for the first time this run; the respawn point moved to it. Boards layer flag/save fx.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M0PCAKN6RFTB5YXC3TCYZZ01",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lives",
+                      3
+                    ],
+                    [
+                      "set",
+                      "@entity.respawnX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.respawnY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.cpX",
+                      [
+                        "-",
+                        0,
+                        1000000
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastHitAt",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "DAMAGE",
+                  "eventId": "evt_01M0PCAKN6YZDSBX3W71KH98JK",
+                  "guard": [
+                    "and",
+                    true,
+                    [
+                      ">",
+                      "@entity.lives",
+                      0
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "if",
+                      [
+                        ">=",
+                        [
+                          "-",
+                          [
+                            "time/now"
+                          ],
+                          "@entity.lastHitAt"
+                        ],
+                        1500
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.lastHitAt",
+                          [
+                            "time/now"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.lives",
+                          [
+                            "-",
+                            "@entity.lives",
+                            1
+                          ]
+                        ],
+                        [
+                          "if",
+                          [
+                            ">",
+                            "@entity.lives",
+                            0
+                          ],
+                          [
+                            "do",
+                            [
+                              "emit",
+                              "LIFE_LOST",
+                              {
+                                "lives": "@entity.lives"
+                              }
+                            ],
+                            [
+                              "emit",
+                              "RESPAWN",
+                              {
+                                "y": "@entity.respawnY",
+                                "x": "@entity.respawnX"
+                              }
+                            ]
+                          ],
+                          [
+                            "emit",
+                            "GAME_OVER",
+                            {
+                              "id": "lives"
+                            }
+                          ]
+                        ]
+                      ],
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M0PCAKN640DKPRK56HB2D016",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "reached",
+                          [
+                            "array/filter",
+                            [],
+                            [
+                              "fn",
+                              "c",
+                              [
+                                "and",
+                                [
+                                  "<=",
+                                  [
+                                    "object/get",
+                                    "@c",
+                                    "atX"
+                                  ],
+                                  "@payload.x"
+                                ],
+                                [
+                                  ">",
+                                  [
+                                    "object/get",
+                                    "@c",
+                                    "atX"
+                                  ],
+                                  "@entity.cpX"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          ">",
+                          [
+                            "array/len",
+                            "@reached"
+                          ],
+                          0
+                        ],
+                        [
+                          "let",
+                          [
+                            [
+                              "cp",
+                              [
+                                "array/last",
+                                "@reached"
+                              ]
+                            ]
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.respawnX",
+                              [
+                                "object/get",
+                                "@cp",
+                                "x"
+                              ]
+                            ],
+                            [
+                              "set",
+                              "@entity.respawnY",
+                              [
+                                "object/get",
+                                "@cp",
+                                "y"
+                              ]
+                            ],
+                            [
+                              "set",
+                              "@entity.cpX",
+                              [
+                                "object/get",
+                                "@cp",
+                                "atX"
+                              ]
+                            ],
+                            [
+                              "emit",
+                              "CHECKPOINT_REACHED",
+                              {
+                                "id": [
+                                  "object/get",
+                                  "@cp",
+                                  "id"
+                                ]
+                              }
+                            ]
+                          ]
+                        ],
+                        null
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M0PCAKN6NHVZTD3B1YJBP9MN",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lives",
+                      3
+                    ],
+                    [
+                      "set",
+                      "@entity.respawnX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.respawnY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.cpX",
+                      [
+                        "-",
+                        0,
+                        1000000
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastHitAt",
+                      0
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "maxLives": {
+                "type": "number",
+                "default": 3,
+                "label": "Max Lives",
+                "description": "Lives seeded on INIT/RESTART; reaching zero fires GAME_OVER.",
+                "tier": "domain"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, DAMAGE and checkpoint crossings are processed; toggle to make the run harmless (practice mode).",
+                "tier": "domain"
+              },
+              "spawnX": {
+                "type": "number",
+                "default": 0,
+                "label": "Spawn X",
+                "description": "Respawn x before any checkpoint is reached (match the body authority's spawn).",
+                "tier": "domain"
+              },
+              "invulnMs": {
+                "type": "number",
+                "default": 1500,
+                "label": "Invulnerability Window (ms)",
+                "description": "Milliseconds after a accepted hit during which further DAMAGE is ignored, so a hazard overlapping the respawn can't chain-drain.",
+                "tier": "domain"
+              },
+              "spawnY": {
+                "type": "number",
+                "default": 0,
+                "label": "Spawn Y",
+                "description": "Respawn y before any checkpoint is reached.",
+                "tier": "domain"
+              },
+              "checkpoints": {
+                "type": "[Checkpoint]",
+                "default": [],
+                "label": "Checkpoints",
+                "description": "Ordered along the run: when the player's x crosses atX the respawn point moves to (x, y). Must be sorted by atX ascending.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "atX": {
+                      "name": "atX",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "LivesPage",
+            "id": "pag_01M0PCAKN6S9F8GE8SZV40XJBX",
+            "path": "/lives",
+            "traits": [
+              {
+                "ref": "Lives",
+                "refId": "trt_01M0PCAKN664P8DZK7E18JCX38"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M0PCAKN6ZV52F19HYZXHATFD": {
+          "id": "evt_01M0PCAKN6ZV52F19HYZXHATFD",
+          "kind": "event",
+          "bakedName": "LIFE_LOST",
+          "curName": "LIFE_LOST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "evt_01M0PCAKN6GA9CBJDE8T7FS2F0": {
+          "id": "evt_01M0PCAKN6GA9CBJDE8T7FS2F0",
+          "kind": "event",
+          "bakedName": "RESPAWN",
+          "curName": "RESPAWN",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "pag_01M0PCAKN6S9F8GE8SZV40XJBX": {
+          "id": "pag_01M0PCAKN6S9F8GE8SZV40XJBX",
+          "kind": "page",
+          "bakedName": "LivesPage",
+          "curName": "LivesPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCAKN6QFXHSDW8XJ4ET8NS": {
+          "id": "evt_01M0PCAKN6QFXHSDW8XJ4ET8NS",
+          "kind": "event",
+          "bakedName": "CHECKPOINT_REACHED",
+          "curName": "CHECKPOINT_REACHED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "evt_01M0PCAKN6NHVZTD3B1YJBP9MN": {
+          "id": "evt_01M0PCAKN6NHVZTD3B1YJBP9MN",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "evt_01M0PCAKN6YZDSBX3W71KH98JK": {
+          "id": "evt_01M0PCAKN6YZDSBX3W71KH98JK",
+          "kind": "event",
+          "bakedName": "DAMAGE",
+          "curName": "DAMAGE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "orb_01M0PCAKN65YEGE28DED3T3JRW": {
+          "id": "orb_01M0PCAKN65YEGE28DED3T3JRW",
+          "kind": "orbital",
+          "bakedName": "LivesOrbital",
+          "curName": "LivesOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M0PCAKN6E2Z14AYWA1MGF3TS": {
+          "id": "ent_01M0PCAKN6E2Z14AYWA1MGF3TS",
+          "kind": "entity",
+          "bakedName": "LivesData",
+          "curName": "LivesData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCAKN6RFTB5YXC3TCYZZ01": {
+          "id": "evt_01M0PCAKN6RFTB5YXC3TCYZZ01",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "evt_01M0PCAKN6XEC33A41ZQW64MFX": {
+          "id": "evt_01M0PCAKN6XEC33A41ZQW64MFX",
+          "kind": "event",
+          "bakedName": "GAME_OVER",
+          "curName": "GAME_OVER",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        },
+        "trt_01M0PCAKN664P8DZK7E18JCX38": {
+          "id": "trt_01M0PCAKN664P8DZK7E18JCX38",
+          "kind": "trait",
+          "bakedName": "Lives",
+          "curName": "Lives",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCAKN640DKPRK56HB2D016": {
+          "id": "evt_01M0PCAKN640DKPRK56HB2D016",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKN664P8DZK7E18JCX38"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-lives \"1.0.0\"\n\"Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity.\"\norbital LivesOrbital {\n  type Checkpoint = {\n    id : string!\n    atX : number!\n    x : number!\n    y : number!\n  }\n\n  entity LivesData [runtime, shared] {\n    id : string!\n    lives : number = 3\n    respawnX : number = 0\n    respawnY : number = 0\n    cpX : number = -1000000\n    lastHitAt : number = 0\n  }\n\n  trait Lives -> @rebindable LivesData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.lives @config.maxLives)\n        (set @entity.respawnX @config.spawnX)\n        (set @entity.respawnY @config.spawnY)\n        (set @entity.cpX (- 0 1000000))\n        (set @entity.lastHitAt 0)\n\n      DAMAGE -> active when (and @config.running (> @entity.lives 0))\n        (if (>= (- (time/now) @entity.lastHitAt) @config.invulnMs)\n          (do\n            (set @entity.lastHitAt (time/now))\n            (set @entity.lives (- @entity.lives 1))\n            (if (> @entity.lives 0)\n              (do\n                (emit LIFE_LOST { lives: @entity.lives })\n                (emit RESPAWN { x: @entity.respawnX, y: @entity.respawnY }))\n              (emit GAME_OVER { id: \"lives\" })))\n          null)\n\n      BODY_MOVED -> active when @config.running\n        (let ((reached (array/filter @config.checkpoints (fn c (and (<= (object/get @c atX) @payload.x) (> (object/get @c atX) @entity.cpX))))))\n        (if (> (array/len @reached) 0)\n          (let ((cp (array/last @reached)))\n            (do\n              (set @entity.respawnX (object/get @cp x))\n              (set @entity.respawnY (object/get @cp y))\n              (set @entity.cpX (object/get @cp atX))\n              (emit CHECKPOINT_REACHED { id: (object/get @cp id) })))\n          null))\n\n      RESTART -> active\n        (set @entity.lives @config.maxLives)\n        (set @entity.respawnX @config.spawnX)\n        (set @entity.respawnY @config.spawnY)\n        (set @entity.cpX (- 0 1000000))\n        (set @entity.lastHitAt 0)\n    }\n\n    emits {\n      LIFE_LOST -> external {\n        lives : number!\n      }\n        @description \"A life was spent (post-invulnerability check); carries the lives remaining. Boards layer damage fx / HUD heartbeat.\"\n        @tier \"domain\"\n      RESPAWN -> external {\n        x : number!\n        y : number!\n      }\n        @description \"The checkpoint the body should restart from after this life loss; boards forward it to the body authority's PLACE.\"\n        @tier \"domain\"\n      GAME_OVER -> external {\n        id : string!\n      }\n        @description \"The last life was spent; boards show the game-over overlay and wait for RESTART.\"\n        @tier \"domain\"\n      CHECKPOINT_REACHED -> external {\n        id : string!\n      }\n        @description \"The player crossed a checkpoint's atX for the first time this run; the respawn point moved to it. Boards layer flag/save fx.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      DAMAGE { source : string }\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, DAMAGE and checkpoint crossings are processed; toggle to make the run harmless (practice mode).\"\n        @tier \"domain\"\n      maxLives : number = 3\n        @label \"Max Lives\"\n        @description \"Lives seeded on INIT/RESTART; reaching zero fires GAME_OVER.\"\n        @tier \"domain\"\n      invulnMs : number = 1500\n        @label \"Invulnerability Window (ms)\"\n        @description \"Milliseconds after a accepted hit during which further DAMAGE is ignored, so a hazard overlapping the respawn can't chain-drain.\"\n        @tier \"domain\"\n      spawnX : number = 0\n        @label \"Spawn X\"\n        @description \"Respawn x before any checkpoint is reached (match the body authority's spawn).\"\n        @tier \"domain\"\n      spawnY : number = 0\n        @label \"Spawn Y\"\n        @description \"Respawn y before any checkpoint is reached.\"\n        @tier \"domain\"\n      checkpoints : [Checkpoint] = []\n        @label \"Checkpoints\"\n        @description \"Ordered along the run: when the player's x crosses atX the respawn point moves to (x, y). Must be sorted by atX ascending.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/lives\" as LivesPage -> Lives\n}\n"
+}

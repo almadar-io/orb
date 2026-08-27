@@ -1,0 +1,784 @@
+{
+  "name": "std-ml-infer",
+  "description": "std-ml-infer — the learned rung (R4) of the intelligence ladder, and the seam between a .lolo circuit and a trained model deployed on masar (or off-the-shelf HuggingFace weights) reached through the ml service. Sends the caller-supplied input straight to call-service ml infer, then guards the raw output before it ever becomes an effect: validates it against the declared outputContract, clamps it into range, and only then decides. Emits INFERRED when the output satisfies the contract and confidence clears confidenceFloor — carrying the clamped output, confidence, and an empty violations list. Otherwise abstains with INFER_ABSTAINED, whose reason is one of: low confidence (contract satisfied but below floor, violations empty), contract violation (violations populated via contract/violations for diagnosis), or unavailable (the service call itself failed — a masar cold start or a down endpoint, never surfaced as a user-visible error). Use when a numeric or tensor-shaped model answer needs a licensed guard before becoming a decision — classification scores, regressions, embedding-derived predictions — and the next rung (R5 generative) should take over on any abstain.",
+  "level": "atom",
+  "topic": "ml",
+  "schema": {
+    "name": "std-ml-infer",
+    "version": "1.0.0",
+    "description": "std-ml-infer — the learned rung (R4) of the intelligence ladder, and the seam between a .lolo circuit and a trained model deployed on masar (or off-the-shelf HuggingFace weights) reached through the ml service. Sends the caller-supplied input straight to call-service ml infer, then guards the raw output before it ever becomes an effect: validates it against the declared outputContract, clamps it into range, and only then decides. Emits INFERRED when the output satisfies the contract and confidence clears confidenceFloor — carrying the clamped output, confidence, and an empty violations list. Otherwise abstains with INFER_ABSTAINED, whose reason is one of: low confidence (contract satisfied but below floor, violations empty), contract violation (violations populated via contract/violations for diagnosis), or unavailable (the service call itself failed — a masar cold start or a down endpoint, never surfaced as a user-visible error). Use when a numeric or tensor-shaped model answer needs a licensed guard before becoming a decision — classification scores, regressions, embedding-derived predictions — and the next rung (R5 generative) should take over on any abstain.",
+    "orbitals": [
+      {
+        "name": "MlInferOrbital",
+        "id": "orb_01KYBPCRRYEW3P2BD0V50BY174",
+        "entity": {
+          "name": "Inference",
+          "id": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "input",
+              "type": "object",
+              "default": {}
+            },
+            {
+              "name": "output",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "number"
+              }
+            },
+            {
+              "name": "confidence",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "violations",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "request",
+              "type": "object",
+              "default": {}
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "inferring",
+                "resolved"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "InferenceRun",
+            "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
+            "category": "lifecycle",
+            "linkedEntity": "Inference",
+            "linkedEntityId": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
+            "entityRefIds": {
+              "Inference": "ent_01KYBPCRRYA4RY273R7TFF3VRF"
+            },
+            "emits": [
+              {
+                "event": "INFERRED_RAW",
+                "eventId": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+                "description": "Raw ml.infer service result, flattened onto the payload by the call-service effect executor",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "output",
+                    "type": "[float]",
+                    "required": true
+                  },
+                  {
+                    "name": "confidence",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "INFER_CALL_FAILED",
+                "eventId": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
+                "description": "call-service infer failure signal — a masar cold start or a down endpoint lands here, not as a user-visible error",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "INFERRED",
+                "eventId": "evt_01KYBPCRRYDEDF9WYPE4KRR2Q6",
+                "description": "The service answered, the output satisfies outputContract, and confidence clears confidenceFloor — output already clamped",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "output",
+                    "type": "[float]",
+                    "required": true
+                  },
+                  {
+                    "name": "confidence",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "violations",
+                    "type": "[object]",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "INFER_ABSTAINED",
+                "eventId": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
+                "description": "The abstain — reason is one of: low confidence, contract violation, unavailable. violations is populated only on the contract violation path. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "violations",
+                    "type": "[object]",
+                    "required": true
+                  },
+                  {
+                    "name": "request",
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "inferring"
+                },
+                {
+                  "name": "resolved"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "INFER",
+                  "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
+                  "name": "Infer",
+                  "payloadSchema": [
+                    {
+                      "name": "input",
+                      "type": "object",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "INFERRED_RAW",
+                  "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+                  "name": "Inferred Raw",
+                  "description": "Raw ml.infer service result, flattened onto the payload by the call-service effect executor",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "output",
+                      "type": "[float]",
+                      "required": true
+                    },
+                    {
+                      "name": "confidence",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "INFER_CALL_FAILED",
+                  "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
+                  "name": "Infer Call Failed",
+                  "description": "call-service infer failure signal — a masar cold start or a down endpoint lands here, not as a user-visible error",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KYBPCRRY1764RNVM07X1HN1W",
+                  "name": "Reset"
+                },
+                {
+                  "key": "INFERRED",
+                  "id": "evt_01KYBPCRRYDEDF9WYPE4KRR2Q6",
+                  "name": "Inferred",
+                  "description": "The service answered, the output satisfies outputContract, and confidence clears confidenceFloor — output already clamped",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "output",
+                      "type": "[float]",
+                      "required": true
+                    },
+                    {
+                      "name": "confidence",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "violations",
+                      "type": "[object]",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "INFER_ABSTAINED",
+                  "id": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
+                  "name": "Infer Abstained",
+                  "description": "The abstain — reason is one of: low confidence, contract violation, unavailable. violations is populated only on the contract violation path. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "reason",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "violations",
+                      "type": "[object]",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.input",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.output",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.confidence",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.violations",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "inferring",
+                  "event": "INFER",
+                  "eventId": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.input",
+                      "@payload.input"
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      "@payload.request"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "inferring"
+                    ],
+                    [
+                      "call-service",
+                      "ml",
+                      "infer",
+                      {
+                        "input": "@entity.input",
+                        "model": ""
+                      },
+                      {
+                        "emit": {
+                          "failure": "INFER_CALL_FAILED",
+                          "success": "INFERRED_RAW"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "inferring",
+                  "to": "resolved",
+                  "event": "INFERRED_RAW",
+                  "eventId": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.output",
+                      "@payload.output"
+                    ],
+                    [
+                      "set",
+                      "@entity.confidence",
+                      "@payload.confidence"
+                    ],
+                    [
+                      "let",
+                      [
+                        [
+                          "validation",
+                          [
+                            "contract/validate-output",
+                            "@entity.output",
+                            {
+                              "ranges": {}
+                            }
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          "object/get",
+                          "@validation",
+                          "valid"
+                        ],
+                        [
+                          "if",
+                          [
+                            ">=",
+                            "@entity.confidence",
+                            0.7
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.output",
+                              [
+                                "contract/clamp-output",
+                                "@entity.output",
+                                {
+                                  "ranges": {}
+                                }
+                              ]
+                            ],
+                            [
+                              "set",
+                              "@entity.violations",
+                              []
+                            ],
+                            [
+                              "set",
+                              "@entity.reason",
+                              ""
+                            ],
+                            [
+                              "set",
+                              "@entity.status",
+                              "resolved"
+                            ],
+                            [
+                              "emit",
+                              "INFERRED",
+                              {
+                                "violations": "@entity.violations",
+                                "confidence": "@entity.confidence",
+                                "output": "@entity.output"
+                              }
+                            ]
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.violations",
+                              []
+                            ],
+                            [
+                              "set",
+                              "@entity.reason",
+                              "low confidence"
+                            ],
+                            [
+                              "set",
+                              "@entity.status",
+                              "resolved"
+                            ],
+                            [
+                              "emit",
+                              "INFER_ABSTAINED",
+                              {
+                                "request": "@entity.request",
+                                "reason": "low confidence",
+                                "violations": "@entity.violations"
+                              }
+                            ]
+                          ]
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.violations",
+                            [
+                              "contract/violations",
+                              "@entity.output",
+                              {
+                                "ranges": {}
+                              }
+                            ]
+                          ],
+                          [
+                            "set",
+                            "@entity.reason",
+                            "contract violation"
+                          ],
+                          [
+                            "set",
+                            "@entity.status",
+                            "resolved"
+                          ],
+                          [
+                            "emit",
+                            "INFER_ABSTAINED",
+                            {
+                              "request": "@entity.request",
+                              "violations": "@entity.violations",
+                              "reason": "contract violation"
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "inferring",
+                  "to": "resolved",
+                  "event": "INFER_CALL_FAILED",
+                  "eventId": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.output",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.confidence",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.violations",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      "unavailable"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ],
+                    [
+                      "emit",
+                      "INFER_ABSTAINED",
+                      {
+                        "request": "@entity.request",
+                        "violations": "@entity.violations",
+                        "reason": "unavailable"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "resolved",
+                  "to": "resolved",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "resolved"
+                    ]
+                  ]
+                },
+                {
+                  "from": "resolved",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01KYBPCRRY1764RNVM07X1HN1W",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.input",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.output",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.confidence",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.violations",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.reason",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.request",
+                      {}
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "model": {
+                "type": "string",
+                "default": "",
+                "label": "Model reference",
+                "description": "hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action",
+                "tier": "infra"
+              },
+              "outputContract": {
+                "type": "OutputContract",
+                "default": {
+                  "ranges": {}
+                },
+                "label": "Output contract",
+                "description": "Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained",
+                "tier": "domain",
+                "properties": {
+                  "ranges": {
+                    "name": "ranges",
+                    "type": "object",
+                    "required": false,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "min": {
+                          "name": "min",
+                          "type": "number",
+                          "required": true
+                        },
+                        "max": {
+                          "name": "max",
+                          "type": "number",
+                          "required": true
+                        }
+                      }
+                    }
+                  },
+                  "shape": {
+                    "name": "shape",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "confidenceFloor": {
+                "type": "float",
+                "default": 0.7,
+                "label": "Confidence floor",
+                "description": "Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence",
+                "tier": "policy"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MlInferPage",
+            "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
+            "path": "/ml-infer",
+            "traits": [
+              {
+                "ref": "InferenceRun",
+                "refId": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KYBPCRRY2FMY57YT8MYD3NWX": {
+          "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
+          "kind": "event",
+          "bakedName": "INFER_CALL_FAILED",
+          "curName": "INFER_CALL_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "orb_01KYBPCRRYEW3P2BD0V50BY174": {
+          "id": "orb_01KYBPCRRYEW3P2BD0V50BY174",
+          "kind": "orbital",
+          "bakedName": "MlInferOrbital",
+          "curName": "MlInferOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KYBPCRRYA4RY273R7TFF3VRF": {
+          "id": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
+          "kind": "entity",
+          "bakedName": "Inference",
+          "curName": "Inference",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRY466WKYEHEYJJD4NJ": {
+          "id": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
+          "kind": "event",
+          "bakedName": "INFER_ABSTAINED",
+          "curName": "INFER_ABSTAINED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRYDEDF9WYPE4KRR2Q6": {
+          "id": "evt_01KYBPCRRYDEDF9WYPE4KRR2Q6",
+          "kind": "event",
+          "bakedName": "INFERRED",
+          "curName": "INFERRED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49": {
+          "id": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRY49ZNB6TD5ZPAY80T": {
+          "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+          "kind": "event",
+          "bakedName": "INFERRED_RAW",
+          "curName": "INFERRED_RAW",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX": {
+          "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
+          "kind": "trait",
+          "bakedName": "InferenceRun",
+          "curName": "InferenceRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRYVWRB6GXDRKPNX561": {
+          "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
+          "kind": "event",
+          "bakedName": "INFER",
+          "curName": "INFER",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "pag_01KYBPCRRY18XQ2SBPNFRTP0SN": {
+          "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
+          "kind": "page",
+          "bakedName": "MlInferPage",
+          "curName": "MlInferPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRY1764RNVM07X1HN1W": {
+          "id": "evt_01KYBPCRRY1764RNVM07X1HN1W",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-ml-infer \"1.0.0\"\n\"std-ml-infer — the learned rung (R4) of the intelligence ladder, and the seam between a .lolo circuit and a trained model deployed on masar (or off-the-shelf HuggingFace weights) reached through the ml service. Sends the caller-supplied input straight to call-service ml infer, then guards the raw output before it ever becomes an effect: validates it against the declared outputContract, clamps it into range, and only then decides. Emits INFERRED when the output satisfies the contract and confidence clears confidenceFloor — carrying the clamped output, confidence, and an empty violations list. Otherwise abstains with INFER_ABSTAINED, whose reason is one of: low confidence (contract satisfied but below floor, violations empty), contract violation (violations populated via contract/violations for diagnosis), or unavailable (the service call itself failed — a masar cold start or a down endpoint, never surfaced as a user-visible error). Use when a numeric or tensor-shaped model answer needs a licensed guard before becoming a decision — classification scores, regressions, embedding-derived predictions — and the next rung (R5 generative) should take over on any abstain.\"\n\ntype Range = { min: float!, max: float! }\ntype OutputContract = { shape: [int], ranges: Map string Range }\n\norbital MlInferOrbital {\n\n  entity Inference [runtime] {\n    input      : object   = {}\n    output     : [float]  = []\n    confidence : float    = 0\n    violations : [object] = []\n    reason     : string   = \"\"\n    request    : object   = {}\n    status     : \"idle\" | \"inferring\" | \"resolved\" = idle\n  }\n\n  trait InferenceRun -> Inference [lifecycle, instance] {\n    initial: idle\n\n    config {\n      model : string = \"\"\n        @label \"Model reference\"\n        @description \"hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action\"\n        @tier \"infra\"\n      confidenceFloor : float = 0.7\n        @label \"Confidence floor\"\n        @description \"Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence\"\n        @tier \"policy\"\n      outputContract : OutputContract = { ranges: {} }\n        @label \"Output contract\"\n        @description \"Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained\"\n        @tier \"domain\"\n    }\n\n    state idle {\n      INIT -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n\n      INFER -> inferring\n        (set @entity.input ?input)\n        (set @entity.request ?request)\n        (set @entity.status inferring)\n        (call-service \"ml\" \"infer\" { model: @config.model, input: @entity.input }\n          { emit: { success: INFERRED_RAW, failure: INFER_CALL_FAILED } })\n    }\n\n    state inferring {\n      INFERRED_RAW -> resolved\n        (set @entity.output ?output)\n        (set @entity.confidence ?confidence)\n        (let ((validation (contract/validate-output @entity.output @config.outputContract)))\n          (if (object/get @validation \"valid\")\n            (if (>= @entity.confidence @config.confidenceFloor)\n              (do\n                (set @entity.output (contract/clamp-output @entity.output @config.outputContract))\n                (set @entity.violations [])\n                (set @entity.reason \"\")\n                (set @entity.status resolved)\n                (emit INFERRED { output: @entity.output, confidence: @entity.confidence, violations: @entity.violations }))\n              (do\n                (set @entity.violations [])\n                (set @entity.reason \"low confidence\")\n                (set @entity.status resolved)\n                (emit INFER_ABSTAINED { reason: \"low confidence\", violations: @entity.violations, request: @entity.request })))\n            (do\n              (set @entity.violations (contract/violations @entity.output @config.outputContract))\n              (set @entity.reason \"contract violation\")\n              (set @entity.status resolved)\n              (emit INFER_ABSTAINED { reason: \"contract violation\", violations: @entity.violations, request: @entity.request }))))\n\n      INFER_CALL_FAILED -> resolved\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"unavailable\")\n        (set @entity.status resolved)\n        (emit INFER_ABSTAINED { reason: \"unavailable\", violations: @entity.violations, request: @entity.request })\n    }\n\n    state resolved {\n      INIT -> resolved\n        (set @entity.status resolved)\n      RESET -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n    }\n\n    emits {\n      INFERRED_RAW {\n        output     : [float]!\n        confidence : number!\n      }\n        @description \"Raw ml.infer service result, flattened onto the payload by the call-service effect executor\"\n        @tier \"secondary\"\n\n      INFER_CALL_FAILED {\n        error : string!\n      }\n        @description \"call-service infer failure signal — a masar cold start or a down endpoint lands here, not as a user-visible error\"\n        @tier \"secondary\"\n\n      INFERRED -> external {\n        output     : [float]!\n        confidence : float!\n        violations : [object]!\n      }\n        @description \"The service answered, the output satisfies outputContract, and confidence clears confidenceFloor — output already clamped\"\n        @tier \"primary\"\n\n      INFER_ABSTAINED -> external {\n        reason     : string!\n        violations : [object]!\n        request    : object\n      }\n        @description \"The abstain — reason is one of: low confidence, contract violation, unavailable. violations is populated only on the contract violation path. request echoes the originating request untouched so the next rung can project its own inputs out of it\"\n        @tier \"primary\"\n    }\n\n    listens {\n      INFER {\n        input : object!\n        request : object\n      }\n    }\n  }\n\n  page \"/ml-infer\" as MlInferPage -> InferenceRun\n}\n"
+}

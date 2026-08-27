@@ -1,0 +1,481 @@
+{
+  "name": "std-ml-lookup",
+  "description": "Rung R1 of the intelligence ladder — finds the candidate value in a list of accepted values; abstains when nothing matches.",
+  "level": "atom",
+  "topic": "ml",
+  "schema": {
+    "name": "std-ml-lookup",
+    "version": "1.0.0",
+    "description": "Rung R1 of the intelligence ladder — finds the candidate value in a list of accepted values; abstains when nothing matches.",
+    "orbitals": [
+      {
+        "name": "MlLookupOrbital",
+        "id": "orb_01KYBMJJT4GF4NBRN7SX8PTDSE",
+        "entity": {
+          "name": "KeyLookup",
+          "id": "ent_01KYBMJJT4DMQ50X37K7WJ7XDD",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "matched",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "checked"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "LookupRun",
+            "id": "trt_01KYBMJJT4887BT5V7KWCDW7XR",
+            "category": "lifecycle",
+            "linkedEntity": "KeyLookup",
+            "linkedEntityId": "ent_01KYBMJJT4DMQ50X37K7WJ7XDD",
+            "entityRefIds": {
+              "KeyLookup": "ent_01KYBMJJT4DMQ50X37K7WJ7XDD"
+            },
+            "emits": [
+              {
+                "event": "KEY_HIT",
+                "eventId": "evt_01KYBMJJT4XY85SQDER4Q9CHW1",
+                "description": "Fired when the candidate matches an entry in the accepted list",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "candidate",
+                    "type": "any",
+                    "required": true
+                  },
+                  {
+                    "name": "entry",
+                    "type": "any",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "KEY_MISS",
+                "eventId": "evt_01KYBMJJT48QRYPT14NG0GMXMY",
+                "description": "Abstain — candidate matches nothing in the accepted list; the next rung should take over. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "candidate",
+                    "type": "any",
+                    "required": true
+                  },
+                  {
+                    "name": "request",
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "checked"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBMJJT4K8ANYTCSAH8QZ0JC",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "LOOKUP",
+                  "id": "evt_01KYBMJJT4NBFQTG784CP78ERD",
+                  "name": "Lookup",
+                  "payloadSchema": [
+                    {
+                      "name": "candidate",
+                      "type": "any",
+                      "required": true
+                    },
+                    {
+                      "name": "accepted",
+                      "type": "[any]",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KYC09GZR0684YDEM0BAP2W5X",
+                  "name": "Reset"
+                },
+                {
+                  "key": "KEY_HIT",
+                  "id": "evt_01KYBMJJT4XY85SQDER4Q9CHW1",
+                  "name": "Key Hit",
+                  "description": "Fired when the candidate matches an entry in the accepted list",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "candidate",
+                      "type": "any",
+                      "required": true
+                    },
+                    {
+                      "name": "entry",
+                      "type": "any",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "KEY_MISS",
+                  "id": "evt_01KYBMJJT48QRYPT14NG0GMXMY",
+                  "name": "Key Miss",
+                  "description": "Abstain — candidate matches nothing in the accepted list; the next rung should take over. request echoes the originating request untouched so the next rung can project its own inputs out of it",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "candidate",
+                      "type": "any",
+                      "required": true
+                    },
+                    {
+                      "name": "request",
+                      "type": "object"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBMJJT4K8ANYTCSAH8QZ0JC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.matched",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "checked",
+                  "event": "LOOKUP",
+                  "eventId": "evt_01KYBMJJT4NBFQTG784CP78ERD",
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "candStr",
+                          [
+                            "str/concat",
+                            "@payload.candidate"
+                          ]
+                        ],
+                        [
+                          "candNorm",
+                          [
+                            "if",
+                            true,
+                            [
+                              "str/lower",
+                              [
+                                "str/trim",
+                                "@candStr"
+                              ]
+                            ],
+                            "@candStr"
+                          ]
+                        ],
+                        [
+                          "found",
+                          [
+                            "array/find",
+                            "@payload.accepted",
+                            [
+                              "fn",
+                              "item",
+                              [
+                                "let",
+                                [
+                                  [
+                                    "raw",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "",
+                                        ""
+                                      ],
+                                      "@item",
+                                      [
+                                        "object/get",
+                                        "@item",
+                                        ""
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "rawStr",
+                                    [
+                                      "str/concat",
+                                      "@raw"
+                                    ]
+                                  ],
+                                  [
+                                    "rawNorm",
+                                    [
+                                      "if",
+                                      true,
+                                      [
+                                        "str/lower",
+                                        [
+                                          "str/trim",
+                                          "@rawStr"
+                                        ]
+                                      ],
+                                      "@rawStr"
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "==",
+                                  "@rawNorm",
+                                  "@candNorm"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          "!=",
+                          "@found",
+                          null
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.matched",
+                            true
+                          ],
+                          [
+                            "set",
+                            "@entity.status",
+                            "checked"
+                          ],
+                          [
+                            "emit",
+                            "KEY_HIT",
+                            {
+                              "candidate": "@payload.candidate",
+                              "entry": "@found"
+                            }
+                          ]
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.matched",
+                            false
+                          ],
+                          [
+                            "set",
+                            "@entity.status",
+                            "checked"
+                          ],
+                          [
+                            "emit",
+                            "KEY_MISS",
+                            {
+                              "candidate": "@payload.candidate",
+                              "request": "@payload.request"
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "checked",
+                  "to": "checked",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBMJJT4K8ANYTCSAH8QZ0JC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "checked"
+                    ]
+                  ]
+                },
+                {
+                  "from": "checked",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01KYC09GZR0684YDEM0BAP2W5X",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.matched",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "normalize": {
+                "type": "boolean",
+                "default": true,
+                "label": "Normalize",
+                "description": "Trim and lowercase both sides before comparing",
+                "tier": "policy"
+              },
+              "matchField": {
+                "type": "string",
+                "default": "",
+                "label": "Match field",
+                "description": "When the accepted list holds objects rather than scalars, the field to compare against the candidate; empty compares each element itself",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MlLookupPage",
+            "id": "pag_01KYBMJJT4GJK8ZDFRAM7HJ9HR",
+            "path": "/ml-lookup",
+            "traits": [
+              {
+                "ref": "LookupRun",
+                "refId": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KYC09GZR0684YDEM0BAP2W5X": {
+          "id": "evt_01KYC09GZR0684YDEM0BAP2W5X",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+        },
+        "evt_01KYBMJJT48QRYPT14NG0GMXMY": {
+          "id": "evt_01KYBMJJT48QRYPT14NG0GMXMY",
+          "kind": "event",
+          "bakedName": "KEY_MISS",
+          "curName": "KEY_MISS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+        },
+        "pag_01KYBMJJT4GJK8ZDFRAM7HJ9HR": {
+          "id": "pag_01KYBMJJT4GJK8ZDFRAM7HJ9HR",
+          "kind": "page",
+          "bakedName": "MlLookupPage",
+          "curName": "MlLookupPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KYBMJJT4887BT5V7KWCDW7XR": {
+          "id": "trt_01KYBMJJT4887BT5V7KWCDW7XR",
+          "kind": "trait",
+          "bakedName": "LookupRun",
+          "curName": "LookupRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBMJJT4NBFQTG784CP78ERD": {
+          "id": "evt_01KYBMJJT4NBFQTG784CP78ERD",
+          "kind": "event",
+          "bakedName": "LOOKUP",
+          "curName": "LOOKUP",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+        },
+        "evt_01KYBMJJT4XY85SQDER4Q9CHW1": {
+          "id": "evt_01KYBMJJT4XY85SQDER4Q9CHW1",
+          "kind": "event",
+          "bakedName": "KEY_HIT",
+          "curName": "KEY_HIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+        },
+        "ent_01KYBMJJT4DMQ50X37K7WJ7XDD": {
+          "id": "ent_01KYBMJJT4DMQ50X37K7WJ7XDD",
+          "kind": "entity",
+          "bakedName": "KeyLookup",
+          "curName": "KeyLookup",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBMJJT4K8ANYTCSAH8QZ0JC": {
+          "id": "evt_01KYBMJJT4K8ANYTCSAH8QZ0JC",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBMJJT4887BT5V7KWCDW7XR"
+        },
+        "orb_01KYBMJJT4GF4NBRN7SX8PTDSE": {
+          "id": "orb_01KYBMJJT4GF4NBRN7SX8PTDSE",
+          "kind": "orbital",
+          "bakedName": "MlLookupOrbital",
+          "curName": "MlLookupOrbital",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-ml-lookup \"1.0.0\"\n\"Rung R1 of the intelligence ladder — finds the candidate value in a list of accepted values; abstains when nothing matches.\"\n\norbital MlLookupOrbital {\n\n  entity KeyLookup [runtime] {\n    matched : boolean = false\n    status  : \"idle\" | \"checked\" = idle\n  }\n\n  trait LookupRun -> KeyLookup [lifecycle, instance] {\n    initial: idle\n\n    config {\n      matchField : string = \"\"\n        @label \"Match field\"\n        @description \"When the accepted list holds objects rather than scalars, the field to compare against the candidate; empty compares each element itself\"\n        @tier \"domain\"\n      normalize : boolean = true\n        @label \"Normalize\"\n        @description \"Trim and lowercase both sides before comparing\"\n        @tier \"policy\"\n    }\n\n    state idle {\n      INIT -> idle\n        (set @entity.matched false)\n        (set @entity.status idle)\n      LOOKUP -> checked\n        (let ((candStr (str/concat ?candidate))\n              (candNorm (if @config.normalize (str/lower (str/trim @candStr)) @candStr))\n              (found (array/find ?accepted\n                       (fn item\n                         (let ((raw (if (== @config.matchField \"\") @item (object/get @item @config.matchField)))\n                               (rawStr (str/concat @raw))\n                               (rawNorm (if @config.normalize (str/lower (str/trim @rawStr)) @rawStr)))\n                           (== @rawNorm @candNorm))))))\n          (if (!= @found null)\n            (do\n              (set @entity.matched true)\n              (set @entity.status checked)\n              (emit KEY_HIT { candidate: ?candidate, entry: @found }))\n            (do\n              (set @entity.matched false)\n              (set @entity.status checked)\n              (emit KEY_MISS { candidate: ?candidate, request: ?request }))))\n    }\n\n    state checked {\n      INIT -> checked\n        (set @entity.status checked)\n      RESET -> idle\n        (set @entity.matched false)\n        (set @entity.status idle)\n    }\n\n    emits {\n      KEY_HIT -> external {\n        candidate : any!\n        entry : any!\n      }\n        @description \"Fired when the candidate matches an entry in the accepted list\"\n        @tier \"primary\"\n\n      KEY_MISS -> external {\n        candidate : any!\n        request : object\n      }\n        @description \"Abstain — candidate matches nothing in the accepted list; the next rung should take over. request echoes the originating request untouched so the next rung can project its own inputs out of it\"\n        @tier \"primary\"\n    }\n\n    listens {\n      LOOKUP {\n        candidate : any!\n        accepted : [any]!\n        request : object\n      }\n    }\n  }\n\n  page \"/ml-lookup\" as MlLookupPage -> LookupRun\n}\n"
+}

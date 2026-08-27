@@ -1,15 +1,16 @@
 {
   "name": "std-esign-flow",
-  "description": "std-esign-flow — the send-for-signature flow: list signature requests, create one (pick document + recipient), resend or cancel, track status. Composes std-file-store + std-esign-request; no document-rendering or code-preview chrome.",
-  "level": "molecule",
-  "topic": "core",
+  "description": "std-esign-flow — the send-for-signature flow: list signature requests, create one (pick document + recipient), resend or cancel, track status. Composes std-file-store + std-esign-request; no document-rendering or code-preview chrome. v1.2 (W5): EnvelopeDispatcher wires sessions to the real `esign` service — SEND_ENVELOPE dispatches a DocuSign envelope (the document rides the event as an UploadDropZone-shaped file payload, since StoredFile rows are metadata-only) and stamps `envelopeId`/`sentAt`/status=sent; the browse grid's per-row \"Refresh status\" pulls getEnvelopeStatus and maps completed/delivered/declined onto signed/viewed/declined.",
+  "level": "atom",
+  "topic": "ui/core",
   "schema": {
     "name": "std-esign-flow",
-    "version": "1.1.0",
-    "description": "std-esign-flow — the send-for-signature flow: list signature requests, create one (pick document + recipient), resend or cancel, track status. Composes std-file-store + std-esign-request; no document-rendering or code-preview chrome.",
+    "version": "1.2.0",
+    "description": "std-esign-flow — the send-for-signature flow: list signature requests, create one (pick document + recipient), resend or cancel, track status. Composes std-file-store + std-esign-request; no document-rendering or code-preview chrome. v1.2 (W5): EnvelopeDispatcher wires sessions to the real `esign` service — SEND_ENVELOPE dispatches a DocuSign envelope (the document rides the event as an UploadDropZone-shaped file payload, since StoredFile rows are metadata-only) and stamps `envelopeId`/`sentAt`/status=sent; the browse grid's per-row \"Refresh status\" pulls getEnvelopeStatus and maps completed/delivered/declined onto signed/viewed/declined.",
     "orbitals": [
       {
         "name": "SignatureSessionOrbital",
+        "id": "orb_01KXG04G2XPVD49MAX6GWP787V",
         "uses": [
           {
             "from": "std/behaviors/std-file-store",
@@ -30,6 +31,7 @@
         ],
         "entity": {
           "name": "SignatureSession",
+          "id": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
           "collection": "signaturesessions",
           "persistence": "persistent",
           "fields": [
@@ -61,7 +63,7 @@
             },
             {
               "name": "recipientEmail",
-              "type": "string",
+              "type": "email",
               "required": true,
               "description": "The email address of the recipient.",
               "synonyms": "email, address, contact"
@@ -89,17 +91,22 @@
             },
             {
               "name": "sentAt",
-              "type": "string",
-              "default": "",
+              "type": "datetime",
               "description": "Timestamp indicating when the request was sent.",
               "synonyms": "sent date, submission time, dispatched"
             },
             {
               "name": "signedAt",
-              "type": "string",
-              "default": "",
+              "type": "datetime",
               "description": "The date and time the signature was applied.",
               "synonyms": "signed date, completion date, signature time"
+            },
+            {
+              "name": "envelopeId",
+              "type": "string",
+              "default": "",
+              "description": "Provider envelope id stamped when the real e-sign dispatch succeeds; blank = never dispatched. Written by EnvelopeDispatcher, not user-facing.",
+              "synonyms": "docusign id, provider reference"
             },
             {
               "name": "pendingId",
@@ -129,17 +136,24 @@
         "traits": [
           {
             "name": "SignatureSessionBrowse",
+            "id": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W",
             "category": "interaction",
             "linkedEntity": "SignatureSession",
+            "linkedEntityId": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+            "entityRefIds": {
+              "SignatureSession": "ent_01KXG04G2XSNH89NP1ZVCSX2F8"
+            },
             "emits": [
               {
                 "event": "CREATE",
+                "eventId": "evt_01KXG04G2X0H2F7DRT85NPZ50P",
                 "description": "Indicates a new signature request has been initiated.",
                 "synonyms": "new, initiate, start, begin",
                 "tier": "domain"
               },
               {
                 "event": "RESEND_REQUEST",
+                "eventId": "evt_01KXG04G2X8VYDRSA6KA34XX58",
                 "description": "Indicates a signature request has been resent.",
                 "synonyms": "resend, retransmit, repeat",
                 "tier": "presentation",
@@ -174,7 +188,7 @@
                       },
                       {
                         "name": "recipientEmail",
-                        "type": "string",
+                        "type": "email",
                         "required": true
                       },
                       {
@@ -187,10 +201,82 @@
                       },
                       {
                         "name": "sentAt",
-                        "type": "string"
+                        "type": "datetime"
                       },
                       {
                         "name": "signedAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "envelopeId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "pendingId",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "CHECK_ENVELOPE_STATUS",
+                "eventId": "evt_01M0MMZJ7CFHPXVFNDJMT71GKD",
+                "description": "Pull the provider's current envelope status for this request.",
+                "synonyms": "refresh status, check signature, poll envelope",
+                "tier": "domain",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "row",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "documentId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "documentName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "recipientName",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "recipientEmail",
+                        "type": "email",
+                        "required": true
+                      },
+                      {
+                        "name": "requesterName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "sentAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "signedAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "envelopeId",
                         "type": "string"
                       },
                       {
@@ -203,6 +289,7 @@
               },
               {
                 "event": "REQUEST_DELETE",
+                "eventId": "evt_01KXG04G2X99QYBSC9XR0TJJQ4",
                 "description": "Signals a signature request has been removed.",
                 "synonyms": "remove, purge, discard",
                 "tier": "presentation",
@@ -237,7 +324,7 @@
                       },
                       {
                         "name": "recipientEmail",
-                        "type": "string",
+                        "type": "email",
                         "required": true
                       },
                       {
@@ -250,10 +337,14 @@
                       },
                       {
                         "name": "sentAt",
-                        "type": "string"
+                        "type": "datetime"
                       },
                       {
                         "name": "signedAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "envelopeId",
                         "type": "string"
                       },
                       {
@@ -266,6 +357,7 @@
               },
               {
                 "event": "SignatureSessionLoaded",
+                "eventId": "evt_01KXG04G2XE4CWFXQTK1BR863T",
                 "description": "Signals that a signature session has been successfully loaded.",
                 "synonyms": "loaded, initialized, ready",
                 "tier": "domain",
@@ -279,6 +371,7 @@
               },
               {
                 "event": "SignatureSessionLoadFailed",
+                "eventId": "evt_01KXG04G2XZNG6CF0WYNR2CZ5F",
                 "description": "Indicates failure to load a signature session.",
                 "synonyms": "error, failure, problem, unsuccessful",
                 "tier": "internal",
@@ -298,26 +391,35 @@
             "listens": [
               {
                 "event": "SESSION_CREATED",
+                "eventId": "evt_01KXG04G2XF1EA32EHP6X9FHDA",
                 "triggers": "INIT",
+                "triggersId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionPersistor"
+                  "trait": "SignatureSessionPersistor",
+                  "traitId": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
                 }
               },
               {
                 "event": "SESSION_RESENT",
+                "eventId": "evt_01KXG04G2XGRZR83HEPH1JYBEB",
                 "triggers": "INIT",
+                "triggersId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionPersistor"
+                  "trait": "SignatureSessionPersistor",
+                  "traitId": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
                 }
               },
               {
                 "event": "SESSION_DELETED",
+                "eventId": "evt_01KXG04G2XWD3MQXZ2B1JA7ARM",
                 "triggers": "INIT",
+                "triggersId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionPersistor"
+                  "trait": "SignatureSessionPersistor",
+                  "traitId": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
                 }
               }
             ],
@@ -337,10 +439,12 @@
               "events": [
                 {
                   "key": "INIT",
+                  "id": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                   "name": "Initialize"
                 },
                 {
                   "key": "SignatureSessionLoaded",
+                  "id": "evt_01KXG04G2XE4CWFXQTK1BR863T",
                   "name": "SignatureSession loaded",
                   "description": "Signals that a signature session has been successfully loaded.",
                   "synonyms": "loaded, initialized, ready",
@@ -354,6 +458,7 @@
                 },
                 {
                   "key": "SignatureSessionLoadFailed",
+                  "id": "evt_01KXG04G2XZNG6CF0WYNR2CZ5F",
                   "name": "SignatureSession load failed",
                   "description": "Indicates failure to load a signature session.",
                   "synonyms": "error, failure, problem, unsuccessful",
@@ -370,7 +475,13 @@
                   ]
                 },
                 {
+                  "key": "RETRY",
+                  "id": "evt_01KYXKHAWNPKKZ4XXT3K22KWDJ",
+                  "name": "Retry"
+                },
+                {
                   "key": "CREATE",
+                  "id": "evt_01KXG04G2X0H2F7DRT85NPZ50P",
                   "name": "Create",
                   "description": "Indicates a new signature request has been initiated.",
                   "synonyms": "new, initiate, start, begin",
@@ -378,6 +489,7 @@
                 },
                 {
                   "key": "RESEND_REQUEST",
+                  "id": "evt_01KXG04G2X8VYDRSA6KA34XX58",
                   "name": "Resend Request",
                   "description": "Indicates a signature request has been resent.",
                   "synonyms": "resend, retransmit, repeat",
@@ -413,7 +525,7 @@
                         },
                         {
                           "name": "recipientEmail",
-                          "type": "string",
+                          "type": "email",
                           "required": true
                         },
                         {
@@ -426,10 +538,83 @@
                         },
                         {
                           "name": "sentAt",
-                          "type": "string"
+                          "type": "datetime"
                         },
                         {
                           "name": "signedAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "envelopeId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "pendingId",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "CHECK_ENVELOPE_STATUS",
+                  "id": "evt_01M0MMZJ7CFHPXVFNDJMT71GKD",
+                  "name": "Check Envelope Status",
+                  "description": "Pull the provider's current envelope status for this request.",
+                  "synonyms": "refresh status, check signature, poll envelope",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentId",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "recipientName",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "recipientEmail",
+                          "type": "email",
+                          "required": true
+                        },
+                        {
+                          "name": "requesterName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "sentAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "signedAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "envelopeId",
                           "type": "string"
                         },
                         {
@@ -442,6 +627,7 @@
                 },
                 {
                   "key": "REQUEST_DELETE",
+                  "id": "evt_01KXG04G2X99QYBSC9XR0TJJQ4",
                   "name": "Request Delete",
                   "description": "Signals a signature request has been removed.",
                   "synonyms": "remove, purge, discard",
@@ -477,7 +663,7 @@
                         },
                         {
                           "name": "recipientEmail",
-                          "type": "string",
+                          "type": "email",
                           "required": true
                         },
                         {
@@ -490,10 +676,14 @@
                         },
                         {
                           "name": "sentAt",
-                          "type": "string"
+                          "type": "datetime"
                         },
                         {
                           "name": "signedAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "envelopeId",
                           "type": "string"
                         },
                         {
@@ -510,14 +700,15 @@
                   "from": "loading",
                   "to": "loading",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                   "effects": [
                     [
                       "fetch",
                       "SignatureSession",
                       {
                         "emit": {
-                          "success": "SignatureSessionLoaded",
-                          "failure": "SignatureSessionLoadFailed"
+                          "failure": "SignatureSessionLoadFailed",
+                          "success": "SignatureSessionLoaded"
                         }
                       }
                     ],
@@ -525,22 +716,22 @@
                       "render-ui",
                       "main",
                       {
-                        "align": "center",
+                        "direction": "vertical",
+                        "gap": "md",
+                        "type": "stack",
                         "children": [
                           {
                             "type": "spinner"
                           },
                           {
                             "color": "muted",
-                            "variant": "caption",
                             "type": "typography",
-                            "content": "Loading signature requests…"
+                            "content": "Loading signature requests…",
+                            "variant": "caption"
                           }
                         ],
-                        "className": "py-12",
-                        "direction": "vertical",
-                        "type": "stack",
-                        "gap": "md"
+                        "align": "center",
+                        "className": "py-12"
                       }
                     ]
                   ]
@@ -549,18 +740,16 @@
                   "from": "loading",
                   "to": "browsing",
                   "event": "SignatureSessionLoaded",
+                  "eventId": "evt_01KXG04G2XE4CWFXQTK1BR863T",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
-                        "gap": "lg",
+                        "type": "stack",
                         "direction": "vertical",
                         "children": [
                           {
-                            "direction": "horizontal",
-                            "gap": "md",
-                            "justify": "between",
                             "type": "stack",
                             "children": [
                               {
@@ -580,26 +769,27 @@
                                 "direction": "horizontal"
                               },
                               {
-                                "variant": "primary",
-                                "action": "CREATE",
-                                "icon": "plus",
+                                "label": "New Signature Request",
                                 "type": "button",
-                                "label": "New Signature Request"
+                                "icon": "plus",
+                                "action": "CREATE",
+                                "variant": "primary"
                               }
-                            ]
+                            ],
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between"
                           },
                           {
                             "type": "divider"
                           },
                           {
-                            "type": "data-grid",
-                            "entity": "@payload.data",
                             "fields": [
                               {
-                                "name": "documentName",
-                                "variant": "h4",
                                 "icon": "file-text",
-                                "label": "Document"
+                                "label": "Document",
+                                "name": "documentName",
+                                "variant": "h4"
                               },
                               {
                                 "label": "Recipient",
@@ -607,36 +797,43 @@
                                 "variant": "body"
                               },
                               {
-                                "label": "Email",
                                 "variant": "caption",
+                                "label": "Email",
                                 "name": "recipientEmail"
                               },
                               {
                                 "label": "Status",
-                                "name": "status",
-                                "variant": "badge"
+                                "variant": "badge",
+                                "name": "status"
                               },
                               {
-                                "name": "sentAt",
                                 "label": "Sent",
-                                "variant": "caption"
+                                "variant": "caption",
+                                "name": "sentAt"
                               }
                             ],
                             "itemActions": [
                               {
                                 "variant": "primary",
-                                "event": "RESEND_REQUEST",
-                                "label": "Resend"
+                                "label": "Resend",
+                                "event": "RESEND_REQUEST"
                               },
                               {
-                                "label": "Cancel",
                                 "variant": "danger",
+                                "label": "Cancel",
                                 "event": "REQUEST_DELETE"
+                              },
+                              {
+                                "event": "CHECK_ENVELOPE_STATUS",
+                                "variant": "secondary",
+                                "label": "Refresh status"
                               }
-                            ]
+                            ],
+                            "type": "data-grid",
+                            "entity": "@payload.data"
                           }
                         ],
-                        "type": "stack"
+                        "gap": "lg"
                       }
                     ]
                   ]
@@ -645,41 +842,42 @@
                   "from": "loading",
                   "to": "error",
                   "event": "SignatureSessionLoadFailed",
+                  "eventId": "evt_01KXG04G2XZNG6CF0WYNR2CZ5F",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
-                        "className": "py-12",
-                        "direction": "vertical",
-                        "gap": "md",
-                        "type": "stack",
-                        "align": "center",
                         "children": [
                           {
-                            "color": "error",
                             "name": "alert-triangle",
-                            "type": "icon"
+                            "type": "icon",
+                            "color": "error"
                           },
                           {
-                            "content": "Failed to load signature requests",
                             "variant": "h3",
+                            "content": "Failed to load signature requests",
                             "type": "typography"
                           },
                           {
-                            "content": "@payload.error",
-                            "variant": "body",
+                            "type": "typography",
                             "color": "muted",
-                            "type": "typography"
+                            "content": "@payload.error",
+                            "variant": "body"
                           },
                           {
-                            "label": "Retry",
-                            "action": "INIT",
-                            "variant": "primary",
                             "type": "button",
+                            "variant": "primary",
+                            "label": "Retry",
+                            "action": "RETRY",
                             "icon": "rotate-ccw"
                           }
-                        ]
+                        ],
+                        "direction": "vertical",
+                        "align": "center",
+                        "type": "stack",
+                        "className": "py-12",
+                        "gap": "md"
                       }
                     ]
                   ]
@@ -688,6 +886,7 @@
                   "from": "browsing",
                   "to": "loading",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                   "effects": [
                     [
                       "fetch",
@@ -712,14 +911,40 @@
                   "from": "error",
                   "to": "loading",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04G2X4S540XXPRT1SRB1B",
                   "effects": [
                     [
                       "fetch",
                       "SignatureSession",
                       {
                         "emit": {
-                          "failure": "SignatureSessionLoadFailed",
-                          "success": "SignatureSessionLoaded"
+                          "success": "SignatureSessionLoaded",
+                          "failure": "SignatureSessionLoadFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "spinner"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "error",
+                  "to": "loading",
+                  "event": "RETRY",
+                  "eventId": "evt_01KYXKHAWNPKKZ4XXT3K22KWDJ",
+                  "effects": [
+                    [
+                      "fetch",
+                      "SignatureSession",
+                      {
+                        "emit": {
+                          "success": "SignatureSessionLoaded",
+                          "failure": "SignatureSessionLoadFailed"
                         }
                       }
                     ],
@@ -738,6 +963,7 @@
           },
           {
             "name": "SignatureSessionCreate",
+            "id": "trt_01KXG04GVS1W2103BQKJT7KZRZ",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -745,9 +971,14 @@
             },
             "category": "interaction",
             "linkedEntity": "SignatureSession",
+            "linkedEntityId": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+            "entityRefIds": {
+              "ModalRecord": "ent_01KXG04GVS68RDSK2NDK0G2TT5"
+            },
             "emits": [
               {
                 "event": "SAVE",
+                "eventId": "evt_01KXG04GVSB8F2AS3XHMEZ69NW",
                 "description": "Indicates a successful data save operation.",
                 "synonyms": "submit, persist, confirm",
                 "tier": "domain",
@@ -755,18 +986,82 @@
                   {
                     "name": "data",
                     "type": "object",
-                    "required": true
+                    "required": true,
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "documentId",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "documentName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "recipientName",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "recipientEmail",
+                        "type": "email",
+                        "required": true
+                      },
+                      {
+                        "name": "requesterName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "status",
+                        "type": "string"
+                      },
+                      {
+                        "name": "sentAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "signedAt",
+                        "type": "datetime"
+                      },
+                      {
+                        "name": "envelopeId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "pendingId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "name",
+                        "type": "string"
+                      },
+                      {
+                        "name": "description",
+                        "type": "string"
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "event": "CLOSE",
+                "eventId": "evt_01KXG04GVSBXP7PA6YXW44W87X",
                 "description": "Indicates the modal window is being closed.",
                 "synonyms": "dismiss, hide, cancel",
                 "tier": "domain"
               },
               {
                 "event": "ModalRecordLoadFailed",
+                "eventId": "evt_01KXG04GVS0KS8WXT183DREMAC",
                 "description": "Indicates a failure to load the record data.",
                 "synonyms": "error, failure, problem, unsuccessful",
                 "tier": "internal",
@@ -784,6 +1079,7 @@
               },
               {
                 "event": "ModalRecordLoaded",
+                "eventId": "evt_01KXG04GVS3BQFMQRN09N23MX6",
                 "description": "Signals that the modal's data has been successfully loaded.",
                 "synonyms": "loaded, data ready, populated",
                 "tier": "domain",
@@ -802,7 +1098,8 @@
                 "triggers": "CREATE",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionBrowse"
+                  "trait": "SignatureSessionBrowse",
+                  "traitId": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
                 }
               }
             ],
@@ -819,10 +1116,12 @@
               "events": [
                 {
                   "key": "INIT",
+                  "id": "evt_01KXG04GVSS6QBKSCYWMBQWZMS",
                   "name": "Initialize"
                 },
                 {
                   "key": "CREATE",
+                  "id": "evt_01KXG04GVS6WNYYGFS0H53BHKC",
                   "name": "Open",
                   "description": "A request to display the modal window.",
                   "synonyms": "show, display, present, reveal",
@@ -840,6 +1139,7 @@
                 },
                 {
                   "key": "CLOSE",
+                  "id": "evt_01KXG04GVSBXP7PA6YXW44W87X",
                   "name": "Close",
                   "description": "Indicates the modal window is being closed.",
                   "synonyms": "dismiss, hide, cancel",
@@ -847,6 +1147,7 @@
                 },
                 {
                   "key": "SAVE",
+                  "id": "evt_01KXG04GVSB8F2AS3XHMEZ69NW",
                   "name": "Save",
                   "description": "Indicates a successful data save operation.",
                   "synonyms": "submit, persist, confirm",
@@ -855,12 +1156,75 @@
                     {
                       "name": "data",
                       "type": "object",
-                      "required": true
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentId",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "recipientName",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "recipientEmail",
+                          "type": "email",
+                          "required": true
+                        },
+                        {
+                          "name": "requesterName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "sentAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "signedAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "envelopeId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "pendingId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
                     }
                   ]
                 },
                 {
                   "key": "ModalRecordLoadFailed",
+                  "id": "evt_01KXG04GVS0KS8WXT183DREMAC",
                   "name": "ModalRecord load failed",
                   "description": "Indicates a failure to load the record data.",
                   "synonyms": "error, failure, problem, unsuccessful",
@@ -878,6 +1242,7 @@
                 },
                 {
                   "key": "ModalRecordLoaded",
+                  "id": "evt_01KXG04GVS3BQFMQRN09N23MX6",
                   "name": "ModalRecord loaded",
                   "description": "Signals that the modal's data has been successfully loaded.",
                   "synonyms": "loaded, data ready, populated",
@@ -895,14 +1260,15 @@
                   "from": "closed",
                   "to": "closed",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04GVSS6QBKSCYWMBQWZMS",
                   "effects": [
                     [
                       "fetch",
                       "SignatureSession",
                       {
                         "emit": {
-                          "success": "ModalRecordLoaded",
-                          "failure": "ModalRecordLoadFailed"
+                          "failure": "ModalRecordLoadFailed",
+                          "success": "ModalRecordLoaded"
                         }
                       }
                     ]
@@ -912,6 +1278,7 @@
                   "from": "closed",
                   "to": "open",
                   "event": "CREATE",
+                  "eventId": "evt_01KXG04GVS6WNYYGFS0H53BHKC",
                   "guard": [
                     "or",
                     [
@@ -931,27 +1298,33 @@
                       "render-ui",
                       "modal",
                       {
+                        "type": "stack",
+                        "direction": "vertical",
+                        "gap": "md",
                         "children": [
                           {
+                            "direction": "horizontal",
                             "gap": "sm",
+                            "type": "stack",
                             "children": [
                               {
-                                "name": "file-signature",
-                                "type": "icon"
+                                "type": "icon",
+                                "name": "file-signature"
                               },
                               {
                                 "variant": "h3",
-                                "type": "typography",
-                                "content": "New Signature Request"
+                                "content": "New Signature Request",
+                                "type": "typography"
                               }
-                            ],
-                            "type": "stack",
-                            "direction": "horizontal"
+                            ]
                           },
                           {
                             "type": "divider"
                           },
                           {
+                            "fieldOverrides": [],
+                            "mode": "create",
+                            "type": "form-section",
                             "fields": [
                               "list",
                               "documentId",
@@ -959,16 +1332,11 @@
                               "recipientEmail",
                               "requesterName"
                             ],
-                            "type": "form-section",
-                            "cancelEvent": "CLOSE",
-                            "mode": "create",
                             "entity": "@payload.row",
-                            "submitEvent": "SAVE"
+                            "submitEvent": "SAVE",
+                            "cancelEvent": "CLOSE"
                           }
-                        ],
-                        "gap": "md",
-                        "direction": "vertical",
-                        "type": "stack"
+                        ]
                       }
                     ]
                   ]
@@ -977,6 +1345,7 @@
                   "from": "open",
                   "to": "closed",
                   "event": "CLOSE",
+                  "eventId": "evt_01KXG04GVSBXP7PA6YXW44W87X",
                   "effects": [
                     [
                       "render-ui",
@@ -994,6 +1363,7 @@
                   "from": "open",
                   "to": "closed",
                   "event": "SAVE",
+                  "eventId": "evt_01KXG04GVSB8F2AS3XHMEZ69NW",
                   "effects": [
                     [
                       "render-ui",
@@ -1012,22 +1382,6 @@
                 "description": "UI slot the modal renders into",
                 "tier": "internal"
               },
-              "mode": {
-                "type": "string",
-                "default": "create",
-                "label": "Is this for creating or editing?",
-                "description": "create = blank form; edit = pre-filled from the selected row.",
-                "synonyms": "form mode, create or edit, new or update, add or modify",
-                "tier": "domain"
-              },
-              "title": {
-                "type": "string",
-                "default": "New Signature Request",
-                "label": "What should the modal heading say?",
-                "description": "Heading displayed at the top of the modal.",
-                "synonyms": "modal title, dialog heading, panel title, form title",
-                "tier": "presentation"
-              },
               "icon": {
                 "type": "string",
                 "default": "file-signature",
@@ -1035,6 +1389,39 @@
                 "description": "Lucide icon name shown next to the modal title.",
                 "synonyms": "header icon, modal icon, title icon",
                 "tier": "presentation"
+              },
+              "fieldOverrides": {
+                "type": "[ModalFieldOverride]",
+                "default": [],
+                "label": "Any per-field display copy overrides?",
+                "description": "Per-field label/placeholder/hint overrides, keyed by field name. Types, options and required-ness stay entity-schema-driven (declare once on the entity); override only display copy the entity's @description doesn't fit.",
+                "synonyms": "field labels, custom labels, help text overrides, placeholder text",
+                "tier": "presentation",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hint": {
+                      "name": "hint",
+                      "type": "string",
+                      "required": false
+                    },
+                    "label": {
+                      "name": "label",
+                      "type": "string",
+                      "required": false
+                    },
+                    "name": {
+                      "name": "name",
+                      "type": "string",
+                      "required": true
+                    },
+                    "placeholder": {
+                      "name": "placeholder",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
               },
               "fields": {
                 "type": "[string]",
@@ -1052,6 +1439,22 @@
                   "type": "string"
                 }
               },
+              "mode": {
+                "type": "string",
+                "default": "create",
+                "label": "Is this for creating or editing?",
+                "description": "create = blank form; edit = pre-filled from the selected row.",
+                "synonyms": "form mode, create or edit, new or update, add or modify",
+                "tier": "internal"
+              },
+              "title": {
+                "type": "string",
+                "default": "New Signature Request",
+                "label": "What should the modal heading say?",
+                "description": "Heading displayed at the top of the modal.",
+                "synonyms": "modal title, dialog heading, panel title, form title",
+                "tier": "presentation"
+              },
               "detailPattern": {
                 "type": "pattern",
                 "default": "stack",
@@ -1068,6 +1471,7 @@
             },
             "sourceEntityDefinition": {
               "name": "ModalRecord",
+              "id": "ent_01KXG04GVS68RDSK2NDK0G2TT5",
               "persistence": "runtime",
               "fields": [
                 {
@@ -1107,6 +1511,7 @@
           },
           {
             "name": "SignatureSessionDelete",
+            "id": "trt_01KXG04FYBTTTS73WNZ70BHYG3",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -1117,9 +1522,14 @@
             },
             "category": "interaction",
             "linkedEntity": "SignatureSession",
+            "linkedEntityId": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+            "entityRefIds": {
+              "ConfirmAction": "ent_01KXG04FYBTGHFRAPB3WSD7E4S"
+            },
             "emits": [
               {
                 "event": "CONFIRM_DELETE",
+                "eventId": "evt_01KXG04FYC450T4RAT8DCZGDGB",
                 "description": "Indicates the user has approved the action.",
                 "synonyms": "approve, accept, ok",
                 "tier": "domain",
@@ -1132,12 +1542,14 @@
               },
               {
                 "event": "CANCEL",
+                "eventId": "evt_01KXG04FYC4KXP69V2RPH33D3M",
                 "description": "Indicates the action was cancelled by the user.",
                 "synonyms": "dismiss, reject, undo",
                 "tier": "domain"
               },
               {
                 "event": "ConfirmActionLoadFailed",
+                "eventId": "evt_01KXG04FYCHXE5EC39ZKQW8ETA",
                 "description": "Indicates failure to load the confirmation action.",
                 "synonyms": "error, failure, failed, problem",
                 "tier": "internal",
@@ -1155,6 +1567,7 @@
               },
               {
                 "event": "ConfirmActionLoaded",
+                "eventId": "evt_01KXG04FYCT21KVC5HEBG1C4JP",
                 "description": "Indicates the confirmation action has been successfully loaded.",
                 "synonyms": "loaded, ready, initialized",
                 "tier": "internal",
@@ -1173,7 +1586,8 @@
                 "triggers": "DELETE",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionBrowse"
+                  "trait": "SignatureSessionBrowse",
+                  "traitId": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
                 }
               }
             ],
@@ -1190,10 +1604,12 @@
               "events": [
                 {
                   "key": "INIT",
+                  "id": "evt_01KXG04FYBVF76N7HDV4519M58",
                   "name": "Initialize"
                 },
                 {
                   "key": "DELETE",
+                  "id": "evt_01KXG04FYC7ZGXXG1G3NDHJCX6",
                   "name": "Request",
                   "description": "A request for confirmation before proceeding.",
                   "synonyms": "prompt, ask, verify",
@@ -1212,6 +1628,7 @@
                 },
                 {
                   "key": "CONFIRM_DELETE",
+                  "id": "evt_01KXG04FYC450T4RAT8DCZGDGB",
                   "name": "Confirm",
                   "description": "Indicates the user has approved the action.",
                   "synonyms": "approve, accept, ok",
@@ -1225,6 +1642,7 @@
                 },
                 {
                   "key": "CANCEL",
+                  "id": "evt_01KXG04FYC4KXP69V2RPH33D3M",
                   "name": "Cancel",
                   "description": "Indicates the action was cancelled by the user.",
                   "synonyms": "dismiss, reject, undo",
@@ -1232,6 +1650,7 @@
                 },
                 {
                   "key": "CLOSE",
+                  "id": "evt_01KXG04FYC2VEHHFBCHZ4PR5WB",
                   "name": "Close",
                   "description": "Indicates the user dismissed the confirmation.",
                   "synonyms": "dismiss, decline, reject",
@@ -1239,6 +1658,7 @@
                 },
                 {
                   "key": "ConfirmActionLoadFailed",
+                  "id": "evt_01KXG04FYCHXE5EC39ZKQW8ETA",
                   "name": "ConfirmAction load failed",
                   "description": "Indicates failure to load the confirmation action.",
                   "synonyms": "error, failure, failed, problem",
@@ -1256,6 +1676,7 @@
                 },
                 {
                   "key": "ConfirmActionLoaded",
+                  "id": "evt_01KXG04FYCT21KVC5HEBG1C4JP",
                   "name": "ConfirmAction loaded",
                   "description": "Indicates the confirmation action has been successfully loaded.",
                   "synonyms": "loaded, ready, initialized",
@@ -1273,6 +1694,7 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04FYBVF76N7HDV4519M58",
                   "effects": [
                     [
                       "fetch",
@@ -1290,6 +1712,7 @@
                   "from": "idle",
                   "to": "confirming",
                   "event": "DELETE",
+                  "eventId": "evt_01KXG04FYC7ZGXXG1G3NDHJCX6",
                   "guard": "@payload.row",
                   "effects": [
                     [
@@ -1307,22 +1730,21 @@
                       "modal",
                       {
                         "direction": "vertical",
-                        "type": "stack",
                         "children": [
                           {
-                            "align": "center",
+                            "type": "stack",
                             "children": [
                               {
-                                "name": "alert-triangle",
-                                "type": "icon"
+                                "type": "icon",
+                                "name": "alert-triangle"
                               },
                               {
-                                "variant": "h3",
                                 "content": "Cancel Signature Request",
-                                "type": "typography"
+                                "type": "typography",
+                                "variant": "h3"
                               }
                             ],
-                            "type": "stack",
+                            "align": "center",
                             "direction": "horizontal",
                             "gap": "sm"
                           },
@@ -1330,47 +1752,48 @@
                             "type": "divider"
                           },
                           {
-                            "type": "alert",
+                            "variant": "error",
                             "message": "Are you sure you want to cancel this signature request?",
-                            "variant": "error"
+                            "type": "alert"
                           },
                           {
                             "content": "@entity.name",
-                            "type": "typography",
-                            "variant": "h4"
+                            "variant": "h4",
+                            "type": "typography"
                           },
                           {
+                            "type": "typography",
+                            "content": "@entity.pendingId",
                             "color": "muted",
-                            "type": "typography",
-                            "variant": "caption",
-                            "content": "@entity.pendingId"
+                            "variant": "caption"
                           },
                           {
+                            "gap": "sm",
                             "justify": "end",
                             "children": [
                               {
-                                "label": "Cancel",
+                                "action": "CANCEL",
                                 "variant": "ghost",
                                 "type": "button",
-                                "action": "CANCEL"
+                                "label": "Cancel"
                               },
                               {
-                                "actionPayload": {
-                                  "id": "@payload.id"
-                                },
-                                "action": "CONFIRM_DELETE",
-                                "icon": "check",
+                                "variant": "danger",
                                 "label": "Cancel Request",
+                                "icon": "check",
                                 "type": "button",
-                                "variant": "danger"
+                                "actionPayload": {
+                                  "id": "@entity.pendingId"
+                                },
+                                "action": "CONFIRM_DELETE"
                               }
                             ],
-                            "type": "stack",
-                            "gap": "sm",
-                            "direction": "horizontal"
+                            "direction": "horizontal",
+                            "type": "stack"
                           }
                         ],
-                        "gap": "md"
+                        "gap": "md",
+                        "type": "stack"
                       }
                     ]
                   ]
@@ -1379,6 +1802,7 @@
                   "from": "confirming",
                   "to": "idle",
                   "event": "CONFIRM_DELETE",
+                  "eventId": "evt_01KXG04FYC450T4RAT8DCZGDGB",
                   "effects": [
                     [
                       "render-ui",
@@ -1391,6 +1815,7 @@
                   "from": "confirming",
                   "to": "idle",
                   "event": "CANCEL",
+                  "eventId": "evt_01KXG04FYC4KXP69V2RPH33D3M",
                   "effects": [
                     [
                       "render-ui",
@@ -1403,6 +1828,7 @@
                   "from": "confirming",
                   "to": "idle",
                   "event": "CLOSE",
+                  "eventId": "evt_01KXG04FYC2VEHHFBCHZ4PR5WB",
                   "effects": [
                     [
                       "render-ui",
@@ -1414,6 +1840,13 @@
               ]
             },
             "config": {
+              "confirmLabel": {
+                "type": "string",
+                "default": "Cancel Request",
+                "label": "Confirm button",
+                "description": "Label on the primary confirm action button",
+                "tier": "presentation"
+              },
               "alertMessage": {
                 "type": "string",
                 "default": "Are you sure you want to cancel this signature request?",
@@ -1434,13 +1867,6 @@
                 "label": "Modal title",
                 "description": "Heading shown at the top of the confirmation modal",
                 "tier": "presentation"
-              },
-              "confirmLabel": {
-                "type": "string",
-                "default": "Cancel Request",
-                "label": "Confirm button",
-                "description": "Label on the primary confirm action button",
-                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -1451,6 +1877,7 @@
             },
             "sourceEntityDefinition": {
               "name": "ConfirmAction",
+              "id": "ent_01KXG04FYBTGHFRAPB3WSD7E4S",
               "persistence": "runtime",
               "fields": [
                 {
@@ -1497,11 +1924,17 @@
           },
           {
             "name": "SignatureSessionPersistor",
+            "id": "trt_01KXG04G2X40Y24PAD7JV6DE0C",
             "category": "lifecycle",
             "linkedEntity": "SignatureSession",
+            "linkedEntityId": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+            "entityRefIds": {
+              "SignatureSession": "ent_01KXG04G2XSNH89NP1ZVCSX2F8"
+            },
             "emits": [
               {
                 "event": "SESSION_CREATED",
+                "eventId": "evt_01KXG04G2XF1EA32EHP6X9FHDA",
                 "description": "A new signature session has been initialized.",
                 "synonyms": "start, begin, initialize",
                 "tier": "domain",
@@ -1515,6 +1948,7 @@
               },
               {
                 "event": "SESSION_RESENT",
+                "eventId": "evt_01KXG04G2XGRZR83HEPH1JYBEB",
                 "description": "Indicates a signature request has been resent.",
                 "synonyms": "resend, retransmit, send again",
                 "tier": "presentation",
@@ -1528,6 +1962,7 @@
               },
               {
                 "event": "SESSION_DELETED",
+                "eventId": "evt_01KXG04G2XWD3MQXZ2B1JA7ARM",
                 "description": "Indicates a signature session has been removed or invalidated.",
                 "synonyms": "removed, cleared, expired, terminated",
                 "tier": "internal",
@@ -1544,25 +1979,32 @@
               {
                 "event": "SAVE",
                 "triggers": "DO_CREATE",
+                "triggersId": "evt_01KXG04G2X29R3V3VM9QQMH5W4",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionCreate"
+                  "trait": "SignatureSessionCreate",
+                  "traitId": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
                 }
               },
               {
                 "event": "RESEND_REQUEST",
+                "eventId": "evt_01KXG04G2X8VYDRSA6KA34XX58",
                 "triggers": "DO_RESEND",
+                "triggersId": "evt_01KXG04G2XF6B2CXF28NG2ZV7X",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionBrowse"
+                  "trait": "SignatureSessionBrowse",
+                  "traitId": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
                 }
               },
               {
                 "event": "CONFIRM_DELETE",
                 "triggers": "DO_DELETE",
+                "triggersId": "evt_01KXG04G2XVRY51VF766ZYRR79",
                 "source": {
                   "kind": "trait",
-                  "trait": "SignatureSessionDelete"
+                  "trait": "SignatureSessionDelete",
+                  "traitId": "trt_01KXG04FYBTTTS73WNZ70BHYG3"
                 }
               }
             ],
@@ -1576,10 +2018,12 @@
               "events": [
                 {
                   "key": "INIT",
+                  "id": "evt_01KXG04G2XNM490PKYWYZRGRYV",
                   "name": "Initialize"
                 },
                 {
                   "key": "DO_CREATE",
+                  "id": "evt_01KXG04G2X29R3V3VM9QQMH5W4",
                   "name": "Do Create",
                   "description": "Initiates the creation of a new signature request.",
                   "synonyms": "new, add, generate, start",
@@ -1588,12 +2032,75 @@
                     {
                       "name": "data",
                       "type": "object",
-                      "required": true
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentId",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "documentName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "recipientName",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "recipientEmail",
+                          "type": "email",
+                          "required": true
+                        },
+                        {
+                          "name": "requesterName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "sentAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "signedAt",
+                          "type": "datetime"
+                        },
+                        {
+                          "name": "envelopeId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "pendingId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
                     }
                   ]
                 },
                 {
                   "key": "DO_RESEND",
+                  "id": "evt_01KXG04G2XF6B2CXF28NG2ZV7X",
                   "name": "Do Resend",
                   "description": "A request to resend a signature request.",
                   "synonyms": "retry, repeat, send again",
@@ -1607,6 +2114,7 @@
                 },
                 {
                   "key": "DO_DELETE",
+                  "id": "evt_01KXG04G2XVRY51VF766ZYRR79",
                   "name": "Do Delete",
                   "description": "A request to remove an item from the current view.",
                   "synonyms": "remove, discard, clear, erase",
@@ -1620,6 +2128,7 @@
                 },
                 {
                   "key": "SESSION_CREATED",
+                  "id": "evt_01KXG04G2XF1EA32EHP6X9FHDA",
                   "name": "Session Created",
                   "description": "A new signature session has been initialized.",
                   "synonyms": "start, begin, initialize",
@@ -1633,6 +2142,7 @@
                 },
                 {
                   "key": "SESSION_RESENT",
+                  "id": "evt_01KXG04G2XGRZR83HEPH1JYBEB",
                   "name": "Session Resent",
                   "description": "Indicates a signature request has been resent.",
                   "synonyms": "resend, retransmit, send again",
@@ -1646,6 +2156,7 @@
                 },
                 {
                   "key": "SESSION_DELETED",
+                  "id": "evt_01KXG04G2XWD3MQXZ2B1JA7ARM",
                   "name": "Session Deleted",
                   "description": "Indicates a signature session has been removed or invalidated.",
                   "synonyms": "removed, cleared, expired, terminated",
@@ -1662,12 +2173,14 @@
                 {
                   "from": "idle",
                   "to": "idle",
-                  "event": "INIT"
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04G2XNM490PKYWYZRGRYV"
                 },
                 {
                   "from": "idle",
                   "to": "idle",
                   "event": "DO_CREATE",
+                  "eventId": "evt_01KXG04G2X29R3V3VM9QQMH5W4",
                   "effects": [
                     [
                       "persist",
@@ -1686,6 +2199,7 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "DO_RESEND",
+                  "eventId": "evt_01KXG04G2XF6B2CXF28NG2ZV7X",
                   "effects": [
                     [
                       "persist",
@@ -1704,6 +2218,7 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "DO_DELETE",
+                  "eventId": "evt_01KXG04G2XVRY51VF766ZYRR79",
                   "effects": [
                     [
                       "persist",
@@ -1721,24 +2236,619 @@
               ]
             },
             "scope": "instance"
+          },
+          {
+            "name": "EnvelopeDispatcher",
+            "id": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS",
+            "category": "lifecycle",
+            "linkedEntity": "SignatureSession",
+            "linkedEntityId": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+            "entityRefIds": {
+              "SignatureSession": "ent_01KXG04G2XSNH89NP1ZVCSX2F8"
+            },
+            "emits": [
+              {
+                "event": "ENVELOPE_SENT",
+                "eventId": "evt_01M0MMZJ7C0CFESZQ5ENKVPDCT",
+                "description": "The provider accepted the envelope; carries its id.",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "envelopeId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ENVELOPE_SEND_FAILED",
+                "eventId": "evt_01M0MMZJ7C8EBA31GBE092Q0SP",
+                "description": "The e-sign provider rejected or failed the dispatch.",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ENVELOPE_STATUS_LOADED",
+                "eventId": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                "description": "The provider returned the envelope's current status.",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "completedAt",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ENVELOPE_STATUS_FAILED",
+                "eventId": "evt_01M0MMZJ7CXWDXCQ8G90FMBV11",
+                "description": "Reading the envelope status failed.",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ENVELOPE_STAMPED",
+                "eventId": "evt_01M0MMZJ7CNJJQBQM8YWNP49SP",
+                "description": "The session row now carries the latest provider state (envelopeId / status / timestamps).",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "ENVELOPE_STAMP_FAILED",
+                "eventId": "evt_01M0MMZJ7CGYTWH84Q2S608ZFK",
+                "description": "Writing the provider state back onto the session row failed.",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "CHECK_ENVELOPE_STATUS",
+                "eventId": "evt_01M0MMZJ7CFHPXVFNDJMT71GKD",
+                "triggers": "CHECK_ENVELOPE_STATUS",
+                "triggersId": "evt_01M0MMZJ7CP14FSR8MTASBQSKN",
+                "source": {
+                  "kind": "trait",
+                  "trait": "SignatureSessionBrowse",
+                  "traitId": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "dispatching"
+                },
+                {
+                  "name": "polling"
+                }
+              ],
+              "events": [
+                {
+                  "key": "SEND_ENVELOPE",
+                  "id": "evt_01M0MMZJ7C3R220FHX6FWPRNNB",
+                  "name": "Send Envelope",
+                  "description": "Dispatch this session as a real e-sign envelope; `file.content` is the document as a base64 data URL (UploadDropZone shape).",
+                  "synonyms": "send envelope, dispatch signature, send for signing",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "SignatureSession"
+                    },
+                    {
+                      "name": "file",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "name",
+                          "type": "string"
+                        },
+                        {
+                          "name": "size",
+                          "type": "number"
+                        },
+                        {
+                          "name": "type",
+                          "type": "string"
+                        },
+                        {
+                          "name": "content",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "CHECK_ENVELOPE_STATUS",
+                  "id": "evt_01M0MMZJ7CP14FSR8MTASBQSKN",
+                  "name": "Check Envelope Status",
+                  "description": "Pull the provider's current envelope status and stamp it onto the session row.",
+                  "synonyms": "refresh status, check signature, poll envelope",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "row",
+                      "type": "SignatureSession"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_STAMPED",
+                  "id": "evt_01M0MMZJ7CNJJQBQM8YWNP49SP",
+                  "name": "Envelope Stamped",
+                  "description": "The session row now carries the latest provider state (envelopeId / status / timestamps).",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_STAMP_FAILED",
+                  "id": "evt_01M0MMZJ7CGYTWH84Q2S608ZFK",
+                  "name": "Envelope Stamp Failed",
+                  "description": "Writing the provider state back onto the session row failed.",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_SENT",
+                  "id": "evt_01M0MMZJ7C0CFESZQ5ENKVPDCT",
+                  "name": "Envelope Sent",
+                  "description": "The provider accepted the envelope; carries its id.",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "envelopeId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_SEND_FAILED",
+                  "id": "evt_01M0MMZJ7C8EBA31GBE092Q0SP",
+                  "name": "Envelope Send Failed",
+                  "description": "The e-sign provider rejected or failed the dispatch.",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_STATUS_LOADED",
+                  "id": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                  "name": "Envelope Status Loaded",
+                  "description": "The provider returned the envelope's current status.",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "status",
+                      "type": "string"
+                    },
+                    {
+                      "name": "completedAt",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "ENVELOPE_STATUS_FAILED",
+                  "id": "evt_01M0MMZJ7CXWDXCQ8G90FMBV11",
+                  "name": "Envelope Status Failed",
+                  "description": "Reading the envelope status failed.",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "dispatching",
+                  "event": "SEND_ENVELOPE",
+                  "eventId": "evt_01M0MMZJ7C3R220FHX6FWPRNNB",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "call-service",
+                      "esign",
+                      "sendEnvelope",
+                      {
+                        "documentContent": [
+                          "object/get",
+                          "@payload.file",
+                          "content"
+                        ],
+                        "documentName": [
+                          "object/get",
+                          "@payload.row",
+                          "documentName"
+                        ],
+                        "recipientName": [
+                          "object/get",
+                          "@payload.row",
+                          "recipientName"
+                        ],
+                        "emailSubject": [
+                          "str/concat",
+                          "Signature requested: ",
+                          [
+                            "object/get",
+                            "@payload.row",
+                            "documentName"
+                          ]
+                        ],
+                        "recipientEmail": [
+                          "object/get",
+                          "@payload.row",
+                          "recipientEmail"
+                        ]
+                      },
+                      {
+                        "emit": {
+                          "failure": "ENVELOPE_SEND_FAILED",
+                          "success": "ENVELOPE_SENT"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "polling",
+                  "event": "CHECK_ENVELOPE_STATUS",
+                  "eventId": "evt_01M0MMZJ7CP14FSR8MTASBQSKN",
+                  "guard": [
+                    "!=",
+                    [
+                      "object/get",
+                      "@payload.row",
+                      "envelopeId"
+                    ],
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "call-service",
+                      "esign",
+                      "getEnvelopeStatus",
+                      {
+                        "envelopeId": [
+                          "object/get",
+                          "@payload.row",
+                          "envelopeId"
+                        ]
+                      },
+                      {
+                        "emit": {
+                          "success": "ENVELOPE_STATUS_LOADED",
+                          "failure": "ENVELOPE_STATUS_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "CHECK_ENVELOPE_STATUS",
+                  "eventId": "evt_01M0MMZJ7CP14FSR8MTASBQSKN",
+                  "effects": [
+                    [
+                      "notify",
+                      "info",
+                      "This request was never dispatched to the e-sign provider — send it first"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ENVELOPE_STAMPED",
+                  "eventId": "evt_01M0MMZJ7CNJJQBQM8YWNP49SP"
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "ENVELOPE_STAMP_FAILED",
+                  "eventId": "evt_01M0MMZJ7CGYTWH84Q2S608ZFK",
+                  "effects": [
+                    [
+                      "notify",
+                      "warning",
+                      "Could not record the envelope state on the request"
+                    ]
+                  ]
+                },
+                {
+                  "from": "dispatching",
+                  "to": "idle",
+                  "event": "ENVELOPE_SENT",
+                  "eventId": "evt_01M0MMZJ7C0CFESZQ5ENKVPDCT",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SignatureSession",
+                      {
+                        "sentAt": "@now",
+                        "envelopeId": "@payload.envelopeId",
+                        "status": "sent",
+                        "id": "@entity.id"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ENVELOPE_STAMP_FAILED",
+                          "success": "ENVELOPE_STAMPED"
+                        }
+                      }
+                    ],
+                    [
+                      "notify",
+                      "success",
+                      "Signature request sent"
+                    ]
+                  ]
+                },
+                {
+                  "from": "dispatching",
+                  "to": "idle",
+                  "event": "ENVELOPE_SEND_FAILED",
+                  "eventId": "evt_01M0MMZJ7C8EBA31GBE092Q0SP",
+                  "effects": [
+                    [
+                      "notify",
+                      "warning",
+                      "Could not send the signature request"
+                    ]
+                  ]
+                },
+                {
+                  "from": "polling",
+                  "to": "idle",
+                  "event": "ENVELOPE_STATUS_LOADED",
+                  "eventId": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                  "guard": [
+                    "=",
+                    "@payload.status",
+                    "completed"
+                  ],
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SignatureSession",
+                      {
+                        "id": "@entity.id",
+                        "signedAt": "@now",
+                        "status": "signed"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ENVELOPE_STAMP_FAILED",
+                          "success": "ENVELOPE_STAMPED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "polling",
+                  "to": "idle",
+                  "event": "ENVELOPE_STATUS_LOADED",
+                  "eventId": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                  "guard": [
+                    "=",
+                    "@payload.status",
+                    "delivered"
+                  ],
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SignatureSession",
+                      {
+                        "id": "@entity.id",
+                        "status": "viewed"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ENVELOPE_STAMP_FAILED",
+                          "success": "ENVELOPE_STAMPED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "polling",
+                  "to": "idle",
+                  "event": "ENVELOPE_STATUS_LOADED",
+                  "eventId": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                  "guard": [
+                    "=",
+                    "@payload.status",
+                    "declined"
+                  ],
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SignatureSession",
+                      {
+                        "id": "@entity.id",
+                        "status": "declined"
+                      },
+                      {
+                        "emit": {
+                          "success": "ENVELOPE_STAMPED",
+                          "failure": "ENVELOPE_STAMP_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "polling",
+                  "to": "idle",
+                  "event": "ENVELOPE_STATUS_LOADED",
+                  "eventId": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "SignatureSession",
+                      {
+                        "id": "@entity.id",
+                        "status": "sent"
+                      },
+                      {
+                        "emit": {
+                          "failure": "ENVELOPE_STAMP_FAILED",
+                          "success": "ENVELOPE_STAMPED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "polling",
+                  "to": "idle",
+                  "event": "ENVELOPE_STATUS_FAILED",
+                  "eventId": "evt_01M0MMZJ7CXWDXCQ8G90FMBV11",
+                  "effects": [
+                    [
+                      "notify",
+                      "warning",
+                      "Could not read the envelope status"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
           }
         ],
         "pages": [
           {
             "name": "SignatureSessionPage",
+            "id": "pag_01KXG04G2XKC9YKVDK75FBG4CM",
             "path": "/esign-flow",
             "traits": [
               {
-                "ref": "SignatureSessionBrowse"
+                "ref": "SignatureSessionBrowse",
+                "refId": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
               },
               {
-                "ref": "SignatureSessionCreate"
+                "ref": "SignatureSessionCreate",
+                "refId": "trt_01KXZ44YA3WAPGJ2QXV0PFMPK6"
               },
               {
-                "ref": "SignatureSessionDelete"
+                "ref": "SignatureSessionDelete",
+                "refId": "trt_01KXZ44YA335PSXM3T6F6TYJKV"
               },
               {
-                "ref": "SignatureSessionPersistor"
+                "ref": "SignatureSessionPersistor",
+                "refId": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+              },
+              {
+                "ref": "EnvelopeDispatcher",
+                "refId": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
               }
             ]
           }
@@ -1748,6 +2858,12 @@
     "_metadata": {
       "configProvenance": {
         "SignatureSessionOrbital": [
+          {
+            "trait": "SignatureSessionCreate",
+            "patternPath": "root",
+            "prop": "type",
+            "knob": "detailPattern"
+          },
           {
             "trait": "SignatureSessionCreate",
             "patternPath": "root.children.0.children.0",
@@ -1763,8 +2879,8 @@
           {
             "trait": "SignatureSessionCreate",
             "patternPath": "root.children.2",
-            "prop": "fields",
-            "knob": "fields"
+            "prop": "fieldOverrides",
+            "knob": "fieldOverrides"
           },
           {
             "trait": "SignatureSessionCreate",
@@ -1774,9 +2890,9 @@
           },
           {
             "trait": "SignatureSessionCreate",
-            "patternPath": "root",
-            "prop": "type",
-            "knob": "detailPattern"
+            "patternPath": "root.children.2",
+            "prop": "fields",
+            "knob": "fields"
           },
           {
             "trait": "SignatureSessionDelete",
@@ -1804,8 +2920,285 @@
           }
         ]
       }
+    },
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "trt_01KXG04G2XFKTVZ6MWT4X4Y28W": {
+          "id": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W",
+          "kind": "trait",
+          "bakedName": "SignatureSessionBrowse",
+          "curName": "SignatureSessionBrowse",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2X8VYDRSA6KA34XX58": {
+          "id": "evt_01KXG04G2X8VYDRSA6KA34XX58",
+          "kind": "event",
+          "bakedName": "RESEND_REQUEST",
+          "curName": "RESEND_REQUEST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "ent_01KXG04G2XSNH89NP1ZVCSX2F8": {
+          "id": "ent_01KXG04G2XSNH89NP1ZVCSX2F8",
+          "kind": "entity",
+          "bakedName": "SignatureSession",
+          "curName": "SignatureSession",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2XNM490PKYWYZRGRYV": {
+          "id": "evt_01KXG04G2XNM490PKYWYZRGRYV",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01KXG04G2XF1EA32EHP6X9FHDA": {
+          "id": "evt_01KXG04G2XF1EA32EHP6X9FHDA",
+          "kind": "event",
+          "bakedName": "SESSION_CREATED",
+          "curName": "SESSION_CREATED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01M0MMZJ7C0CFESZQ5ENKVPDCT": {
+          "id": "evt_01M0MMZJ7C0CFESZQ5ENKVPDCT",
+          "kind": "event",
+          "bakedName": "ENVELOPE_SENT",
+          "curName": "ENVELOPE_SENT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "trt_01KXZ44YA335PSXM3T6F6TYJKV": {
+          "id": "trt_01KXZ44YA335PSXM3T6F6TYJKV",
+          "kind": "trait",
+          "bakedName": "SignatureSessionDelete",
+          "curName": "SignatureSessionDelete",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2X99QYBSC9XR0TJJQ4": {
+          "id": "evt_01KXG04G2X99QYBSC9XR0TJJQ4",
+          "kind": "event",
+          "bakedName": "REQUEST_DELETE",
+          "curName": "REQUEST_DELETE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS": {
+          "id": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS",
+          "kind": "trait",
+          "bakedName": "EnvelopeDispatcher",
+          "curName": "EnvelopeDispatcher",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2XWD3MQXZ2B1JA7ARM": {
+          "id": "evt_01KXG04G2XWD3MQXZ2B1JA7ARM",
+          "kind": "event",
+          "bakedName": "SESSION_DELETED",
+          "curName": "SESSION_DELETED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01M0MMZJ7C3R220FHX6FWPRNNB": {
+          "id": "evt_01M0MMZJ7C3R220FHX6FWPRNNB",
+          "kind": "event",
+          "bakedName": "SEND_ENVELOPE",
+          "curName": "SEND_ENVELOPE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "trt_01KXZ44YA3WAPGJ2QXV0PFMPK6": {
+          "id": "trt_01KXZ44YA3WAPGJ2QXV0PFMPK6",
+          "kind": "trait",
+          "bakedName": "SignatureSessionCreate",
+          "curName": "SignatureSessionCreate",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0MMZJ7CGYTWH84Q2S608ZFK": {
+          "id": "evt_01M0MMZJ7CGYTWH84Q2S608ZFK",
+          "kind": "event",
+          "bakedName": "ENVELOPE_STAMP_FAILED",
+          "curName": "ENVELOPE_STAMP_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "evt_01M0MMZJ7CP14FSR8MTASBQSKN": {
+          "id": "evt_01M0MMZJ7CP14FSR8MTASBQSKN",
+          "kind": "event",
+          "bakedName": "CHECK_ENVELOPE_STATUS",
+          "curName": "CHECK_ENVELOPE_STATUS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5": {
+          "id": "evt_01M0MMZJ7CJ8D5ZNXGWH64DRY5",
+          "kind": "event",
+          "bakedName": "ENVELOPE_STATUS_LOADED",
+          "curName": "ENVELOPE_STATUS_LOADED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "evt_01KXG04G2X29R3V3VM9QQMH5W4": {
+          "id": "evt_01KXG04G2X29R3V3VM9QQMH5W4",
+          "kind": "event",
+          "bakedName": "DO_CREATE",
+          "curName": "DO_CREATE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01KXG04G2XF6B2CXF28NG2ZV7X": {
+          "id": "evt_01KXG04G2XF6B2CXF28NG2ZV7X",
+          "kind": "event",
+          "bakedName": "DO_RESEND",
+          "curName": "DO_RESEND",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "pag_01KXG04G2XKC9YKVDK75FBG4CM": {
+          "id": "pag_01KXG04G2XKC9YKVDK75FBG4CM",
+          "kind": "page",
+          "bakedName": "SignatureSessionPage",
+          "curName": "SignatureSessionPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0MMZJ7CNJJQBQM8YWNP49SP": {
+          "id": "evt_01M0MMZJ7CNJJQBQM8YWNP49SP",
+          "kind": "event",
+          "bakedName": "ENVELOPE_STAMPED",
+          "curName": "ENVELOPE_STAMPED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "orb_01KXG04G2XPVD49MAX6GWP787V": {
+          "id": "orb_01KXG04G2XPVD49MAX6GWP787V",
+          "kind": "orbital",
+          "bakedName": "SignatureSessionOrbital",
+          "curName": "SignatureSessionOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2XVRY51VF766ZYRR79": {
+          "id": "evt_01KXG04G2XVRY51VF766ZYRR79",
+          "kind": "event",
+          "bakedName": "DO_DELETE",
+          "curName": "DO_DELETE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01KYXKHAWNPKKZ4XXT3K22KWDJ": {
+          "id": "evt_01KYXKHAWNPKKZ4XXT3K22KWDJ",
+          "kind": "event",
+          "bakedName": "RETRY",
+          "curName": "RETRY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "evt_01M0MMZJ7C8EBA31GBE092Q0SP": {
+          "id": "evt_01M0MMZJ7C8EBA31GBE092Q0SP",
+          "kind": "event",
+          "bakedName": "ENVELOPE_SEND_FAILED",
+          "curName": "ENVELOPE_SEND_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        },
+        "evt_01KXG04G2XE4CWFXQTK1BR863T": {
+          "id": "evt_01KXG04G2XE4CWFXQTK1BR863T",
+          "kind": "event",
+          "bakedName": "SignatureSessionLoaded",
+          "curName": "SignatureSessionLoaded",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "evt_01M0MMZJ7CFHPXVFNDJMT71GKD": {
+          "id": "evt_01M0MMZJ7CFHPXVFNDJMT71GKD",
+          "kind": "event",
+          "bakedName": "CHECK_ENVELOPE_STATUS",
+          "curName": "CHECK_ENVELOPE_STATUS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "evt_01KXG04G2X0H2F7DRT85NPZ50P": {
+          "id": "evt_01KXG04G2X0H2F7DRT85NPZ50P",
+          "kind": "event",
+          "bakedName": "CREATE",
+          "curName": "CREATE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "trt_01KXG04G2X40Y24PAD7JV6DE0C": {
+          "id": "trt_01KXG04G2X40Y24PAD7JV6DE0C",
+          "kind": "trait",
+          "bakedName": "SignatureSessionPersistor",
+          "curName": "SignatureSessionPersistor",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04G2X4S540XXPRT1SRB1B": {
+          "id": "evt_01KXG04G2X4S540XXPRT1SRB1B",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "evt_01KXG04G2XGRZR83HEPH1JYBEB": {
+          "id": "evt_01KXG04G2XGRZR83HEPH1JYBEB",
+          "kind": "event",
+          "bakedName": "SESSION_RESENT",
+          "curName": "SESSION_RESENT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2X40Y24PAD7JV6DE0C"
+        },
+        "evt_01KXG04G2XZNG6CF0WYNR2CZ5F": {
+          "id": "evt_01KXG04G2XZNG6CF0WYNR2CZ5F",
+          "kind": "event",
+          "bakedName": "SignatureSessionLoadFailed",
+          "curName": "SignatureSessionLoadFailed",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04G2XFKTVZ6MWT4X4Y28W"
+        },
+        "evt_01M0MMZJ7CXWDXCQ8G90FMBV11": {
+          "id": "evt_01M0MMZJ7CXWDXCQ8G90FMBV11",
+          "kind": "event",
+          "bakedName": "ENVELOPE_STATUS_FAILED",
+          "curName": "ENVELOPE_STATUS_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0MMZJ7CEY2SRHX9NBWDN7ZS"
+        }
+      }
     }
   },
   "source": "",
-  "lolo": ""
+  "lolo": "app std-esign-flow \"1.2.0\"\n\"std-esign-flow — the send-for-signature flow: list signature requests, create one (pick document + recipient), resend or cancel, track status. Composes std-file-store + std-esign-request; no document-rendering or code-preview chrome. v1.2 (W5): EnvelopeDispatcher wires sessions to the real `esign` service — SEND_ENVELOPE dispatches a DocuSign envelope (the document rides the event as an UploadDropZone-shaped file payload, since StoredFile rows are metadata-only) and stamps `envelopeId`/`sentAt`/status=sent; the browse grid's per-row \\\"Refresh status\\\" pulls getEnvelopeStatus and maps completed/delivered/declined onto signed/viewed/declined.\"\norbital SignatureSessionOrbital {\n  uses StoredFile from \"std/behaviors/std-file-store\"\n\n  uses ESignRequest from \"std/behaviors/std-esign-request\"\n\n  uses Modal from \"std/behaviors/std-modal\"\n\n  uses Confirmation from \"std/behaviors/std-confirmation\"\n\n    type SignatureSessionLoaded = Event { data : [SignatureSession] } \"Fired when the SignatureSession collection finishes loading\"\n\n    type SignatureSessionLoadFailed = Event { error : string, code : string } \"Fired when the SignatureSession collection fails to load\"\n\n  entity SignatureSession [persistent: signaturesessions] {\n    id : string!\n    documentId : string! @description \"Unique identifier for the associated document.\" @synonyms \"fileID, docID, documentReference\"\n    documentName : string @description \"The name of the document associated with the signature request.\" @synonyms \"filename, document, file\" = \"\"\n    recipientName : string! @description \"The name of the recipient for the signature request.\" @synonyms \"recipient, name, user\"\n    recipientEmail : email! @description \"The email address of the recipient.\" @synonyms \"email, address, contact\"\n    requesterName : string @description \"The name of the user initiating the signature request.\" @synonyms \"initiator, sender, originator\" = \"\"\n    status : \"draft\" | \"sent\" | \"viewed\" | \"signed\" | \"declined\" @description \"Current state of the signature request.\" @synonyms \"state, condition, stage\" = draft\n    sentAt : datetime @description \"Timestamp indicating when the request was sent.\" @synonyms \"sent date, submission time, dispatched\"\n    signedAt : datetime @description \"The date and time the signature was applied.\" @synonyms \"signed date, completion date, signature time\"\n    envelopeId : string @description \"Provider envelope id stamped when the real e-sign dispatch succeeds; blank = never dispatched. Written by EnvelopeDispatcher, not user-facing.\" @synonyms \"docusign id, provider reference\" = \"\"\n    pendingId : string @description \"Unique identifier for a pending action or task.\" @synonyms \"taskId, pendingKey, referenceId\" = \"\"\n  }\n\n  trait SignatureSessionBrowse -> SignatureSession [interaction, collection] {\n    initial: loading\n\n    state loading {\n      INIT -> loading\n        (fetch SignatureSession {\n          emit: { failure: SignatureSessionLoadFailed, success: SignatureSessionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading signature requests…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SignatureSessionLoaded -> browsing\n        (render-ui main {\n          children: [{\n            children: [{\n              children: [{ name: file-signature, type: icon }, {\n                content: \"Signature Requests\"\n                type: typography\n                variant: h2\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, {\n              action: CREATE\n              icon: plus\n              label: \"New Signature Request\"\n              type: button\n              variant: primary\n            }]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, { type: divider }, {\n            entity: ?data\n            fields: [{\n              icon: file-text\n              label: Document\n              name: documentName\n              variant: h4\n            }, {\n              label: Recipient\n              name: recipientName\n              variant: body\n            }, {\n              label: Email\n              name: recipientEmail\n              variant: caption\n            }, {\n              label: Status\n              name: status\n              variant: badge\n            }, {\n              label: Sent\n              name: sentAt\n              variant: caption\n            }]\n            itemActions: [{\n              event: RESEND_REQUEST\n              label: Resend\n              variant: primary\n            }, {\n              event: REQUEST_DELETE\n              label: Cancel\n              variant: danger\n            }, {\n              event: CHECK_ENVELOPE_STATUS\n              label: \"Refresh status\"\n              variant: secondary\n            }]\n            type: data-grid\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      SignatureSessionLoadFailed -> error\n        (render-ui main {\n          align: center\n          children: [{\n            color: error\n            name: alert-triangle\n            type: icon\n          }, {\n            content: \"Failed to load signature requests\"\n            type: typography\n            variant: h3\n          }, {\n            color: muted\n            content: ?error\n            type: typography\n            variant: body\n          }, {\n            action: RETRY\n            icon: rotate-ccw\n            label: Retry\n            type: button\n            variant: primary\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state browsing {\n      INIT -> loading\n        (fetch SignatureSession {\n          emit: { failure: SignatureSessionLoadFailed, success: SignatureSessionLoaded }\n        })\n        (render-ui main { type: spinner })\n    }\n\n    state error {\n      INIT -> loading\n        (fetch SignatureSession {\n          emit: { failure: SignatureSessionLoadFailed, success: SignatureSessionLoaded }\n        })\n        (render-ui main { type: spinner })\n      ;; the error screen's Retry button: INIT is lifecycle-only and the bus never\n      ;; delivers it, so the affordance must target a first-class user event\n      RETRY -> loading\n        (fetch SignatureSession {\n          emit: { failure: SignatureSessionLoadFailed, success: SignatureSessionLoaded }\n        })\n        (render-ui main { type: spinner })\n    }\n\n    emits {\n      CREATE\n        @description \"Indicates a new signature request has been initiated.\"\n        @synonyms \"new, initiate, start, begin\"\n        @tier \"domain\"\n      RESEND_REQUEST {\n        id : string!\n        row : SignatureSession\n      }\n        @description \"Indicates a signature request has been resent.\"\n        @synonyms \"resend, retransmit, repeat\"\n        @tier \"presentation\"\n      CHECK_ENVELOPE_STATUS {\n        id : string!\n        row : SignatureSession\n      }\n        @description \"Pull the provider's current envelope status for this request.\"\n        @synonyms \"refresh status, check signature, poll envelope\"\n        @tier \"domain\"\n      REQUEST_DELETE {\n        id : string!\n        row : SignatureSession\n      }\n        @description \"Signals a signature request has been removed.\"\n        @synonyms \"remove, purge, discard\"\n        @tier \"presentation\"\n      SignatureSessionLoaded\n        @description \"Signals that a signature session has been successfully loaded.\"\n        @synonyms \"loaded, initialized, ready\"\n        @tier \"domain\"\n      SignatureSessionLoadFailed\n        @description \"Indicates failure to load a signature session.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    listens {\n      SignatureSessionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates failure to load a signature session.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n      SignatureSessionPersistor.SESSION_CREATED -> INIT\n      SignatureSessionPersistor.SESSION_RESENT -> INIT\n      SignatureSessionPersistor.SESSION_DELETED -> INIT\n    }\n  }\n\n  trait SignatureSessionCreate = Modal.traits.ModalRecordModal -> SignatureSession {\n    events {\n      OPEN: CREATE\n    }\n\n    config {\n      icon: file-signature\n      title: \"New Signature Request\"\n      fields: (documentId recipientName recipientEmail requesterName)\n      mode: create\n    }\n\n    listens {\n      SignatureSessionBrowse.CREATE -> CREATE\n      CREATE {\n        id : string\n        row : SignatureSession\n      }\n        @description \"A new signature request is being initiated.\"\n        @synonyms \"new, start, begin, initiate\"\n        @tier \"domain\"\n      SAVE {\n        data : @entity!\n      }\n        @description \"Data has been persisted; update the UI accordingly.\"\n        @synonyms \"persist, store, update, commit\"\n        @tier \"domain\"\n      ModalRecordLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load record data for a modal.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n  }\n\n  trait SignatureSessionDelete = Confirmation.traits.ConfirmActionConfirmation -> SignatureSession {\n    events {\n      REQUEST: DELETE\n      CONFIRM: CONFIRM_DELETE\n    }\n\n    config {\n      icon: alert-triangle\n      title: \"Cancel Signature Request\"\n      alertMessage: \"Are you sure you want to cancel this signature request?\"\n      confirmLabel: \"Cancel Request\"\n    }\n\n    listens {\n      SignatureSessionBrowse.REQUEST_DELETE -> DELETE\n      DELETE {\n        id : string\n        row : SignatureSession\n      }\n        @description \"A request to remove a signature request from the list.\"\n        @synonyms \"remove, dismiss, discard\"\n        @tier \"presentation\"\n      ConfirmActionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load data needed for an action.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n  }\n\n  trait SignatureSessionPersistor -> SignatureSession [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n      DO_CREATE -> idle\n        (persist create SignatureSession ?data {\n          emit: { success: SESSION_CREATED }\n        })\n      DO_RESEND -> idle\n        (persist update SignatureSession ?id {\n          emit: { success: SESSION_RESENT }\n        })\n      DO_DELETE -> idle\n        (persist delete SignatureSession ?id {\n          emit: { success: SESSION_DELETED }\n        })\n    }\n\n    emits {\n      SESSION_CREATED -> external {\n        id : string\n      }\n        @description \"A new signature session has been initialized.\"\n        @synonyms \"start, begin, initialize\"\n        @tier \"domain\"\n      SESSION_RESENT -> external {\n        id : string\n      }\n        @description \"Indicates a signature request has been resent.\"\n        @synonyms \"resend, retransmit, send again\"\n        @tier \"presentation\"\n      SESSION_DELETED -> external {\n        id : string\n      }\n        @description \"Indicates a signature session has been removed or invalidated.\"\n        @synonyms \"removed, cleared, expired, terminated\"\n        @tier \"internal\"\n    }\n\n    listens {\n      DO_CREATE {\n        data : @entity!\n      }\n        @description \"Initiates the creation of a new signature request.\"\n        @synonyms \"new, add, generate, start\"\n        @tier \"domain\"\n      DO_RESEND {\n        id : string\n      }\n        @description \"A request to resend a signature request.\"\n        @synonyms \"retry, repeat, send again\"\n        @tier \"presentation\"\n      DO_DELETE {\n        id : string\n      }\n        @description \"A request to remove an item from the current view.\"\n        @synonyms \"remove, discard, clear, erase\"\n        @tier \"presentation\"\n      SignatureSessionCreate.SAVE -> DO_CREATE\n      SignatureSessionBrowse.RESEND_REQUEST -> DO_RESEND\n      SignatureSessionDelete.CONFIRM_DELETE -> DO_DELETE\n    }\n  }\n\n  ;; W5: the real e-sign wire. SEND_ENVELOPE dispatches a provider envelope —\n  ;; the document travels IN the event as an UploadDropZone-shaped file payload\n  ;; (StoredFile rows are metadata-only, so there is nothing to fetch); the\n  ;; session row is stamped envelopeId/sentAt/status=sent on success. The\n  ;; browse grid's \"Refresh status\" action pulls the provider status and maps\n  ;; completed/delivered/declined onto the session's signed/viewed/declined.\n  trait EnvelopeDispatcher -> SignatureSession [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      SEND_ENVELOPE -> dispatching\n        (set @entity.id ?id)\n        (call-service esign sendEnvelope {\n          documentContent: (object/get ?file content)\n          documentName: (object/get ?row documentName)\n          emailSubject: (str/concat \"Signature requested: \" (object/get ?row documentName))\n          recipientEmail: (object/get ?row recipientEmail)\n          recipientName: (object/get ?row recipientName)\n        } {\n          emit: { failure: ENVELOPE_SEND_FAILED, success: ENVELOPE_SENT }\n        })\n      CHECK_ENVELOPE_STATUS -> polling when [\"!=\", (object/get ?row envelopeId), \"\"]\n        (set @entity.id ?id)\n        (call-service esign getEnvelopeStatus {\n          envelopeId: (object/get ?row envelopeId)\n        } {\n          emit: { failure: ENVELOPE_STATUS_FAILED, success: ENVELOPE_STATUS_LOADED }\n        })\n      CHECK_ENVELOPE_STATUS -> idle\n        (notify info \"This request was never dispatched to the e-sign provider — send it first\")\n      ENVELOPE_STAMPED -> idle\n      ENVELOPE_STAMP_FAILED -> idle\n        (notify warning \"Could not record the envelope state on the request\")\n    }\n\n    state dispatching {\n      ENVELOPE_SENT -> idle\n        (persist update SignatureSession {\n          id: @entity.id\n          envelopeId: ?envelopeId\n          sentAt: @now\n          status: sent\n        } {\n          emit: { failure: ENVELOPE_STAMP_FAILED, success: ENVELOPE_STAMPED }\n        })\n        (notify success \"Signature request sent\")\n      ENVELOPE_SEND_FAILED -> idle\n        (notify warning \"Could not send the signature request\")\n    }\n\n    state polling {\n      ENVELOPE_STATUS_LOADED -> idle when [\"=\", ?status, \"completed\"]\n        (persist update SignatureSession {\n          id: @entity.id\n          signedAt: @now\n          status: signed\n        } {\n          emit: { failure: ENVELOPE_STAMP_FAILED, success: ENVELOPE_STAMPED }\n        })\n      ENVELOPE_STATUS_LOADED -> idle when [\"=\", ?status, \"delivered\"]\n        (persist update SignatureSession {\n          id: @entity.id\n          status: viewed\n        } {\n          emit: { failure: ENVELOPE_STAMP_FAILED, success: ENVELOPE_STAMPED }\n        })\n      ENVELOPE_STATUS_LOADED -> idle when [\"=\", ?status, \"declined\"]\n        (persist update SignatureSession {\n          id: @entity.id\n          status: declined\n        } {\n          emit: { failure: ENVELOPE_STAMP_FAILED, success: ENVELOPE_STAMPED }\n        })\n      ENVELOPE_STATUS_LOADED -> idle\n        (persist update SignatureSession {\n          id: @entity.id\n          status: sent\n        } {\n          emit: { failure: ENVELOPE_STAMP_FAILED, success: ENVELOPE_STAMPED }\n        })\n      ENVELOPE_STATUS_FAILED -> idle\n        (notify warning \"Could not read the envelope status\")\n    }\n\n    emits {\n      ENVELOPE_SENT {\n        envelopeId : string\n        status : string\n      }\n        @description \"The provider accepted the envelope; carries its id.\"\n        @tier \"internal\"\n      ENVELOPE_SEND_FAILED {\n        error : string\n        code : string\n      }\n        @description \"The e-sign provider rejected or failed the dispatch.\"\n        @tier \"internal\"\n      ENVELOPE_STATUS_LOADED {\n        status : string\n        completedAt : string\n      }\n        @description \"The provider returned the envelope's current status.\"\n        @tier \"internal\"\n      ENVELOPE_STATUS_FAILED {\n        error : string\n        code : string\n      }\n        @description \"Reading the envelope status failed.\"\n        @tier \"internal\"\n      ENVELOPE_STAMPED -> external {\n        id : string\n      }\n        @description \"The session row now carries the latest provider state (envelopeId / status / timestamps).\"\n        @tier \"domain\"\n      ENVELOPE_STAMP_FAILED {\n        error : string\n        code : string\n      }\n        @description \"Writing the provider state back onto the session row failed.\"\n        @tier \"internal\"\n    }\n\n    listens {\n      SEND_ENVELOPE {\n        id : string!\n        row : SignatureSession\n        file : { name : string, size : number, type : string, content : string }\n      }\n        @description \"Dispatch this session as a real e-sign envelope; `file.content` is the document as a base64 data URL (UploadDropZone shape).\"\n        @synonyms \"send envelope, dispatch signature, send for signing\"\n        @tier \"domain\"\n      SignatureSessionBrowse.CHECK_ENVELOPE_STATUS -> CHECK_ENVELOPE_STATUS\n      CHECK_ENVELOPE_STATUS {\n        id : string!\n        row : SignatureSession\n      }\n        @description \"Pull the provider's current envelope status and stamp it onto the session row.\"\n        @synonyms \"refresh status, check signature, poll envelope\"\n        @tier \"domain\"\n      ENVELOPE_SENT {\n        envelopeId : string\n        status : string\n      }\n      ENVELOPE_SEND_FAILED {\n        error : string\n        code : string\n      }\n      ENVELOPE_STATUS_LOADED {\n        status : string\n        completedAt : string\n      }\n      ENVELOPE_STATUS_FAILED {\n        error : string\n        code : string\n      }\n      ENVELOPE_STAMPED {\n        id : string\n      }\n      ENVELOPE_STAMP_FAILED {\n        error : string\n        code : string\n      }\n    }\n  }\n\n  page \"/esign-flow\" as SignatureSessionPage -> SignatureSessionBrowse, SignatureSessionCreate, SignatureSessionDelete, SignatureSessionPersistor, EnvelopeDispatcher\n}"
 }

@@ -1,0 +1,384 @@
+{
+  "name": "std-fx-trail",
+  "description": "Headless motion-trail mechanic: records the moving body's recent positions as timestamped dots on a [runtime, shared] entity so the render layer can draw a fading comet trail. Rides the body authority's BODY_MOVED — appends a dot only when the body's speed exceeds minSpeed (standing still leaves no trail) and prunes dots older than ttl on the same pass, so no decay tick is needed and a stopped body's trail simply stops growing (the render side fades each dot by bornAt/ttl). RESTART clears. Renders nothing.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-fx-trail",
+    "version": "1.0.0",
+    "description": "Headless motion-trail mechanic: records the moving body's recent positions as timestamped dots on a [runtime, shared] entity so the render layer can draw a fading comet trail. Rides the body authority's BODY_MOVED — appends a dot only when the body's speed exceeds minSpeed (standing still leaves no trail) and prunes dots older than ttl on the same pass, so no decay tick is needed and a stopped body's trail simply stops growing (the render side fades each dot by bornAt/ttl). RESTART clears. Renders nothing.",
+    "orbitals": [
+      {
+        "name": "FxTrailOrbital",
+        "id": "orb_01M0PCAKRAXW91Y5Y34VV62FV0",
+        "entity": {
+          "name": "FxTrailData",
+          "id": "ent_01M0PCAKRAB0PFSPQ98X9S0BNF",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "trail",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "ttl": {
+                    "name": "ttl",
+                    "type": "number",
+                    "required": true
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "bornAt": {
+                    "name": "bornAt",
+                    "type": "number",
+                    "required": true
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "seq",
+              "type": "number",
+              "default": 0
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "FxTrail",
+            "id": "trt_01M0PCAKRAJE43ZB66D52QJSGZ",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "seq",
+                "trail"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "FxTrailData",
+            "linkedEntityId": "ent_01M0PCAKRAB0PFSPQ98X9S0BNF",
+            "entityRefIds": {
+              "FxTrailData": "ent_01M0PCAKRAB0PFSPQ98X9S0BNF"
+            },
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0PCAKRA14YFRZZGT8CDR3BE",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M0PCAKRAWHX8VG91V45K7YYE",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M0PCAKRAK7M2V40695X450BC",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M0PCAKRA14YFRZZGT8CDR3BE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.trail",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.seq",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M0PCAKRAWHX8VG91V45K7YYE",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.trail",
+                      [
+                        "array/filter",
+                        [
+                          "if",
+                          [
+                            ">",
+                            "@payload.speed",
+                            0.5
+                          ],
+                          [
+                            "array/concat",
+                            "@entity.trail",
+                            [
+                              {
+                                "bornAt": [
+                                  "time/now"
+                                ],
+                                "id": [
+                                  "str/concat",
+                                  "trail-",
+                                  [
+                                    "+",
+                                    "@entity.seq",
+                                    1
+                                  ]
+                                ],
+                                "ttl": 600,
+                                "x": "@payload.x",
+                                "y": "@payload.y"
+                              }
+                            ]
+                          ],
+                          "@entity.trail"
+                        ],
+                        [
+                          "fn",
+                          "d",
+                          [
+                            "<",
+                            [
+                              "-",
+                              [
+                                "time/now"
+                              ],
+                              [
+                                "object/get",
+                                "@d",
+                                "bornAt"
+                              ]
+                            ],
+                            [
+                              "object/get",
+                              "@d",
+                              "ttl"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "if",
+                      [
+                        ">",
+                        "@payload.speed",
+                        0.5
+                      ],
+                      [
+                        "set",
+                        "@entity.seq",
+                        [
+                          "+",
+                          "@entity.seq",
+                          1
+                        ]
+                      ],
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M0PCAKRAK7M2V40695X450BC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.trail",
+                      []
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "ttl": {
+                "type": "number",
+                "default": 600,
+                "label": "Trail Ttl (ms)",
+                "description": "Milliseconds a trail dot lives; at a 33ms move cadence ~600ms keeps the last eighteen positions. The ttl is also the natural length cap — no separate limit needed.",
+                "tier": "presentation"
+              },
+              "minSpeed": {
+                "type": "number",
+                "default": 0.5,
+                "label": "Min Speed",
+                "description": "Body speed (units/s, from BODY_MOVED) below which no dot is appended, so a resting body doesn't pile dots on one spot.",
+                "tier": "domain"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, BODY_MOVED appends trail dots; toggle to freeze the trail (existing dots still age out).",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "FxTrailPage",
+            "id": "pag_01M0PCAKRAY62QVZS832H2XSWS",
+            "path": "/fx-trail",
+            "traits": [
+              {
+                "ref": "FxTrail",
+                "refId": "trt_01M0PCAKRAJE43ZB66D52QJSGZ"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M0PCAKRAK7M2V40695X450BC": {
+          "id": "evt_01M0PCAKRAK7M2V40695X450BC",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKRAJE43ZB66D52QJSGZ"
+        },
+        "evt_01M0PCAKRA14YFRZZGT8CDR3BE": {
+          "id": "evt_01M0PCAKRA14YFRZZGT8CDR3BE",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKRAJE43ZB66D52QJSGZ"
+        },
+        "pag_01M0PCAKRAY62QVZS832H2XSWS": {
+          "id": "pag_01M0PCAKRAY62QVZS832H2XSWS",
+          "kind": "page",
+          "bakedName": "FxTrailPage",
+          "curName": "FxTrailPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCAKRAWHX8VG91V45K7YYE": {
+          "id": "evt_01M0PCAKRAWHX8VG91V45K7YYE",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKRAJE43ZB66D52QJSGZ"
+        },
+        "trt_01M0PCAKRAJE43ZB66D52QJSGZ": {
+          "id": "trt_01M0PCAKRAJE43ZB66D52QJSGZ",
+          "kind": "trait",
+          "bakedName": "FxTrail",
+          "curName": "FxTrail",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "orb_01M0PCAKRAXW91Y5Y34VV62FV0": {
+          "id": "orb_01M0PCAKRAXW91Y5Y34VV62FV0",
+          "kind": "orbital",
+          "bakedName": "FxTrailOrbital",
+          "curName": "FxTrailOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M0PCAKRAB0PFSPQ98X9S0BNF": {
+          "id": "ent_01M0PCAKRAB0PFSPQ98X9S0BNF",
+          "kind": "entity",
+          "bakedName": "FxTrailData",
+          "curName": "FxTrailData",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-fx-trail \"1.0.0\"\n\"Headless motion-trail mechanic: records the moving body's recent positions as timestamped dots on a [runtime, shared] entity so the render layer can draw a fading comet trail. Rides the body authority's BODY_MOVED — appends a dot only when the body's speed exceeds minSpeed (standing still leaves no trail) and prunes dots older than ttl on the same pass, so no decay tick is needed and a stopped body's trail simply stops growing (the render side fades each dot by bornAt/ttl). RESTART clears. Renders nothing.\"\norbital FxTrailOrbital {\n  type TrailDot = {\n    id : string!\n    x : number!\n    y : number!\n    bornAt : number!\n    ttl : number!\n  }\n\n  entity FxTrailData [runtime, shared] {\n    id : string!\n    trail : [TrailDot] = []\n    seq : number = 0\n  }\n\n  trait FxTrail -> @rebindable FxTrailData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.trail [])\n        (set @entity.seq 0)\n\n      BODY_MOVED -> active when @config.running\n        (set @entity.trail\n          (array/filter\n            (if (> @payload.speed @config.minSpeed)\n              (array/concat @entity.trail [ { id: (str/concat \"trail-\" (+ @entity.seq 1)), x: @payload.x, y: @payload.y, bornAt: (time/now), ttl: @config.ttl } ])\n              @entity.trail)\n            (fn d (< (- (time/now) (object/get @d bornAt)) (object/get @d ttl)))))\n        (if (> @payload.speed @config.minSpeed)\n          (set @entity.seq (+ @entity.seq 1))\n          null)\n\n      RESTART -> active\n        (set @entity.trail [])\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED appends trail dots; toggle to freeze the trail (existing dots still age out).\"\n        @tier \"domain\"\n      ttl : number = 600\n        @label \"Trail Ttl (ms)\"\n        @description \"Milliseconds a trail dot lives; at a 33ms move cadence ~600ms keeps the last eighteen positions. The ttl is also the natural length cap — no separate limit needed.\"\n        @tier \"presentation\"\n      minSpeed : number = 0.5\n        @label \"Min Speed\"\n        @description \"Body speed (units/s, from BODY_MOVED) below which no dot is appended, so a resting body doesn't pile dots on one spot.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/fx-trail\" as FxTrailPage -> FxTrail\n}\n"
+}

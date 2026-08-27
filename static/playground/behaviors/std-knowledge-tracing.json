@@ -1,0 +1,1389 @@
+{
+  "name": "std-knowledge-tracing",
+  "description": "std-knowledge-tracing — turns one true/false observation ('did the learner get this right?') into a tracked belief about mastery, and captures the same observation as a labeled training example in the same motion. Composes std-ml-posterior (the R2 statistical rung — a Beta-Bernoulli belief over an unknown success rate) with std-ml-label-capture: every posterior verdict — MASTERY_REACHED, REMEDIATION_NEEDED, or the abstain EVIDENCE_INSUFFICIENT — becomes a persisted labeled example (the input skill, the posterior's own verdict, and the ground-truth outcome that produced it), so a cheaper rung can later be trained to reproduce the same call without running the statistics. Domain-agnostic: it knows about skills and observations, not students, quizzes, or courses. One instance tracks one belief (e.g. one learner × one skill); the host composes as many instances as it has beliefs to hold.",
+  "level": "organism",
+  "topic": "ml",
+  "schema": {
+    "name": "std-knowledge-tracing",
+    "version": "1.0.0",
+    "description": "std-knowledge-tracing — turns one true/false observation ('did the learner get this right?') into a tracked belief about mastery, and captures the same observation as a labeled training example in the same motion. Composes std-ml-posterior (the R2 statistical rung — a Beta-Bernoulli belief over an unknown success rate) with std-ml-label-capture: every posterior verdict — MASTERY_REACHED, REMEDIATION_NEEDED, or the abstain EVIDENCE_INSUFFICIENT — becomes a persisted labeled example (the input skill, the posterior's own verdict, and the ground-truth outcome that produced it), so a cheaper rung can later be trained to reproduce the same call without running the statistics. Domain-agnostic: it knows about skills and observations, not students, quizzes, or courses. One instance tracks one belief (e.g. one learner × one skill); the host composes as many instances as it has beliefs to hold.",
+    "orbitals": [
+      {
+        "name": "KnowledgeTracingOrbital",
+        "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
+        "uses": [
+          {
+            "from": "std/behaviors/std-ml-posterior",
+            "as": "Posterior"
+          },
+          {
+            "from": "std/behaviors/std-ml-label-capture",
+            "as": "LabelCap"
+          }
+        ],
+        "entity": {
+          "name": "KnowledgeState",
+          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "skillId",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "lastOutcome",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "alpha",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "beta",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "mean",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "intervalLow",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "intervalHigh",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "observations",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "insufficient",
+                "mastered",
+                "remediate"
+              ]
+            },
+            {
+              "name": "input",
+              "type": "string"
+            },
+            {
+              "name": "verdict",
+              "type": "string"
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "outcome",
+              "type": "string"
+            },
+            {
+              "name": "sink",
+              "type": "string",
+              "default": ""
+            },
+            {
+              "name": "recordedAt",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "primaryKey": true
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "ObservationRelay",
+            "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
+            "category": "lifecycle",
+            "linkedEntity": "KnowledgeState",
+            "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+            "entityRefIds": {
+              "KnowledgeState": "ent_01M055GH5S23ZDSM86RRZ5D2BQ"
+            },
+            "emits": [
+              {
+                "event": "OBSERVATION_MADE",
+                "eventId": "evt_01M055GH5SC5MER6VGX1V0QMXP",
+                "description": "Forwards the raw outcome to PosteriorTracker once skillId is recorded on the shared entity.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "outcome",
+                    "type": "boolean",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CAPTURE_LABEL",
+                "eventId": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+                "description": "The posterior's verdict reshaped into a labeled example for LabelCaptureListener.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "input",
+                    "type": "any",
+                    "required": true
+                  },
+                  {
+                    "name": "verdict",
+                    "type": "any",
+                    "required": true
+                  },
+                  {
+                    "name": "source",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "outcome",
+                    "type": "any"
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "MASTERY_REACHED",
+                "triggers": "VERDICT_REACHED",
+                "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+                "payloadMapping": {
+                  "status": "mastered",
+                  "intervalLow": "@payload.intervalLow",
+                  "intervalHigh": "@payload.intervalHigh",
+                  "mean": "@payload.mean"
+                },
+                "source": {
+                  "kind": "trait",
+                  "trait": "PosteriorTracker",
+                  "traitId": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+                }
+              },
+              {
+                "event": "REMEDIATION_NEEDED",
+                "triggers": "VERDICT_REACHED",
+                "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+                "payloadMapping": {
+                  "mean": "@payload.mean",
+                  "status": "remediate",
+                  "intervalLow": "@payload.intervalLow",
+                  "intervalHigh": "@payload.intervalHigh"
+                },
+                "source": {
+                  "kind": "trait",
+                  "trait": "PosteriorTracker",
+                  "traitId": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+                }
+              },
+              {
+                "event": "EVIDENCE_INSUFFICIENT",
+                "triggers": "VERDICT_REACHED",
+                "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+                "payloadMapping": {
+                  "mean": "@payload.mean",
+                  "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow",
+                  "status": "insufficient"
+                },
+                "source": {
+                  "kind": "trait",
+                  "trait": "PosteriorTracker",
+                  "traitId": "trt_01KYBM8SPDR0V9Y61Y00APN1PT"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "OBSERVE_SKILL",
+                  "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
+                  "name": "Observe Skill",
+                  "description": "Public entry point — one true/false observation of a learner against one skill.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "skillId",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "outcome",
+                      "type": "boolean",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "VERDICT_REACHED",
+                  "id": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+                  "name": "Verdict Reached",
+                  "description": "Any posterior verdict, tagged with which one it was.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "status",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "OBSERVATION_MADE",
+                  "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
+                  "name": "Observation Made",
+                  "description": "Forwards the raw outcome to PosteriorTracker once skillId is recorded on the shared entity.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "outcome",
+                      "type": "boolean",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CAPTURE_LABEL",
+                  "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+                  "name": "Capture Label",
+                  "description": "The posterior's verdict reshaped into a labeled example for LabelCaptureListener.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "input",
+                      "type": "any",
+                      "required": true
+                    },
+                    {
+                      "name": "verdict",
+                      "type": "any",
+                      "required": true
+                    },
+                    {
+                      "name": "source",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "outcome",
+                      "type": "any"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M055GH5SPSSPVR4KFDT936G3",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.skillId",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.lastOutcome",
+                      false
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "OBSERVE_SKILL",
+                  "eventId": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.skillId",
+                      "@payload.skillId"
+                    ],
+                    [
+                      "set",
+                      "@entity.lastOutcome",
+                      "@payload.outcome"
+                    ],
+                    [
+                      "emit",
+                      "OBSERVATION_MADE",
+                      {
+                        "outcome": "@payload.outcome"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "VERDICT_REACHED",
+                  "eventId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+                  "effects": [
+                    [
+                      "emit",
+                      "CAPTURE_LABEL",
+                      {
+                        "verdict": {
+                          "intervalHigh": "@payload.intervalHigh",
+                          "intervalLow": "@payload.intervalLow",
+                          "mean": "@payload.mean",
+                          "status": "@payload.status"
+                        },
+                        "input": {
+                          "skillId": "@entity.skillId"
+                        },
+                        "source": "posterior",
+                        "outcome": "@entity.lastOutcome"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          },
+          {
+            "name": "PosteriorTracker",
+            "id": "trt_01KYBM8SPDR0V9Y61Y00APN1PT",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "alpha",
+                "beta",
+                "intervalHigh",
+                "intervalLow",
+                "mean",
+                "observations",
+                "status"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "KnowledgeState",
+            "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+            "entityRefIds": {
+              "Posterior": "ent_01KYBM8SPD24VMR9HBQY0RM82A"
+            },
+            "emits": [
+              {
+                "event": "MASTERY_REACHED",
+                "eventId": "evt_01KYBM8SPDPGKNPVWPME4HZA7C",
+                "description": "The posterior mean clears masteryFloor with a credible interval narrow enough to trust.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "REMEDIATION_NEEDED",
+                "eventId": "evt_01KYBM8SPDW5ZGB5SDCQD74JSB",
+                "description": "The posterior mean is at or below remediationCeiling with a credible interval narrow enough to trust.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "EVIDENCE_INSUFFICIENT",
+                "eventId": "evt_01KYBM8SPDSVKBPWV2V0GTMS44",
+                "description": "The abstain — the credible interval is still wider than intervalWidthMax, so no verdict is licensed yet.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "mean",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalLow",
+                    "type": "float",
+                    "required": true
+                  },
+                  {
+                    "name": "intervalHigh",
+                    "type": "float",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "OBSERVATION_MADE",
+                "triggers": "OBSERVE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ObservationRelay",
+                  "traitId": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "OBSERVE",
+                  "id": "evt_01KYBM8SPDZNET4JJKM8MJ8TYE",
+                  "name": "Observe",
+                  "payloadSchema": [
+                    {
+                      "name": "outcome",
+                      "type": "boolean",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MASTERY_REACHED",
+                  "id": "evt_01KYBM8SPDPGKNPVWPME4HZA7C",
+                  "name": "Mastery Reached",
+                  "description": "The posterior mean clears masteryFloor with a credible interval narrow enough to trust.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "REMEDIATION_NEEDED",
+                  "id": "evt_01KYBM8SPDW5ZGB5SDCQD74JSB",
+                  "name": "Remediation Needed",
+                  "description": "The posterior mean is at or below remediationCeiling with a credible interval narrow enough to trust.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "EVIDENCE_INSUFFICIENT",
+                  "id": "evt_01KYBM8SPDSVKBPWV2V0GTMS44",
+                  "name": "Evidence Insufficient",
+                  "description": "The abstain — the credible interval is still wider than intervalWidthMax, so no verdict is licensed yet.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "mean",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalLow",
+                      "type": "float",
+                      "required": true
+                    },
+                    {
+                      "name": "intervalHigh",
+                      "type": "float",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBM8SPDEVSWTYZ4MWW9NPR1",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.alpha",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.beta",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.mean",
+                      [
+                        "/",
+                        1,
+                        [
+                          "+",
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.intervalLow",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.intervalHigh",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.observations",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "OBSERVE",
+                  "eventId": "evt_01KYBM8SPDZNET4JJKM8MJ8TYE",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.alpha",
+                      [
+                        "if",
+                        "@payload.outcome",
+                        [
+                          "+",
+                          "@entity.alpha",
+                          1
+                        ],
+                        "@entity.alpha"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.beta",
+                      [
+                        "if",
+                        "@payload.outcome",
+                        "@entity.beta",
+                        [
+                          "+",
+                          "@entity.beta",
+                          1
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.observations",
+                      [
+                        "+",
+                        "@entity.observations",
+                        1
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.mean",
+                      [
+                        "/",
+                        "@entity.alpha",
+                        [
+                          "+",
+                          "@entity.alpha",
+                          "@entity.beta"
+                        ]
+                      ]
+                    ],
+                    [
+                      "let",
+                      [
+                        [
+                          "samples",
+                          [
+                            "prob/sample",
+                            200,
+                            [
+                              "prob/beta",
+                              "@entity.alpha",
+                              "@entity.beta"
+                            ]
+                          ]
+                        ],
+                        [
+                          "interval",
+                          [
+                            "prob/credible-interval",
+                            "@samples",
+                            0.05
+                          ]
+                        ],
+                        [
+                          "low",
+                          [
+                            "array/nth",
+                            "@interval",
+                            0
+                          ]
+                        ],
+                        [
+                          "high",
+                          [
+                            "array/nth",
+                            "@interval",
+                            1
+                          ]
+                        ],
+                        [
+                          "width",
+                          [
+                            "-",
+                            "@high",
+                            "@low"
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.intervalLow",
+                          "@low"
+                        ],
+                        [
+                          "set",
+                          "@entity.intervalHigh",
+                          "@high"
+                        ],
+                        [
+                          "if",
+                          [
+                            ">",
+                            "@width",
+                            0.25
+                          ],
+                          [
+                            "do",
+                            [
+                              "set",
+                              "@entity.status",
+                              "insufficient"
+                            ],
+                            [
+                              "emit",
+                              "EVIDENCE_INSUFFICIENT",
+                              {
+                                "intervalHigh": "@high",
+                                "intervalLow": "@low",
+                                "mean": "@entity.mean"
+                              }
+                            ]
+                          ],
+                          [
+                            "if",
+                            [
+                              ">=",
+                              "@entity.mean",
+                              0.85
+                            ],
+                            [
+                              "do",
+                              [
+                                "set",
+                                "@entity.status",
+                                "mastered"
+                              ],
+                              [
+                                "emit",
+                                "MASTERY_REACHED",
+                                {
+                                  "mean": "@entity.mean",
+                                  "intervalLow": "@low",
+                                  "intervalHigh": "@high"
+                                }
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "<=",
+                                "@entity.mean",
+                                0.35
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.status",
+                                  "remediate"
+                                ],
+                                [
+                                  "emit",
+                                  "REMEDIATION_NEEDED",
+                                  {
+                                    "intervalLow": "@low",
+                                    "intervalHigh": "@high",
+                                    "mean": "@entity.mean"
+                                  }
+                                ]
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.status",
+                                  "insufficient"
+                                ],
+                                [
+                                  "emit",
+                                  "EVIDENCE_INSUFFICIENT",
+                                  {
+                                    "intervalHigh": "@high",
+                                    "mean": "@entity.mean",
+                                    "intervalLow": "@low"
+                                  }
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "priorAlpha": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior alpha",
+                "description": "Beta prior success pseudo-count before any observation.",
+                "tier": "domain"
+              },
+              "intervalWidthMax": {
+                "type": "float",
+                "default": 0.25,
+                "label": "Max credible-interval width",
+                "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
+                "tier": "policy"
+              },
+              "priorBeta": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior beta",
+                "description": "Beta prior failure pseudo-count before any observation.",
+                "tier": "domain"
+              },
+              "remediationCeiling": {
+                "type": "float",
+                "default": 0.35,
+                "label": "Remediation ceiling",
+                "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
+                "tier": "policy"
+              },
+              "sampleCount": {
+                "type": "int",
+                "default": 200,
+                "label": "Posterior sample count",
+                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
+                "tier": "infra"
+              },
+              "masteryFloor": {
+                "type": "float",
+                "default": 0.85,
+                "label": "Mastery floor",
+                "description": "Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.",
+                "tier": "policy"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-ml-posterior",
+              "alias": "Posterior",
+              "originalName": "PosteriorBelief"
+            },
+            "sourceEntityDefinition": {
+              "name": "Posterior",
+              "id": "ent_01KYBM8SPD24VMR9HBQY0RM82A",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "alpha",
+                  "type": "number",
+                  "default": 1,
+                  "description": "Beta distribution success count (prior + observed successes)."
+                },
+                {
+                  "name": "beta",
+                  "type": "number",
+                  "default": 1,
+                  "description": "Beta distribution failure count (prior + observed failures)."
+                },
+                {
+                  "name": "mean",
+                  "type": "number",
+                  "default": 0,
+                  "description": "Posterior mean: alpha / (alpha + beta)."
+                },
+                {
+                  "name": "intervalLow",
+                  "type": "number",
+                  "default": 0,
+                  "description": "Lower bound of the last computed credible interval."
+                },
+                {
+                  "name": "intervalHigh",
+                  "type": "number",
+                  "default": 0,
+                  "description": "Upper bound of the last computed credible interval."
+                },
+                {
+                  "name": "observations",
+                  "type": "number",
+                  "default": 0,
+                  "description": "Number of observations folded into the posterior so far."
+                },
+                {
+                  "name": "status",
+                  "type": "string",
+                  "default": "idle",
+                  "values": [
+                    "idle",
+                    "insufficient",
+                    "mastered",
+                    "remediate"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "Labels",
+            "id": "trt_01KYBM8SK85P7TQJB7PYMA4M7F",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "input",
+                "outcome",
+                "recordedAt",
+                "sink",
+                "source",
+                "verdict"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "KnowledgeState",
+            "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+            "entityRefIds": {
+              "LabeledExample": "ent_01KYBM8SK7FG0R2GXW69YPGA2M"
+            },
+            "emits": [
+              {
+                "event": "LABEL_CAPTURED",
+                "eventId": "evt_01KYBM8SK86WYGVMBYJKQ9J3AG",
+                "description": "Fired after a labeled example is persisted.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "source",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "sink",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "listens": [
+              {
+                "event": "CAPTURE_LABEL",
+                "triggers": "CAPTURE",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ObservationRelay",
+                  "traitId": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYBM8SK8J7G5ZWPYH8WGW6TM",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "CAPTURE",
+                  "id": "evt_01KYBM8SK8NT8HZ2CR5Y8SAE19",
+                  "name": "Capture",
+                  "payloadSchema": [
+                    {
+                      "name": "input",
+                      "type": "json",
+                      "required": true
+                    },
+                    {
+                      "name": "verdict",
+                      "type": "json",
+                      "required": true
+                    },
+                    {
+                      "name": "source",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "outcome",
+                      "type": "json"
+                    }
+                  ]
+                },
+                {
+                  "key": "LABEL_CAPTURED",
+                  "id": "evt_01KYBM8SK86WYGVMBYJKQ9J3AG",
+                  "name": "Label Captured",
+                  "description": "Fired after a labeled example is persisted.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "source",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "sink",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KYBM8SK8J7G5ZWPYH8WGW6TM",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.input",
+                      null
+                    ],
+                    [
+                      "set",
+                      "@entity.verdict",
+                      null
+                    ],
+                    [
+                      "set",
+                      "@entity.source",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.outcome",
+                      null
+                    ],
+                    [
+                      "set",
+                      "@entity.sink",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.recordedAt",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "CAPTURE",
+                  "eventId": "evt_01KYBM8SK8NT8HZ2CR5Y8SAE19",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.input",
+                      "@payload.input"
+                    ],
+                    [
+                      "set",
+                      "@entity.verdict",
+                      "@payload.verdict"
+                    ],
+                    [
+                      "set",
+                      "@entity.source",
+                      "@payload.source"
+                    ],
+                    [
+                      "set",
+                      "@entity.outcome",
+                      "@payload.outcome"
+                    ],
+                    [
+                      "set",
+                      "@entity.sink",
+                      "knowledge-tracing"
+                    ],
+                    [
+                      "set",
+                      "@entity.recordedAt",
+                      "@now"
+                    ],
+                    [
+                      "if",
+                      [
+                        "prob/flip",
+                        1
+                      ],
+                      [
+                        "do",
+                        [
+                          "persist",
+                          "create",
+                          "KnowledgeState",
+                          {
+                            "recordedAt": "@entity.recordedAt",
+                            "sink": "@entity.sink",
+                            "source": "@entity.source",
+                            "verdict": "@entity.verdict",
+                            "input": "@entity.input",
+                            "outcome": "@entity.outcome"
+                          }
+                        ],
+                        [
+                          "emit",
+                          "LABEL_CAPTURED",
+                          {
+                            "source": "@entity.source",
+                            "sink": "@entity.sink"
+                          }
+                        ]
+                      ],
+                      null
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "sampleRate": {
+                "type": "float",
+                "default": 1,
+                "label": "Sample rate",
+                "description": "Fraction of examples to keep (1 = capture all). A prob/flip trial per observation.",
+                "tier": "policy"
+              },
+              "sink": {
+                "type": "string",
+                "default": "knowledge-tracing",
+                "label": "Label sink",
+                "description": "Named destination this batch of examples is attributed to; interpreted downstream (the physical label store is not yet decided).",
+                "tier": "infra"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/std-ml-label-capture",
+              "alias": "LabelCap",
+              "originalName": "LabelCaptureListener"
+            },
+            "sourceEntityDefinition": {
+              "name": "LabeledExample",
+              "id": "ent_01KYBM8SK7FG0R2GXW69YPGA2M",
+              "collection": "ml_labels",
+              "persistence": "persistent",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true,
+                  "primaryKey": true
+                },
+                {
+                  "name": "input",
+                  "type": "string",
+                  "description": "The input that was judged."
+                },
+                {
+                  "name": "verdict",
+                  "type": "string",
+                  "description": "The verdict/output produced by the rung."
+                },
+                {
+                  "name": "source",
+                  "type": "string",
+                  "default": "",
+                  "description": "Which rung produced the verdict."
+                },
+                {
+                  "name": "outcome",
+                  "type": "string",
+                  "description": "The observed ground-truth outcome, once known."
+                },
+                {
+                  "name": "sink",
+                  "type": "string",
+                  "default": "",
+                  "description": "Named destination this example is attributed to."
+                },
+                {
+                  "name": "recordedAt",
+                  "type": "number",
+                  "default": 0
+                }
+              ]
+            }
+          }
+        ],
+        "pages": [
+          {
+            "name": "KnowledgeTracingPage",
+            "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
+            "path": "/knowledge-tracing",
+            "traits": [
+              {
+                "ref": "ObservationRelay",
+                "refId": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+              },
+              {
+                "ref": "PosteriorTracker",
+                "refId": "trt_01M055GH5SE12B5GWSSEVJRR69"
+              },
+              {
+                "ref": "Labels",
+                "refId": "trt_01M055GH5S3EQBR96Q27R8Q4MH"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "orb_01M055GH5SQ4PW0JE8JXG0YT6E": {
+          "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
+          "kind": "orbital",
+          "bakedName": "KnowledgeTracingOrbital",
+          "curName": "KnowledgeTracingOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
+          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+          "kind": "entity",
+          "bakedName": "KnowledgeState",
+          "curName": "KnowledgeState",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GH5SC5MER6VGX1V0QMXP": {
+          "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
+          "kind": "event",
+          "bakedName": "OBSERVATION_MADE",
+          "curName": "OBSERVATION_MADE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "pag_01M055GH5SSYEVKVNE6QTVE0CV": {
+          "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
+          "kind": "page",
+          "bakedName": "KnowledgeTracingPage",
+          "curName": "KnowledgeTracingPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GH5SPSSPVR4KFDT936G3": {
+          "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "trt_01M055GH5S071KYNGZ5DG0J6K3": {
+          "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
+          "kind": "trait",
+          "bakedName": "ObservationRelay",
+          "curName": "ObservationRelay",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GH5SJRF4GEBT3G9WA18Q": {
+          "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+          "kind": "event",
+          "bakedName": "CAPTURE_LABEL",
+          "curName": "CAPTURE_LABEL",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "evt_01M055GH5S6N5RDG1Q63GAB0M8": {
+          "id": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
+          "kind": "event",
+          "bakedName": "VERDICT_REACHED",
+          "curName": "VERDICT_REACHED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "evt_01M055GH5S8WRWJBGCGT5YQJ9W": {
+          "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
+          "kind": "event",
+          "bakedName": "OBSERVE_SKILL",
+          "curName": "OBSERVE_SKILL",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "trt_01M055GH5S3EQBR96Q27R8Q4MH": {
+          "id": "trt_01M055GH5S3EQBR96Q27R8Q4MH",
+          "kind": "trait",
+          "bakedName": "Labels",
+          "curName": "Labels",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M055GH5SE12B5GWSSEVJRR69": {
+          "id": "trt_01M055GH5SE12B5GWSSEVJRR69",
+          "kind": "trait",
+          "bakedName": "PosteriorTracker",
+          "curName": "PosteriorTracker",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-knowledge-tracing \"1.0.0\"\n\"std-knowledge-tracing — turns one true/false observation ('did the learner get this right?') into a tracked belief about mastery, and captures the same observation as a labeled training example in the same motion. Composes std-ml-posterior (the R2 statistical rung — a Beta-Bernoulli belief over an unknown success rate) with std-ml-label-capture: every posterior verdict — MASTERY_REACHED, REMEDIATION_NEEDED, or the abstain EVIDENCE_INSUFFICIENT — becomes a persisted labeled example (the input skill, the posterior's own verdict, and the ground-truth outcome that produced it), so a cheaper rung can later be trained to reproduce the same call without running the statistics. Domain-agnostic: it knows about skills and observations, not students, quizzes, or courses. One instance tracks one belief (e.g. one learner × one skill); the host composes as many instances as it has beliefs to hold.\"\n;; @exposure both\norbital KnowledgeTracingOrbital {\n  uses Posterior from \"std/behaviors/std-ml-posterior\"\n  uses LabelCap from \"std/behaviors/std-ml-label-capture\"\n\n  entity KnowledgeState [runtime, shared] {\n    skillId : string = \"\"\n    lastOutcome : boolean = false\n    alpha : float = 1\n    beta : float = 1\n    mean : float = 0\n    intervalLow : float = 0\n    intervalHigh : float = 0\n    observations : int = 0\n    status : \"idle\" | \"insufficient\" | \"mastered\" | \"remediate\" = idle\n    input : json = null\n    verdict : json = null\n    source : string = \"\"\n    outcome : json = null\n    sink : string = \"\"\n    recordedAt : number = 0\n  }\n\n  trait ObservationRelay -> KnowledgeState [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (set @entity.skillId \"\")\n        (set @entity.lastOutcome false)\n      OBSERVE_SKILL -> idle\n        (set @entity.skillId ?skillId)\n        (set @entity.lastOutcome ?outcome)\n        (emit OBSERVATION_MADE { outcome: ?outcome })\n      VERDICT_REACHED -> idle\n        (emit CAPTURE_LABEL {\n          input: { skillId: @entity.skillId },\n          verdict: { status: ?status, mean: ?mean, intervalLow: ?intervalLow, intervalHigh: ?intervalHigh },\n          source: \"posterior\",\n          outcome: @entity.lastOutcome\n        })\n    }\n\n    emits {\n      OBSERVATION_MADE {\n        outcome : boolean!\n      }\n        @description \"Forwards the raw outcome to PosteriorTracker once skillId is recorded on the shared entity.\"\n        @tier \"secondary\"\n\n      CAPTURE_LABEL {\n        input : any!\n        verdict : any!\n        source : string!\n        outcome : any\n      }\n        @description \"The posterior's verdict reshaped into a labeled example for LabelCaptureListener.\"\n        @tier \"secondary\"\n    }\n\n    listens {\n      OBSERVE_SKILL {\n        skillId : string!\n        outcome : boolean!\n      }\n        @description \"Public entry point — one true/false observation of a learner against one skill.\"\n        @tier \"primary\"\n\n      PosteriorTracker.MASTERY_REACHED -> VERDICT_REACHED\n        with { status: \"mastered\", mean: ?mean, intervalLow: ?intervalLow, intervalHigh: ?intervalHigh }\n      PosteriorTracker.REMEDIATION_NEEDED -> VERDICT_REACHED\n        with { status: \"remediate\", mean: ?mean, intervalLow: ?intervalLow, intervalHigh: ?intervalHigh }\n      PosteriorTracker.EVIDENCE_INSUFFICIENT -> VERDICT_REACHED\n        with { status: \"insufficient\", mean: ?mean, intervalLow: ?intervalLow, intervalHigh: ?intervalHigh }\n\n      VERDICT_REACHED {\n        status : string!\n        mean : float!\n        intervalLow : float!\n        intervalHigh : float!\n      }\n        @description \"Any posterior verdict, tagged with which one it was.\"\n        @tier \"secondary\"\n    }\n  }\n\n  trait PosteriorTracker = Posterior.traits.PosteriorBelief -> KnowledgeState {\n    config {\n      priorAlpha: 1\n      priorBeta: 1\n      masteryFloor: 0.85\n      remediationCeiling: 0.35\n      intervalWidthMax: 0.25\n      sampleCount: 200\n    }\n\n    listens {\n      ObservationRelay.OBSERVATION_MADE -> OBSERVE\n    }\n  }\n\n  trait Labels = LabelCap.traits.LabelCaptureListener -> KnowledgeState {\n    config {\n      sink: \"knowledge-tracing\"\n      sampleRate: 1\n    }\n\n    listens {\n      ObservationRelay.CAPTURE_LABEL -> CAPTURE\n    }\n  }\n\n  page \"/knowledge-tracing\" as KnowledgeTracingPage -> ObservationRelay, PosteriorTracker, Labels\n}\n"
+}

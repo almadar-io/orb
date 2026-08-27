@@ -1,0 +1,1019 @@
+{
+  "name": "std-agent-context",
+  "description": "Wraps llm/token-count + llm/compact — context window management.",
+  "level": "atom",
+  "topic": "agent",
+  "schema": {
+    "name": "std-agent-context",
+    "version": "1.0.0",
+    "description": "Wraps llm/token-count + llm/compact — context window management.",
+    "orbitals": [
+      {
+        "name": "AgentContextOrbital",
+        "id": "orb_01KXG04EJ6F1D9RV8QYMR1QHR3",
+        "entity": {
+          "name": "ContextWindow",
+          "id": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "tokenCount",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "beforeTokens",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "afterTokens",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "counted",
+                "compacted"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ContextCounter",
+            "id": "trt_01KXG04EJ65759SYAWKN34XYXK",
+            "category": "lifecycle",
+            "linkedEntity": "ContextWindow",
+            "linkedEntityId": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C",
+            "entityRefIds": {
+              "ContextWindow": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C"
+            },
+            "emits": [
+              {
+                "event": "COUNTED",
+                "eventId": "evt_01KXG04EJ6A298CG2EER1HNX1N",
+                "payloadSchema": [
+                  {
+                    "name": "tokenCount",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "TOKEN_COUNTED",
+                "eventId": "evt_01KXG04EJ6YDMK4GDYZAP5EQVN",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "counting"
+                },
+                {
+                  "name": "counted"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04EJ6D8CWB6ANC75CXZ82",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "COUNT",
+                  "id": "evt_01KXG04EJ69BAQATPKRX0H3FCS",
+                  "name": "Count"
+                },
+                {
+                  "key": "TOKEN_COUNTED",
+                  "id": "evt_01KXG04EJ6YDMK4GDYZAP5EQVN",
+                  "name": "Token Counted",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "COUNT_FAILED",
+                  "id": "evt_01KXG04EJ6RPMNB1NW9NSTTB67",
+                  "name": "Count Failed"
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KXG04EJ6BGYTR3XX620JPG4E",
+                  "name": "Reset"
+                },
+                {
+                  "key": "COUNTED",
+                  "id": "evt_01KXG04EJ6A298CG2EER1HNX1N",
+                  "name": "Counted",
+                  "payloadSchema": [
+                    {
+                      "name": "tokenCount",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6D8CWB6ANC75CXZ82",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.tokenCount",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "counting",
+                  "event": "COUNT",
+                  "eventId": "evt_01KXG04EJ69BAQATPKRX0H3FCS",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ],
+                    [
+                      "llm/token-count",
+                      {
+                        "emit": {
+                          "success": "TOKEN_COUNTED",
+                          "failure": "COUNT_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting",
+                  "to": "counted",
+                  "event": "TOKEN_COUNTED",
+                  "eventId": "evt_01KXG04EJ6YDMK4GDYZAP5EQVN",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.tokenCount",
+                      "@payload.result"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "counted"
+                    ],
+                    [
+                      "emit",
+                      "COUNTED",
+                      {
+                        "tokenCount": "@entity.tokenCount"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting",
+                  "to": "idle",
+                  "event": "COUNT_FAILED",
+                  "eventId": "evt_01KXG04EJ6RPMNB1NW9NSTTB67",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.tokenCount",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "counted",
+                  "to": "counted",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6D8CWB6ANC75CXZ82",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "counted"
+                    ]
+                  ]
+                },
+                {
+                  "from": "counted",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01KXG04EJ6BGYTR3XX620JPG4E",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.tokenCount",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          },
+          {
+            "name": "ContextCompactor",
+            "id": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR",
+            "category": "lifecycle",
+            "linkedEntity": "ContextWindow",
+            "linkedEntityId": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C",
+            "entityRefIds": {
+              "ContextWindow": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C"
+            },
+            "emits": [
+              {
+                "event": "COMPACTED",
+                "eventId": "evt_01KXG04EJ66A1JYHNEYG9198F1",
+                "payloadSchema": [
+                  {
+                    "name": "before",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "after",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "BEFORE_COUNTED",
+                "eventId": "evt_01KXG04EJ6Z7G17S74VV3YFDEJ",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "AFTER_COUNTED",
+                "eventId": "evt_01KXG04EJ6E9TP7C7SF7M8K3W0",
+                "payloadSchema": [
+                  {
+                    "name": "result",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "counting_before"
+                },
+                {
+                  "name": "compacting"
+                },
+                {
+                  "name": "counting_after"
+                },
+                {
+                  "name": "compacted"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04EJ6BV158VJ09W0Y21T3",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "COMPACT",
+                  "id": "evt_01KXG04EJ6X1DEPTM8YD7RKHKQ",
+                  "name": "Compact"
+                },
+                {
+                  "key": "BEFORE_COUNTED",
+                  "id": "evt_01KXG04EJ6Z7G17S74VV3YFDEJ",
+                  "name": "Before Counted",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "COMPACT_COUNT_FAILED",
+                  "id": "evt_01KXG04EJ6J65JX3XFMD1C1SK4",
+                  "name": "Compact Count Failed"
+                },
+                {
+                  "key": "COMPACTED_OK",
+                  "id": "evt_01KXG04EJ6ZMS4KGCC2NSZF14D",
+                  "name": "Compacted Ok"
+                },
+                {
+                  "key": "COMPACT_FAILED",
+                  "id": "evt_01KXG04EJ6WAKQAWFGQBEZE94C",
+                  "name": "Compact Failed"
+                },
+                {
+                  "key": "AFTER_COUNTED",
+                  "id": "evt_01KXG04EJ6E9TP7C7SF7M8K3W0",
+                  "name": "After Counted",
+                  "payloadSchema": [
+                    {
+                      "name": "result",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KXG04EJ65AN9A7NMFDBY9K2Q",
+                  "name": "Reset"
+                },
+                {
+                  "key": "COMPACTED",
+                  "id": "evt_01KXG04EJ66A1JYHNEYG9198F1",
+                  "name": "Compacted",
+                  "payloadSchema": [
+                    {
+                      "name": "before",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "after",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6BV158VJ09W0Y21T3",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "counting_before",
+                  "event": "COMPACT",
+                  "eventId": "evt_01KXG04EJ6X1DEPTM8YD7RKHKQ",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ],
+                    [
+                      "llm/token-count",
+                      {
+                        "emit": {
+                          "success": "BEFORE_COUNTED",
+                          "failure": "COMPACT_COUNT_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting_before",
+                  "to": "compacting",
+                  "event": "BEFORE_COUNTED",
+                  "eventId": "evt_01KXG04EJ6Z7G17S74VV3YFDEJ",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      "@payload.result"
+                    ],
+                    [
+                      "llm/compact",
+                      {
+                        "emit": {
+                          "failure": "COMPACT_FAILED",
+                          "success": "COMPACTED_OK"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting_before",
+                  "to": "idle",
+                  "event": "COMPACT_COUNT_FAILED",
+                  "eventId": "evt_01KXG04EJ6J65JX3XFMD1C1SK4",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "compacting",
+                  "to": "counting_after",
+                  "event": "COMPACTED_OK",
+                  "eventId": "evt_01KXG04EJ6ZMS4KGCC2NSZF14D",
+                  "effects": [
+                    [
+                      "llm/token-count",
+                      {
+                        "emit": {
+                          "failure": "COMPACT_COUNT_FAILED",
+                          "success": "AFTER_COUNTED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "compacting",
+                  "to": "idle",
+                  "event": "COMPACT_FAILED",
+                  "eventId": "evt_01KXG04EJ6WAKQAWFGQBEZE94C",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting_after",
+                  "to": "compacted",
+                  "event": "AFTER_COUNTED",
+                  "eventId": "evt_01KXG04EJ6E9TP7C7SF7M8K3W0",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      "@payload.result"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "compacted"
+                    ],
+                    [
+                      "emit",
+                      "COMPACTED",
+                      {
+                        "before": "@entity.beforeTokens",
+                        "after": "@entity.afterTokens"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "counting_after",
+                  "to": "idle",
+                  "event": "COMPACT_COUNT_FAILED",
+                  "eventId": "evt_01KXG04EJ6J65JX3XFMD1C1SK4",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "compacted",
+                  "to": "compacted",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6BV158VJ09W0Y21T3",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "compacted"
+                    ]
+                  ]
+                },
+                {
+                  "from": "compacted",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01KXG04EJ65AN9A7NMFDBY9K2Q",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.beforeTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.afterTokens",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          },
+          {
+            "name": "ContextListener",
+            "id": "trt_01KXG04EJ69AGWNN2FDK7XQEG9",
+            "category": "lifecycle",
+            "linkedEntity": "ContextWindow",
+            "linkedEntityId": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C",
+            "entityRefIds": {
+              "ContextWindow": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C"
+            },
+            "listens": [
+              {
+                "event": "COUNTED",
+                "eventId": "evt_01KXG04EJ6A298CG2EER1HNX1N",
+                "triggers": "COUNTED",
+                "triggersId": "evt_01KXG04EJ6FHB7K9E2WTGN17F9",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ContextCounter",
+                  "traitId": "trt_01KXG04EJ65759SYAWKN34XYXK"
+                }
+              },
+              {
+                "event": "COMPACTED",
+                "eventId": "evt_01KXG04EJ66A1JYHNEYG9198F1",
+                "triggers": "COMPACTED",
+                "triggersId": "evt_01KXG04EJ6WNX1ZCSR2FFTFKRK",
+                "source": {
+                  "kind": "trait",
+                  "trait": "ContextCompactor",
+                  "traitId": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+                }
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "waiting",
+                  "isInitial": true
+                },
+                {
+                  "name": "active"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04EJ6KN4HPKZM7KJYWWM4",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "COUNTED",
+                  "id": "evt_01KXG04EJ6FHB7K9E2WTGN17F9",
+                  "name": "Counted"
+                },
+                {
+                  "key": "COMPACTED",
+                  "id": "evt_01KXG04EJ6WNX1ZCSR2FFTFKRK",
+                  "name": "Compacted"
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01KXG04EJ67W02HJVM8TA5N087",
+                  "name": "Reset"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "waiting",
+                  "to": "waiting",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6KN4HPKZM7KJYWWM4",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "waiting",
+                  "to": "active",
+                  "event": "COUNTED",
+                  "eventId": "evt_01KXG04EJ6FHB7K9E2WTGN17F9",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "counted"
+                    ]
+                  ]
+                },
+                {
+                  "from": "waiting",
+                  "to": "active",
+                  "event": "COMPACTED",
+                  "eventId": "evt_01KXG04EJ6WNX1ZCSR2FFTFKRK",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "compacted"
+                    ]
+                  ]
+                },
+                {
+                  "from": "waiting",
+                  "to": "waiting",
+                  "event": "RESET",
+                  "eventId": "evt_01KXG04EJ67W02HJVM8TA5N087",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04EJ6KN4HPKZM7KJYWWM4",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "waiting",
+                  "event": "RESET",
+                  "eventId": "evt_01KXG04EJ67W02HJVM8TA5N087",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "AgentContextPage",
+            "id": "pag_01KXG04EJ62CMMJ76JEYM9DSF9",
+            "path": "/agent-context",
+            "traits": [
+              {
+                "ref": "ContextCounter",
+                "refId": "trt_01KXG04EJ65759SYAWKN34XYXK"
+              },
+              {
+                "ref": "ContextCompactor",
+                "refId": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+              },
+              {
+                "ref": "ContextListener",
+                "refId": "trt_01KXG04EJ69AGWNN2FDK7XQEG9"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KXG04EJ67W02HJVM8TA5N087": {
+          "id": "evt_01KXG04EJ67W02HJVM8TA5N087",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ69AGWNN2FDK7XQEG9"
+        },
+        "trt_01KXG04EJ6J58Z1FR4ESGW6ERR": {
+          "id": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR",
+          "kind": "trait",
+          "bakedName": "ContextCompactor",
+          "curName": "ContextCompactor",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EJ6J65JX3XFMD1C1SK4": {
+          "id": "evt_01KXG04EJ6J65JX3XFMD1C1SK4",
+          "kind": "event",
+          "bakedName": "COMPACT_COUNT_FAILED",
+          "curName": "COMPACT_COUNT_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "trt_01KXG04EJ65759SYAWKN34XYXK": {
+          "id": "trt_01KXG04EJ65759SYAWKN34XYXK",
+          "kind": "trait",
+          "bakedName": "ContextCounter",
+          "curName": "ContextCounter",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EJ6E9TP7C7SF7M8K3W0": {
+          "id": "evt_01KXG04EJ6E9TP7C7SF7M8K3W0",
+          "kind": "event",
+          "bakedName": "AFTER_COUNTED",
+          "curName": "AFTER_COUNTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ6WAKQAWFGQBEZE94C": {
+          "id": "evt_01KXG04EJ6WAKQAWFGQBEZE94C",
+          "kind": "event",
+          "bakedName": "COMPACT_FAILED",
+          "curName": "COMPACT_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ6Z7G17S74VV3YFDEJ": {
+          "id": "evt_01KXG04EJ6Z7G17S74VV3YFDEJ",
+          "kind": "event",
+          "bakedName": "BEFORE_COUNTED",
+          "curName": "BEFORE_COUNTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "orb_01KXG04EJ6F1D9RV8QYMR1QHR3": {
+          "id": "orb_01KXG04EJ6F1D9RV8QYMR1QHR3",
+          "kind": "orbital",
+          "bakedName": "AgentContextOrbital",
+          "curName": "AgentContextOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KXG04EJ69AGWNN2FDK7XQEG9": {
+          "id": "trt_01KXG04EJ69AGWNN2FDK7XQEG9",
+          "kind": "trait",
+          "bakedName": "ContextListener",
+          "curName": "ContextListener",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EJ6RPMNB1NW9NSTTB67": {
+          "id": "evt_01KXG04EJ6RPMNB1NW9NSTTB67",
+          "kind": "event",
+          "bakedName": "COUNT_FAILED",
+          "curName": "COUNT_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "evt_01KXG04EJ6FHB7K9E2WTGN17F9": {
+          "id": "evt_01KXG04EJ6FHB7K9E2WTGN17F9",
+          "kind": "event",
+          "bakedName": "COUNTED",
+          "curName": "COUNTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ69AGWNN2FDK7XQEG9"
+        },
+        "evt_01KXG04EJ6KN4HPKZM7KJYWWM4": {
+          "id": "evt_01KXG04EJ6KN4HPKZM7KJYWWM4",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ69AGWNN2FDK7XQEG9"
+        },
+        "evt_01KXG04EJ6BV158VJ09W0Y21T3": {
+          "id": "evt_01KXG04EJ6BV158VJ09W0Y21T3",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ6YDMK4GDYZAP5EQVN": {
+          "id": "evt_01KXG04EJ6YDMK4GDYZAP5EQVN",
+          "kind": "event",
+          "bakedName": "TOKEN_COUNTED",
+          "curName": "TOKEN_COUNTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "evt_01KXG04EJ66A1JYHNEYG9198F1": {
+          "id": "evt_01KXG04EJ66A1JYHNEYG9198F1",
+          "kind": "event",
+          "bakedName": "COMPACTED",
+          "curName": "COMPACTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ69BAQATPKRX0H3FCS": {
+          "id": "evt_01KXG04EJ69BAQATPKRX0H3FCS",
+          "kind": "event",
+          "bakedName": "COUNT",
+          "curName": "COUNT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "ent_01KXG04EJ6PXMMHTTEJ27RNN6C": {
+          "id": "ent_01KXG04EJ6PXMMHTTEJ27RNN6C",
+          "kind": "entity",
+          "bakedName": "ContextWindow",
+          "curName": "ContextWindow",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EJ6A298CG2EER1HNX1N": {
+          "id": "evt_01KXG04EJ6A298CG2EER1HNX1N",
+          "kind": "event",
+          "bakedName": "COUNTED",
+          "curName": "COUNTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "evt_01KXG04EJ65AN9A7NMFDBY9K2Q": {
+          "id": "evt_01KXG04EJ65AN9A7NMFDBY9K2Q",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ6D8CWB6ANC75CXZ82": {
+          "id": "evt_01KXG04EJ6D8CWB6ANC75CXZ82",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "evt_01KXG04EJ6WNX1ZCSR2FFTFKRK": {
+          "id": "evt_01KXG04EJ6WNX1ZCSR2FFTFKRK",
+          "kind": "event",
+          "bakedName": "COMPACTED",
+          "curName": "COMPACTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ69AGWNN2FDK7XQEG9"
+        },
+        "evt_01KXG04EJ6X1DEPTM8YD7RKHKQ": {
+          "id": "evt_01KXG04EJ6X1DEPTM8YD7RKHKQ",
+          "kind": "event",
+          "bakedName": "COMPACT",
+          "curName": "COMPACT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "evt_01KXG04EJ6BGYTR3XX620JPG4E": {
+          "id": "evt_01KXG04EJ6BGYTR3XX620JPG4E",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ65759SYAWKN34XYXK"
+        },
+        "evt_01KXG04EJ6ZMS4KGCC2NSZF14D": {
+          "id": "evt_01KXG04EJ6ZMS4KGCC2NSZF14D",
+          "kind": "event",
+          "bakedName": "COMPACTED_OK",
+          "curName": "COMPACTED_OK",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EJ6J58Z1FR4ESGW6ERR"
+        },
+        "pag_01KXG04EJ62CMMJ76JEYM9DSF9": {
+          "id": "pag_01KXG04EJ62CMMJ76JEYM9DSF9",
+          "kind": "page",
+          "bakedName": "AgentContextPage",
+          "curName": "AgentContextPage",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-agent-context \"1.0.0\"\n\"Wraps llm/token-count + llm/compact — context window management.\"\norbital AgentContextOrbital {\n\n  entity ContextWindow [runtime] {\n    tokenCount : number = 0\n    beforeTokens : number = 0\n    afterTokens : number = 0\n    status : \"idle\" | \"counted\" | \"compacted\" = idle\n  }\n\n  trait ContextCounter -> ContextWindow [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (set @entity.tokenCount 0)\n        (set @entity.status idle)\n      COUNT -> counting\n        (set @entity.status idle)\n        (llm/token-count { emit: { success: TOKEN_COUNTED, failure: COUNT_FAILED } })\n    }\n\n    state counting {\n      TOKEN_COUNTED -> counted\n        (set @entity.tokenCount ?result)\n        (set @entity.status counted)\n        (emit COUNTED { tokenCount: @entity.tokenCount })\n      COUNT_FAILED -> idle\n        (set @entity.tokenCount 0)\n        (set @entity.status idle)\n    }\n\n    state counted {\n      INIT -> counted\n        (set @entity.status counted)\n      RESET -> idle\n        (set @entity.tokenCount 0)\n        (set @entity.status idle)\n    }\n\n    emits {\n      COUNTED {\n        tokenCount : number!\n      }\n      TOKEN_COUNTED {\n        result : number!\n      }\n    }\n\n    listens {\n      COUNT\n    }\n  }\n\n  trait ContextCompactor -> ContextWindow [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (set @entity.beforeTokens 0)\n        (set @entity.afterTokens 0)\n        (set @entity.status idle)\n      COMPACT -> counting_before\n        (set @entity.status idle)\n        (llm/token-count { emit: { success: BEFORE_COUNTED, failure: COMPACT_COUNT_FAILED } })\n    }\n\n    state counting_before {\n      BEFORE_COUNTED -> compacting\n        (set @entity.beforeTokens ?result)\n        (llm/compact { emit: { success: COMPACTED_OK, failure: COMPACT_FAILED } })\n      COMPACT_COUNT_FAILED -> idle\n        (set @entity.beforeTokens 0)\n        (set @entity.afterTokens 0)\n        (set @entity.status idle)\n    }\n\n    state compacting {\n      COMPACTED_OK -> counting_after\n        (llm/token-count { emit: { success: AFTER_COUNTED, failure: COMPACT_COUNT_FAILED } })\n      COMPACT_FAILED -> idle\n        (set @entity.beforeTokens 0)\n        (set @entity.afterTokens 0)\n        (set @entity.status idle)\n    }\n\n    state counting_after {\n      AFTER_COUNTED -> compacted\n        (set @entity.afterTokens ?result)\n        (set @entity.status compacted)\n        (emit COMPACTED { before: @entity.beforeTokens, after: @entity.afterTokens })\n      COMPACT_COUNT_FAILED -> idle\n        (set @entity.beforeTokens 0)\n        (set @entity.afterTokens 0)\n        (set @entity.status idle)\n    }\n\n    state compacted {\n      INIT -> compacted\n        (set @entity.status compacted)\n      RESET -> idle\n        (set @entity.beforeTokens 0)\n        (set @entity.afterTokens 0)\n        (set @entity.status idle)\n    }\n\n    emits {\n      COMPACTED {\n        before : number!\n        after : number!\n      }\n      BEFORE_COUNTED {\n        result : number!\n      }\n      AFTER_COUNTED {\n        result : number!\n      }\n    }\n\n    listens {\n      COMPACT\n    }\n  }\n\n  trait ContextListener -> ContextWindow [lifecycle, instance] {\n    initial: waiting\n\n    state waiting {\n      INIT -> waiting\n        (set @entity.status idle)\n      COUNTED -> active\n        (set @entity.status counted)\n      COMPACTED -> active\n        (set @entity.status compacted)\n      RESET -> waiting\n        (set @entity.status idle)\n    }\n\n    state active {\n      INIT -> active\n        (set @entity.status idle)\n      RESET -> waiting\n        (set @entity.status idle)\n    }\n\n    listens {\n      ContextCounter.COUNTED -> COUNTED\n      ContextCompactor.COMPACTED -> COMPACTED\n      RESET\n    }\n  }\n\n  page \"/agent-context\" as AgentContextPage -> ContextCounter, ContextCompactor, ContextListener\n}\n"
+}

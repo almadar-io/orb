@@ -1,0 +1,916 @@
+{
+  "name": "std-learn-slope-probe",
+  "description": "Headless derivative probe for graph-riding learning boards: while the body authority's BODY_MOVED reports its `skating` flag (body riding the curve), it brackets the configured curve around the body's x and derives the local calculus readout — the slope dy/dx, a tangent-line segment of half-width `window` centered on the contact point, a rise-over-run triangle (run `triRun`, rise slope·run), and the glow window of curve samples around the contact — all written to a [runtime, shared] entity so the board renders the math the player is physically riding. Emits the sparse SLOPE_CHANGED signal only when the slope crosses a 0.5 bucket boundary, so fx and HUD meters react to *changes* in steepness without paying a per-tick event. The curve is the same sample table the body skates and the canvas draws — one source, three views. Renders nothing.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-learn-slope-probe",
+    "version": "1.0.0",
+    "description": "Headless derivative probe for graph-riding learning boards: while the body authority's BODY_MOVED reports its `skating` flag (body riding the curve), it brackets the configured curve around the body's x and derives the local calculus readout — the slope dy/dx, a tangent-line segment of half-width `window` centered on the contact point, a rise-over-run triangle (run `triRun`, rise slope·run), and the glow window of curve samples around the contact — all written to a [runtime, shared] entity so the board renders the math the player is physically riding. Emits the sparse SLOPE_CHANGED signal only when the slope crosses a 0.5 bucket boundary, so fx and HUD meters react to *changes* in steepness without paying a per-tick event. The curve is the same sample table the body skates and the canvas draws — one source, three views. Renders nothing.",
+    "orbitals": [
+      {
+        "name": "LearnSlopeProbeOrbital",
+        "id": "orb_01M0PCKHE1NHAQJX69K4B0BDYN",
+        "entity": {
+          "name": "SlopeProbeState",
+          "id": "ent_01M0PCKHE11KYZX94KWC57GXV6",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "probing",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "slope",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "tax",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "tay",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "tbx",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "tby",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triAx",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triAy",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triBx",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triBy",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triCx",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "triCy",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "segment",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "bucket",
+              "type": "number",
+              "default": 9999
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "LearnSlopeProbe",
+            "id": "trt_01M0PCKHE1M92GK1XB3S6AJ740",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "bucket",
+                "probing",
+                "segment",
+                "slope",
+                "tax",
+                "tay",
+                "tbx",
+                "tby",
+                "triAx",
+                "triAy",
+                "triBx",
+                "triBy",
+                "triCx",
+                "triCy",
+                "x",
+                "y"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "SlopeProbeState",
+            "linkedEntityId": "ent_01M0PCKHE11KYZX94KWC57GXV6",
+            "entityRefIds": {
+              "SlopeProbeState": "ent_01M0PCKHE11KYZX94KWC57GXV6"
+            },
+            "emits": [
+              {
+                "event": "SLOPE_CHANGED",
+                "eventId": "evt_01M0PCKHE12DGVT5B7T3TPJ62C",
+                "description": "The local dy/dx crossed a 0.5 bucket boundary while the probe was active; slope is exact, bucket is the rounded step — fx/HUD scale with steepness without paying per-tick events.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "slope",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "bucket",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0PCKHE128V5KDZKW5641SC0",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M0PCKHE13WYBS0FD96E41N8P",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M0PCKHE1NS3DMPSXV27AB9PC",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "SLOPE_CHANGED",
+                  "id": "evt_01M0PCKHE12DGVT5B7T3TPJ62C",
+                  "name": "Slope Changed",
+                  "description": "The local dy/dx crossed a 0.5 bucket boundary while the probe was active; slope is exact, bucket is the rounded step — fx/HUD scale with steepness without paying per-tick events.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "slope",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "bucket",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M0PCKHE128V5KDZKW5641SC0",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.probing",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.segment",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.bucket",
+                      9999
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M0PCKHE13WYBS0FD96E41N8P",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "on",
+                          [
+                            "and",
+                            "@payload.skating",
+                            [
+                              ">",
+                              [
+                                "array/len",
+                                []
+                              ],
+                              1
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "let",
+                        [
+                          [
+                            "inRange",
+                            [
+                              "and",
+                              "@on",
+                              [
+                                "and",
+                                [
+                                  ">=",
+                                  "@payload.x",
+                                  [
+                                    "object/get",
+                                    [
+                                      "array/first",
+                                      []
+                                    ],
+                                    "x"
+                                  ]
+                                ],
+                                [
+                                  "<=",
+                                  "@payload.x",
+                                  [
+                                    "object/get",
+                                    [
+                                      "array/last",
+                                      []
+                                    ],
+                                    "x"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "if",
+                          "@inRange",
+                          [
+                            "let",
+                            [
+                              [
+                                "leftSamp",
+                                [
+                                  "array/last",
+                                  [
+                                    "array/filter",
+                                    [],
+                                    [
+                                      "fn",
+                                      "s",
+                                      [
+                                        "<=",
+                                        [
+                                          "object/get",
+                                          "@s",
+                                          "x"
+                                        ],
+                                        "@payload.x"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "rightSamp",
+                                [
+                                  "array/first",
+                                  [
+                                    "array/filter",
+                                    [],
+                                    [
+                                      "fn",
+                                      "s",
+                                      [
+                                        ">",
+                                        [
+                                          "object/get",
+                                          "@s",
+                                          "x"
+                                        ],
+                                        "@payload.x"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ],
+                            [
+                              "let",
+                              [
+                                [
+                                  "slope",
+                                  [
+                                    "if",
+                                    [
+                                      "==",
+                                      "@rightSamp",
+                                      null
+                                    ],
+                                    0,
+                                    [
+                                      "/",
+                                      [
+                                        "-",
+                                        [
+                                          "object/get",
+                                          "@rightSamp",
+                                          "y"
+                                        ],
+                                        [
+                                          "object/get",
+                                          "@leftSamp",
+                                          "y"
+                                        ]
+                                      ],
+                                      [
+                                        "-",
+                                        [
+                                          "object/get",
+                                          "@rightSamp",
+                                          "x"
+                                        ],
+                                        [
+                                          "object/get",
+                                          "@leftSamp",
+                                          "x"
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "curveY",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "@rightSamp",
+                                        null
+                                      ],
+                                      [
+                                        "object/get",
+                                        "@leftSamp",
+                                        "y"
+                                      ],
+                                      [
+                                        "+",
+                                        [
+                                          "object/get",
+                                          "@leftSamp",
+                                          "y"
+                                        ],
+                                        [
+                                          "*",
+                                          "@slope",
+                                          [
+                                            "-",
+                                            "@payload.x",
+                                            [
+                                              "object/get",
+                                              "@leftSamp",
+                                              "x"
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "let",
+                                  [
+                                    [
+                                      "norm",
+                                      [
+                                        "math/sqrt",
+                                        [
+                                          "+",
+                                          1,
+                                          [
+                                            "*",
+                                            "@slope",
+                                            "@slope"
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "let",
+                                    [
+                                      [
+                                        "dx",
+                                        [
+                                          "/",
+                                          1.5,
+                                          "@norm"
+                                        ]
+                                      ],
+                                      [
+                                        "dy",
+                                        [
+                                          "/",
+                                          [
+                                            "*",
+                                            "@slope",
+                                            1.5
+                                          ],
+                                          "@norm"
+                                        ]
+                                      ]
+                                    ],
+                                    [
+                                      "let",
+                                      [
+                                        [
+                                          "newBucket",
+                                          [
+                                            "*",
+                                            [
+                                              "math/round",
+                                              [
+                                                "*",
+                                                "@slope",
+                                                2
+                                              ],
+                                              0
+                                            ],
+                                            0.5
+                                          ]
+                                        ]
+                                      ],
+                                      [
+                                        "do",
+                                        [
+                                          "set",
+                                          "@entity.probing",
+                                          true
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.x",
+                                          "@payload.x"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.y",
+                                          "@curveY"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.slope",
+                                          "@slope"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.tax",
+                                          [
+                                            "-",
+                                            "@payload.x",
+                                            "@dx"
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.tay",
+                                          [
+                                            "-",
+                                            "@curveY",
+                                            "@dy"
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.tbx",
+                                          [
+                                            "+",
+                                            "@payload.x",
+                                            "@dx"
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.tby",
+                                          [
+                                            "+",
+                                            "@curveY",
+                                            "@dy"
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triAx",
+                                          "@payload.x"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triAy",
+                                          "@curveY"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triBx",
+                                          [
+                                            "+",
+                                            "@payload.x",
+                                            1
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triBy",
+                                          "@curveY"
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triCx",
+                                          [
+                                            "+",
+                                            "@payload.x",
+                                            1
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.triCy",
+                                          [
+                                            "+",
+                                            "@curveY",
+                                            [
+                                              "*",
+                                              "@slope",
+                                              1
+                                            ]
+                                          ]
+                                        ],
+                                        [
+                                          "set",
+                                          "@entity.segment",
+                                          [
+                                            "array/filter",
+                                            [],
+                                            [
+                                              "fn",
+                                              "s",
+                                              [
+                                                "and",
+                                                [
+                                                  ">=",
+                                                  [
+                                                    "object/get",
+                                                    "@s",
+                                                    "x"
+                                                  ],
+                                                  [
+                                                    "-",
+                                                    "@payload.x",
+                                                    1.5
+                                                  ]
+                                                ],
+                                                [
+                                                  "<=",
+                                                  [
+                                                    "object/get",
+                                                    "@s",
+                                                    "x"
+                                                  ],
+                                                  [
+                                                    "+",
+                                                    "@payload.x",
+                                                    1.5
+                                                  ]
+                                                ]
+                                              ]
+                                            ]
+                                          ]
+                                        ],
+                                        [
+                                          "if",
+                                          [
+                                            "!=",
+                                            "@newBucket",
+                                            "@entity.bucket"
+                                          ],
+                                          [
+                                            "do",
+                                            [
+                                              "set",
+                                              "@entity.bucket",
+                                              "@newBucket"
+                                            ],
+                                            [
+                                              "emit",
+                                              "SLOPE_CHANGED",
+                                              {
+                                                "bucket": "@newBucket",
+                                                "slope": "@slope"
+                                              }
+                                            ]
+                                          ],
+                                          null
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ],
+                          [
+                            "if",
+                            "@entity.probing",
+                            [
+                              "do",
+                              [
+                                "set",
+                                "@entity.probing",
+                                false
+                              ],
+                              [
+                                "set",
+                                "@entity.segment",
+                                []
+                              ]
+                            ],
+                            null
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "RESTART",
+                  "eventId": "evt_01M0PCKHE1NS3DMPSXV27AB9PC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.probing",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.segment",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.bucket",
+                      9999
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "triRun": {
+                "type": "number",
+                "default": 1,
+                "label": "Triangle Run",
+                "description": "Horizontal leg of the rise-over-run triangle; the vertical leg is slope × triRun, so triRun = 1 reads the slope directly.",
+                "tier": "presentation"
+              },
+              "window": {
+                "type": "number",
+                "default": 1.5,
+                "label": "Tangent Window",
+                "description": "Half-length (world units along the tangent) of the tangent segment and of the glow sample window around the contact point.",
+                "tier": "presentation"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the probe derives the readout off BODY_MOVED; toggle to freeze it (the board hides the tangent overlays when probing goes stale).",
+                "tier": "domain"
+              },
+              "curve": {
+                "type": "[ProbeSample]",
+                "default": [],
+                "label": "Curve",
+                "description": "Surface samples (x strictly increasing) of the graph being ridden — the same table the body skates and the canvas draws, so the readout matches what is underfoot.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "LearnSlopeProbePage",
+            "id": "pag_01M0PCKHE1E5THPAXQSJ3SX27B",
+            "path": "/learn-slope-probe",
+            "traits": [
+              {
+                "ref": "LearnSlopeProbe",
+                "refId": "trt_01M0PCKHE1M92GK1XB3S6AJ740"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "trt_01M0PCKHE1M92GK1XB3S6AJ740": {
+          "id": "trt_01M0PCKHE1M92GK1XB3S6AJ740",
+          "kind": "trait",
+          "bakedName": "LearnSlopeProbe",
+          "curName": "LearnSlopeProbe",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01M0PCKHE1E5THPAXQSJ3SX27B": {
+          "id": "pag_01M0PCKHE1E5THPAXQSJ3SX27B",
+          "kind": "page",
+          "bakedName": "LearnSlopeProbePage",
+          "curName": "LearnSlopeProbePage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCKHE13WYBS0FD96E41N8P": {
+          "id": "evt_01M0PCKHE13WYBS0FD96E41N8P",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCKHE1M92GK1XB3S6AJ740"
+        },
+        "orb_01M0PCKHE1NHAQJX69K4B0BDYN": {
+          "id": "orb_01M0PCKHE1NHAQJX69K4B0BDYN",
+          "kind": "orbital",
+          "bakedName": "LearnSlopeProbeOrbital",
+          "curName": "LearnSlopeProbeOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M0PCKHE11KYZX94KWC57GXV6": {
+          "id": "ent_01M0PCKHE11KYZX94KWC57GXV6",
+          "kind": "entity",
+          "bakedName": "SlopeProbeState",
+          "curName": "SlopeProbeState",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0PCKHE128V5KDZKW5641SC0": {
+          "id": "evt_01M0PCKHE128V5KDZKW5641SC0",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCKHE1M92GK1XB3S6AJ740"
+        },
+        "evt_01M0PCKHE12DGVT5B7T3TPJ62C": {
+          "id": "evt_01M0PCKHE12DGVT5B7T3TPJ62C",
+          "kind": "event",
+          "bakedName": "SLOPE_CHANGED",
+          "curName": "SLOPE_CHANGED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCKHE1M92GK1XB3S6AJ740"
+        },
+        "evt_01M0PCKHE1NS3DMPSXV27AB9PC": {
+          "id": "evt_01M0PCKHE1NS3DMPSXV27AB9PC",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0PCKHE1M92GK1XB3S6AJ740"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-learn-slope-probe \"1.0.0\"\n\"Headless derivative probe for graph-riding learning boards: while the body authority's BODY_MOVED reports its `skating` flag (body riding the curve), it brackets the configured curve around the body's x and derives the local calculus readout — the slope dy/dx, a tangent-line segment of half-width `window` centered on the contact point, a rise-over-run triangle (run `triRun`, rise slope·run), and the glow window of curve samples around the contact — all written to a [runtime, shared] entity so the board renders the math the player is physically riding. Emits the sparse SLOPE_CHANGED signal only when the slope crosses a 0.5 bucket boundary, so fx and HUD meters react to *changes* in steepness without paying a per-tick event. The curve is the same sample table the body skates and the canvas draws — one source, three views. Renders nothing.\"\norbital LearnSlopeProbeOrbital {\n  type ProbeSample = {\n    x : number!\n    y : number!\n  }\n\n  entity SlopeProbeState [runtime, shared] {\n    id : string!\n    probing : boolean = false\n    x : number = 0\n    y : number = 0\n    slope : number = 0\n    tax : number = 0\n    tay : number = 0\n    tbx : number = 0\n    tby : number = 0\n    triAx : number = 0\n    triAy : number = 0\n    triBx : number = 0\n    triBy : number = 0\n    triCx : number = 0\n    triCy : number = 0\n    segment : [ProbeSample] = []\n    bucket : number = 9999\n  }\n\n  trait LearnSlopeProbe -> @rebindable SlopeProbeState [lifecycle] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (set @entity.probing false)\n        (set @entity.segment [])\n        (set @entity.bucket 9999)\n\n      BODY_MOVED -> idle when @config.running\n        (let ((on (and @payload.skating (> (array/len @config.curve) 1))))\n        (let ((inRange (and @on (and (>= @payload.x (object/get (array/first @config.curve) x)) (<= @payload.x (object/get (array/last @config.curve) x))))))\n        (if @inRange\n          (let ((leftSamp (array/last (array/filter @config.curve (fn s (<= (object/get @s x) @payload.x)))))\n                (rightSamp (array/first (array/filter @config.curve (fn s (> (object/get @s x) @payload.x))))))\n          (let ((slope (if (== @rightSamp null) 0 (/ (- (object/get @rightSamp y) (object/get @leftSamp y)) (- (object/get @rightSamp x) (object/get @leftSamp x))))))\n          (let ((curveY (if (== @rightSamp null) (object/get @leftSamp y) (+ (object/get @leftSamp y) (* @slope (- @payload.x (object/get @leftSamp x)))))))\n          (let ((norm (math/sqrt (+ 1 (* @slope @slope)))))\n          (let ((dx (/ @config.window @norm)) (dy (/ (* @slope @config.window) @norm)))\n          (let ((newBucket (* (math/round (* @slope 2) 0) 0.5)))\n            (do\n              (set @entity.probing true)\n              (set @entity.x @payload.x)\n              (set @entity.y @curveY)\n              (set @entity.slope @slope)\n              (set @entity.tax (- @payload.x @dx))\n              (set @entity.tay (- @curveY @dy))\n              (set @entity.tbx (+ @payload.x @dx))\n              (set @entity.tby (+ @curveY @dy))\n              (set @entity.triAx @payload.x)\n              (set @entity.triAy @curveY)\n              (set @entity.triBx (+ @payload.x @config.triRun))\n              (set @entity.triBy @curveY)\n              (set @entity.triCx (+ @payload.x @config.triRun))\n              (set @entity.triCy (+ @curveY (* @slope @config.triRun)))\n              (set @entity.segment (array/filter @config.curve (fn s (and (>= (object/get @s x) (- @payload.x @config.window)) (<= (object/get @s x) (+ @payload.x @config.window))))))\n              (if (!= @newBucket @entity.bucket)\n                (do\n                  (set @entity.bucket @newBucket)\n                  (emit SLOPE_CHANGED { slope: @slope, bucket: @newBucket }))\n                null))))))))\n          (if @entity.probing\n            (do\n              (set @entity.probing false)\n              (set @entity.segment []))\n            null))))\n\n      RESTART -> idle\n        (set @entity.probing false)\n        (set @entity.segment [])\n        (set @entity.bucket 9999)\n    }\n\n    emits {\n      SLOPE_CHANGED -> external {\n        slope : number!\n        bucket : number!\n      }\n        @description \"The local dy/dx crossed a 0.5 bucket boundary while the probe was active; slope is exact, bucket is the rounded step — fx/HUD scale with steepness without paying per-tick events.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the probe derives the readout off BODY_MOVED; toggle to freeze it (the board hides the tangent overlays when probing goes stale).\"\n        @tier \"domain\"\n      curve : [ProbeSample] = []\n        @label \"Curve\"\n        @description \"Surface samples (x strictly increasing) of the graph being ridden — the same table the body skates and the canvas draws, so the readout matches what is underfoot.\"\n        @tier \"domain\"\n      window : number = 1.5\n        @label \"Tangent Window\"\n        @description \"Half-length (world units along the tangent) of the tangent segment and of the glow sample window around the contact point.\"\n        @tier \"presentation\"\n      triRun : number = 1\n        @label \"Triangle Run\"\n        @description \"Horizontal leg of the rise-over-run triangle; the vertical leg is slope × triRun, so triRun = 1 reads the slope directly.\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/learn-slope-probe\" as LearnSlopeProbePage -> LearnSlopeProbe\n}\n"
+}

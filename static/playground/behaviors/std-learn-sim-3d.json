@@ -1,0 +1,1656 @@
+{
+  "name": "std-learn-sim-3d",
+  "description": "Generic 3D simulation-transport (clock) instrument. Contract: the atom owns the transport and the clock but NOT the physics — Run/Pause/Reset plus a 0.5x/1x/2x/4x speed row drive a running flag and speed multiplier, and a 32ms tick advances steps and simTime by dt x speedMultiplier, emitting SIM_3D_TICK { dt, simTime } each step WITHOUT rendering; a composed sibling trait transitions directly on the SIM_3D_TICK / SIM_3D_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain physics, and owns the scene render — this atom renders no canvas. A caption readout shows steps, sim time, and current speed. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-learn-sim-3d",
+    "version": "1.0.0",
+    "description": "Generic 3D simulation-transport (clock) instrument. Contract: the atom owns the transport and the clock but NOT the physics — Run/Pause/Reset plus a 0.5x/1x/2x/4x speed row drive a running flag and speed multiplier, and a 32ms tick advances steps and simTime by dt x speedMultiplier, emitting SIM_3D_TICK { dt, simTime } each step WITHOUT rendering; a composed sibling trait transitions directly on the SIM_3D_TICK / SIM_3D_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain physics, and owns the scene render — this atom renders no canvas. A caption readout shows steps, sim time, and current speed. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+    "orbitals": [
+      {
+        "name": "LearnSim3DOrbital",
+        "id": "orb_01M07REZ9EHW5BRQW5R24KSKAZ",
+        "entity": {
+          "name": "Learn3DSimScene",
+          "id": "ent_01M07REZ9E71GXFJBWFQNRRKP9",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "running",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "speedMultiplier",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "steps",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "simTime",
+              "type": "number",
+              "default": 0
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "Learn3DSimTransport",
+            "id": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "active",
+                "running",
+                "simTime",
+                "speedMultiplier",
+                "steps",
+                "title"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "Learn3DSimScene",
+            "linkedEntityId": "ent_01M07REZ9E71GXFJBWFQNRRKP9",
+            "entityRefIds": {
+              "Learn3DSimScene": "ent_01M07REZ9E71GXFJBWFQNRRKP9"
+            },
+            "emits": [
+              {
+                "event": "SIM_3D_TICK",
+                "eventId": "evt_01M07REZ9G8Q5ACBKNGK2DY98T",
+                "description": "Fires every 32ms tick while running with the effective timestep (config dt x speed multiplier) and accumulated sim time — the clock a composed physics trait subscribes to; a harmless no-op when the atom runs standalone.",
+                "synonyms": "tick, frame, step, clock, sim update, telemetry",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "dt",
+                    "type": "number"
+                  },
+                  {
+                    "name": "simTime",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "event": "SIM_3D_UPDATED",
+                "eventId": "evt_01M07REZ9G7GAPRM5DR9WDQ69Q",
+                "description": "Fires on INIT/MODE_SELECTED/Run/Pause/Reset/speed change with the transport state — running flag, speed multiplier, step counter, and sim time — a composed listener (readout, graph) can subscribe; a harmless no-op when the atom runs standalone.",
+                "synonyms": "run, pause, reset, speed, transport, sim state",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "running",
+                    "type": "boolean"
+                  },
+                  {
+                    "name": "speedMultiplier",
+                    "type": "number"
+                  },
+                  {
+                    "name": "steps",
+                    "type": "int"
+                  },
+                  {
+                    "name": "simTime",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M07REZ9E2GJ091W7DXN8TNRS",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "MODE_SELECTED",
+                  "id": "evt_01M07REZ9GB3B15PX19TD5V8FG",
+                  "name": "Mode Selected",
+                  "description": "Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "RUN",
+                  "id": "evt_01M07REZ9GQTKWE3EAS9FSE63G",
+                  "name": "Run"
+                },
+                {
+                  "key": "PAUSE",
+                  "id": "evt_01M07REZ9GCADSZNP330KKQGBY",
+                  "name": "Pause"
+                },
+                {
+                  "key": "RESET",
+                  "id": "evt_01M07REZ9GBZQTTBK1M1CWZKDF",
+                  "name": "Reset"
+                },
+                {
+                  "key": "SPEED_HALF",
+                  "id": "evt_01M07REZ9GYHZDG4QWW1EYXBP9",
+                  "name": "Speed Half"
+                },
+                {
+                  "key": "SPEED_NORMAL",
+                  "id": "evt_01M07REZ9GCWV927BK9FH4XGWE",
+                  "name": "Speed Normal"
+                },
+                {
+                  "key": "SPEED_DOUBLE",
+                  "id": "evt_01M07REZ9GZ6GJR167ZJ2N68DY",
+                  "name": "Speed Double"
+                },
+                {
+                  "key": "SPEED_QUAD",
+                  "id": "evt_01M07REZ9GDGPW6RCCEP3D4EMJ",
+                  "name": "Speed Quad"
+                },
+                {
+                  "key": "SIM_3D_TICK",
+                  "id": "evt_01M07REZ9G8Q5ACBKNGK2DY98T",
+                  "name": "Sim 3d Tick",
+                  "description": "Fires every 32ms tick while running with the effective timestep (config dt x speed multiplier) and accumulated sim time — the clock a composed physics trait subscribes to; a harmless no-op when the atom runs standalone.",
+                  "synonyms": "tick, frame, step, clock, sim update, telemetry",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "dt",
+                      "type": "number"
+                    },
+                    {
+                      "name": "simTime",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "SIM_3D_UPDATED",
+                  "id": "evt_01M07REZ9G7GAPRM5DR9WDQ69Q",
+                  "name": "Sim 3d Updated",
+                  "description": "Fires on INIT/MODE_SELECTED/Run/Pause/Reset/speed change with the transport state — running flag, speed multiplier, step counter, and sim time — a composed listener (readout, graph) can subscribe; a harmless no-op when the atom runs standalone.",
+                  "synonyms": "run, pause, reset, speed, transport, sim state",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "running",
+                      "type": "boolean"
+                    },
+                    {
+                      "name": "speedMultiplier",
+                      "type": "number"
+                    },
+                    {
+                      "name": "steps",
+                      "type": "int"
+                    },
+                    {
+                      "name": "simTime",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M07REZ9E2GJ091W7DXN8TNRS",
+                  "guard": [
+                    "==",
+                    "",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.active",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "3D Simulation"
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.simTime",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "variant": "h4",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "label": "Run",
+                                    "action": "RUN",
+                                    "variant": "primary",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "label": "Pause",
+                                    "variant": "secondary",
+                                    "action": "PAUSE"
+                                  },
+                                  {
+                                    "label": "Reset",
+                                    "action": "RESET",
+                                    "variant": "ghost",
+                                    "type": "button"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "variant": "ghost",
+                                    "action": "SPEED_HALF",
+                                    "type": "button",
+                                    "label": "0.5x"
+                                  },
+                                  {
+                                    "label": "1x",
+                                    "variant": "ghost",
+                                    "action": "SPEED_NORMAL",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "label": "2x",
+                                    "action": "SPEED_DOUBLE",
+                                    "type": "button",
+                                    "variant": "ghost"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "4x"
+                                  }
+                                ],
+                                "gap": "sm"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "type": "typography",
+                                "variant": "caption"
+                              }
+                            ],
+                            "gap": "md",
+                            "direction": "vertical"
+                          }
+                        ],
+                        "type": "box"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "simTime": "@entity.simTime",
+                        "running": "@entity.running",
+                        "steps": "@entity.steps"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "MODE_SELECTED",
+                  "eventId": "evt_01M07REZ9GB3B15PX19TD5V8FG",
+                  "guard": [
+                    "==",
+                    "@payload.mode",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.active",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.title",
+                      "3D Simulation"
+                    ],
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.simTime",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "variant": "h4",
+                                "type": "typography",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "variant": "primary",
+                                    "action": "RUN",
+                                    "label": "Run",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "label": "Pause",
+                                    "variant": "secondary",
+                                    "action": "PAUSE",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "action": "RESET",
+                                    "label": "Reset"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "action": "SPEED_HALF",
+                                    "label": "0.5x"
+                                  },
+                                  {
+                                    "label": "1x",
+                                    "variant": "ghost",
+                                    "type": "button",
+                                    "action": "SPEED_NORMAL"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "SPEED_DOUBLE",
+                                    "label": "2x",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "label": "4x",
+                                    "variant": "ghost",
+                                    "type": "button"
+                                  }
+                                ],
+                                "type": "stack"
+                              },
+                              {
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "type": "typography"
+                              }
+                            ],
+                            "gap": "md",
+                            "type": "stack",
+                            "direction": "vertical"
+                          }
+                        ],
+                        "type": "box",
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "simTime": "@entity.simTime",
+                        "steps": "@entity.steps",
+                        "running": "@entity.running",
+                        "speedMultiplier": "@entity.speedMultiplier"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "RUN",
+                  "eventId": "evt_01M07REZ9GQTKWE3EAS9FSE63G",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "type": "box",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "gap": "md",
+                            "direction": "vertical",
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "variant": "h4",
+                                "type": "typography"
+                              },
+                              {
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "variant": "primary",
+                                    "action": "RUN",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "action": "PAUSE",
+                                    "variant": "secondary",
+                                    "label": "Pause",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "Reset",
+                                    "action": "RESET"
+                                  }
+                                ]
+                              },
+                              {
+                                "gap": "sm",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "label": "0.5x",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "action": "SPEED_HALF"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "SPEED_NORMAL",
+                                    "label": "1x",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "label": "2x",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "action": "SPEED_DOUBLE"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "type": "button",
+                                    "label": "4x",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "type": "stack"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "type": "typography",
+                                "variant": "caption"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "steps": "@entity.steps",
+                        "simTime": "@entity.simTime",
+                        "running": "@entity.running",
+                        "speedMultiplier": "@entity.speedMultiplier"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "PAUSE",
+                  "eventId": "evt_01M07REZ9GCADSZNP330KKQGBY",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      false
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "type": "box",
+                        "children": [
+                          {
+                            "type": "stack",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "variant": "h4",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "variant": "primary",
+                                    "action": "RUN",
+                                    "type": "button",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "action": "PAUSE",
+                                    "type": "button",
+                                    "label": "Pause",
+                                    "variant": "secondary"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "label": "Reset",
+                                    "action": "RESET",
+                                    "type": "button"
+                                  }
+                                ],
+                                "type": "stack",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "variant": "ghost",
+                                    "type": "button",
+                                    "label": "0.5x",
+                                    "action": "SPEED_HALF"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "SPEED_NORMAL",
+                                    "type": "button",
+                                    "label": "1x"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "label": "2x",
+                                    "action": "SPEED_DOUBLE",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "label": "4x",
+                                    "variant": "ghost",
+                                    "type": "button"
+                                  }
+                                ],
+                                "type": "stack",
+                                "gap": "sm",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "gap": "md"
+                          }
+                        ]
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "running": "@entity.running",
+                        "simTime": "@entity.simTime",
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "steps": "@entity.steps"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "RESET",
+                  "eventId": "evt_01M07REZ9GBZQTTBK1M1CWZKDF",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.running",
+                      true
+                    ],
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.steps",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.simTime",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "type": "box",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "variant": "primary",
+                                    "action": "RUN",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "label": "Pause",
+                                    "type": "button",
+                                    "action": "PAUSE"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "RESET",
+                                    "type": "button",
+                                    "label": "Reset"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "type": "stack"
+                              },
+                              {
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "action": "SPEED_HALF",
+                                    "type": "button",
+                                    "label": "0.5x",
+                                    "variant": "ghost"
+                                  },
+                                  {
+                                    "action": "SPEED_NORMAL",
+                                    "label": "1x",
+                                    "variant": "ghost",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "SPEED_DOUBLE",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "2x"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "label": "4x",
+                                    "type": "button",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "type": "typography"
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "vertical",
+                            "gap": "md"
+                          }
+                        ]
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "running": "@entity.running",
+                        "simTime": "@entity.simTime",
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "steps": "@entity.steps"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SPEED_HALF",
+                  "eventId": "evt_01M07REZ9GYHZDG4QWW1EYXBP9",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      0.5
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "padding": "md",
+                        "type": "box",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "gap": "sm",
+                                "type": "stack",
+                                "direction": "horizontal",
+                                "children": [
+                                  {
+                                    "action": "RUN",
+                                    "type": "button",
+                                    "variant": "primary",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "type": "button",
+                                    "action": "PAUSE",
+                                    "label": "Pause"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "RESET",
+                                    "type": "button",
+                                    "label": "Reset"
+                                  }
+                                ]
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "action": "SPEED_HALF",
+                                    "label": "0.5x",
+                                    "variant": "ghost"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "action": "SPEED_NORMAL",
+                                    "type": "button",
+                                    "label": "1x"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "action": "SPEED_DOUBLE",
+                                    "label": "2x"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "type": "button",
+                                    "label": "4x",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "type": "stack",
+                                "gap": "sm"
+                              },
+                              {
+                                "variant": "caption",
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "type": "typography"
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "vertical",
+                            "gap": "md"
+                          }
+                        ]
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "running": "@entity.running",
+                        "steps": "@entity.steps",
+                        "simTime": "@entity.simTime"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SPEED_NORMAL",
+                  "eventId": "evt_01M07REZ9GCWV927BK9FH4XGWE",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      1
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "variant": "h4",
+                                "content": "@entity.title",
+                                "type": "typography"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "variant": "primary",
+                                    "type": "button",
+                                    "action": "RUN",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "action": "PAUSE",
+                                    "label": "Pause",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "RESET",
+                                    "type": "button",
+                                    "label": "Reset",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "variant": "ghost",
+                                    "label": "0.5x",
+                                    "action": "SPEED_HALF",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "SPEED_NORMAL",
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "1x"
+                                  },
+                                  {
+                                    "label": "2x",
+                                    "type": "button",
+                                    "action": "SPEED_DOUBLE",
+                                    "variant": "ghost"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "variant": "ghost",
+                                    "label": "4x",
+                                    "type": "button"
+                                  }
+                                ],
+                                "gap": "sm",
+                                "type": "stack",
+                                "direction": "horizontal"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "gap": "md",
+                            "type": "stack"
+                          }
+                        ],
+                        "padding": "md",
+                        "type": "box"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "steps": "@entity.steps",
+                        "running": "@entity.running",
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "simTime": "@entity.simTime"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SPEED_DOUBLE",
+                  "eventId": "evt_01M07REZ9GZ6GJR167ZJ2N68DY",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      2
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "box",
+                        "children": [
+                          {
+                            "direction": "vertical",
+                            "children": [
+                              {
+                                "variant": "h4",
+                                "content": "@entity.title",
+                                "type": "typography"
+                              },
+                              {
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "variant": "primary",
+                                    "type": "button",
+                                    "action": "RUN",
+                                    "label": "Run"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "label": "Pause",
+                                    "type": "button",
+                                    "action": "PAUSE"
+                                  },
+                                  {
+                                    "label": "Reset",
+                                    "variant": "ghost",
+                                    "action": "RESET",
+                                    "type": "button"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "gap": "sm"
+                              },
+                              {
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "children": [
+                                  {
+                                    "variant": "ghost",
+                                    "label": "0.5x",
+                                    "action": "SPEED_HALF",
+                                    "type": "button"
+                                  },
+                                  {
+                                    "action": "SPEED_NORMAL",
+                                    "variant": "ghost",
+                                    "type": "button",
+                                    "label": "1x"
+                                  },
+                                  {
+                                    "label": "2x",
+                                    "action": "SPEED_DOUBLE",
+                                    "type": "button",
+                                    "variant": "ghost"
+                                  },
+                                  {
+                                    "action": "SPEED_QUAD",
+                                    "type": "button",
+                                    "label": "4x",
+                                    "variant": "ghost"
+                                  }
+                                ],
+                                "type": "stack"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "gap": "md",
+                            "type": "stack"
+                          }
+                        ],
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "steps": "@entity.steps",
+                        "running": "@entity.running",
+                        "speedMultiplier": "@entity.speedMultiplier",
+                        "simTime": "@entity.simTime"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SPEED_QUAD",
+                  "eventId": "evt_01M07REZ9GDGPW6RCCEP3D4EMJ",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.speedMultiplier",
+                      4
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "type": "typography",
+                                "content": "@entity.title",
+                                "variant": "h4"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "label": "Run",
+                                    "action": "RUN",
+                                    "type": "button",
+                                    "variant": "primary"
+                                  },
+                                  {
+                                    "variant": "secondary",
+                                    "label": "Pause",
+                                    "type": "button",
+                                    "action": "PAUSE"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "variant": "ghost",
+                                    "label": "Reset",
+                                    "action": "RESET"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "type": "button",
+                                    "action": "SPEED_HALF",
+                                    "variant": "ghost",
+                                    "label": "0.5x"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "label": "1x",
+                                    "type": "button",
+                                    "action": "SPEED_NORMAL"
+                                  },
+                                  {
+                                    "variant": "ghost",
+                                    "type": "button",
+                                    "action": "SPEED_DOUBLE",
+                                    "label": "2x"
+                                  },
+                                  {
+                                    "type": "button",
+                                    "action": "SPEED_QUAD",
+                                    "variant": "ghost",
+                                    "label": "4x"
+                                  }
+                                ],
+                                "direction": "horizontal",
+                                "gap": "sm",
+                                "type": "stack"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "Steps: ",
+                                  "@entity.steps",
+                                  " — sim time: ",
+                                  [
+                                    "math/round",
+                                    "@entity.simTime",
+                                    1
+                                  ],
+                                  " s — speed: ",
+                                  "@entity.speedMultiplier",
+                                  "x"
+                                ],
+                                "variant": "caption",
+                                "type": "typography"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "type": "stack",
+                            "gap": "md"
+                          }
+                        ],
+                        "padding": "md",
+                        "type": "box"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "SIM_3D_UPDATED",
+                      {
+                        "running": "@entity.running",
+                        "steps": "@entity.steps",
+                        "simTime": "@entity.simTime",
+                        "speedMultiplier": "@entity.speedMultiplier"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "simTick",
+                "interval": 32,
+                "guard": [
+                  "==",
+                  "@entity.running",
+                  true
+                ],
+                "effects": [
+                  [
+                    "let",
+                    [
+                      [
+                        "dtEff",
+                        [
+                          "*",
+                          0.02,
+                          "@entity.speedMultiplier"
+                        ]
+                      ]
+                    ],
+                    [
+                      "do",
+                      [
+                        "set",
+                        "@entity.steps",
+                        [
+                          "+",
+                          "@entity.steps",
+                          1
+                        ]
+                      ],
+                      [
+                        "set",
+                        "@entity.simTime",
+                        [
+                          "+",
+                          "@entity.simTime",
+                          "@dtEff"
+                        ]
+                      ],
+                      [
+                        "emit",
+                        "SIM_3D_TICK",
+                        {
+                          "dt": "@dtEff",
+                          "simTime": "@entity.simTime"
+                        }
+                      ]
+                    ]
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the clock starts ticking on INIT; the Reset arm restores this value.",
+                "tier": "domain"
+              },
+              "dt": {
+                "type": "number",
+                "default": 0.02,
+                "label": "Timestep",
+                "description": "Simulated seconds per tick before the speed multiplier; the effective step emitted on SIM_3D_TICK is dt x speedMultiplier.",
+                "tier": "domain"
+              },
+              "title": {
+                "type": "string",
+                "default": "3D Simulation",
+                "label": "Title",
+                "description": "Title shown above the transport controls.",
+                "tier": "presentation"
+              },
+              "matchMode": {
+                "type": "string",
+                "default": "",
+                "label": "Match Mode",
+                "description": "When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "Learn3DSimPage",
+            "id": "pag_01M07REZ9HYJYMCZZHC8V210CX",
+            "path": "/learn-sim-3d",
+            "traits": [
+              {
+                "ref": "Learn3DSimTransport",
+                "refId": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "ent_01M07REZ9E71GXFJBWFQNRRKP9": {
+          "id": "ent_01M07REZ9E71GXFJBWFQNRRKP9",
+          "kind": "entity",
+          "bakedName": "Learn3DSimScene",
+          "curName": "Learn3DSimScene",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M07REZ9E2GJ091W7DXN8TNRS": {
+          "id": "evt_01M07REZ9E2GJ091W7DXN8TNRS",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9G7GAPRM5DR9WDQ69Q": {
+          "id": "evt_01M07REZ9G7GAPRM5DR9WDQ69Q",
+          "kind": "event",
+          "bakedName": "SIM_3D_UPDATED",
+          "curName": "SIM_3D_UPDATED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GZ6GJR167ZJ2N68DY": {
+          "id": "evt_01M07REZ9GZ6GJR167ZJ2N68DY",
+          "kind": "event",
+          "bakedName": "SPEED_DOUBLE",
+          "curName": "SPEED_DOUBLE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9G8Q5ACBKNGK2DY98T": {
+          "id": "evt_01M07REZ9G8Q5ACBKNGK2DY98T",
+          "kind": "event",
+          "bakedName": "SIM_3D_TICK",
+          "curName": "SIM_3D_TICK",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GCADSZNP330KKQGBY": {
+          "id": "evt_01M07REZ9GCADSZNP330KKQGBY",
+          "kind": "event",
+          "bakedName": "PAUSE",
+          "curName": "PAUSE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GYHZDG4QWW1EYXBP9": {
+          "id": "evt_01M07REZ9GYHZDG4QWW1EYXBP9",
+          "kind": "event",
+          "bakedName": "SPEED_HALF",
+          "curName": "SPEED_HALF",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "trt_01M07REZ9E0HF8ACCCVGGXXQ8E": {
+          "id": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E",
+          "kind": "trait",
+          "bakedName": "Learn3DSimTransport",
+          "curName": "Learn3DSimTransport",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M07REZ9GCWV927BK9FH4XGWE": {
+          "id": "evt_01M07REZ9GCWV927BK9FH4XGWE",
+          "kind": "event",
+          "bakedName": "SPEED_NORMAL",
+          "curName": "SPEED_NORMAL",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GDGPW6RCCEP3D4EMJ": {
+          "id": "evt_01M07REZ9GDGPW6RCCEP3D4EMJ",
+          "kind": "event",
+          "bakedName": "SPEED_QUAD",
+          "curName": "SPEED_QUAD",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "orb_01M07REZ9EHW5BRQW5R24KSKAZ": {
+          "id": "orb_01M07REZ9EHW5BRQW5R24KSKAZ",
+          "kind": "orbital",
+          "bakedName": "LearnSim3DOrbital",
+          "curName": "LearnSim3DOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01M07REZ9HYJYMCZZHC8V210CX": {
+          "id": "pag_01M07REZ9HYJYMCZZHC8V210CX",
+          "kind": "page",
+          "bakedName": "Learn3DSimPage",
+          "curName": "Learn3DSimPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M07REZ9GBZQTTBK1M1CWZKDF": {
+          "id": "evt_01M07REZ9GBZQTTBK1M1CWZKDF",
+          "kind": "event",
+          "bakedName": "RESET",
+          "curName": "RESET",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GQTKWE3EAS9FSE63G": {
+          "id": "evt_01M07REZ9GQTKWE3EAS9FSE63G",
+          "kind": "event",
+          "bakedName": "RUN",
+          "curName": "RUN",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        },
+        "evt_01M07REZ9GB3B15PX19TD5V8FG": {
+          "id": "evt_01M07REZ9GB3B15PX19TD5V8FG",
+          "kind": "event",
+          "bakedName": "MODE_SELECTED",
+          "curName": "MODE_SELECTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M07REZ9E0HF8ACCCVGGXXQ8E"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-learn-sim-3d \"1.0.0\"\n\"Generic 3D simulation-transport (clock) instrument. Contract: the atom owns the transport and the clock but NOT the physics — Run/Pause/Reset plus a 0.5x/1x/2x/4x speed row drive a running flag and speed multiplier, and a 32ms tick advances steps and simTime by dt x speedMultiplier, emitting SIM_3D_TICK { dt, simTime } each step WITHOUT rendering; a composed sibling trait transitions directly on the SIM_3D_TICK / SIM_3D_UPDATED broadcasts (the same bare-event cascade the lab routers use), applies the domain physics, and owns the scene render — this atom renders no canvas. A caption readout shows steps, sim time, and current speed. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.\"\norbital LearnSim3DOrbital {\n  entity Learn3DSimScene [runtime] {\n    id : string!\n    active : boolean = false\n    title : string\n    running : boolean = false\n    speedMultiplier : number = 1\n    steps : int = 0\n    simTime : number = 0\n  }\n\n  trait Learn3DSimTransport -> @rebindable Learn3DSimScene [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle when (== @config.matchMode \"\")\n        (set @entity.active true)\n        (set @entity.title @config.title)\n        (set @entity.running @config.running)\n        (set @entity.speedMultiplier 1)\n        (set @entity.steps 0)\n        (set @entity.simTime 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      MODE_SELECTED -> idle when (== ?mode @config.matchMode)\n        (set @entity.active true)\n        (set @entity.title @config.title)\n        (set @entity.running @config.running)\n        (set @entity.speedMultiplier 1)\n        (set @entity.steps 0)\n        (set @entity.simTime 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      RUN -> idle when (== @entity.active true)\n        (set @entity.running true)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      PAUSE -> idle when (== @entity.active true)\n        (set @entity.running false)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      RESET -> idle when (== @entity.active true)\n        (set @entity.running @config.running)\n        (set @entity.speedMultiplier 1)\n        (set @entity.steps 0)\n        (set @entity.simTime 0)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      SPEED_HALF -> idle when (== @entity.active true)\n        (set @entity.speedMultiplier 0.5)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      SPEED_NORMAL -> idle when (== @entity.active true)\n        (set @entity.speedMultiplier 1)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      SPEED_DOUBLE -> idle when (== @entity.active true)\n        (set @entity.speedMultiplier 2)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n\n      SPEED_QUAD -> idle when (== @entity.active true)\n        (set @entity.speedMultiplier 4)\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: RUN, label: \"Run\", variant: primary },\n                    { type: button, action: PAUSE, label: \"Pause\", variant: secondary },\n                    { type: button, action: RESET, label: \"Reset\", variant: ghost }\n                  ] },\n                { type: stack, direction: horizontal, gap: sm, children: [\n                    { type: button, action: SPEED_HALF, label: \"0.5x\", variant: ghost },\n                    { type: button, action: SPEED_NORMAL, label: \"1x\", variant: ghost },\n                    { type: button, action: SPEED_DOUBLE, label: \"2x\", variant: ghost },\n                    { type: button, action: SPEED_QUAD, label: \"4x\", variant: ghost }\n                  ] },\n                { type: typography, variant: caption, content: (str/concat \"Steps: \" @entity.steps \" — sim time: \" (math/round @entity.simTime 1) \" s — speed: \" @entity.speedMultiplier \"x\") }\n              ] }\n          ]\n        })\n        (emit SIM_3D_UPDATED { running: @entity.running, speedMultiplier: @entity.speedMultiplier, steps: @entity.steps, simTime: @entity.simTime })\n    }\n\n    ticks {\n      simTick every 32ms\n        when (== @entity.running true)\n        (let (\n          (dtEff (* @config.dt @entity.speedMultiplier))\n        )\n        (do\n          (set @entity.steps (+ @entity.steps 1))\n          (set @entity.simTime (+ @entity.simTime @dtEff))\n          (emit SIM_3D_TICK { dt: @dtEff, simTime: @entity.simTime })\n        ))\n    }\n\n    listens {\n      MODE_SELECTED {\n        mode : string\n      }\n        @description \"Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.\"\n        @tier \"domain\"\n    }\n\n    emits {\n      SIM_3D_TICK -> external {\n        dt : number\n        simTime : number\n      }\n        @description \"Fires every 32ms tick while running with the effective timestep (config dt x speed multiplier) and accumulated sim time — the clock a composed physics trait subscribes to; a harmless no-op when the atom runs standalone.\"\n        @synonyms \"tick, frame, step, clock, sim update, telemetry\"\n        @tier \"domain\"\n      SIM_3D_UPDATED -> external {\n        running : boolean\n        speedMultiplier : number\n        steps : int\n        simTime : number\n      }\n        @description \"Fires on INIT/MODE_SELECTED/Run/Pause/Reset/speed change with the transport state — running flag, speed multiplier, step counter, and sim time — a composed listener (readout, graph) can subscribe; a harmless no-op when the atom runs standalone.\"\n        @synonyms \"run, pause, reset, speed, transport, sim state\"\n        @tier \"domain\"\n    }\n\n    config {\n      matchMode : string = \"\"\n        @label \"Match Mode\"\n        @description \"When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.\"\n        @tier \"presentation\"\n      title : string = \"3D Simulation\"\n        @label \"Title\"\n        @description \"Title shown above the transport controls.\"\n        @tier \"presentation\"\n      dt : number = 0.02\n        @label \"Timestep\"\n        @description \"Simulated seconds per tick before the speed multiplier; the effective step emitted on SIM_3D_TICK is dt x speedMultiplier.\"\n        @tier \"domain\"\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the clock starts ticking on INIT; the Reset arm restores this value.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/learn-sim-3d\" as Learn3DSimPage -> Learn3DSimTransport\n}\n"
+}

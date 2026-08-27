@@ -1,0 +1,858 @@
+{
+  "name": "std-gather",
+  "description": "Headless resource-gathering mechanic: owns features + wood + stone. Listens HERO_STEPPED and, when the hero lands on a wood/stone-type feature, increments the matching resource, removes the node, emits a BURST pickup particle, and emits RESOURCES so survival-flow can decide loss. Never writes units.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-gather",
+    "version": "1.0.0",
+    "description": "Headless resource-gathering mechanic: owns features + wood + stone. Listens HERO_STEPPED and, when the hero lands on a wood/stone-type feature, increments the matching resource, removes the node, emits a BURST pickup particle, and emits RESOURCES so survival-flow can decide loss. Never writes units.",
+    "orbitals": [
+      {
+        "name": "GatherOrbital",
+        "id": "orb_01KXG04TGGJBM5532P4KGT5YMG",
+        "entity": {
+          "name": "GatherData",
+          "id": "ent_01KXG04TGGZJHPYRRS81F9PP09",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "features",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "name": "type",
+                    "type": "string",
+                    "required": true
+                  },
+                  "assetUrl": {
+                    "name": "assetUrl",
+                    "type": "object",
+                    "required": false,
+                    "properties": {
+                      "category": {
+                        "name": "category",
+                        "type": "string",
+                        "required": false
+                      },
+                      "style": {
+                        "name": "style",
+                        "type": "string",
+                        "required": false
+                      },
+                      "thumbnailUrl": {
+                        "name": "thumbnailUrl",
+                        "type": "string",
+                        "required": false
+                      },
+                      "url": {
+                        "name": "url",
+                        "type": "string",
+                        "required": false
+                      },
+                      "variant": {
+                        "name": "variant",
+                        "type": "string",
+                        "required": false
+                      },
+                      "animations": {
+                        "name": "animations",
+                        "type": "array",
+                        "required": false,
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "dimension": {
+                        "name": "dimension",
+                        "type": "string",
+                        "required": false
+                      },
+                      "role": {
+                        "name": "role",
+                        "type": "string",
+                        "required": false
+                      },
+                      "name": {
+                        "name": "name",
+                        "type": "string",
+                        "required": false
+                      },
+                      "aspect": {
+                        "name": "aspect",
+                        "type": "string",
+                        "required": false
+                      }
+                    }
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "elevation": {
+                    "name": "elevation",
+                    "type": "number",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": false
+                  },
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "z": {
+                    "name": "z",
+                    "type": "number",
+                    "required": false
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "wood",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "stone",
+              "type": "number",
+              "default": 0
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "Gather",
+            "id": "trt_01KXG04TGG6JKGWFNS68C642NS",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "features",
+                "stone",
+                "wood"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "GatherData",
+            "linkedEntityId": "ent_01KXG04TGGZJHPYRRS81F9PP09",
+            "entityRefIds": {
+              "GatherData": "ent_01KXG04TGGZJHPYRRS81F9PP09"
+            },
+            "emits": [
+              {
+                "event": "BURST",
+                "eventId": "evt_01KXG04TGGFYSNBXWZJPRA89EC",
+                "description": "Pickup particle produced when a resource node is gathered; a fx-particles listener spawns it",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "particles",
+                    "type": "[Fx]"
+                  }
+                ]
+              },
+              {
+                "event": "RESOURCES",
+                "eventId": "evt_01KXG04TGGE5BST9P155QY49WW",
+                "description": "Wood/stone totals and moves remaining after this step; a survival-flow listener decides loss",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "wood",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "stone",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "movesLeft",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KXG04TGGGRCT4BAC0W1GRS88",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "HERO_STEPPED",
+                  "id": "evt_01KXG04TGG4MH3Q3KZFEHCER4E",
+                  "name": "Hero Stepped",
+                  "payloadSchema": [
+                    {
+                      "name": "unitId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "x",
+                      "type": "number"
+                    },
+                    {
+                      "name": "z",
+                      "type": "number"
+                    },
+                    {
+                      "name": "movesLeft",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01KXG04TGGEPR1ZNKW0XHRCC8Z",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "BURST",
+                  "id": "evt_01KXG04TGGFYSNBXWZJPRA89EC",
+                  "name": "Burst",
+                  "description": "Pickup particle produced when a resource node is gathered; a fx-particles listener spawns it",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "particles",
+                      "type": "[Fx]"
+                    }
+                  ]
+                },
+                {
+                  "key": "RESOURCES",
+                  "id": "evt_01KXG04TGGE5BST9P155QY49WW",
+                  "name": "Resources",
+                  "description": "Wood/stone totals and moves remaining after this step; a survival-flow listener decides loss",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "wood",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "stone",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "movesLeft",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01KXG04TGGGRCT4BAC0W1GRS88",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.features",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.wood",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.stone",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "HERO_STEPPED",
+                  "eventId": "evt_01KXG04TGG4MH3Q3KZFEHCER4E",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "matched",
+                          [
+                            "array/filter",
+                            "@entity.features",
+                            [
+                              "fn",
+                              "f",
+                              [
+                                "and",
+                                [
+                                  "==",
+                                  [
+                                    "object/get",
+                                    "@f",
+                                    "x"
+                                  ],
+                                  "@payload.x"
+                                ],
+                                [
+                                  "and",
+                                  [
+                                    "==",
+                                    [
+                                      "object/get",
+                                      "@f",
+                                      "y"
+                                    ],
+                                    "@payload.z"
+                                  ],
+                                  [
+                                    "or",
+                                    [
+                                      "==",
+                                      [
+                                        "object/get",
+                                        "@f",
+                                        "type"
+                                      ],
+                                      "tree"
+                                    ],
+                                    [
+                                      "==",
+                                      [
+                                        "object/get",
+                                        "@f",
+                                        "type"
+                                      ],
+                                      "rock"
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "let",
+                        [
+                          [
+                            "woodHits",
+                            [
+                              "array/len",
+                              [
+                                "array/filter",
+                                "@matched",
+                                [
+                                  "fn",
+                                  "f",
+                                  [
+                                    "==",
+                                    [
+                                      "object/get",
+                                      "@f",
+                                      "type"
+                                    ],
+                                    "tree"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ],
+                          [
+                            "stoneHits",
+                            [
+                              "array/len",
+                              [
+                                "array/filter",
+                                "@matched",
+                                [
+                                  "fn",
+                                  "f",
+                                  [
+                                    "==",
+                                    [
+                                      "object/get",
+                                      "@f",
+                                      "type"
+                                    ],
+                                    "rock"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.wood",
+                            [
+                              "+",
+                              "@entity.wood",
+                              [
+                                "*",
+                                1,
+                                "@woodHits"
+                              ]
+                            ]
+                          ],
+                          [
+                            "set",
+                            "@entity.stone",
+                            [
+                              "+",
+                              "@entity.stone",
+                              [
+                                "*",
+                                1,
+                                "@stoneHits"
+                              ]
+                            ]
+                          ],
+                          [
+                            "set",
+                            "@entity.features",
+                            [
+                              "array/filter",
+                              "@entity.features",
+                              [
+                                "fn",
+                                "f",
+                                [
+                                  "not",
+                                  [
+                                    "and",
+                                    [
+                                      "==",
+                                      [
+                                        "object/get",
+                                        "@f",
+                                        "x"
+                                      ],
+                                      "@payload.x"
+                                    ],
+                                    [
+                                      "and",
+                                      [
+                                        "==",
+                                        [
+                                          "object/get",
+                                          "@f",
+                                          "y"
+                                        ],
+                                        "@payload.z"
+                                      ],
+                                      [
+                                        "or",
+                                        [
+                                          "==",
+                                          [
+                                            "object/get",
+                                            "@f",
+                                            "type"
+                                          ],
+                                          "tree"
+                                        ],
+                                        [
+                                          "==",
+                                          [
+                                            "object/get",
+                                            "@f",
+                                            "type"
+                                          ],
+                                          "rock"
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ],
+                          [
+                            "emit",
+                            "BURST",
+                            {
+                              "particles": [
+                                "array/map",
+                                "@matched",
+                                [
+                                  "fn",
+                                  "f",
+                                  {
+                                    "ttl": 3,
+                                    "x": [
+                                      "object/get",
+                                      "@f",
+                                      "x"
+                                    ],
+                                    "z": [
+                                      "object/get",
+                                      "@f",
+                                      "y"
+                                    ],
+                                    "id": [
+                                      "str/concat",
+                                      "fx-gather-",
+                                      [
+                                        "object/get",
+                                        "@f",
+                                        "id"
+                                      ]
+                                    ],
+                                    "type": "pickup",
+                                    "message": [
+                                      "if",
+                                      [
+                                        "==",
+                                        [
+                                          "object/get",
+                                          "@f",
+                                          "type"
+                                        ],
+                                        "tree"
+                                      ],
+                                      "+1 wood",
+                                      "+1 stone"
+                                    ]
+                                  }
+                                ]
+                              ]
+                            }
+                          ],
+                          [
+                            "emit",
+                            "RESOURCES",
+                            {
+                              "wood": "@entity.wood",
+                              "movesLeft": "@payload.movesLeft",
+                              "stone": "@entity.stone"
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01KXG04TGGEPR1ZNKW0XHRCC8Z",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.features",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.wood",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.stone",
+                      0
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "yieldPerNode": {
+                "type": "number",
+                "default": 1,
+                "label": "Yield Per Node",
+                "description": "Wood or stone gained per node gathered",
+                "tier": "domain"
+              },
+              "features": {
+                "type": "[Feature]",
+                "default": [],
+                "label": "Features",
+                "description": "Board features — resource nodes (matched by woodType/stoneType) plus decorations",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "color": {
+                      "name": "color",
+                      "type": "string",
+                      "required": false
+                    },
+                    "assetUrl": {
+                      "name": "assetUrl",
+                      "type": "object",
+                      "required": false,
+                      "properties": {
+                        "name": {
+                          "name": "name",
+                          "type": "string",
+                          "required": false
+                        },
+                        "url": {
+                          "name": "url",
+                          "type": "string",
+                          "required": false
+                        },
+                        "variant": {
+                          "name": "variant",
+                          "type": "string",
+                          "required": false
+                        },
+                        "style": {
+                          "name": "style",
+                          "type": "string",
+                          "required": false
+                        },
+                        "role": {
+                          "name": "role",
+                          "type": "string",
+                          "required": false
+                        },
+                        "aspect": {
+                          "name": "aspect",
+                          "type": "string",
+                          "required": false
+                        },
+                        "category": {
+                          "name": "category",
+                          "type": "string",
+                          "required": false
+                        },
+                        "thumbnailUrl": {
+                          "name": "thumbnailUrl",
+                          "type": "string",
+                          "required": false
+                        },
+                        "dimension": {
+                          "name": "dimension",
+                          "type": "string",
+                          "required": false
+                        },
+                        "animations": {
+                          "name": "animations",
+                          "type": "array",
+                          "required": false,
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "elevation": {
+                      "name": "elevation",
+                      "type": "number",
+                      "required": false
+                    },
+                    "type": {
+                      "name": "type",
+                      "type": "string",
+                      "required": true
+                    },
+                    "z": {
+                      "name": "z",
+                      "type": "number",
+                      "required": false
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": false
+                    }
+                  }
+                }
+              },
+              "startWood": {
+                "type": "number",
+                "default": 0,
+                "label": "Start Wood",
+                "description": "Wood set on INIT",
+                "tier": "domain"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, hero steps onto resource nodes are gathered; toggle to freeze",
+                "tier": "domain"
+              },
+              "stoneType": {
+                "type": "string",
+                "default": "rock",
+                "label": "Stone Type",
+                "description": "Feature type counted as a stone resource node",
+                "tier": "domain"
+              },
+              "startStone": {
+                "type": "number",
+                "default": 0,
+                "label": "Start Stone",
+                "description": "Stone set on INIT",
+                "tier": "domain"
+              },
+              "woodType": {
+                "type": "string",
+                "default": "tree",
+                "label": "Wood Type",
+                "description": "Feature type counted as a wood resource node",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "GatherPage",
+            "id": "pag_01KXG04TGGGV1WK8273W8CXBSH",
+            "path": "/gather",
+            "traits": [
+              {
+                "ref": "Gather",
+                "refId": "trt_01KXG04TGG6JKGWFNS68C642NS"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KXG04TGGEPR1ZNKW0XHRCC8Z": {
+          "id": "evt_01KXG04TGGEPR1ZNKW0XHRCC8Z",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TGG6JKGWFNS68C642NS"
+        },
+        "ent_01KXG04TGGZJHPYRRS81F9PP09": {
+          "id": "ent_01KXG04TGGZJHPYRRS81F9PP09",
+          "kind": "entity",
+          "bakedName": "GatherData",
+          "curName": "GatherData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TGGE5BST9P155QY49WW": {
+          "id": "evt_01KXG04TGGE5BST9P155QY49WW",
+          "kind": "event",
+          "bakedName": "RESOURCES",
+          "curName": "RESOURCES",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TGG6JKGWFNS68C642NS"
+        },
+        "evt_01KXG04TGGGRCT4BAC0W1GRS88": {
+          "id": "evt_01KXG04TGGGRCT4BAC0W1GRS88",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TGG6JKGWFNS68C642NS"
+        },
+        "evt_01KXG04TGGFYSNBXWZJPRA89EC": {
+          "id": "evt_01KXG04TGGFYSNBXWZJPRA89EC",
+          "kind": "event",
+          "bakedName": "BURST",
+          "curName": "BURST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TGG6JKGWFNS68C642NS"
+        },
+        "pag_01KXG04TGGGV1WK8273W8CXBSH": {
+          "id": "pag_01KXG04TGGGV1WK8273W8CXBSH",
+          "kind": "page",
+          "bakedName": "GatherPage",
+          "curName": "GatherPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KXG04TGG6JKGWFNS68C642NS": {
+          "id": "trt_01KXG04TGG6JKGWFNS68C642NS",
+          "kind": "trait",
+          "bakedName": "Gather",
+          "curName": "Gather",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04TGG4MH3Q3KZFEHCER4E": {
+          "id": "evt_01KXG04TGG4MH3Q3KZFEHCER4E",
+          "kind": "event",
+          "bakedName": "HERO_STEPPED",
+          "curName": "HERO_STEPPED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04TGG6JKGWFNS68C642NS"
+        },
+        "orb_01KXG04TGGJBM5532P4KGT5YMG": {
+          "id": "orb_01KXG04TGGJBM5532P4KGT5YMG",
+          "kind": "orbital",
+          "bakedName": "GatherOrbital",
+          "curName": "GatherOrbital",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-gather \"1.0.0\"\n\"Headless resource-gathering mechanic: owns features + wood + stone. Listens HERO_STEPPED and, when the hero lands on a wood/stone-type feature, increments the matching resource, removes the node, emits a BURST pickup particle, and emits RESOURCES so survival-flow can decide loss. Never writes units.\"\norbital GatherOrbital {\n  type Asset = {\n    url : asset\n    role : string\n    category : string\n    animations : [string]\n    style : string\n    variant : string\n    dimension : string\n    aspect : string\n    name : string\n    thumbnailUrl : string\n  }\n  type Feature = {\n    id : string\n    x : number!\n    y : number!\n    z : number\n    type : string!\n    assetUrl : Asset\n    color : string\n    elevation : number\n  }\n  type Fx = {\n    id : string!\n    type : string!\n    x : number!\n    z : number\n    y : number\n    message : string\n    ttl : number!\n  }\n\n  entity GatherData [runtime, shared] {\n    id : string!\n    features : [Feature]\n    wood : number = 0\n    stone : number = 0\n  }\n\n  trait Gather -> @rebindable GatherData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.features @config.features)\n        (set @entity.wood @config.startWood)\n        (set @entity.stone @config.startStone)\n\n      HERO_STEPPED -> active when @config.running\n        (let ((matched (array/filter @entity.features (fn f (and (== (object/get @f x) @payload.x) (and (== (object/get @f y) @payload.z) (or (== (object/get @f type) @config.woodType) (== (object/get @f type) @config.stoneType))))))))\n        (let ((woodHits (array/len (array/filter @matched (fn f (== (object/get @f type) @config.woodType))))) (stoneHits (array/len (array/filter @matched (fn f (== (object/get @f type) @config.stoneType))))))\n        (do\n          (set @entity.wood (+ @entity.wood (* @config.yieldPerNode @woodHits)))\n          (set @entity.stone (+ @entity.stone (* @config.yieldPerNode @stoneHits)))\n          (set @entity.features (array/filter @entity.features (fn f (not (and (== (object/get @f x) @payload.x) (and (== (object/get @f y) @payload.z) (or (== (object/get @f type) @config.woodType) (== (object/get @f type) @config.stoneType))))))))\n          (emit BURST { particles: (array/map @matched (fn f { id: (str/concat \"fx-gather-\" (object/get @f id)), type: \"pickup\", x: (object/get @f x), z: (object/get @f y), message: (if (== (object/get @f type) @config.woodType) \"+1 wood\" \"+1 stone\"), ttl: 3 })) })\n          (emit RESOURCES { wood: @entity.wood, stone: @entity.stone, movesLeft: @payload.movesLeft })\n        )))\n\n      RESTART -> active\n        (set @entity.features @config.features)\n        (set @entity.wood @config.startWood)\n        (set @entity.stone @config.startStone)\n    }\n\n    emits {\n      BURST -> external {\n        particles : [Fx]\n      }\n        @description \"Pickup particle produced when a resource node is gathered; a fx-particles listener spawns it\"\n        @tier \"domain\"\n      RESOURCES -> external {\n        wood : number!\n        stone : number!\n        movesLeft : number!\n      }\n        @description \"Wood/stone totals and moves remaining after this step; a survival-flow listener decides loss\"\n        @tier \"domain\"\n    }\n\n    listens {\n      HERO_STEPPED { unitId : string, x : number, z : number, movesLeft : number }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, hero steps onto resource nodes are gathered; toggle to freeze\"\n        @tier \"domain\"\n      features : [Feature] = []\n        @label \"Features\"\n        @description \"Board features — resource nodes (matched by woodType/stoneType) plus decorations\"\n        @tier \"domain\"\n      woodType : string = \"tree\"\n        @label \"Wood Type\"\n        @description \"Feature type counted as a wood resource node\"\n        @tier \"domain\"\n      stoneType : string = \"rock\"\n        @label \"Stone Type\"\n        @description \"Feature type counted as a stone resource node\"\n        @tier \"domain\"\n      yieldPerNode : number = 1\n        @label \"Yield Per Node\"\n        @description \"Wood or stone gained per node gathered\"\n        @tier \"domain\"\n      startWood : number = 0\n        @label \"Start Wood\"\n        @description \"Wood set on INIT\"\n        @tier \"domain\"\n      startStone : number = 0\n        @label \"Start Stone\"\n        @description \"Stone set on INIT\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/gather\" as GatherPage -> Gather\n}\n"
+}

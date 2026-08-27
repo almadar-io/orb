@@ -1,0 +1,1651 @@
+{
+  "name": "std-calendar-sync",
+  "description": "std-calendar-sync — two-way Google Calendar synchronization engine. PUSH: a 15-minute cron scan (and the user-addressable SYNC_NOW) walks `targetEntity` rows whose `externalEventId` marker is blank and creates a remote event per row through calendar.createEvent, reading the summary/start/end via the configured field mapping (`titleField`/`startField`/`endField`/`durationMinutes` fallback/`locationField`/`descriptionField`) — so ANY event-shaped host entity pushes, provided it declares the two marker columns `externalEventId : string` and `syncedAt : number` (the remindedAt precedent). PULL: `CAL_REMOTE_CHANGED` (delivered by the shared /api/hooks/google-calendar ingress from a calendar.watch channel) or the same cycle after a clean push lists remote events (incremental via the in-memory sync token; a restart falls back to a full window list) and upserts each into the atom's own canonical `CalendarEvent` store, matched by `externalEventId` — pulls land in the canonical store, NOT the arbitrary target, because persist keys are static in the language; bind calendar UI to `CalendarEvent` to surface remote events. Conflict detection (local-newer-than-remote) needs a local-modified marker convention and is a recorded gap, not a decorative state. Composes with std-notify-on-event via CAL_SYNCED / CAL_SYNC_FAILED.",
+  "level": "atom",
+  "topic": "infra",
+  "schema": {
+    "name": "std-calendar-sync",
+    "version": "1.0.0",
+    "description": "std-calendar-sync — two-way Google Calendar synchronization engine. PUSH: a 15-minute cron scan (and the user-addressable SYNC_NOW) walks `targetEntity` rows whose `externalEventId` marker is blank and creates a remote event per row through calendar.createEvent, reading the summary/start/end via the configured field mapping (`titleField`/`startField`/`endField`/`durationMinutes` fallback/`locationField`/`descriptionField`) — so ANY event-shaped host entity pushes, provided it declares the two marker columns `externalEventId : string` and `syncedAt : number` (the remindedAt precedent). PULL: `CAL_REMOTE_CHANGED` (delivered by the shared /api/hooks/google-calendar ingress from a calendar.watch channel) or the same cycle after a clean push lists remote events (incremental via the in-memory sync token; a restart falls back to a full window list) and upserts each into the atom's own canonical `CalendarEvent` store, matched by `externalEventId` — pulls land in the canonical store, NOT the arbitrary target, because persist keys are static in the language; bind calendar UI to `CalendarEvent` to surface remote events. Conflict detection (local-newer-than-remote) needs a local-modified marker convention and is a recorded gap, not a decorative state. Composes with std-notify-on-event via CAL_SYNCED / CAL_SYNC_FAILED.",
+    "orbitals": [
+      {
+        "name": "CalendarSyncOrbital",
+        "id": "orb_01M0M9E89QS0N7F1YWY99SQVH1",
+        "entity": {
+          "name": "CalendarSyncRun",
+          "id": "ent_01M0MAF1B71AH9M3J5ZYKAXFM3",
+          "collection": "calendarSyncState",
+          "persistence": "persistent",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "syncToken",
+              "type": "string",
+              "default": "",
+              "description": "Scratch: Google incremental-sync token from the last listEvents; in-memory per instance — a restart falls back to a full list.",
+              "synonyms": "sync cursor, next token"
+            },
+            {
+              "name": "lastSyncedAt",
+              "type": "number",
+              "default": 0,
+              "description": "When the last full push+pull cycle completed; 0 = never.",
+              "synonyms": "last sync time"
+            },
+            {
+              "name": "headId",
+              "type": "string",
+              "default": "",
+              "description": "Scratch: id of the target row the push loop is currently exporting.",
+              "synonyms": "cursor, current row"
+            },
+            {
+              "name": "pending",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "name": "start",
+                    "type": "string",
+                    "required": false
+                  },
+                  "summary": {
+                    "name": "summary",
+                    "type": "string",
+                    "required": false
+                  },
+                  "description": {
+                    "name": "description",
+                    "type": "string",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": false
+                  },
+                  "status": {
+                    "name": "status",
+                    "type": "string",
+                    "required": false
+                  },
+                  "end": {
+                    "name": "end",
+                    "type": "string",
+                    "required": false
+                  },
+                  "location": {
+                    "name": "location",
+                    "type": "string",
+                    "required": false
+                  },
+                  "updated": {
+                    "name": "updated",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              },
+              "description": "Scratch: remote events remaining in the current pull-upsert loop.",
+              "synonyms": "pull queue, remaining events"
+            },
+            {
+              "name": "lastError",
+              "type": "string",
+              "default": "",
+              "description": "Last sync failure detail; blank = none.",
+              "synonyms": "sync error, failure"
+            }
+          ]
+        },
+        "auxiliaryEntities": [
+          {
+            "name": "CalendarEvent",
+            "id": "ent_01M0M9E89Q1H8VNNH0J06PH7RH",
+            "collection": "calendarEvents",
+            "persistence": "persistent",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "title",
+                "type": "string",
+                "default": "",
+                "description": "Event title/summary.",
+                "synonyms": "summary, name, subject"
+              },
+              {
+                "name": "startsAt",
+                "type": "string",
+                "default": "",
+                "description": "ISO start (dateTime, or YYYY-MM-DD for all-day).",
+                "synonyms": "start, begins, from"
+              },
+              {
+                "name": "endsAt",
+                "type": "string",
+                "default": "",
+                "description": "ISO end (dateTime, or YYYY-MM-DD for all-day).",
+                "synonyms": "end, finishes, until"
+              },
+              {
+                "name": "location",
+                "type": "string",
+                "default": "",
+                "description": "Event location.",
+                "synonyms": "place, where, venue"
+              },
+              {
+                "name": "description",
+                "type": "string",
+                "default": "",
+                "description": "Event description/notes.",
+                "synonyms": "notes, details, body"
+              },
+              {
+                "name": "status",
+                "type": "string",
+                "default": "",
+                "description": "Remote status (confirmed/tentative/cancelled).",
+                "synonyms": "state, confirmation"
+              },
+              {
+                "name": "externalEventId",
+                "type": "string",
+                "default": "",
+                "description": "Google Calendar event id this row mirrors; the pull-upsert match key.",
+                "synonyms": "remote id, google id, calendar event id"
+              },
+              {
+                "name": "syncedAt",
+                "type": "number",
+                "default": 0,
+                "description": "When this row last synced with the remote calendar; 0 = never.",
+                "synonyms": "last sync, synced"
+              }
+            ]
+          }
+        ],
+        "traits": [
+          {
+            "name": "CalendarSync",
+            "id": "trt_01M0M9E89QMEF62295H7XTZDND",
+            "category": "lifecycle",
+            "linkedEntity": "CalendarSyncRun",
+            "linkedEntityId": "ent_01M0MAF1B71AH9M3J5ZYKAXFM3",
+            "entityRefIds": {
+              "CalendarEvent": "ent_01M0M9E89Q1H8VNNH0J06PH7RH",
+              "CalendarSyncRun": "ent_01M0MAF1B71AH9M3J5ZYKAXFM3"
+            },
+            "emits": [
+              {
+                "event": "CAL_SYNCED",
+                "eventId": "evt_01M0M9E89Q7GVB4RTA9MQZKB90",
+                "description": "A full push+pull cycle completed; wire to std-notify-on-event or a status surface.",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "syncedAt",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "event": "CAL_SYNC_FAILED",
+                "eventId": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+                "description": "A calendar service call / fetch / persist failed — lastError carries the detail and the cycle stops until the next trigger.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "error",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "PUSH_ROWS_LOADED",
+                "eventId": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                "description": "Target rows with a blank externalEventId marker — the remaining local→remote export queue.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[TargetRow]"
+                  }
+                ]
+              },
+              {
+                "event": "CAL_EVENT_CREATED",
+                "eventId": "evt_01M0M9E89Q9N7X13XMTK58JYY9",
+                "description": "calendar.createEvent result, flattened onto the payload by the call-service effect executor.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "status",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "htmlLink",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "PUSH_STEPPED",
+                "eventId": "evt_01M0M9E89QRFQJNXPGD4C8XFP0",
+                "description": "Target row stamped with its new externalEventId; drives the next push pass.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CAL_REMOTE_LISTED",
+                "eventId": "evt_01M0M9E89Q006H33RM6WGB8QRJ",
+                "description": "calendar.listEvents result — the remote change set for the pull-upsert loop.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "events",
+                    "type": "[RemoteEvent]"
+                  },
+                  {
+                    "name": "nextSyncToken",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "PULL_TARGET_LOADED",
+                "eventId": "evt_01M0M9E89QZS3J82D8V4N7GNTX",
+                "description": "CalendarEvent rows loaded for externalEventId matching in the pull-upsert.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "[TargetRow]"
+                  }
+                ]
+              },
+              {
+                "event": "PULL_STEPPED",
+                "eventId": "evt_01M0M9E89QR7NR9G2343SA8BPM",
+                "description": "One remote event upserted into the CalendarEvent store; drives the next pull pass.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "PULL_NEXT",
+                "eventId": "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC",
+                "description": "Pull loop control: how many remote events remain in the queue.",
+                "tier": "secondary",
+                "payloadSchema": [
+                  {
+                    "name": "remaining",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                },
+                {
+                  "name": "pushing"
+                },
+                {
+                  "name": "pulling"
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M0M9E89QYTZJDGBZVC1BVZDY",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "SYNC_NOW",
+                  "id": "evt_01M0M9E89Q7PTP9ZRG3M5VD1SY",
+                  "name": "Sync Now"
+                },
+                {
+                  "key": "CAL_REMOTE_CHANGED",
+                  "id": "evt_01M0M9E89QBVVRWENZKAMT0H2B",
+                  "name": "Cal Remote Changed",
+                  "payloadSchema": [
+                    {
+                      "name": "channelId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "resourceId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "resourceState",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "PUSH_ROWS_LOADED",
+                  "id": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                  "name": "Push Rows Loaded",
+                  "description": "Target rows with a blank externalEventId marker — the remaining local→remote export queue.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[object]",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string"
+                        },
+                        {
+                          "name": "externalEventId",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "CAL_REMOTE_LISTED",
+                  "id": "evt_01M0M9E89Q006H33RM6WGB8QRJ",
+                  "name": "Cal Remote Listed",
+                  "description": "calendar.listEvents result — the remote change set for the pull-upsert loop.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "events",
+                      "type": "[object]",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string"
+                        },
+                        {
+                          "name": "summary",
+                          "type": "string"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "location",
+                          "type": "string"
+                        },
+                        {
+                          "name": "start",
+                          "type": "string"
+                        },
+                        {
+                          "name": "end",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "updated",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "nextSyncToken",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CAL_SYNC_FAILED",
+                  "id": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+                  "name": "Cal Sync Failed",
+                  "description": "A calendar service call / fetch / persist failed — lastError carries the detail and the cycle stops until the next trigger.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CAL_EVENT_CREATED",
+                  "id": "evt_01M0M9E89Q9N7X13XMTK58JYY9",
+                  "name": "Cal Event Created",
+                  "description": "calendar.createEvent result, flattened onto the payload by the call-service effect executor.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "status",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "htmlLink",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "PUSH_STEPPED",
+                  "id": "evt_01M0M9E89QRFQJNXPGD4C8XFP0",
+                  "name": "Push Stepped",
+                  "description": "Target row stamped with its new externalEventId; drives the next push pass.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "PULL_TARGET_LOADED",
+                  "id": "evt_01M0M9E89QZS3J82D8V4N7GNTX",
+                  "name": "Pull Target Loaded",
+                  "description": "CalendarEvent rows loaded for externalEventId matching in the pull-upsert.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "[object]",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string"
+                        },
+                        {
+                          "name": "externalEventId",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "PULL_STEPPED",
+                  "id": "evt_01M0M9E89QR7NR9G2343SA8BPM",
+                  "name": "Pull Stepped",
+                  "description": "One remote event upserted into the CalendarEvent store; drives the next pull pass.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "PULL_NEXT",
+                  "id": "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC",
+                  "name": "Pull Next",
+                  "description": "Pull loop control: how many remote events remain in the queue.",
+                  "tier": "secondary",
+                  "payloadSchema": [
+                    {
+                      "name": "remaining",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "CAL_SYNCED",
+                  "id": "evt_01M0M9E89Q7GVB4RTA9MQZKB90",
+                  "name": "Cal Synced",
+                  "description": "A full push+pull cycle completed; wire to std-notify-on-event or a status surface.",
+                  "payloadSchema": [
+                    {
+                      "name": "syncedAt",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M0M9E89QYTZJDGBZVC1BVZDY"
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SYNC_NOW",
+                  "eventId": "evt_01M0M9E89Q7PTP9ZRG3M5VD1SY",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "PUSH_ROWS_LOADED"
+                        },
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "externalEventId"
+                          ],
+                          ""
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "CAL_REMOTE_CHANGED",
+                  "eventId": "evt_01M0M9E89QBVVRWENZKAMT0H2B",
+                  "guard": false,
+                  "effects": [
+                    [
+                      "call-service",
+                      "calendar",
+                      "listEvents",
+                      {
+                        "calendarId": "",
+                        "syncToken": "@entity.syncToken"
+                      },
+                      {
+                        "emit": {
+                          "success": "CAL_REMOTE_LISTED",
+                          "failure": "CAL_SYNC_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "pushing",
+                  "event": "PUSH_ROWS_LOADED",
+                  "eventId": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                  "guard": [
+                    "and",
+                    false,
+                    [
+                      ">",
+                      [
+                        "array/len",
+                        "@payload.data"
+                      ],
+                      0
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.headId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "call-service",
+                      "calendar",
+                      "createEvent",
+                      {
+                        "durationMinutes": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          60,
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ],
+                        "calendarId": "",
+                        "description": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ],
+                        "end": [
+                          "if",
+                          [
+                            "=",
+                            "endsAt",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            "endsAt"
+                          ]
+                        ],
+                        "location": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ],
+                        "start": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@payload.data"
+                          ],
+                          "startsAt"
+                        ],
+                        "summary": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@payload.data"
+                          ],
+                          "title"
+                        ]
+                      },
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "CAL_EVENT_CREATED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "PUSH_ROWS_LOADED",
+                  "eventId": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "call-service",
+                      "calendar",
+                      "listEvents",
+                      {
+                        "calendarId": "",
+                        "syncToken": "@entity.syncToken"
+                      },
+                      {
+                        "emit": {
+                          "success": "CAL_REMOTE_LISTED",
+                          "failure": "CAL_SYNC_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "pulling",
+                  "event": "CAL_REMOTE_LISTED",
+                  "eventId": "evt_01M0M9E89Q006H33RM6WGB8QRJ",
+                  "guard": [
+                    ">",
+                    [
+                      "array/len",
+                      "@payload.events"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pending",
+                      "@payload.events"
+                    ],
+                    [
+                      "set",
+                      "@entity.syncToken",
+                      [
+                        "str/default",
+                        "@payload.nextSyncToken",
+                        ""
+                      ]
+                    ],
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "emit": {
+                          "success": "PULL_TARGET_LOADED",
+                          "failure": "CAL_SYNC_FAILED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "CAL_REMOTE_LISTED",
+                  "eventId": "evt_01M0M9E89Q006H33RM6WGB8QRJ",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      "@payload.events"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.syncToken",
+                      [
+                        "str/default",
+                        "@payload.nextSyncToken",
+                        ""
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.lastSyncedAt",
+                      "@now"
+                    ],
+                    [
+                      "emit",
+                      "CAL_SYNCED",
+                      {
+                        "syncedAt": "@entity.lastSyncedAt"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "CAL_SYNC_FAILED",
+                  "eventId": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lastError",
+                      "@payload.error"
+                    ]
+                  ]
+                },
+                {
+                  "from": "pushing",
+                  "to": "pushing",
+                  "event": "CAL_EVENT_CREATED",
+                  "eventId": "evt_01M0M9E89Q9N7X13XMTK58JYY9",
+                  "effects": [
+                    [
+                      "persist",
+                      "update",
+                      "CalendarEvent",
+                      {
+                        "externalEventId": "@payload.id",
+                        "id": "@entity.headId",
+                        "syncedAt": "@now"
+                      },
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "PUSH_STEPPED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pushing",
+                  "to": "pushing",
+                  "event": "PUSH_STEPPED",
+                  "eventId": "evt_01M0M9E89QRFQJNXPGD4C8XFP0",
+                  "effects": [
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "externalEventId"
+                          ],
+                          ""
+                        ],
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "PUSH_ROWS_LOADED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pushing",
+                  "to": "pushing",
+                  "event": "PUSH_ROWS_LOADED",
+                  "eventId": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                  "guard": [
+                    ">",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.headId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@payload.data"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "call-service",
+                      "calendar",
+                      "createEvent",
+                      {
+                        "calendarId": "",
+                        "end": [
+                          "if",
+                          [
+                            "=",
+                            "endsAt",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            "endsAt"
+                          ]
+                        ],
+                        "description": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ],
+                        "location": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          "",
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ],
+                        "start": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@payload.data"
+                          ],
+                          "startsAt"
+                        ],
+                        "summary": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@payload.data"
+                          ],
+                          "title"
+                        ],
+                        "durationMinutes": [
+                          "if",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          60,
+                          [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@payload.data"
+                            ],
+                            ""
+                          ]
+                        ]
+                      },
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "CAL_EVENT_CREATED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pushing",
+                  "to": "idle",
+                  "event": "PUSH_ROWS_LOADED",
+                  "eventId": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+                  "guard": [
+                    "=",
+                    [
+                      "array/len",
+                      "@payload.data"
+                    ],
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "call-service",
+                      "calendar",
+                      "listEvents",
+                      {
+                        "syncToken": "@entity.syncToken",
+                        "calendarId": ""
+                      },
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "CAL_REMOTE_LISTED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pushing",
+                  "to": "idle",
+                  "event": "CAL_SYNC_FAILED",
+                  "eventId": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lastError",
+                      "@payload.error"
+                    ]
+                  ]
+                },
+                {
+                  "from": "pulling",
+                  "to": "pulling",
+                  "event": "PULL_TARGET_LOADED",
+                  "eventId": "evt_01M0M9E89QZS3J82D8V4N7GNTX",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.headId",
+                      [
+                        "object/get",
+                        [
+                          "array/first",
+                          "@entity.pending"
+                        ],
+                        "id"
+                      ]
+                    ],
+                    [
+                      "if",
+                      [
+                        "=",
+                        [
+                          "array/len",
+                          [
+                            "array/filter",
+                            "@payload.data",
+                            [
+                              "fn",
+                              "r",
+                              [
+                                "=",
+                                [
+                                  "object/get",
+                                  "@r",
+                                  "externalEventId"
+                                ],
+                                "@entity.headId"
+                              ]
+                            ]
+                          ]
+                        ],
+                        0
+                      ],
+                      [
+                        "persist",
+                        "create",
+                        "CalendarEvent",
+                        {
+                          "description": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "description"
+                          ],
+                          "location": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "location"
+                          ],
+                          "externalEventId": "@entity.headId",
+                          "syncedAt": "@now",
+                          "startsAt": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "start"
+                          ],
+                          "title": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "summary"
+                          ],
+                          "status": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "status"
+                          ],
+                          "endsAt": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "end"
+                          ]
+                        },
+                        {
+                          "emit": {
+                            "success": "PULL_STEPPED",
+                            "failure": "CAL_SYNC_FAILED"
+                          }
+                        }
+                      ],
+                      [
+                        "persist",
+                        "update",
+                        "CalendarEvent",
+                        {
+                          "endsAt": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "end"
+                          ],
+                          "status": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "status"
+                          ],
+                          "location": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "location"
+                          ],
+                          "title": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "summary"
+                          ],
+                          "id": [
+                            "object/get",
+                            [
+                              "array/first",
+                              [
+                                "array/filter",
+                                "@payload.data",
+                                [
+                                  "fn",
+                                  "r",
+                                  [
+                                    "=",
+                                    [
+                                      "object/get",
+                                      "@r",
+                                      "externalEventId"
+                                    ],
+                                    "@entity.headId"
+                                  ]
+                                ]
+                              ]
+                            ],
+                            "id"
+                          ],
+                          "syncedAt": "@now",
+                          "startsAt": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "start"
+                          ],
+                          "description": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@entity.pending"
+                            ],
+                            "description"
+                          ]
+                        },
+                        {
+                          "emit": {
+                            "failure": "CAL_SYNC_FAILED",
+                            "success": "PULL_STEPPED"
+                          }
+                        }
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "pulling",
+                  "to": "pulling",
+                  "event": "PULL_STEPPED",
+                  "eventId": "evt_01M0M9E89QR7NR9G2343SA8BPM",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pending",
+                      [
+                        "array/drop",
+                        "@entity.pending",
+                        1
+                      ]
+                    ],
+                    [
+                      "emit",
+                      "PULL_NEXT",
+                      {
+                        "remaining": [
+                          "array/len",
+                          "@entity.pending"
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pulling",
+                  "to": "pulling",
+                  "event": "PULL_NEXT",
+                  "eventId": "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC",
+                  "guard": [
+                    ">",
+                    "@payload.remaining",
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "fetch",
+                      "CalendarEvent",
+                      {
+                        "emit": {
+                          "failure": "CAL_SYNC_FAILED",
+                          "success": "PULL_TARGET_LOADED"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pulling",
+                  "to": "idle",
+                  "event": "PULL_NEXT",
+                  "eventId": "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC",
+                  "guard": [
+                    "=",
+                    "@payload.remaining",
+                    0
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lastSyncedAt",
+                      "@now"
+                    ],
+                    [
+                      "emit",
+                      "CAL_SYNCED",
+                      {
+                        "syncedAt": "@entity.lastSyncedAt"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "pulling",
+                  "to": "idle",
+                  "event": "CAL_SYNC_FAILED",
+                  "eventId": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.lastError",
+                      "@payload.error"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "syncCycle",
+                "interval": "*/15 * * * *",
+                "effects": [
+                  [
+                    "fetch",
+                    "CalendarEvent",
+                    {
+                      "filter": [
+                        "=",
+                        [
+                          "object/get",
+                          "@entity",
+                          "externalEventId"
+                        ],
+                        ""
+                      ],
+                      "emit": {
+                        "failure": "CAL_SYNC_FAILED",
+                        "success": "PUSH_ROWS_LOADED"
+                      }
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "calendarId": {
+                "type": "string",
+                "default": "",
+                "label": "Calendar id",
+                "description": "Google calendar to sync with; blank = the service's default (GOOGLE_CALENDAR_ID env, else primary).",
+                "synonyms": "google calendar id, target calendar",
+                "tier": "infra"
+              },
+              "endField": {
+                "type": "string",
+                "default": "endsAt",
+                "label": "End field",
+                "description": "Target-entity field holding the ISO end. Blank = derive the end from `durationMinutes` instead (the corpus carries all four event shapes).",
+                "synonyms": "end date field, finishes field",
+                "tier": "internal"
+              },
+              "startField": {
+                "type": "string",
+                "default": "startsAt",
+                "label": "Start field",
+                "description": "Target-entity field holding the ISO start (dateTime, or YYYY-MM-DD for all-day).",
+                "synonyms": "start date field, begins field, scheduledAt field",
+                "tier": "internal"
+              },
+              "locationField": {
+                "type": "string",
+                "default": "",
+                "label": "Location field",
+                "description": "Target-entity field holding the location; blank = none.",
+                "synonyms": "place field, venue field",
+                "tier": "internal"
+              },
+              "targetEntity": {
+                "type": "entity",
+                "default": "CalendarEvent",
+                "label": "Entity to push",
+                "description": "Event-shaped entity whose rows export to Google Calendar. MUST declare the marker columns `externalEventId : string = \"\"` and `syncedAt : number = 0` (stamped by the push loop). Defaults to the atom's own CalendarEvent store so the standalone validates; rebind per composition.",
+                "synonyms": "entity to sync, source entity, record type, appointments entity, sessions entity",
+                "tier": "internal",
+                "refId": "ent_01M0M9E89Q1H8VNNH0J06PH7RH"
+              },
+              "durationField": {
+                "type": "string",
+                "default": "",
+                "label": "Duration field",
+                "description": "Target-entity field holding the per-row duration in minutes (e.g. ClassSession.durationMinutes). Takes precedence over the fixed `durationMinutes` when set; ignored when `endField` is set. Field precedence: endField > durationField > durationMinutes — the corpus carries all these event shapes.",
+                "synonyms": "minutes field, length field, per-row duration",
+                "tier": "internal"
+              },
+              "descriptionField": {
+                "type": "string",
+                "default": "",
+                "label": "Description field",
+                "description": "Target-entity field holding the description/notes; blank = none.",
+                "synonyms": "notes field, details field",
+                "tier": "internal"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Sync with Google Calendar",
+                "description": "Push local records to Google Calendar and pull remote events into the CalendarEvent store. Off by default; needs the calendar service credentials (GOOGLE_CALENDAR_SA_KEY).",
+                "synonyms": "enable, calendar sync, google calendar, two-way sync, sync events, connect calendar",
+                "tier": "infra"
+              },
+              "titleField": {
+                "type": "string",
+                "default": "title",
+                "label": "Title field",
+                "description": "Target-entity field holding the event title.",
+                "synonyms": "summary field, name field",
+                "tier": "internal"
+              },
+              "durationMinutes": {
+                "type": "number",
+                "default": 60,
+                "label": "Duration (minutes)",
+                "description": "Fixed event length used when both `endField` and `durationField` are blank; the calendar service computes the timezone-correct end.",
+                "synonyms": "length, event duration, minutes",
+                "tier": "internal"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CalendarSyncPage",
+            "id": "pag_01M0M9E89Q5PSV0NJ8P9N6X0JZ",
+            "path": "/calendar-sync",
+            "traits": [
+              {
+                "ref": "CalendarSync",
+                "refId": "trt_01M0M9E89QMEF62295H7XTZDND"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M0M9E89QMRE2B1QZPM8HPXS5": {
+          "id": "evt_01M0M9E89QMRE2B1QZPM8HPXS5",
+          "kind": "event",
+          "bakedName": "CAL_SYNC_FAILED",
+          "curName": "CAL_SYNC_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89Q7PTP9ZRG3M5VD1SY": {
+          "id": "evt_01M0M9E89Q7PTP9ZRG3M5VD1SY",
+          "kind": "event",
+          "bakedName": "SYNC_NOW",
+          "curName": "SYNC_NOW",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "trt_01M0M9E89QMEF62295H7XTZDND": {
+          "id": "trt_01M0M9E89QMEF62295H7XTZDND",
+          "kind": "trait",
+          "bakedName": "CalendarSync",
+          "curName": "CalendarSync",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0M9E89Q9N7X13XMTK58JYY9": {
+          "id": "evt_01M0M9E89Q9N7X13XMTK58JYY9",
+          "kind": "event",
+          "bakedName": "CAL_EVENT_CREATED",
+          "curName": "CAL_EVENT_CREATED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "ent_01M0MAF1B71AH9M3J5ZYKAXFM3": {
+          "id": "ent_01M0MAF1B71AH9M3J5ZYKAXFM3",
+          "kind": "entity",
+          "bakedName": "CalendarSyncRun",
+          "curName": "CalendarSyncRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0M9E89QRFQJNXPGD4C8XFP0": {
+          "id": "evt_01M0M9E89QRFQJNXPGD4C8XFP0",
+          "kind": "event",
+          "bakedName": "PUSH_STEPPED",
+          "curName": "PUSH_STEPPED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "pag_01M0M9E89Q5PSV0NJ8P9N6X0JZ": {
+          "id": "pag_01M0M9E89Q5PSV0NJ8P9N6X0JZ",
+          "kind": "page",
+          "bakedName": "CalendarSyncPage",
+          "curName": "CalendarSyncPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0M9E89Q006H33RM6WGB8QRJ": {
+          "id": "evt_01M0M9E89Q006H33RM6WGB8QRJ",
+          "kind": "event",
+          "bakedName": "CAL_REMOTE_LISTED",
+          "curName": "CAL_REMOTE_LISTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89QYTZJDGBZVC1BVZDY": {
+          "id": "evt_01M0M9E89QYTZJDGBZVC1BVZDY",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "ent_01M0M9E89Q1H8VNNH0J06PH7RH": {
+          "id": "ent_01M0M9E89Q1H8VNNH0J06PH7RH",
+          "kind": "entity",
+          "bakedName": "CalendarEvent",
+          "curName": "CalendarEvent",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0M9E89Q7GVB4RTA9MQZKB90": {
+          "id": "evt_01M0M9E89Q7GVB4RTA9MQZKB90",
+          "kind": "event",
+          "bakedName": "CAL_SYNCED",
+          "curName": "CAL_SYNCED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "orb_01M0M9E89QS0N7F1YWY99SQVH1": {
+          "id": "orb_01M0M9E89QS0N7F1YWY99SQVH1",
+          "kind": "orbital",
+          "bakedName": "CalendarSyncOrbital",
+          "curName": "CalendarSyncOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M0M9E89QVRM9F7VRMWJ8NT71": {
+          "id": "evt_01M0M9E89QVRM9F7VRMWJ8NT71",
+          "kind": "event",
+          "bakedName": "PUSH_ROWS_LOADED",
+          "curName": "PUSH_ROWS_LOADED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89QZS3J82D8V4N7GNTX": {
+          "id": "evt_01M0M9E89QZS3J82D8V4N7GNTX",
+          "kind": "event",
+          "bakedName": "PULL_TARGET_LOADED",
+          "curName": "PULL_TARGET_LOADED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89QBVVRWENZKAMT0H2B": {
+          "id": "evt_01M0M9E89QBVVRWENZKAMT0H2B",
+          "kind": "event",
+          "bakedName": "CAL_REMOTE_CHANGED",
+          "curName": "CAL_REMOTE_CHANGED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89QR7NR9G2343SA8BPM": {
+          "id": "evt_01M0M9E89QR7NR9G2343SA8BPM",
+          "kind": "event",
+          "bakedName": "PULL_STEPPED",
+          "curName": "PULL_STEPPED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        },
+        "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC": {
+          "id": "evt_01M0M9E89QV7Q7Z4KV2FHA4QZC",
+          "kind": "event",
+          "bakedName": "PULL_NEXT",
+          "curName": "PULL_NEXT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0M9E89QMEF62295H7XTZDND"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-calendar-sync \"1.0.0\"\n\"std-calendar-sync — two-way Google Calendar synchronization engine. PUSH: a 15-minute cron scan (and the user-addressable SYNC_NOW) walks `targetEntity` rows whose `externalEventId` marker is blank and creates a remote event per row through calendar.createEvent, reading the summary/start/end via the configured field mapping (`titleField`/`startField`/`endField`/`durationMinutes` fallback/`locationField`/`descriptionField`) — so ANY event-shaped host entity pushes, provided it declares the two marker columns `externalEventId : string` and `syncedAt : number` (the remindedAt precedent). PULL: `CAL_REMOTE_CHANGED` (delivered by the shared /api/hooks/google-calendar ingress from a calendar.watch channel) or the same cycle after a clean push lists remote events (incremental via the in-memory sync token; a restart falls back to a full window list) and upserts each into the atom's own canonical `CalendarEvent` store, matched by `externalEventId` — pulls land in the canonical store, NOT the arbitrary target, because persist keys are static in the language; bind calendar UI to `CalendarEvent` to surface remote events. Conflict detection (local-newer-than-remote) needs a local-modified marker convention and is a recorded gap, not a decorative state. Composes with std-notify-on-event via CAL_SYNCED / CAL_SYNC_FAILED.\"\ntype RemoteEvent = { id : string, summary : string, description : string, location : string, start : string, end : string, status : string, updated : string }\ntype TargetRow = { id : string, externalEventId : string }\norbital CalendarSyncOrbital {\n    type CAL_REMOTE_CHANGED = Event { channelId : string, resourceId : string, resourceState : string } \"Google watch-channel push notification, delivered by the /api/hooks/google-calendar ingress.\"\n\n  entity CalendarSyncRun [persistent: calendarSyncState] {\n    id : string!\n    syncToken : string @description \"Scratch: Google incremental-sync token from the last listEvents; in-memory per instance — a restart falls back to a full list.\" @synonyms \"sync cursor, next token\" = \"\"\n    lastSyncedAt : number @description \"When the last full push+pull cycle completed; 0 = never.\" @synonyms \"last sync time\" = 0\n    headId : string @description \"Scratch: id of the target row the push loop is currently exporting.\" @synonyms \"cursor, current row\" = \"\"\n    pending : [RemoteEvent] @description \"Scratch: remote events remaining in the current pull-upsert loop.\" @synonyms \"pull queue, remaining events\" = []\n    lastError : string @description \"Last sync failure detail; blank = none.\" @synonyms \"sync error, failure\" = \"\"\n  }\n\n  entity CalendarEvent [persistent: calendarEvents] {\n    id : string!\n    title : string @description \"Event title/summary.\" @synonyms \"summary, name, subject\" = \"\"\n    startsAt : string @description \"ISO start (dateTime, or YYYY-MM-DD for all-day).\" @synonyms \"start, begins, from\" = \"\"\n    endsAt : string @description \"ISO end (dateTime, or YYYY-MM-DD for all-day).\" @synonyms \"end, finishes, until\" = \"\"\n    location : string @description \"Event location.\" @synonyms \"place, where, venue\" = \"\"\n    description : string @description \"Event description/notes.\" @synonyms \"notes, details, body\" = \"\"\n    status : string @description \"Remote status (confirmed/tentative/cancelled).\" @synonyms \"state, confirmation\" = \"\"\n    externalEventId : string @description \"Google Calendar event id this row mirrors; the pull-upsert match key.\" @synonyms \"remote id, google id, calendar event id\" = \"\"\n    syncedAt : number @description \"When this row last synced with the remote calendar; 0 = never.\" @synonyms \"last sync, synced\" = 0\n  }\n\n  trait CalendarSync -> CalendarSyncRun [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n      SYNC_NOW -> idle when @config.enabled\n        (fetch @config.targetEntity {\n          emit: { failure: CAL_SYNC_FAILED, success: PUSH_ROWS_LOADED }\n          filter: [\"=\", (object/get @entity externalEventId), \"\"]\n        })\n      CAL_REMOTE_CHANGED -> idle when @config.enabled\n        (call-service \"calendar\" \"listEvents\" {\n          calendarId: @config.calendarId\n          syncToken: @entity.syncToken\n        } { emit: { failure: CAL_SYNC_FAILED, success: CAL_REMOTE_LISTED } })\n      PUSH_ROWS_LOADED -> pushing when (and @config.enabled [\">\", (array/len ?data), 0])\n        (set @entity.headId (object/get (array/first ?data) id))\n        (call-service \"calendar\" \"createEvent\" {\n          calendarId: @config.calendarId\n          summary: (object/get (array/first ?data) @config.titleField)\n          description: (if [\"=\", @config.descriptionField, \"\"] \"\" (object/get (array/first ?data) @config.descriptionField))\n          location: (if [\"=\", @config.locationField, \"\"] \"\" (object/get (array/first ?data) @config.locationField))\n          start: (object/get (array/first ?data) @config.startField)\n          end: (if [\"=\", @config.endField, \"\"] \"\" (object/get (array/first ?data) @config.endField))\n          durationMinutes: (if [\"=\", @config.durationField, \"\"] @config.durationMinutes (object/get (array/first ?data) @config.durationField))\n        } { emit: { failure: CAL_SYNC_FAILED, success: CAL_EVENT_CREATED } })\n      PUSH_ROWS_LOADED -> idle when [\"=\", (array/len ?data), 0]\n        (call-service \"calendar\" \"listEvents\" {\n          calendarId: @config.calendarId\n          syncToken: @entity.syncToken\n        } { emit: { failure: CAL_SYNC_FAILED, success: CAL_REMOTE_LISTED } })\n      CAL_REMOTE_LISTED -> pulling when [\">\", (array/len ?events), 0]\n        (set @entity.pending ?events)\n        (set @entity.syncToken (str/default ?nextSyncToken \"\"))\n        (fetch CalendarEvent {\n          emit: { failure: CAL_SYNC_FAILED, success: PULL_TARGET_LOADED }\n        })\n      CAL_REMOTE_LISTED -> idle when [\"=\", (array/len ?events), 0]\n        (set @entity.syncToken (str/default ?nextSyncToken \"\"))\n        (set @entity.lastSyncedAt @now)\n        (emit CAL_SYNCED { syncedAt: @entity.lastSyncedAt })\n      CAL_SYNC_FAILED -> idle\n        (set @entity.lastError ?error)\n    }\n\n    state pushing {\n      CAL_EVENT_CREATED -> pushing\n        (persist update @config.targetEntity { id: @entity.headId, externalEventId: ?id, syncedAt: @now } {\n          emit: { failure: CAL_SYNC_FAILED, success: PUSH_STEPPED }\n        })\n      PUSH_STEPPED -> pushing\n        (fetch @config.targetEntity {\n          emit: { failure: CAL_SYNC_FAILED, success: PUSH_ROWS_LOADED }\n          filter: [\"=\", (object/get @entity externalEventId), \"\"]\n        })\n      PUSH_ROWS_LOADED -> pushing when [\">\", (array/len ?data), 0]\n        (set @entity.headId (object/get (array/first ?data) id))\n        (call-service \"calendar\" \"createEvent\" {\n          calendarId: @config.calendarId\n          summary: (object/get (array/first ?data) @config.titleField)\n          description: (if [\"=\", @config.descriptionField, \"\"] \"\" (object/get (array/first ?data) @config.descriptionField))\n          location: (if [\"=\", @config.locationField, \"\"] \"\" (object/get (array/first ?data) @config.locationField))\n          start: (object/get (array/first ?data) @config.startField)\n          end: (if [\"=\", @config.endField, \"\"] \"\" (object/get (array/first ?data) @config.endField))\n          durationMinutes: (if [\"=\", @config.durationField, \"\"] @config.durationMinutes (object/get (array/first ?data) @config.durationField))\n        } { emit: { failure: CAL_SYNC_FAILED, success: CAL_EVENT_CREATED } })\n      PUSH_ROWS_LOADED -> idle when [\"=\", (array/len ?data), 0]\n        (call-service \"calendar\" \"listEvents\" {\n          calendarId: @config.calendarId\n          syncToken: @entity.syncToken\n        } { emit: { failure: CAL_SYNC_FAILED, success: CAL_REMOTE_LISTED } })\n      CAL_SYNC_FAILED -> idle\n        (set @entity.lastError ?error)\n    }\n\n    state pulling {\n      PULL_TARGET_LOADED -> pulling\n        (set @entity.headId (object/get (array/first @entity.pending) id))\n        (if [\"=\", (array/len (array/filter ?data (fn r [\"=\", (object/get @r externalEventId), @entity.headId]))), 0] (persist create CalendarEvent {\n          title: (object/get (array/first @entity.pending) summary)\n          startsAt: (object/get (array/first @entity.pending) start)\n          endsAt: (object/get (array/first @entity.pending) end)\n          location: (object/get (array/first @entity.pending) location)\n          description: (object/get (array/first @entity.pending) description)\n          status: (object/get (array/first @entity.pending) status)\n          externalEventId: @entity.headId\n          syncedAt: @now\n        } { emit: { failure: CAL_SYNC_FAILED, success: PULL_STEPPED } }) (persist update CalendarEvent {\n          id: (object/get (array/first (array/filter ?data (fn r [\"=\", (object/get @r externalEventId), @entity.headId]))) id)\n          title: (object/get (array/first @entity.pending) summary)\n          startsAt: (object/get (array/first @entity.pending) start)\n          endsAt: (object/get (array/first @entity.pending) end)\n          location: (object/get (array/first @entity.pending) location)\n          description: (object/get (array/first @entity.pending) description)\n          status: (object/get (array/first @entity.pending) status)\n          syncedAt: @now\n        } { emit: { failure: CAL_SYNC_FAILED, success: PULL_STEPPED } }))\n      PULL_STEPPED -> pulling\n        (set @entity.pending (array/drop @entity.pending 1))\n        (emit PULL_NEXT {\n          remaining: (array/len @entity.pending)\n        })\n      PULL_NEXT -> pulling when [\">\", ?remaining, 0]\n        (fetch CalendarEvent {\n          emit: { failure: CAL_SYNC_FAILED, success: PULL_TARGET_LOADED }\n        })\n      PULL_NEXT -> idle when [\"=\", ?remaining, 0]\n        (set @entity.lastSyncedAt @now)\n        (emit CAL_SYNCED { syncedAt: @entity.lastSyncedAt })\n      CAL_SYNC_FAILED -> idle\n        (set @entity.lastError ?error)\n    }\n\n    emits {\n      CAL_SYNCED -> external {\n        syncedAt : number\n      }\n        @description \"A full push+pull cycle completed; wire to std-notify-on-event or a status surface.\"\n      CAL_SYNC_FAILED {\n        error : string!\n      }\n        @description \"A calendar service call / fetch / persist failed — lastError carries the detail and the cycle stops until the next trigger.\"\n        @tier \"secondary\"\n      PUSH_ROWS_LOADED {\n        data : [TargetRow]\n      }\n        @description \"Target rows with a blank externalEventId marker — the remaining local→remote export queue.\"\n        @tier \"secondary\"\n      CAL_EVENT_CREATED {\n        id : string!\n        status : string!\n        htmlLink : string!\n      }\n        @description \"calendar.createEvent result, flattened onto the payload by the call-service effect executor.\"\n        @tier \"secondary\"\n      PUSH_STEPPED {\n        id : string!\n      }\n        @description \"Target row stamped with its new externalEventId; drives the next push pass.\"\n        @tier \"secondary\"\n      CAL_REMOTE_LISTED {\n        events : [RemoteEvent]\n        nextSyncToken : string\n      }\n        @description \"calendar.listEvents result — the remote change set for the pull-upsert loop.\"\n        @tier \"secondary\"\n      PULL_TARGET_LOADED {\n        data : [TargetRow]\n      }\n        @description \"CalendarEvent rows loaded for externalEventId matching in the pull-upsert.\"\n        @tier \"secondary\"\n      PULL_STEPPED {\n        id : string!\n      }\n        @description \"One remote event upserted into the CalendarEvent store; drives the next pull pass.\"\n        @tier \"secondary\"\n      PULL_NEXT {\n        remaining : number\n      }\n        @description \"Pull loop control: how many remote events remain in the queue.\"\n        @tier \"secondary\"\n    }\n\n    listens {\n      SYNC_NOW {\n      }\n      CAL_REMOTE_CHANGED {\n        channelId : string\n        resourceId : string\n        resourceState : string\n      }\n      PUSH_ROWS_LOADED {\n        data : [TargetRow]\n      }\n      CAL_EVENT_CREATED {\n        id : string!\n        status : string!\n        htmlLink : string!\n      }\n      PUSH_STEPPED {\n        id : string!\n      }\n      CAL_REMOTE_LISTED {\n        events : [RemoteEvent]\n        nextSyncToken : string\n      }\n      PULL_TARGET_LOADED {\n        data : [TargetRow]\n      }\n      PULL_STEPPED {\n        id : string!\n      }\n      PULL_NEXT {\n        remaining : number\n      }\n    }\n\n    ticks {\n      syncCycle every \"*/15 * * * *\"\n        (fetch @config.targetEntity {\n          emit: { failure: CAL_SYNC_FAILED, success: PUSH_ROWS_LOADED }\n          filter: [\"=\", (object/get @entity externalEventId), \"\"]\n        })\n\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Sync with Google Calendar\"\n        @description \"Push local records to Google Calendar and pull remote events into the CalendarEvent store. Off by default; needs the calendar service credentials (GOOGLE_CALENDAR_SA_KEY).\"\n        @synonyms \"enable, calendar sync, google calendar, two-way sync, sync events, connect calendar\"\n        @tier \"infra\"\n      targetEntity : entity = CalendarEvent\n        @label \"Entity to push\"\n        @description \"Event-shaped entity whose rows export to Google Calendar. MUST declare the marker columns `externalEventId : string = \\\"\\\"` and `syncedAt : number = 0` (stamped by the push loop). Defaults to the atom's own CalendarEvent store so the standalone validates; rebind per composition.\"\n        @synonyms \"entity to sync, source entity, record type, appointments entity, sessions entity\"\n        @tier \"internal\"\n      calendarId : string = \"\"\n        @label \"Calendar id\"\n        @description \"Google calendar to sync with; blank = the service's default (GOOGLE_CALENDAR_ID env, else primary).\"\n        @synonyms \"google calendar id, target calendar\"\n        @tier \"infra\"\n      titleField : string = title\n        @label \"Title field\"\n        @description \"Target-entity field holding the event title.\"\n        @synonyms \"summary field, name field\"\n        @tier \"internal\"\n      startField : string = startsAt\n        @label \"Start field\"\n        @description \"Target-entity field holding the ISO start (dateTime, or YYYY-MM-DD for all-day).\"\n        @synonyms \"start date field, begins field, scheduledAt field\"\n        @tier \"internal\"\n      endField : string = endsAt\n        @label \"End field\"\n        @description \"Target-entity field holding the ISO end. Blank = derive the end from `durationMinutes` instead (the corpus carries all four event shapes).\"\n        @synonyms \"end date field, finishes field\"\n        @tier \"internal\"\n      durationMinutes : number = 60\n        @label \"Duration (minutes)\"\n        @description \"Fixed event length used when both `endField` and `durationField` are blank; the calendar service computes the timezone-correct end.\"\n        @synonyms \"length, event duration, minutes\"\n        @tier \"internal\"\n      durationField : string = \"\"\n        @label \"Duration field\"\n        @description \"Target-entity field holding the per-row duration in minutes (e.g. ClassSession.durationMinutes). Takes precedence over the fixed `durationMinutes` when set; ignored when `endField` is set. Field precedence: endField > durationField > durationMinutes — the corpus carries all these event shapes.\"\n        @synonyms \"minutes field, length field, per-row duration\"\n        @tier \"internal\"\n      locationField : string = \"\"\n        @label \"Location field\"\n        @description \"Target-entity field holding the location; blank = none.\"\n        @synonyms \"place field, venue field\"\n        @tier \"internal\"\n      descriptionField : string = \"\"\n        @label \"Description field\"\n        @description \"Target-entity field holding the description/notes; blank = none.\"\n        @synonyms \"notes field, details field\"\n        @tier \"internal\"\n    }\n  }\n\n  page \"/calendar-sync\" as CalendarSyncPage -> CalendarSync\n}\n"
+}

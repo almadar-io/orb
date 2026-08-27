@@ -1,17 +1,19 @@
 {
   "name": "std-anim-tick",
-  "description": "std-anim-tick — sprite/effects animation clock atom. Advances every unit's frame (mod frameCount) and ages @entity.effects (decrement ttl, drop expired) every tick. Boards compose it via `uses` + a sibling trait-ref rebound (linkedEntity) to a board entity that carries `units` + `effects`, replacing the inlined animTick that was duplicated across 8+ game boards.",
+  "description": "std-anim-tick — sprite animation clock atom. Owns a global animation counter and exposes the current frame NAME (@entity.frameName = frames[counter % len]) every 100ms tick. Boards compose it via `uses` + a trait-ref rebound (linkedEntity) to the board entity; render-ui merges @entity.frameName onto the animated sprite's asset, replacing the inlined animTick frame counters that were duplicated across game boards. 1.1.0 redesign: the 1.0.0 units-frame-advance / effects-aging sets were removed — numeric unit frames served the pre-animation-contract regime (draw-sprite paints atlas sub-texture NAMES, which is exactly what frameName now exposes; zero consumers existed), effects aging is owned by std-fx-particles, and the shared-entity one-writer rule (ORB_SHARED_ENTITY_FIELD_CONFLICT) forbids a shared atom co-writing fields a board's own ticks also write. Tick interval is a language-level literal (100ms); the config surface is `frames`.",
   "level": "atom",
-  "topic": "core",
+  "topic": "infra",
   "schema": {
     "name": "std-anim-tick",
-    "version": "1.0.0",
-    "description": "std-anim-tick — sprite/effects animation clock atom. Advances every unit's frame (mod frameCount) and ages @entity.effects (decrement ttl, drop expired) every tick. Boards compose it via `uses` + a sibling trait-ref rebound (linkedEntity) to a board entity that carries `units` + `effects`, replacing the inlined animTick that was duplicated across 8+ game boards.",
+    "version": "1.1.0",
+    "description": "std-anim-tick — sprite animation clock atom. Owns a global animation counter and exposes the current frame NAME (@entity.frameName = frames[counter % len]) every 100ms tick. Boards compose it via `uses` + a trait-ref rebound (linkedEntity) to the board entity; render-ui merges @entity.frameName onto the animated sprite's asset, replacing the inlined animTick frame counters that were duplicated across game boards. 1.1.0 redesign: the 1.0.0 units-frame-advance / effects-aging sets were removed — numeric unit frames served the pre-animation-contract regime (draw-sprite paints atlas sub-texture NAMES, which is exactly what frameName now exposes; zero consumers existed), effects aging is owned by std-fx-particles, and the shared-entity one-writer rule (ORB_SHARED_ENTITY_FIELD_CONFLICT) forbids a shared atom co-writing fields a board's own ticks also write. Tick interval is a language-level literal (100ms); the config surface is `frames`.",
     "orbitals": [
       {
         "name": "AnimTickOrbital",
+        "id": "orb_01KXG04EVEBPP0JED97WPCG83F",
         "entity": {
           "name": "AnimTickItem",
+          "id": "ent_01KXG04EVE5PC62WHMR1RW5PQC",
           "persistence": "runtime",
           "fields": [
             {
@@ -20,75 +22,35 @@
               "required": true
             },
             {
-              "name": "units",
-              "type": "array",
-              "default": [],
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "name": "id",
-                    "type": "string",
-                    "required": true
-                  },
-                  "animation": {
-                    "name": "animation",
-                    "type": "string",
-                    "required": false
-                  },
-                  "frame": {
-                    "name": "frame",
-                    "type": "number",
-                    "required": false
-                  }
-                }
-              }
+              "name": "animCounter",
+              "type": "number",
+              "default": 0
             },
             {
-              "name": "effects",
-              "type": "array",
-              "default": [],
-              "items": {
-                "type": "object",
-                "properties": {
-                  "ttl": {
-                    "name": "ttl",
-                    "type": "number",
-                    "required": true
-                  },
-                  "x": {
-                    "name": "x",
-                    "type": "number",
-                    "required": true
-                  },
-                  "y": {
-                    "name": "y",
-                    "type": "number",
-                    "required": true
-                  },
-                  "key": {
-                    "name": "key",
-                    "type": "string",
-                    "required": true
-                  }
-                }
-              }
+              "name": "frameName",
+              "type": "string",
+              "default": ""
             }
           ]
         },
         "traits": [
           {
             "name": "AnimTick",
+            "id": "trt_01KXG04EVEQNTAB0NYX7ZC392F",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
               "provides": [
-                "effects",
-                "units"
+                "animCounter",
+                "frameName"
               ]
             },
             "category": "game-core",
             "linkedEntity": "AnimTickItem",
+            "linkedEntityId": "ent_01KXG04EVE5PC62WHMR1RW5PQC",
+            "entityRefIds": {
+              "AnimTickItem": "ent_01KXG04EVE5PC62WHMR1RW5PQC"
+            },
             "stateMachine": {
               "states": [
                 {
@@ -99,6 +61,7 @@
               "events": [
                 {
                   "key": "INIT",
+                  "id": "evt_01KXG04EVEZ30NHJHF2DSR273Q",
                   "name": "Initialize"
                 }
               ],
@@ -107,16 +70,33 @@
                   "from": "running",
                   "to": "running",
                   "event": "INIT",
+                  "eventId": "evt_01KXG04EVEZ30NHJHF2DSR273Q",
                   "effects": [
                     [
                       "set",
-                      "@entity.units",
-                      "@entity.units"
+                      "@entity.animCounter",
+                      0
                     ],
                     [
                       "set",
-                      "@entity.effects",
-                      "@entity.effects"
+                      "@entity.frameName",
+                      [
+                        "if",
+                        [
+                          ">",
+                          [
+                            "array/len",
+                            []
+                          ],
+                          0
+                        ],
+                        [
+                          "array/nth",
+                          [],
+                          0
+                        ],
+                        "@entity.frameName"
+                      ]
                     ]
                   ]
                 }
@@ -129,89 +109,55 @@
                 "effects": [
                   [
                     "set",
-                    "@entity.units",
+                    "@entity.animCounter",
                     [
-                      "array/map",
-                      "@entity.units",
-                      [
-                        "fn",
-                        "u",
-                        [
-                          "object/merge",
-                          "@u",
-                          {
-                            "frame": [
-                              "%",
-                              [
-                                "+",
-                                [
-                                  "object/get",
-                                  "@u",
-                                  "frame"
-                                ],
-                                1
-                              ],
-                              8
-                            ]
-                          }
-                        ]
-                      ]
+                      "+",
+                      "@entity.animCounter",
+                      1
                     ]
                   ],
                   [
                     "set",
-                    "@entity.effects",
+                    "@entity.frameName",
                     [
-                      "array/filter",
+                      "if",
                       [
-                        "array/map",
-                        "@entity.effects",
+                        ">",
                         [
-                          "fn",
-                          "e",
+                          "array/len",
+                          []
+                        ],
+                        0
+                      ],
+                      [
+                        "array/nth",
+                        [],
+                        [
+                          "%",
+                          "@entity.animCounter",
                           [
-                            "object/merge",
-                            "@e",
-                            {
-                              "ttl": [
-                                "-",
-                                [
-                                  "object/get",
-                                  "@e",
-                                  "ttl"
-                                ],
-                                1
-                              ]
-                            }
+                            "array/len",
+                            []
                           ]
                         ]
                       ],
-                      [
-                        "fn",
-                        "e",
-                        [
-                          ">",
-                          [
-                            "object/get",
-                            "@e",
-                            "ttl"
-                          ],
-                          0
-                        ]
-                      ]
+                      "@entity.frameName"
                     ]
                   ]
                 ]
               }
             ],
             "config": {
-              "frameCount": {
-                "type": "number",
-                "default": 8,
-                "label": "Frame count",
-                "description": "Number of sprite frames a unit cycles through before the animation loops.",
-                "synonyms": "frames, sheet length, animation length",
-                "tier": "domain"
+              "frames": {
+                "type": "[string]",
+                "default": [],
+                "label": "Frame names",
+                "description": "Atlas sub-texture names cycled into @entity.frameName, one per tick; empty disables name cycling.",
+                "synonyms": "sprite names, atlas frames, animation frames",
+                "tier": "domain",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "scope": "instance"
@@ -220,17 +166,66 @@
         "pages": [
           {
             "name": "AnimTickPage",
+            "id": "pag_01KXG04EVEEWQ0BNGK8KV8E2ZQ",
             "path": "/anim-tick",
             "traits": [
               {
-                "ref": "AnimTick"
+                "ref": "AnimTick",
+                "refId": "trt_01KXG04EVEQNTAB0NYX7ZC392F"
               }
             ]
           }
         ]
       }
-    ]
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "pag_01KXG04EVEEWQ0BNGK8KV8E2ZQ": {
+          "id": "pag_01KXG04EVEEWQ0BNGK8KV8E2ZQ",
+          "kind": "page",
+          "bakedName": "AnimTickPage",
+          "curName": "AnimTickPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KXG04EVEQNTAB0NYX7ZC392F": {
+          "id": "trt_01KXG04EVEQNTAB0NYX7ZC392F",
+          "kind": "trait",
+          "bakedName": "AnimTick",
+          "curName": "AnimTick",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EVEZ30NHJHF2DSR273Q": {
+          "id": "evt_01KXG04EVEZ30NHJHF2DSR273Q",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EVEQNTAB0NYX7ZC392F"
+        },
+        "orb_01KXG04EVEBPP0JED97WPCG83F": {
+          "id": "orb_01KXG04EVEBPP0JED97WPCG83F",
+          "kind": "orbital",
+          "bakedName": "AnimTickOrbital",
+          "curName": "AnimTickOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KXG04EVE5PC62WHMR1RW5PQC": {
+          "id": "ent_01KXG04EVE5PC62WHMR1RW5PQC",
+          "kind": "entity",
+          "bakedName": "AnimTickItem",
+          "curName": "AnimTickItem",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
   },
   "source": "",
-  "lolo": ""
+  "lolo": "app std-anim-tick \"1.1.0\"\n\"std-anim-tick — sprite animation clock atom. Owns a global animation counter and exposes the current frame NAME (@entity.frameName = frames[counter % len]) every 100ms tick. Boards compose it via `uses` + a trait-ref rebound (linkedEntity) to the board entity; render-ui merges @entity.frameName onto the animated sprite's asset, replacing the inlined animTick frame counters that were duplicated across game boards. 1.1.0 redesign: the 1.0.0 units-frame-advance / effects-aging sets were removed — numeric unit frames served the pre-animation-contract regime (draw-sprite paints atlas sub-texture NAMES, which is exactly what frameName now exposes; zero consumers existed), effects aging is owned by std-fx-particles, and the shared-entity one-writer rule (ORB_SHARED_ENTITY_FIELD_CONFLICT) forbids a shared atom co-writing fields a board's own ticks also write. Tick interval is a language-level literal (100ms); the config surface is `frames`.\"\norbital AnimTickOrbital {\n  entity AnimTickItem [runtime] {\n    id : string!\n    animCounter : number = 0\n    frameName : string = \"\"\n  }\n\n  trait AnimTick -> @rebindable AnimTickItem [game-core, instance] {\n    initial: running\n\n    state running {\n      INIT -> running\n        (set @entity.animCounter 0)\n        (set @entity.frameName (if (> (array/len @config.frames) 0) (array/nth @config.frames 0) @entity.frameName))\n    }\n\n    ticks {\n      animTick every 100ms\n        (set @entity.animCounter (+ @entity.animCounter 1))\n        (set @entity.frameName (if (> (array/len @config.frames) 0) (array/nth @config.frames (% @entity.animCounter (array/len @config.frames))) @entity.frameName))\n    }\n\n    config {\n      frames : [string] = []\n        @label \"Frame names\"\n        @description \"Atlas sub-texture names cycled into @entity.frameName, one per tick; empty disables name cycling.\"\n        @synonyms \"sprite names, atlas frames, animation frames\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/anim-tick\" as AnimTickPage -> AnimTick\n}\n"
 }

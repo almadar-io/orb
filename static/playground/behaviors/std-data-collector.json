@@ -1,0 +1,332 @@
+{
+  "name": "std-data-collector",
+  "description": "std-data-collector — pure buffer-accumulation atom, parameterized for any ML domain. Collects data points into a buffer and fires BUFFER_READY with the full accumulated buffer once it reaches config.bufferSize, then resets for the next cycle. No ML compute, no model call — state machine + array operators only. Use ahead of a training loop, a batch inference call, or any downstream rung that needs a fixed-size window of accumulated observations.",
+  "level": "atom",
+  "topic": "ml",
+  "schema": {
+    "name": "std-data-collector",
+    "version": "1.0.0",
+    "description": "std-data-collector — pure buffer-accumulation atom, parameterized for any ML domain. Collects data points into a buffer and fires BUFFER_READY with the full accumulated buffer once it reaches config.bufferSize, then resets for the next cycle. No ML compute, no model call — state machine + array operators only. Use ahead of a training loop, a batch inference call, or any downstream rung that needs a fixed-size window of accumulated observations.",
+    "orbitals": [
+      {
+        "name": "MlDataCollectorOrbital",
+        "id": "orb_01KYE96EQ2ZHXP0FZB846M3HKV",
+        "entity": {
+          "name": "DataBuffer",
+          "id": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "buffer",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "description": "Data points accumulated in the current cycle."
+            },
+            {
+              "name": "count",
+              "type": "number",
+              "default": 0,
+              "description": "Number of points currently in the buffer."
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "default": "idle",
+              "values": [
+                "idle",
+                "collecting"
+              ]
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "DataCollectorRun",
+            "id": "trt_01KYE96EQ272HPSFDTQ3YCB1SG",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "buffer",
+                "count",
+                "status"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "DataBuffer",
+            "linkedEntityId": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z",
+            "entityRefIds": {
+              "DataBuffer": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z"
+            },
+            "emits": [
+              {
+                "event": "BUFFER_READY",
+                "eventId": "evt_01KYE96EQ244DCAVTH74M166Y2",
+                "description": "Fired when the buffer reaches config.bufferSize; carries the full accumulated buffer and its count, then the buffer resets for the next cycle.",
+                "tier": "primary",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "buffer",
+                    "type": "[any]",
+                    "required": true
+                  },
+                  {
+                    "name": "count",
+                    "type": "int",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "collecting",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01KYE96EQ2W7TXBK25RMPEHPSN",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "COLLECT",
+                  "id": "evt_01KYE96EQ2J97DR6K32J75A655",
+                  "name": "Collect",
+                  "payloadSchema": [
+                    {
+                      "name": "point",
+                      "type": "any",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "BUFFER_READY",
+                  "id": "evt_01KYE96EQ244DCAVTH74M166Y2",
+                  "name": "Buffer Ready",
+                  "description": "Fired when the buffer reaches config.bufferSize; carries the full accumulated buffer and its count, then the buffer resets for the next cycle.",
+                  "tier": "primary",
+                  "payloadSchema": [
+                    {
+                      "name": "buffer",
+                      "type": "[any]",
+                      "required": true
+                    },
+                    {
+                      "name": "count",
+                      "type": "int",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "collecting",
+                  "to": "collecting",
+                  "event": "INIT",
+                  "eventId": "evt_01KYE96EQ2W7TXBK25RMPEHPSN",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.buffer",
+                      []
+                    ],
+                    [
+                      "set",
+                      "@entity.count",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "idle"
+                    ]
+                  ]
+                },
+                {
+                  "from": "collecting",
+                  "to": "collecting",
+                  "event": "COLLECT",
+                  "eventId": "evt_01KYE96EQ2J97DR6K32J75A655",
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "newBuffer",
+                          [
+                            "array/append",
+                            "@entity.buffer",
+                            "@payload.point"
+                          ]
+                        ],
+                        [
+                          "newCount",
+                          [
+                            "+",
+                            "@entity.count",
+                            1
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          ">=",
+                          "@newCount",
+                          100
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.buffer",
+                            []
+                          ],
+                          [
+                            "set",
+                            "@entity.count",
+                            0
+                          ],
+                          [
+                            "set",
+                            "@entity.status",
+                            "idle"
+                          ],
+                          [
+                            "emit",
+                            "BUFFER_READY",
+                            {
+                              "count": "@newCount",
+                              "buffer": "@newBuffer"
+                            }
+                          ]
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.buffer",
+                            "@newBuffer"
+                          ],
+                          [
+                            "set",
+                            "@entity.count",
+                            "@newCount"
+                          ],
+                          [
+                            "set",
+                            "@entity.status",
+                            "collecting"
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "bufferSize": {
+                "type": "int",
+                "default": 100,
+                "label": "Buffer size",
+                "description": "Number of data points collected before BUFFER_READY fires.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "MlDataCollectorPage",
+            "id": "pag_01KYE96EQ2NDN4K00H9GTBVH95",
+            "path": "/ml-data-collector",
+            "traits": [
+              {
+                "ref": "DataCollectorRun",
+                "refId": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01KYE96EQ2W7TXBK25RMPEHPSN": {
+          "id": "evt_01KYE96EQ2W7TXBK25RMPEHPSN",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
+        },
+        "trt_01KYE96EQ272HPSFDTQ3YCB1SG": {
+          "id": "trt_01KYE96EQ272HPSFDTQ3YCB1SG",
+          "kind": "trait",
+          "bakedName": "DataCollectorRun",
+          "curName": "DataCollectorRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYE96EQ244DCAVTH74M166Y2": {
+          "id": "evt_01KYE96EQ244DCAVTH74M166Y2",
+          "kind": "event",
+          "bakedName": "BUFFER_READY",
+          "curName": "BUFFER_READY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
+        },
+        "pag_01KYE96EQ2NDN4K00H9GTBVH95": {
+          "id": "pag_01KYE96EQ2NDN4K00H9GTBVH95",
+          "kind": "page",
+          "bakedName": "MlDataCollectorPage",
+          "curName": "MlDataCollectorPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KYE96EQ2HD6QXS53RKDX1V3Z": {
+          "id": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z",
+          "kind": "entity",
+          "bakedName": "DataBuffer",
+          "curName": "DataBuffer",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYE96EQ2J97DR6K32J75A655": {
+          "id": "evt_01KYE96EQ2J97DR6K32J75A655",
+          "kind": "event",
+          "bakedName": "COLLECT",
+          "curName": "COLLECT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
+        },
+        "orb_01KYE96EQ2ZHXP0FZB846M3HKV": {
+          "id": "orb_01KYE96EQ2ZHXP0FZB846M3HKV",
+          "kind": "orbital",
+          "bakedName": "MlDataCollectorOrbital",
+          "curName": "MlDataCollectorOrbital",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-data-collector \"1.0.0\"\n\"std-data-collector — pure buffer-accumulation atom, parameterized for any ML domain. Collects data points into a buffer and fires BUFFER_READY with the full accumulated buffer once it reaches config.bufferSize, then resets for the next cycle. No ML compute, no model call — state machine + array operators only. Use ahead of a training loop, a batch inference call, or any downstream rung that needs a fixed-size window of accumulated observations.\"\norbital MlDataCollectorOrbital {\n\n  entity DataBuffer [runtime] {\n    buffer : [any] @description \"Data points accumulated in the current cycle.\" = []\n    count : int @description \"Number of points currently in the buffer.\" = 0\n    status : \"idle\" | \"collecting\" = idle\n  }\n\n  trait DataCollectorRun -> @rebindable DataBuffer [lifecycle, instance] {\n    initial: collecting\n\n    state collecting {\n      INIT -> collecting\n        (set @entity.buffer [])\n        (set @entity.count 0)\n        (set @entity.status idle)\n\n      COLLECT -> collecting\n        (let ((newBuffer (array/append @entity.buffer ?point))\n              (newCount (+ @entity.count 1)))\n          (if (>= @newCount @config.bufferSize)\n              (do\n                (set @entity.buffer [])\n                (set @entity.count 0)\n                (set @entity.status idle)\n                (emit BUFFER_READY { buffer: @newBuffer, count: @newCount }))\n              (do\n                (set @entity.buffer @newBuffer)\n                (set @entity.count @newCount)\n                (set @entity.status collecting))))\n    }\n\n    emits {\n      BUFFER_READY -> external { buffer : [any]!, count : int! }\n        @description \"Fired when the buffer reaches config.bufferSize; carries the full accumulated buffer and its count, then the buffer resets for the next cycle.\"\n        @tier \"primary\"\n    }\n\n    listens {\n      COLLECT {\n        point : any!\n      }\n    }\n\n    config {\n      bufferSize : int = 100\n        @label \"Buffer size\"\n        @description \"Number of data points collected before BUFFER_READY fires.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/ml-data-collector\" as MlDataCollectorPage -> DataCollectorRun\n}\n"
+}

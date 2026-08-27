@@ -1,0 +1,2718 @@
+{
+  "name": "std-learn-param-explorer",
+  "description": "Generic parameter-explorer engine — two sliders drive a config-selected curve family (power y = A·xᴮ, linear y = A + B·x, or sine y = A·sin(B·x)) sampled onto a math-canvas, with a live readout of both parameters and the curve's value at the midpoint x. Subject atoms narrow the curve family and parameter labels through config; this atom owns only the sample-and-recompute mechanics. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+  "level": "atom",
+  "topic": "ui/learning",
+  "schema": {
+    "name": "std-learn-param-explorer",
+    "version": "1.0.0",
+    "description": "Generic parameter-explorer engine — two sliders drive a config-selected curve family (power y = A·xᴮ, linear y = A + B·x, or sine y = A·sin(B·x)) sampled onto a math-canvas, with a live readout of both parameters and the curve's value at the midpoint x. Subject atoms narrow the curve family and parameter labels through config; this atom owns only the sample-and-recompute mechanics. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.",
+    "orbitals": [
+      {
+        "name": "ParamExplorerOrbital",
+        "id": "orb_01M055GQ3R2SG8517ATGTP2YYZ",
+        "entity": {
+          "name": "ParamExplorerScene",
+          "id": "ent_01M055GQ3RZHSYRJ9Y73F326ES",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "default": false
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "curveKind",
+              "type": "string"
+            },
+            {
+              "name": "paramA",
+              "type": "number"
+            },
+            {
+              "name": "paramB",
+              "type": "number"
+            },
+            {
+              "name": "paramALabel",
+              "type": "string"
+            },
+            {
+              "name": "paramBLabel",
+              "type": "string"
+            },
+            {
+              "name": "xMid",
+              "type": "number"
+            },
+            {
+              "name": "yMid",
+              "type": "number"
+            },
+            {
+              "name": "yMin",
+              "type": "number"
+            },
+            {
+              "name": "yMax",
+              "type": "number"
+            },
+            {
+              "name": "curves",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "color": {
+                    "name": "color",
+                    "type": "string",
+                    "required": false
+                  },
+                  "label": {
+                    "name": "label",
+                    "type": "string",
+                    "required": false
+                  },
+                  "samples": {
+                    "name": "samples",
+                    "type": "array",
+                    "required": true,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "y": {
+                          "name": "y",
+                          "type": "number",
+                          "required": true
+                        },
+                        "x": {
+                          "name": "x",
+                          "type": "number",
+                          "required": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "traits": [
+          {
+            "name": "ParamExplorerSim",
+            "id": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "active",
+                "curveKind",
+                "curves",
+                "paramA",
+                "paramALabel",
+                "paramB",
+                "paramBLabel",
+                "title",
+                "xMid",
+                "yMax",
+                "yMid",
+                "yMin"
+              ]
+            },
+            "category": "interaction",
+            "linkedEntity": "ParamExplorerScene",
+            "linkedEntityId": "ent_01M055GQ3RZHSYRJ9Y73F326ES",
+            "entityRefIds": {
+              "ParamExplorerScene": "ent_01M055GQ3RZHSYRJ9Y73F326ES"
+            },
+            "emits": [
+              {
+                "event": "PARAMS_CHANGED",
+                "eventId": "evt_01M055GQ3SFM2XKKEWPHEHDJS9",
+                "description": "The two parameter values after a slider change — a composed listener (readout, grader) can subscribe; a harmless no-op when the atom runs standalone.",
+                "synonyms": "parameter explorer, curve family, power law, linear function, sine wave",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "paramA",
+                    "type": "number"
+                  },
+                  {
+                    "name": "paramB",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M055GQ3RNWM925Q03N3H02Y1",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "MODE_SELECTED",
+                  "id": "evt_01M055GQ3SMBT9W67Y0R8XCZMS",
+                  "name": "Mode Selected",
+                  "description": "Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_PARAM_A",
+                  "id": "evt_01M055GQ3S5N5XM0K69CMX027H",
+                  "name": "Set Param A",
+                  "description": "Learner dragged the first parameter's slider — value is the new A; the curve recomputes immediately.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_PARAM_B",
+                  "id": "evt_01M055GQ3SFJSGF21NDA00MAK2",
+                  "name": "Set Param B",
+                  "description": "Learner dragged the second parameter's slider — value is the new B; the curve recomputes immediately.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "value",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "key": "PARAMS_CHANGED",
+                  "id": "evt_01M055GQ3SFM2XKKEWPHEHDJS9",
+                  "name": "Params Changed",
+                  "description": "The two parameter values after a slider change — a composed listener (readout, grader) can subscribe; a harmless no-op when the atom runs standalone.",
+                  "synonyms": "parameter explorer, curve family, power law, linear function, sine wave",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "paramA",
+                      "type": "number"
+                    },
+                    {
+                      "name": "paramB",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_01M055GQ3RNWM925Q03N3H02Y1",
+                  "guard": [
+                    "==",
+                    "",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "A",
+                          1
+                        ],
+                        [
+                          "B",
+                          2
+                        ],
+                        [
+                          "kind",
+                          "power"
+                        ],
+                        [
+                          "span",
+                          [
+                            "-",
+                            10,
+                            0
+                          ]
+                        ],
+                        [
+                          "samples",
+                          [
+                            "array/map",
+                            [
+                              "array/range",
+                              0,
+                              81
+                            ],
+                            [
+                              "fn",
+                              [
+                                "i"
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "x",
+                                    [
+                                      "+",
+                                      0,
+                                      [
+                                        "*",
+                                        "@i",
+                                        [
+                                          "/",
+                                          "@span",
+                                          80
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "yVal",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "@kind",
+                                        "power"
+                                      ],
+                                      [
+                                        "*",
+                                        "@A",
+                                        [
+                                          "math/pow",
+                                          "@x",
+                                          "@B"
+                                        ]
+                                      ],
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          "@kind",
+                                          "linear"
+                                        ],
+                                        [
+                                          "+",
+                                          "@A",
+                                          [
+                                            "*",
+                                            "@B",
+                                            "@x"
+                                          ]
+                                        ],
+                                        [
+                                          "*",
+                                          "@A",
+                                          [
+                                            "math/sin",
+                                            [
+                                              "*",
+                                              "@B",
+                                              "@x"
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                {
+                                  "y": "@yVal",
+                                  "x": "@x"
+                                }
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMinRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/min",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMaxRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/max",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yPad",
+                          [
+                            "*",
+                            0.1,
+                            [
+                              "math/max",
+                              0.001,
+                              [
+                                "-",
+                                "@yMaxRaw",
+                                "@yMinRaw"
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "xMidV",
+                          [
+                            "/",
+                            [
+                              "+",
+                              0,
+                              10
+                            ],
+                            2
+                          ]
+                        ],
+                        [
+                          "yMidV",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@kind",
+                              "power"
+                            ],
+                            [
+                              "*",
+                              "@A",
+                              [
+                                "math/pow",
+                                "@xMidV",
+                                "@B"
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "==",
+                                "@kind",
+                                "linear"
+                              ],
+                              [
+                                "+",
+                                "@A",
+                                [
+                                  "*",
+                                  "@B",
+                                  "@xMidV"
+                                ]
+                              ],
+                              [
+                                "*",
+                                "@A",
+                                [
+                                  "math/sin",
+                                  [
+                                    "*",
+                                    "@B",
+                                    "@xMidV"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.active",
+                          true
+                        ],
+                        [
+                          "set",
+                          "@entity.title",
+                          "Parameter Explorer"
+                        ],
+                        [
+                          "set",
+                          "@entity.curveKind",
+                          "@kind"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramA",
+                          "@A"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramB",
+                          "@B"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramALabel",
+                          "A"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramBLabel",
+                          "B"
+                        ],
+                        [
+                          "set",
+                          "@entity.xMid",
+                          "@xMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMid",
+                          "@yMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMin",
+                          [
+                            "-",
+                            "@yMinRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.yMax",
+                          [
+                            "+",
+                            "@yMaxRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.curves",
+                          [
+                            {
+                              "samples": "@samples",
+                              "label": "y(x)",
+                              "color": "#3b82f6"
+                            }
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "box",
+                        "children": [
+                          {
+                            "direction": "vertical",
+                            "type": "stack",
+                            "gap": "md",
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "direction": "vertical",
+                                "type": "stack",
+                                "gap": "xs",
+                                "children": [
+                                  {
+                                    "type": "typography",
+                                    "variant": "caption",
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramALabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramA",
+                                        2
+                                      ]
+                                    ]
+                                  },
+                                  {
+                                    "action": "SET_PARAM_A",
+                                    "type": "range-slider",
+                                    "max": 5,
+                                    "min": -5,
+                                    "value": "@entity.paramA",
+                                    "showTooltip": true,
+                                    "step": 0.1
+                                  }
+                                ]
+                              },
+                              {
+                                "gap": "xs",
+                                "direction": "vertical",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "typography",
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramBLabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramB",
+                                        2
+                                      ]
+                                    ],
+                                    "variant": "caption"
+                                  },
+                                  {
+                                    "step": 0.1,
+                                    "type": "range-slider",
+                                    "action": "SET_PARAM_B",
+                                    "max": 5,
+                                    "showTooltip": true,
+                                    "value": "@entity.paramB",
+                                    "min": -5
+                                  }
+                                ]
+                              },
+                              {
+                                "curves": "@entity.curves",
+                                "points": [],
+                                "xMax": 10,
+                                "title": "",
+                                "animate": false,
+                                "xMin": 0,
+                                "yMin": "@entity.yMin",
+                                "yMax": "@entity.yMax",
+                                "gridStep": 1,
+                                "showGrid": true,
+                                "type": "math-canvas",
+                                "showAxes": true,
+                                "vectors": [],
+                                "shapes": [],
+                                "width": 600,
+                                "interactive": false,
+                                "height": 400
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "@entity.paramALabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramA",
+                                    2
+                                  ],
+                                  ", ",
+                                  "@entity.paramBLabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramB",
+                                    2
+                                  ],
+                                  " — at x=",
+                                  [
+                                    "math/round",
+                                    "@entity.xMid",
+                                    2
+                                  ],
+                                  ", y=",
+                                  [
+                                    "math/round",
+                                    "@entity.yMid",
+                                    3
+                                  ]
+                                ],
+                                "type": "typography",
+                                "variant": "body"
+                              }
+                            ]
+                          }
+                        ],
+                        "padding": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "MODE_SELECTED",
+                  "eventId": "evt_01M055GQ3SMBT9W67Y0R8XCZMS",
+                  "guard": [
+                    "==",
+                    "@payload.mode",
+                    ""
+                  ],
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "A",
+                          1
+                        ],
+                        [
+                          "B",
+                          2
+                        ],
+                        [
+                          "kind",
+                          "power"
+                        ],
+                        [
+                          "span",
+                          [
+                            "-",
+                            10,
+                            0
+                          ]
+                        ],
+                        [
+                          "samples",
+                          [
+                            "array/map",
+                            [
+                              "array/range",
+                              0,
+                              81
+                            ],
+                            [
+                              "fn",
+                              [
+                                "i"
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "x",
+                                    [
+                                      "+",
+                                      0,
+                                      [
+                                        "*",
+                                        "@i",
+                                        [
+                                          "/",
+                                          "@span",
+                                          80
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "yVal",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "@kind",
+                                        "power"
+                                      ],
+                                      [
+                                        "*",
+                                        "@A",
+                                        [
+                                          "math/pow",
+                                          "@x",
+                                          "@B"
+                                        ]
+                                      ],
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          "@kind",
+                                          "linear"
+                                        ],
+                                        [
+                                          "+",
+                                          "@A",
+                                          [
+                                            "*",
+                                            "@B",
+                                            "@x"
+                                          ]
+                                        ],
+                                        [
+                                          "*",
+                                          "@A",
+                                          [
+                                            "math/sin",
+                                            [
+                                              "*",
+                                              "@B",
+                                              "@x"
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                {
+                                  "x": "@x",
+                                  "y": "@yVal"
+                                }
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMinRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/min",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMaxRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/max",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yPad",
+                          [
+                            "*",
+                            0.1,
+                            [
+                              "math/max",
+                              0.001,
+                              [
+                                "-",
+                                "@yMaxRaw",
+                                "@yMinRaw"
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "xMidV",
+                          [
+                            "/",
+                            [
+                              "+",
+                              0,
+                              10
+                            ],
+                            2
+                          ]
+                        ],
+                        [
+                          "yMidV",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@kind",
+                              "power"
+                            ],
+                            [
+                              "*",
+                              "@A",
+                              [
+                                "math/pow",
+                                "@xMidV",
+                                "@B"
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "==",
+                                "@kind",
+                                "linear"
+                              ],
+                              [
+                                "+",
+                                "@A",
+                                [
+                                  "*",
+                                  "@B",
+                                  "@xMidV"
+                                ]
+                              ],
+                              [
+                                "*",
+                                "@A",
+                                [
+                                  "math/sin",
+                                  [
+                                    "*",
+                                    "@B",
+                                    "@xMidV"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.active",
+                          true
+                        ],
+                        [
+                          "set",
+                          "@entity.title",
+                          "Parameter Explorer"
+                        ],
+                        [
+                          "set",
+                          "@entity.curveKind",
+                          "@kind"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramA",
+                          "@A"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramB",
+                          "@B"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramALabel",
+                          "A"
+                        ],
+                        [
+                          "set",
+                          "@entity.paramBLabel",
+                          "B"
+                        ],
+                        [
+                          "set",
+                          "@entity.xMid",
+                          "@xMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMid",
+                          "@yMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMin",
+                          [
+                            "-",
+                            "@yMinRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.yMax",
+                          [
+                            "+",
+                            "@yMaxRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.curves",
+                          [
+                            {
+                              "color": "#3b82f6",
+                              "label": "y(x)",
+                              "samples": "@samples"
+                            }
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "type": "box",
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "content": "@entity.title",
+                                "type": "typography",
+                                "variant": "h4"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramALabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramA",
+                                        2
+                                      ]
+                                    ],
+                                    "variant": "caption",
+                                    "type": "typography"
+                                  },
+                                  {
+                                    "value": "@entity.paramA",
+                                    "min": -5,
+                                    "type": "range-slider",
+                                    "action": "SET_PARAM_A",
+                                    "max": 5,
+                                    "showTooltip": true,
+                                    "step": 0.1
+                                  }
+                                ],
+                                "direction": "vertical",
+                                "gap": "xs",
+                                "type": "stack"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramBLabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramB",
+                                        2
+                                      ]
+                                    ],
+                                    "variant": "caption",
+                                    "type": "typography"
+                                  },
+                                  {
+                                    "value": "@entity.paramB",
+                                    "min": -5,
+                                    "step": 0.1,
+                                    "type": "range-slider",
+                                    "action": "SET_PARAM_B",
+                                    "max": 5,
+                                    "showTooltip": true
+                                  }
+                                ],
+                                "gap": "xs",
+                                "type": "stack",
+                                "direction": "vertical"
+                              },
+                              {
+                                "interactive": false,
+                                "points": [],
+                                "width": 600,
+                                "shapes": [],
+                                "gridStep": 1,
+                                "animate": false,
+                                "yMin": "@entity.yMin",
+                                "title": "",
+                                "type": "math-canvas",
+                                "showGrid": true,
+                                "yMax": "@entity.yMax",
+                                "vectors": [],
+                                "xMax": 10,
+                                "showAxes": true,
+                                "xMin": 0,
+                                "curves": "@entity.curves",
+                                "height": 400
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "@entity.paramALabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramA",
+                                    2
+                                  ],
+                                  ", ",
+                                  "@entity.paramBLabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramB",
+                                    2
+                                  ],
+                                  " — at x=",
+                                  [
+                                    "math/round",
+                                    "@entity.xMid",
+                                    2
+                                  ],
+                                  ", y=",
+                                  [
+                                    "math/round",
+                                    "@entity.yMid",
+                                    3
+                                  ]
+                                ],
+                                "type": "typography",
+                                "variant": "body"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "gap": "md",
+                            "type": "stack"
+                          }
+                        ],
+                        "padding": "md"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SET_PARAM_A",
+                  "eventId": "evt_01M055GQ3S5N5XM0K69CMX027H",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "A",
+                          [
+                            "math/clamp",
+                            "@payload.value",
+                            -5,
+                            5
+                          ]
+                        ],
+                        [
+                          "B",
+                          "@entity.paramB"
+                        ],
+                        [
+                          "kind",
+                          "@entity.curveKind"
+                        ],
+                        [
+                          "span",
+                          [
+                            "-",
+                            10,
+                            0
+                          ]
+                        ],
+                        [
+                          "samples",
+                          [
+                            "array/map",
+                            [
+                              "array/range",
+                              0,
+                              81
+                            ],
+                            [
+                              "fn",
+                              [
+                                "i"
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "x",
+                                    [
+                                      "+",
+                                      0,
+                                      [
+                                        "*",
+                                        "@i",
+                                        [
+                                          "/",
+                                          "@span",
+                                          80
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "yVal",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "@kind",
+                                        "power"
+                                      ],
+                                      [
+                                        "*",
+                                        "@A",
+                                        [
+                                          "math/pow",
+                                          "@x",
+                                          "@B"
+                                        ]
+                                      ],
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          "@kind",
+                                          "linear"
+                                        ],
+                                        [
+                                          "+",
+                                          "@A",
+                                          [
+                                            "*",
+                                            "@B",
+                                            "@x"
+                                          ]
+                                        ],
+                                        [
+                                          "*",
+                                          "@A",
+                                          [
+                                            "math/sin",
+                                            [
+                                              "*",
+                                              "@B",
+                                              "@x"
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                {
+                                  "x": "@x",
+                                  "y": "@yVal"
+                                }
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMinRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/min",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMaxRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/max",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yPad",
+                          [
+                            "*",
+                            0.1,
+                            [
+                              "math/max",
+                              0.001,
+                              [
+                                "-",
+                                "@yMaxRaw",
+                                "@yMinRaw"
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMidV",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@kind",
+                              "power"
+                            ],
+                            [
+                              "*",
+                              "@A",
+                              [
+                                "math/pow",
+                                "@entity.xMid",
+                                "@B"
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "==",
+                                "@kind",
+                                "linear"
+                              ],
+                              [
+                                "+",
+                                "@A",
+                                [
+                                  "*",
+                                  "@B",
+                                  "@entity.xMid"
+                                ]
+                              ],
+                              [
+                                "*",
+                                "@A",
+                                [
+                                  "math/sin",
+                                  [
+                                    "*",
+                                    "@B",
+                                    "@entity.xMid"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.paramA",
+                          "@A"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMid",
+                          "@yMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMin",
+                          [
+                            "-",
+                            "@yMinRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.yMax",
+                          [
+                            "+",
+                            "@yMaxRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.curves",
+                          [
+                            {
+                              "color": "#3b82f6",
+                              "label": "y(x)",
+                              "samples": "@samples"
+                            }
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "type": "typography",
+                                "variant": "h4",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramALabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramA",
+                                        2
+                                      ]
+                                    ],
+                                    "type": "typography",
+                                    "variant": "caption"
+                                  },
+                                  {
+                                    "type": "range-slider",
+                                    "value": "@entity.paramA",
+                                    "min": -5,
+                                    "showTooltip": true,
+                                    "step": 0.1,
+                                    "action": "SET_PARAM_A",
+                                    "max": 5
+                                  }
+                                ],
+                                "direction": "vertical",
+                                "gap": "xs",
+                                "type": "stack"
+                              },
+                              {
+                                "type": "stack",
+                                "gap": "xs",
+                                "children": [
+                                  {
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramBLabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramB",
+                                        2
+                                      ]
+                                    ],
+                                    "type": "typography",
+                                    "variant": "caption"
+                                  },
+                                  {
+                                    "max": 5,
+                                    "min": -5,
+                                    "action": "SET_PARAM_B",
+                                    "showTooltip": true,
+                                    "step": 0.1,
+                                    "value": "@entity.paramB",
+                                    "type": "range-slider"
+                                  }
+                                ],
+                                "direction": "vertical"
+                              },
+                              {
+                                "height": 400,
+                                "xMin": 0,
+                                "shapes": [],
+                                "yMin": "@entity.yMin",
+                                "type": "math-canvas",
+                                "points": [],
+                                "title": "",
+                                "interactive": false,
+                                "width": 600,
+                                "xMax": 10,
+                                "yMax": "@entity.yMax",
+                                "showAxes": true,
+                                "gridStep": 1,
+                                "showGrid": true,
+                                "vectors": [],
+                                "animate": false,
+                                "curves": "@entity.curves"
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "@entity.paramALabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramA",
+                                    2
+                                  ],
+                                  ", ",
+                                  "@entity.paramBLabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramB",
+                                    2
+                                  ],
+                                  " — at x=",
+                                  [
+                                    "math/round",
+                                    "@entity.xMid",
+                                    2
+                                  ],
+                                  ", y=",
+                                  [
+                                    "math/round",
+                                    "@entity.yMid",
+                                    3
+                                  ]
+                                ],
+                                "type": "typography",
+                                "variant": "body"
+                              }
+                            ],
+                            "direction": "vertical",
+                            "type": "stack",
+                            "gap": "md"
+                          }
+                        ],
+                        "type": "box",
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "PARAMS_CHANGED",
+                      {
+                        "paramA": "@entity.paramA",
+                        "paramB": "@entity.paramB"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "SET_PARAM_B",
+                  "eventId": "evt_01M055GQ3SFJSGF21NDA00MAK2",
+                  "guard": [
+                    "==",
+                    "@entity.active",
+                    true
+                  ],
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "A",
+                          "@entity.paramA"
+                        ],
+                        [
+                          "B",
+                          [
+                            "math/clamp",
+                            "@payload.value",
+                            -5,
+                            5
+                          ]
+                        ],
+                        [
+                          "kind",
+                          "@entity.curveKind"
+                        ],
+                        [
+                          "span",
+                          [
+                            "-",
+                            10,
+                            0
+                          ]
+                        ],
+                        [
+                          "samples",
+                          [
+                            "array/map",
+                            [
+                              "array/range",
+                              0,
+                              81
+                            ],
+                            [
+                              "fn",
+                              [
+                                "i"
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "x",
+                                    [
+                                      "+",
+                                      0,
+                                      [
+                                        "*",
+                                        "@i",
+                                        [
+                                          "/",
+                                          "@span",
+                                          80
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "yVal",
+                                    [
+                                      "if",
+                                      [
+                                        "==",
+                                        "@kind",
+                                        "power"
+                                      ],
+                                      [
+                                        "*",
+                                        "@A",
+                                        [
+                                          "math/pow",
+                                          "@x",
+                                          "@B"
+                                        ]
+                                      ],
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          "@kind",
+                                          "linear"
+                                        ],
+                                        [
+                                          "+",
+                                          "@A",
+                                          [
+                                            "*",
+                                            "@B",
+                                            "@x"
+                                          ]
+                                        ],
+                                        [
+                                          "*",
+                                          "@A",
+                                          [
+                                            "math/sin",
+                                            [
+                                              "*",
+                                              "@B",
+                                              "@x"
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                {
+                                  "x": "@x",
+                                  "y": "@yVal"
+                                }
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMinRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/min",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMaxRaw",
+                          [
+                            "array/reduce",
+                            "@samples",
+                            [
+                              "object/get",
+                              [
+                                "array/nth",
+                                "@samples",
+                                0
+                              ],
+                              "y"
+                            ],
+                            [
+                              "fn",
+                              [
+                                "acc",
+                                "s"
+                              ],
+                              [
+                                "math/max",
+                                "@acc",
+                                [
+                                  "object/get",
+                                  "@s",
+                                  "y"
+                                ]
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yPad",
+                          [
+                            "*",
+                            0.1,
+                            [
+                              "math/max",
+                              0.001,
+                              [
+                                "-",
+                                "@yMaxRaw",
+                                "@yMinRaw"
+                              ]
+                            ]
+                          ]
+                        ],
+                        [
+                          "yMidV",
+                          [
+                            "if",
+                            [
+                              "==",
+                              "@kind",
+                              "power"
+                            ],
+                            [
+                              "*",
+                              "@A",
+                              [
+                                "math/pow",
+                                "@entity.xMid",
+                                "@B"
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "==",
+                                "@kind",
+                                "linear"
+                              ],
+                              [
+                                "+",
+                                "@A",
+                                [
+                                  "*",
+                                  "@B",
+                                  "@entity.xMid"
+                                ]
+                              ],
+                              [
+                                "*",
+                                "@A",
+                                [
+                                  "math/sin",
+                                  [
+                                    "*",
+                                    "@B",
+                                    "@entity.xMid"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "do",
+                        [
+                          "set",
+                          "@entity.paramB",
+                          "@B"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMid",
+                          "@yMidV"
+                        ],
+                        [
+                          "set",
+                          "@entity.yMin",
+                          [
+                            "-",
+                            "@yMinRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.yMax",
+                          [
+                            "+",
+                            "@yMaxRaw",
+                            "@yPad"
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.curves",
+                          [
+                            {
+                              "color": "#3b82f6",
+                              "label": "y(x)",
+                              "samples": "@samples"
+                            }
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "gap": "md",
+                            "children": [
+                              {
+                                "type": "typography",
+                                "variant": "h4",
+                                "content": "@entity.title"
+                              },
+                              {
+                                "children": [
+                                  {
+                                    "variant": "caption",
+                                    "type": "typography",
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramALabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramA",
+                                        2
+                                      ]
+                                    ]
+                                  },
+                                  {
+                                    "max": 5,
+                                    "showTooltip": true,
+                                    "action": "SET_PARAM_A",
+                                    "min": -5,
+                                    "step": 0.1,
+                                    "value": "@entity.paramA",
+                                    "type": "range-slider"
+                                  }
+                                ],
+                                "gap": "xs",
+                                "direction": "vertical",
+                                "type": "stack"
+                              },
+                              {
+                                "gap": "xs",
+                                "direction": "vertical",
+                                "type": "stack",
+                                "children": [
+                                  {
+                                    "type": "typography",
+                                    "content": [
+                                      "str/concat",
+                                      "@entity.paramBLabel",
+                                      ": ",
+                                      [
+                                        "math/round",
+                                        "@entity.paramB",
+                                        2
+                                      ]
+                                    ],
+                                    "variant": "caption"
+                                  },
+                                  {
+                                    "step": 0.1,
+                                    "min": -5,
+                                    "action": "SET_PARAM_B",
+                                    "showTooltip": true,
+                                    "value": "@entity.paramB",
+                                    "max": 5,
+                                    "type": "range-slider"
+                                  }
+                                ]
+                              },
+                              {
+                                "vectors": [],
+                                "interactive": false,
+                                "title": "",
+                                "width": 600,
+                                "animate": false,
+                                "curves": "@entity.curves",
+                                "type": "math-canvas",
+                                "yMax": "@entity.yMax",
+                                "shapes": [],
+                                "height": 400,
+                                "points": [],
+                                "xMax": 10,
+                                "showAxes": true,
+                                "gridStep": 1,
+                                "showGrid": true,
+                                "yMin": "@entity.yMin",
+                                "xMin": 0
+                              },
+                              {
+                                "content": [
+                                  "str/concat",
+                                  "@entity.paramALabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramA",
+                                    2
+                                  ],
+                                  ", ",
+                                  "@entity.paramBLabel",
+                                  "=",
+                                  [
+                                    "math/round",
+                                    "@entity.paramB",
+                                    2
+                                  ],
+                                  " — at x=",
+                                  [
+                                    "math/round",
+                                    "@entity.xMid",
+                                    2
+                                  ],
+                                  ", y=",
+                                  [
+                                    "math/round",
+                                    "@entity.yMid",
+                                    3
+                                  ]
+                                ],
+                                "type": "typography",
+                                "variant": "body"
+                              }
+                            ],
+                            "type": "stack",
+                            "direction": "vertical"
+                          }
+                        ],
+                        "type": "box",
+                        "padding": "md"
+                      }
+                    ],
+                    [
+                      "emit",
+                      "PARAMS_CHANGED",
+                      {
+                        "paramA": "@entity.paramA",
+                        "paramB": "@entity.paramB"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "gridStep": {
+                "type": "number",
+                "default": 1,
+                "label": "Grid Step",
+                "tier": "presentation"
+              },
+              "paramAStep": {
+                "type": "number",
+                "default": 0.1,
+                "label": "Parameter A Step",
+                "description": "Slider increment for the first parameter.",
+                "tier": "presentation"
+              },
+              "paramADefault": {
+                "type": "number",
+                "default": 1,
+                "label": "Parameter A Default",
+                "description": "Starting value of the first parameter.",
+                "tier": "domain"
+              },
+              "interactive": {
+                "type": "boolean",
+                "default": false,
+                "label": "Interactive",
+                "tier": "presentation"
+              },
+              "paramBLabel": {
+                "type": "string",
+                "default": "B",
+                "label": "Parameter B Label",
+                "description": "Display label for the second parameter, shown in the caption and readout.",
+                "tier": "presentation"
+              },
+              "curveKind": {
+                "type": "string",
+                "default": "power",
+                "label": "Curve Kind",
+                "description": "Curve family the two parameters drive: power (y = A·xᴮ), linear (y = A + B·x), or sine (y = A·sin(B·x)).",
+                "synonyms": "curve family, power law, linear function, sine wave, function type",
+                "tier": "domain"
+              },
+              "matchMode": {
+                "type": "string",
+                "default": "",
+                "label": "Match Mode",
+                "description": "When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.",
+                "tier": "presentation"
+              },
+              "animate": {
+                "type": "boolean",
+                "default": false,
+                "label": "Animate",
+                "tier": "presentation"
+              },
+              "showAxes": {
+                "type": "boolean",
+                "default": true,
+                "label": "Show Axes",
+                "tier": "presentation"
+              },
+              "title": {
+                "type": "string",
+                "default": "Parameter Explorer",
+                "label": "Title",
+                "description": "Title shown above the canvas.",
+                "tier": "presentation"
+              },
+              "height": {
+                "type": "number",
+                "default": 400,
+                "label": "Height",
+                "tier": "presentation"
+              },
+              "width": {
+                "type": "number",
+                "default": 600,
+                "label": "Width",
+                "tier": "presentation"
+              },
+              "xMax": {
+                "type": "number",
+                "default": 10,
+                "label": "X Max",
+                "description": "Right edge of the sampled x range.",
+                "tier": "presentation"
+              },
+              "xMin": {
+                "type": "number",
+                "default": 0,
+                "label": "X Min",
+                "description": "Left edge of the sampled x range.",
+                "tier": "presentation"
+              },
+              "paramBDefault": {
+                "type": "number",
+                "default": 2,
+                "label": "Parameter B Default",
+                "description": "Starting value of the second parameter.",
+                "tier": "domain"
+              },
+              "paramBMax": {
+                "type": "number",
+                "default": 5,
+                "label": "Parameter B Max",
+                "description": "Upper bound of the second parameter's slider.",
+                "tier": "domain"
+              },
+              "color": {
+                "type": "string",
+                "default": "#3b82f6",
+                "label": "Curve Color",
+                "tier": "presentation"
+              },
+              "paramBMin": {
+                "type": "number",
+                "default": -5,
+                "label": "Parameter B Min",
+                "description": "Lower bound of the second parameter's slider.",
+                "tier": "domain"
+              },
+              "paramBStep": {
+                "type": "number",
+                "default": 0.1,
+                "label": "Parameter B Step",
+                "description": "Slider increment for the second parameter.",
+                "tier": "presentation"
+              },
+              "paramALabel": {
+                "type": "string",
+                "default": "A",
+                "label": "Parameter A Label",
+                "description": "Display label for the first parameter, shown in the caption and readout.",
+                "tier": "presentation"
+              },
+              "paramAMax": {
+                "type": "number",
+                "default": 5,
+                "label": "Parameter A Max",
+                "description": "Upper bound of the first parameter's slider.",
+                "tier": "domain"
+              },
+              "paramAMin": {
+                "type": "number",
+                "default": -5,
+                "label": "Parameter A Min",
+                "description": "Lower bound of the first parameter's slider.",
+                "tier": "domain"
+              },
+              "showGrid": {
+                "type": "boolean",
+                "default": true,
+                "label": "Show Grid",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ParamExplorerPage",
+            "id": "pag_01M055GQ3SMZ1RS2KNCABXJQFA",
+            "path": "/learn-param-explorer",
+            "traits": [
+              {
+                "ref": "ParamExplorerSim",
+                "refId": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "_metadata": {
+      "configProvenance": {
+        "ParamExplorerOrbital": [
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "max",
+            "knob": "paramAMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "min",
+            "knob": "paramAMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "step",
+            "knob": "paramAStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "step",
+            "knob": "paramBStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "max",
+            "knob": "paramBMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "min",
+            "knob": "paramBMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMax",
+            "knob": "xMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "animate",
+            "knob": "animate"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMin",
+            "knob": "xMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "gridStep",
+            "knob": "gridStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showGrid",
+            "knob": "showGrid"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showAxes",
+            "knob": "showAxes"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "interactive",
+            "knob": "interactive"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "min",
+            "knob": "paramAMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "max",
+            "knob": "paramAMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "step",
+            "knob": "paramAStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "min",
+            "knob": "paramBMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "step",
+            "knob": "paramBStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "max",
+            "knob": "paramBMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "interactive",
+            "knob": "interactive"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "gridStep",
+            "knob": "gridStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "animate",
+            "knob": "animate"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showGrid",
+            "knob": "showGrid"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMax",
+            "knob": "xMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showAxes",
+            "knob": "showAxes"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMin",
+            "knob": "xMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "min",
+            "knob": "paramAMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "step",
+            "knob": "paramAStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "max",
+            "knob": "paramAMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "max",
+            "knob": "paramBMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "min",
+            "knob": "paramBMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "step",
+            "knob": "paramBStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMin",
+            "knob": "xMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "interactive",
+            "knob": "interactive"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMax",
+            "knob": "xMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showAxes",
+            "knob": "showAxes"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "gridStep",
+            "knob": "gridStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showGrid",
+            "knob": "showGrid"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "animate",
+            "knob": "animate"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "max",
+            "knob": "paramAMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "min",
+            "knob": "paramAMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.1.children.1",
+            "prop": "step",
+            "knob": "paramAStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "step",
+            "knob": "paramBStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "min",
+            "knob": "paramBMin"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.2.children.1",
+            "prop": "max",
+            "knob": "paramBMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "interactive",
+            "knob": "interactive"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "width",
+            "knob": "width"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "animate",
+            "knob": "animate"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "height",
+            "knob": "height"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMax",
+            "knob": "xMax"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showAxes",
+            "knob": "showAxes"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "gridStep",
+            "knob": "gridStep"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "showGrid",
+            "knob": "showGrid"
+          },
+          {
+            "trait": "ParamExplorerSim",
+            "patternPath": "root.children.0.children.3",
+            "prop": "xMin",
+            "knob": "xMin"
+          }
+        ]
+      }
+    },
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M055GQ3S5N5XM0K69CMX027H": {
+          "id": "evt_01M055GQ3S5N5XM0K69CMX027H",
+          "kind": "event",
+          "bakedName": "SET_PARAM_A",
+          "curName": "SET_PARAM_A",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+        },
+        "ent_01M055GQ3RZHSYRJ9Y73F326ES": {
+          "id": "ent_01M055GQ3RZHSYRJ9Y73F326ES",
+          "kind": "entity",
+          "bakedName": "ParamExplorerScene",
+          "curName": "ParamExplorerScene",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GQ3SMBT9W67Y0R8XCZMS": {
+          "id": "evt_01M055GQ3SMBT9W67Y0R8XCZMS",
+          "kind": "event",
+          "bakedName": "MODE_SELECTED",
+          "curName": "MODE_SELECTED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+        },
+        "evt_01M055GQ3SFJSGF21NDA00MAK2": {
+          "id": "evt_01M055GQ3SFJSGF21NDA00MAK2",
+          "kind": "event",
+          "bakedName": "SET_PARAM_B",
+          "curName": "SET_PARAM_B",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+        },
+        "orb_01M055GQ3R2SG8517ATGTP2YYZ": {
+          "id": "orb_01M055GQ3R2SG8517ATGTP2YYZ",
+          "kind": "orbital",
+          "bakedName": "ParamExplorerOrbital",
+          "curName": "ParamExplorerOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01M055GQ3SMZ1RS2KNCABXJQFA": {
+          "id": "pag_01M055GQ3SMZ1RS2KNCABXJQFA",
+          "kind": "page",
+          "bakedName": "ParamExplorerPage",
+          "curName": "ParamExplorerPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M055GQ3R8ZEBMEKS5VVB3DRS": {
+          "id": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS",
+          "kind": "trait",
+          "bakedName": "ParamExplorerSim",
+          "curName": "ParamExplorerSim",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GQ3SFM2XKKEWPHEHDJS9": {
+          "id": "evt_01M055GQ3SFM2XKKEWPHEHDJS9",
+          "kind": "event",
+          "bakedName": "PARAMS_CHANGED",
+          "curName": "PARAMS_CHANGED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+        },
+        "evt_01M055GQ3RNWM925Q03N3H02Y1": {
+          "id": "evt_01M055GQ3RNWM925Q03N3H02Y1",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GQ3R8ZEBMEKS5VVB3DRS"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-learn-param-explorer \"1.0.0\"\n\"Generic parameter-explorer engine — two sliders drive a config-selected curve family (power y = A·xᴮ, linear y = A + B·x, or sine y = A·sin(B·x)) sampled onto a math-canvas, with a live readout of both parameters and the curve's value at the midpoint x. Subject atoms narrow the curve family and parameter labels through config; this atom owns only the sample-and-recompute mechanics. Standalone by default; behind a lab router set matchMode and it renders only when MODE_SELECTED matches.\"\norbital ParamExplorerOrbital {\n  type ParamExplorerCurve = {\n    label : string\n    color : string\n    samples : [ParamExplorerCurveSample]!\n  }\n  type ParamExplorerCurveSample = {\n    x : number!\n    y : number!\n  }\n\n  entity ParamExplorerScene [runtime] {\n    id : string!\n    active : boolean = false\n    title : string\n    curveKind : string\n    paramA : number\n    paramB : number\n    paramALabel : string\n    paramBLabel : string\n    xMid : number\n    yMid : number\n    yMin : number\n    yMax : number\n    curves : [ParamExplorerCurve]\n  }\n\n  trait ParamExplorerSim -> @rebindable ParamExplorerScene [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle when (== @config.matchMode \"\")\n        (let (\n            (A @config.paramADefault)\n            (B @config.paramBDefault)\n            (kind @config.curveKind)\n            (span (- @config.xMax @config.xMin))\n            (samples (array/map (array/range 0 81) (fn (i)\n              (let (\n                  (x (+ @config.xMin (* @i (/ @span 80))))\n                  (yVal (if (== @kind \"power\")\n                          (* @A (math/pow @x @B))\n                          (if (== @kind \"linear\")\n                            (+ @A (* @B @x))\n                            (* @A (math/sin (* @B @x))))))\n                )\n                { x: @x, y: @yVal }))))\n            (yMinRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/min @acc (object/get @s y)))))\n            (yMaxRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/max @acc (object/get @s y)))))\n            (yPad (* 0.1 (math/max 0.001 (- @yMaxRaw @yMinRaw))))\n            (xMidV (/ (+ @config.xMin @config.xMax) 2))\n            (yMidV (if (== @kind \"power\")\n                     (* @A (math/pow @xMidV @B))\n                     (if (== @kind \"linear\")\n                       (+ @A (* @B @xMidV))\n                       (* @A (math/sin (* @B @xMidV))))))\n          )\n          (do\n            (set @entity.active true)\n            (set @entity.title @config.title)\n            (set @entity.curveKind @kind)\n            (set @entity.paramA @A)\n            (set @entity.paramB @B)\n            (set @entity.paramALabel @config.paramALabel)\n            (set @entity.paramBLabel @config.paramBLabel)\n            (set @entity.xMid @xMidV)\n            (set @entity.yMid @yMidV)\n            (set @entity.yMin (- @yMinRaw @yPad))\n            (set @entity.yMax (+ @yMaxRaw @yPad))\n            (set @entity.curves [{ label: \"y(x)\", color: @config.color, samples: @samples }])))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramALabel \": \" (math/round @entity.paramA 2)) },\n                    { type: range-slider, min: @config.paramAMin, max: @config.paramAMax, step: @config.paramAStep, value: @entity.paramA, showTooltip: true, action: \"SET_PARAM_A\" }\n                  ] },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramBLabel \": \" (math/round @entity.paramB 2)) },\n                    { type: range-slider, min: @config.paramBMin, max: @config.paramBMax, step: @config.paramBStep, value: @entity.paramB, showTooltip: true, action: \"SET_PARAM_B\" }\n                  ] },\n                { type: math-canvas, width: @config.width, height: @config.height, title: \"\", xMin: @config.xMin, xMax: @config.xMax, yMin: @entity.yMin, yMax: @entity.yMax, showAxes: @config.showAxes, showGrid: @config.showGrid, gridStep: @config.gridStep, curves: @entity.curves, points: [], vectors: [], shapes: [], interactive: @config.interactive, animate: @config.animate },\n                { type: typography, variant: body, content: (str/concat @entity.paramALabel \"=\" (math/round @entity.paramA 2) \", \" @entity.paramBLabel \"=\" (math/round @entity.paramB 2) \" — at x=\" (math/round @entity.xMid 2) \", y=\" (math/round @entity.yMid 3)) }\n              ] }\n          ]\n        })\n\n      MODE_SELECTED -> idle when (== ?mode @config.matchMode)\n        (let (\n            (A @config.paramADefault)\n            (B @config.paramBDefault)\n            (kind @config.curveKind)\n            (span (- @config.xMax @config.xMin))\n            (samples (array/map (array/range 0 81) (fn (i)\n              (let (\n                  (x (+ @config.xMin (* @i (/ @span 80))))\n                  (yVal (if (== @kind \"power\")\n                          (* @A (math/pow @x @B))\n                          (if (== @kind \"linear\")\n                            (+ @A (* @B @x))\n                            (* @A (math/sin (* @B @x))))))\n                )\n                { x: @x, y: @yVal }))))\n            (yMinRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/min @acc (object/get @s y)))))\n            (yMaxRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/max @acc (object/get @s y)))))\n            (yPad (* 0.1 (math/max 0.001 (- @yMaxRaw @yMinRaw))))\n            (xMidV (/ (+ @config.xMin @config.xMax) 2))\n            (yMidV (if (== @kind \"power\")\n                     (* @A (math/pow @xMidV @B))\n                     (if (== @kind \"linear\")\n                       (+ @A (* @B @xMidV))\n                       (* @A (math/sin (* @B @xMidV))))))\n          )\n          (do\n            (set @entity.active true)\n            (set @entity.title @config.title)\n            (set @entity.curveKind @kind)\n            (set @entity.paramA @A)\n            (set @entity.paramB @B)\n            (set @entity.paramALabel @config.paramALabel)\n            (set @entity.paramBLabel @config.paramBLabel)\n            (set @entity.xMid @xMidV)\n            (set @entity.yMid @yMidV)\n            (set @entity.yMin (- @yMinRaw @yPad))\n            (set @entity.yMax (+ @yMaxRaw @yPad))\n            (set @entity.curves [{ label: \"y(x)\", color: @config.color, samples: @samples }])))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramALabel \": \" (math/round @entity.paramA 2)) },\n                    { type: range-slider, min: @config.paramAMin, max: @config.paramAMax, step: @config.paramAStep, value: @entity.paramA, showTooltip: true, action: \"SET_PARAM_A\" }\n                  ] },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramBLabel \": \" (math/round @entity.paramB 2)) },\n                    { type: range-slider, min: @config.paramBMin, max: @config.paramBMax, step: @config.paramBStep, value: @entity.paramB, showTooltip: true, action: \"SET_PARAM_B\" }\n                  ] },\n                { type: math-canvas, width: @config.width, height: @config.height, title: \"\", xMin: @config.xMin, xMax: @config.xMax, yMin: @entity.yMin, yMax: @entity.yMax, showAxes: @config.showAxes, showGrid: @config.showGrid, gridStep: @config.gridStep, curves: @entity.curves, points: [], vectors: [], shapes: [], interactive: @config.interactive, animate: @config.animate },\n                { type: typography, variant: body, content: (str/concat @entity.paramALabel \"=\" (math/round @entity.paramA 2) \", \" @entity.paramBLabel \"=\" (math/round @entity.paramB 2) \" — at x=\" (math/round @entity.xMid 2) \", y=\" (math/round @entity.yMid 3)) }\n              ] }\n          ]\n        })\n\n      SET_PARAM_A -> idle when (== @entity.active true)\n        (let (\n            (A (math/clamp ?value @config.paramAMin @config.paramAMax))\n            (B @entity.paramB)\n            (kind @entity.curveKind)\n            (span (- @config.xMax @config.xMin))\n            (samples (array/map (array/range 0 81) (fn (i)\n              (let (\n                  (x (+ @config.xMin (* @i (/ @span 80))))\n                  (yVal (if (== @kind \"power\")\n                          (* @A (math/pow @x @B))\n                          (if (== @kind \"linear\")\n                            (+ @A (* @B @x))\n                            (* @A (math/sin (* @B @x))))))\n                )\n                { x: @x, y: @yVal }))))\n            (yMinRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/min @acc (object/get @s y)))))\n            (yMaxRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/max @acc (object/get @s y)))))\n            (yPad (* 0.1 (math/max 0.001 (- @yMaxRaw @yMinRaw))))\n            (yMidV (if (== @kind \"power\")\n                     (* @A (math/pow @entity.xMid @B))\n                     (if (== @kind \"linear\")\n                       (+ @A (* @B @entity.xMid))\n                       (* @A (math/sin (* @B @entity.xMid))))))\n          )\n          (do\n            (set @entity.paramA @A)\n            (set @entity.yMid @yMidV)\n            (set @entity.yMin (- @yMinRaw @yPad))\n            (set @entity.yMax (+ @yMaxRaw @yPad))\n            (set @entity.curves [{ label: \"y(x)\", color: @config.color, samples: @samples }])))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramALabel \": \" (math/round @entity.paramA 2)) },\n                    { type: range-slider, min: @config.paramAMin, max: @config.paramAMax, step: @config.paramAStep, value: @entity.paramA, showTooltip: true, action: \"SET_PARAM_A\" }\n                  ] },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramBLabel \": \" (math/round @entity.paramB 2)) },\n                    { type: range-slider, min: @config.paramBMin, max: @config.paramBMax, step: @config.paramBStep, value: @entity.paramB, showTooltip: true, action: \"SET_PARAM_B\" }\n                  ] },\n                { type: math-canvas, width: @config.width, height: @config.height, title: \"\", xMin: @config.xMin, xMax: @config.xMax, yMin: @entity.yMin, yMax: @entity.yMax, showAxes: @config.showAxes, showGrid: @config.showGrid, gridStep: @config.gridStep, curves: @entity.curves, points: [], vectors: [], shapes: [], interactive: @config.interactive, animate: @config.animate },\n                { type: typography, variant: body, content: (str/concat @entity.paramALabel \"=\" (math/round @entity.paramA 2) \", \" @entity.paramBLabel \"=\" (math/round @entity.paramB 2) \" — at x=\" (math/round @entity.xMid 2) \", y=\" (math/round @entity.yMid 3)) }\n              ] }\n          ]\n        })\n        (emit PARAMS_CHANGED { paramA: @entity.paramA, paramB: @entity.paramB })\n\n      SET_PARAM_B -> idle when (== @entity.active true)\n        (let (\n            (A @entity.paramA)\n            (B (math/clamp ?value @config.paramBMin @config.paramBMax))\n            (kind @entity.curveKind)\n            (span (- @config.xMax @config.xMin))\n            (samples (array/map (array/range 0 81) (fn (i)\n              (let (\n                  (x (+ @config.xMin (* @i (/ @span 80))))\n                  (yVal (if (== @kind \"power\")\n                          (* @A (math/pow @x @B))\n                          (if (== @kind \"linear\")\n                            (+ @A (* @B @x))\n                            (* @A (math/sin (* @B @x))))))\n                )\n                { x: @x, y: @yVal }))))\n            (yMinRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/min @acc (object/get @s y)))))\n            (yMaxRaw (array/reduce @samples (object/get (array/nth @samples 0) y) (fn (acc s) (math/max @acc (object/get @s y)))))\n            (yPad (* 0.1 (math/max 0.001 (- @yMaxRaw @yMinRaw))))\n            (yMidV (if (== @kind \"power\")\n                     (* @A (math/pow @entity.xMid @B))\n                     (if (== @kind \"linear\")\n                       (+ @A (* @B @entity.xMid))\n                       (* @A (math/sin (* @B @entity.xMid))))))\n          )\n          (do\n            (set @entity.paramB @B)\n            (set @entity.yMid @yMidV)\n            (set @entity.yMin (- @yMinRaw @yPad))\n            (set @entity.yMax (+ @yMaxRaw @yPad))\n            (set @entity.curves [{ label: \"y(x)\", color: @config.color, samples: @samples }])))\n        (render-ui main {\n          type: box\n          padding: md\n          children: [\n            { type: stack, direction: vertical, gap: md, children: [\n                { type: typography, variant: h4, content: @entity.title },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramALabel \": \" (math/round @entity.paramA 2)) },\n                    { type: range-slider, min: @config.paramAMin, max: @config.paramAMax, step: @config.paramAStep, value: @entity.paramA, showTooltip: true, action: \"SET_PARAM_A\" }\n                  ] },\n                { type: stack, direction: vertical, gap: xs, children: [\n                    { type: typography, variant: caption, content: (str/concat @entity.paramBLabel \": \" (math/round @entity.paramB 2)) },\n                    { type: range-slider, min: @config.paramBMin, max: @config.paramBMax, step: @config.paramBStep, value: @entity.paramB, showTooltip: true, action: \"SET_PARAM_B\" }\n                  ] },\n                { type: math-canvas, width: @config.width, height: @config.height, title: \"\", xMin: @config.xMin, xMax: @config.xMax, yMin: @entity.yMin, yMax: @entity.yMax, showAxes: @config.showAxes, showGrid: @config.showGrid, gridStep: @config.gridStep, curves: @entity.curves, points: [], vectors: [], shapes: [], interactive: @config.interactive, animate: @config.animate },\n                { type: typography, variant: body, content: (str/concat @entity.paramALabel \"=\" (math/round @entity.paramA 2) \", \" @entity.paramBLabel \"=\" (math/round @entity.paramB 2) \" — at x=\" (math/round @entity.xMid 2) \", y=\" (math/round @entity.yMid 3)) }\n              ] }\n          ]\n        })\n        (emit PARAMS_CHANGED { paramA: @entity.paramA, paramB: @entity.paramB })\n    }\n\n    listens {\n      MODE_SELECTED {\n        mode : string\n      }\n        @description \"Lab router broadcast naming the active mode; this instrument renders when the mode equals matchMode, otherwise renders null.\"\n        @tier \"domain\"\n      SET_PARAM_A {\n        value : number\n      }\n        @description \"Learner dragged the first parameter's slider — value is the new A; the curve recomputes immediately.\"\n        @tier \"domain\"\n      SET_PARAM_B {\n        value : number\n      }\n        @description \"Learner dragged the second parameter's slider — value is the new B; the curve recomputes immediately.\"\n        @tier \"domain\"\n    }\n\n    emits {\n      PARAMS_CHANGED -> external {\n        paramA : number\n        paramB : number\n      }\n        @description \"The two parameter values after a slider change — a composed listener (readout, grader) can subscribe; a harmless no-op when the atom runs standalone.\"\n        @synonyms \"parameter explorer, curve family, power law, linear function, sine wave\"\n        @tier \"domain\"\n    }\n\n    config {\n      matchMode : string = \"\"\n        @label \"Match Mode\"\n        @description \"When composed behind a lab router, the MODE_SELECTED mode value this instrument responds to. Empty string means standalone — render immediately on INIT.\"\n        @tier \"presentation\"\n      title : string = \"Parameter Explorer\"\n        @label \"Title\"\n        @description \"Title shown above the canvas.\"\n        @tier \"presentation\"\n      curveKind : string = \"power\"\n        @label \"Curve Kind\"\n        @description \"Curve family the two parameters drive: power (y = A·xᴮ), linear (y = A + B·x), or sine (y = A·sin(B·x)).\"\n        @synonyms \"curve family, power law, linear function, sine wave, function type\"\n        @tier \"domain\"\n      paramALabel : string = \"A\"\n        @label \"Parameter A Label\"\n        @description \"Display label for the first parameter, shown in the caption and readout.\"\n        @tier \"presentation\"\n      paramAMin : number = -5\n        @label \"Parameter A Min\"\n        @description \"Lower bound of the first parameter's slider.\"\n        @tier \"domain\"\n      paramAMax : number = 5\n        @label \"Parameter A Max\"\n        @description \"Upper bound of the first parameter's slider.\"\n        @tier \"domain\"\n      paramAStep : number = 0.1\n        @label \"Parameter A Step\"\n        @description \"Slider increment for the first parameter.\"\n        @tier \"presentation\"\n      paramADefault : number = 1\n        @label \"Parameter A Default\"\n        @description \"Starting value of the first parameter.\"\n        @tier \"domain\"\n      paramBLabel : string = \"B\"\n        @label \"Parameter B Label\"\n        @description \"Display label for the second parameter, shown in the caption and readout.\"\n        @tier \"presentation\"\n      paramBMin : number = -5\n        @label \"Parameter B Min\"\n        @description \"Lower bound of the second parameter's slider.\"\n        @tier \"domain\"\n      paramBMax : number = 5\n        @label \"Parameter B Max\"\n        @description \"Upper bound of the second parameter's slider.\"\n        @tier \"domain\"\n      paramBStep : number = 0.1\n        @label \"Parameter B Step\"\n        @description \"Slider increment for the second parameter.\"\n        @tier \"presentation\"\n      paramBDefault : number = 2\n        @label \"Parameter B Default\"\n        @description \"Starting value of the second parameter.\"\n        @tier \"domain\"\n      xMin : number = 0\n        @label \"X Min\"\n        @description \"Left edge of the sampled x range.\"\n        @tier \"presentation\"\n      xMax : number = 10\n        @label \"X Max\"\n        @description \"Right edge of the sampled x range.\"\n        @tier \"presentation\"\n      color : string = \"#3b82f6\"\n        @label \"Curve Color\"\n        @tier \"presentation\"\n      width : number = 600\n        @label \"Width\"\n        @tier \"presentation\"\n      height : number = 400\n        @label \"Height\"\n        @tier \"presentation\"\n      showAxes : boolean = true\n        @label \"Show Axes\"\n        @tier \"presentation\"\n      showGrid : boolean = true\n        @label \"Show Grid\"\n        @tier \"presentation\"\n      gridStep : number = 1\n        @label \"Grid Step\"\n        @tier \"presentation\"\n      interactive : boolean = false\n        @label \"Interactive\"\n        @tier \"presentation\"\n      animate : boolean = false\n        @label \"Animate\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/learn-param-explorer\" as ParamExplorerPage -> ParamExplorerSim\n}\n"
+}
