@@ -27,11 +27,6 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "ay": {
-                    "name": "ay",
-                    "type": "number",
-                    "required": false
-                  },
                   "vx": {
                     "name": "vx",
                     "type": "number",
@@ -42,23 +37,28 @@
                     "type": "number",
                     "required": true
                   },
-                  "ax": {
-                    "name": "ax",
+                  "y": {
+                    "name": "y",
                     "type": "number",
-                    "required": false
+                    "required": true
                   },
                   "id": {
                     "name": "id",
                     "type": "string",
                     "required": true
                   },
-                  "y": {
-                    "name": "y",
-                    "type": "number",
-                    "required": true
-                  },
                   "vy": {
                     "name": "vy",
+                    "type": "number",
+                    "required": false
+                  },
+                  "ax": {
+                    "name": "ax",
+                    "type": "number",
+                    "required": false
+                  },
+                  "ay": {
+                    "name": "ay",
                     "type": "number",
                     "required": false
                   }
@@ -348,8 +348,8 @@
                               "object/merge",
                               "@b",
                               {
-                                "ax": "@payload.ax",
-                                "ay": "@payload.ay"
+                                "ay": "@payload.ay",
+                                "ax": "@payload.ax"
                               }
                             ],
                             "@b"
@@ -385,15 +385,6 @@
                               "object/merge",
                               "@b",
                               {
-                                "vx": [
-                                  "+",
-                                  [
-                                    "object/get",
-                                    "@b",
-                                    "vx"
-                                  ],
-                                  "@payload.dvx"
-                                ],
                                 "vy": [
                                   "+",
                                   [
@@ -402,6 +393,15 @@
                                     "vy"
                                   ],
                                   "@payload.dvy"
+                                ],
+                                "vx": [
+                                  "+",
+                                  [
+                                    "object/get",
+                                    "@b",
+                                    "vx"
+                                  ],
+                                  "@payload.dvx"
                                 ]
                               }
                             ],
@@ -438,8 +438,8 @@
                               "object/merge",
                               "@b",
                               {
-                                "y": "@payload.y",
-                                "x": "@payload.x"
+                                "x": "@payload.x",
+                                "y": "@payload.y"
                               }
                             ],
                             "@b"
@@ -669,6 +669,24 @@
                                     "@b",
                                     {
                                       "y": "@ny",
+                                      "vy": [
+                                        "if",
+                                        [
+                                          "or",
+                                          [
+                                            "==",
+                                            "@ny",
+                                            -1000000
+                                          ],
+                                          [
+                                            "==",
+                                            "@ny",
+                                            1000000
+                                          ]
+                                        ],
+                                        0,
+                                        "@nvy"
+                                      ],
                                       "vx": [
                                         "if",
                                         [
@@ -687,25 +705,7 @@
                                         0,
                                         "@nvx"
                                       ],
-                                      "x": "@nx",
-                                      "vy": [
-                                        "if",
-                                        [
-                                          "or",
-                                          [
-                                            "==",
-                                            "@ny",
-                                            -1000000
-                                          ],
-                                          [
-                                            "==",
-                                            "@ny",
-                                            1000000
-                                          ]
-                                        ],
-                                        0,
-                                        "@nvy"
-                                      ]
+                                      "x": "@nx"
                                     }
                                   ]
                                 ]
@@ -719,6 +719,14 @@
                       "emit",
                       "BODY_MOVED",
                       {
+                        "vy": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "vy"
+                        ],
                         "vx": [
                           "object/get",
                           [
@@ -727,13 +735,13 @@
                           ],
                           "vx"
                         ],
-                        "id": [
+                        "x": [
                           "object/get",
                           [
                             "array/first",
                             "@entity.bodies"
                           ],
-                          "id"
+                          "x"
                         ],
                         "y": [
                           "object/get",
@@ -762,21 +770,13 @@
                             "vy"
                           ]
                         ],
-                        "vy": [
+                        "id": [
                           "object/get",
                           [
                             "array/first",
                             "@entity.bodies"
                           ],
-                          "vy"
-                        ],
-                        "x": [
-                          "object/get",
-                          [
-                            "array/first",
-                            "@entity.bodies"
-                          ],
-                          "x"
+                          "id"
                         ]
                       }
                     ]
@@ -785,18 +785,32 @@
               }
             ],
             "config": {
-              "running": {
-                "type": "boolean",
-                "default": true,
-                "label": "Running",
-                "description": "When true the 50ms motion tick integrates; toggle to freeze all bodies",
+              "gravity": {
+                "type": "number",
+                "default": 0,
+                "label": "Gravity",
+                "description": "Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live",
                 "tier": "domain"
+              },
+              "xMax": {
+                "type": "number",
+                "default": 1000000,
+                "label": "Right Wall",
+                "description": "Largest x a body may hold; hitting it zeroes vx",
+                "tier": "presentation"
               },
               "xMin": {
                 "type": "number",
                 "default": -1000000,
                 "label": "Left Wall",
                 "description": "Smallest x a body may hold; hitting it zeroes vx",
+                "tier": "presentation"
+              },
+              "yMax": {
+                "type": "number",
+                "default": 1000000,
+                "label": "Ceiling",
+                "description": "Largest y a body may hold; hitting it zeroes vy",
                 "tier": "presentation"
               },
               "bodies": {
@@ -808,6 +822,16 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
                     "y": {
                       "name": "y",
                       "type": "number",
@@ -818,67 +842,43 @@
                       "type": "number",
                       "required": false
                     },
+                    "vy": {
+                      "name": "vy",
+                      "type": "number",
+                      "required": false
+                    },
                     "ay": {
                       "name": "ay",
                       "type": "number",
                       "required": false
                     },
-                    "x": {
-                      "name": "x",
-                      "type": "number",
-                      "required": true
-                    },
-                    "id": {
-                      "name": "id",
-                      "type": "string",
-                      "required": true
-                    },
                     "vx": {
                       "name": "vx",
-                      "type": "number",
-                      "required": false
-                    },
-                    "vy": {
-                      "name": "vy",
                       "type": "number",
                       "required": false
                     }
                   }
                 }
               },
-              "xMax": {
+              "maxSpeed": {
                 "type": "number",
-                "default": 1000000,
-                "label": "Right Wall",
-                "description": "Largest x a body may hold; hitting it zeroes vx",
+                "default": 8,
+                "label": "Max Speed",
+                "description": "Per-axis speed cap in world units per second",
                 "tier": "presentation"
               },
-              "yMax": {
-                "type": "number",
-                "default": 1000000,
-                "label": "Ceiling",
-                "description": "Largest y a body may hold; hitting it zeroes vy",
-                "tier": "presentation"
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the 50ms motion tick integrates; toggle to freeze all bodies",
+                "tier": "domain"
               },
               "damping": {
                 "type": "number",
                 "default": 0.98,
                 "label": "Damping",
                 "description": "Velocity retained each 50ms tick (1 = frictionless coast, 0.9 = quick stop); the ice-to-mud feel knob",
-                "tier": "presentation"
-              },
-              "gravity": {
-                "type": "number",
-                "default": 0,
-                "label": "Gravity",
-                "description": "Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live",
-                "tier": "domain"
-              },
-              "maxSpeed": {
-                "type": "number",
-                "default": 8,
-                "label": "Max Speed",
-                "description": "Per-axis speed cap in world units per second",
                 "tier": "presentation"
               },
               "yMin": {
@@ -911,37 +911,28 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "pag_01M0F157501TQFSRR5CVBKJTT3": {
-          "id": "pag_01M0F157501TQFSRR5CVBKJTT3",
-          "kind": "page",
-          "bakedName": "MotionBodyPage",
-          "curName": "MotionBodyPage",
+        "ent_01M0F15750RMAD8B3BNR5GE99X": {
+          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
+          "kind": "entity",
+          "bakedName": "MotionBodyData",
+          "curName": "MotionBodyData",
           "renames": [],
           "owner": "workspace"
-        },
-        "evt_01M0F15750TYJ70MCGET9ERBWE": {
-          "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
-          "kind": "event",
-          "bakedName": "SET_BIAS",
-          "curName": "SET_BIAS",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "evt_01M0F1575079YFH1R7XXJ6NS4H": {
-          "id": "evt_01M0F1575079YFH1R7XXJ6NS4H",
-          "kind": "event",
-          "bakedName": "THRUST",
-          "curName": "THRUST",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         },
         "evt_01M0F15750D79SW7SYK0MEJ1C8": {
           "id": "evt_01M0F15750D79SW7SYK0MEJ1C8",
           "kind": "event",
           "bakedName": "INIT",
           "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750TJ4X6Y99S6H34892": {
+          "id": "evt_01M0F15750TJ4X6Y99S6H34892",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
@@ -954,11 +945,11 @@
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01M0F15750TJ4X6Y99S6H34892": {
-          "id": "evt_01M0F15750TJ4X6Y99S6H34892",
+        "evt_01M0F15750TYJ70MCGET9ERBWE": {
+          "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
           "kind": "event",
-          "bakedName": "RESTART",
-          "curName": "RESTART",
+          "bakedName": "SET_BIAS",
+          "curName": "SET_BIAS",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
@@ -972,6 +963,14 @@
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         },
+        "orb_01M0F15750P5ST6DKE8H23JASA": {
+          "id": "orb_01M0F15750P5ST6DKE8H23JASA",
+          "kind": "orbital",
+          "bakedName": "MotionBodyOrbital",
+          "curName": "MotionBodyOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
         "evt_01M0F15750F9TZKR47X63EBW01": {
           "id": "evt_01M0F15750F9TZKR47X63EBW01",
           "kind": "event",
@@ -981,11 +980,11 @@
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         },
-        "ent_01M0F15750RMAD8B3BNR5GE99X": {
-          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
-          "kind": "entity",
-          "bakedName": "MotionBodyData",
-          "curName": "MotionBodyData",
+        "pag_01M0F157501TQFSRR5CVBKJTT3": {
+          "id": "pag_01M0F157501TQFSRR5CVBKJTT3",
+          "kind": "page",
+          "bakedName": "MotionBodyPage",
+          "curName": "MotionBodyPage",
           "renames": [],
           "owner": "workspace"
         },
@@ -998,6 +997,15 @@
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         },
+        "evt_01M0F1575079YFH1R7XXJ6NS4H": {
+          "id": "evt_01M0F1575079YFH1R7XXJ6NS4H",
+          "kind": "event",
+          "bakedName": "THRUST",
+          "curName": "THRUST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
         "evt_01M0F15750J898T28N2T7C5DW6": {
           "id": "evt_01M0F15750J898T28N2T7C5DW6",
           "kind": "event",
@@ -1006,14 +1014,6 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "orb_01M0F15750P5ST6DKE8H23JASA": {
-          "id": "orb_01M0F15750P5ST6DKE8H23JASA",
-          "kind": "orbital",
-          "bakedName": "MotionBodyOrbital",
-          "curName": "MotionBodyOrbital",
-          "renames": [],
-          "owner": "workspace"
         }
       }
     }

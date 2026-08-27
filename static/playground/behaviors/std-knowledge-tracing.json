@@ -171,10 +171,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "status": "mastered",
-                  "intervalLow": "@payload.intervalLow",
+                  "mean": "@payload.mean",
                   "intervalHigh": "@payload.intervalHigh",
-                  "mean": "@payload.mean"
+                  "intervalLow": "@payload.intervalLow",
+                  "status": "mastered"
                 },
                 "source": {
                   "kind": "trait",
@@ -187,10 +187,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "mean": "@payload.mean",
                   "status": "remediate",
-                  "intervalLow": "@payload.intervalLow",
-                  "intervalHigh": "@payload.intervalHigh"
+                  "mean": "@payload.mean",
+                  "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow"
                 },
                 "source": {
                   "kind": "trait",
@@ -203,10 +203,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "mean": "@payload.mean",
                   "intervalHigh": "@payload.intervalHigh",
+                  "status": "insufficient",
                   "intervalLow": "@payload.intervalLow",
-                  "status": "insufficient"
+                  "mean": "@payload.mean"
                 },
                 "source": {
                   "kind": "trait",
@@ -373,16 +373,16 @@
                       "emit",
                       "CAPTURE_LABEL",
                       {
+                        "source": "posterior",
                         "verdict": {
-                          "intervalHigh": "@payload.intervalHigh",
                           "intervalLow": "@payload.intervalLow",
                           "mean": "@payload.mean",
-                          "status": "@payload.status"
+                          "status": "@payload.status",
+                          "intervalHigh": "@payload.intervalHigh"
                         },
                         "input": {
                           "skillId": "@entity.skillId"
                         },
-                        "source": "posterior",
                         "outcome": "@entity.lastOutcome"
                       }
                     ]
@@ -783,9 +783,9 @@
                               "emit",
                               "EVIDENCE_INSUFFICIENT",
                               {
-                                "intervalHigh": "@high",
                                 "intervalLow": "@low",
-                                "mean": "@entity.mean"
+                                "mean": "@entity.mean",
+                                "intervalHigh": "@high"
                               }
                             ]
                           ],
@@ -807,8 +807,8 @@
                                 "emit",
                                 "MASTERY_REACHED",
                                 {
-                                  "mean": "@entity.mean",
                                   "intervalLow": "@low",
+                                  "mean": "@entity.mean",
                                   "intervalHigh": "@high"
                                 }
                               ]
@@ -831,8 +831,8 @@
                                   "emit",
                                   "REMEDIATION_NEEDED",
                                   {
-                                    "intervalLow": "@low",
                                     "intervalHigh": "@high",
+                                    "intervalLow": "@low",
                                     "mean": "@entity.mean"
                                   }
                                 ]
@@ -848,9 +848,9 @@
                                   "emit",
                                   "EVIDENCE_INSUFFICIENT",
                                   {
-                                    "intervalHigh": "@high",
+                                    "intervalLow": "@low",
                                     "mean": "@entity.mean",
-                                    "intervalLow": "@low"
+                                    "intervalHigh": "@high"
                                   }
                                 ]
                               ]
@@ -864,12 +864,12 @@
               ]
             },
             "config": {
-              "priorAlpha": {
-                "type": "float",
-                "default": 1,
-                "label": "Prior alpha",
-                "description": "Beta prior success pseudo-count before any observation.",
-                "tier": "domain"
+              "sampleCount": {
+                "type": "int",
+                "default": 200,
+                "label": "Posterior sample count",
+                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
+                "tier": "infra"
               },
               "intervalWidthMax": {
                 "type": "float",
@@ -878,11 +878,11 @@
                 "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
                 "tier": "policy"
               },
-              "priorBeta": {
+              "priorAlpha": {
                 "type": "float",
                 "default": 1,
-                "label": "Prior beta",
-                "description": "Beta prior failure pseudo-count before any observation.",
+                "label": "Prior alpha",
+                "description": "Beta prior success pseudo-count before any observation.",
                 "tier": "domain"
               },
               "remediationCeiling": {
@@ -892,12 +892,12 @@
                 "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
                 "tier": "policy"
               },
-              "sampleCount": {
-                "type": "int",
-                "default": 200,
-                "label": "Posterior sample count",
-                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
-                "tier": "infra"
+              "priorBeta": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior beta",
+                "description": "Beta prior failure pseudo-count before any observation.",
+                "tier": "domain"
               },
               "masteryFloor": {
                 "type": "float",
@@ -1168,12 +1168,12 @@
                           "create",
                           "KnowledgeState",
                           {
-                            "recordedAt": "@entity.recordedAt",
-                            "sink": "@entity.sink",
                             "source": "@entity.source",
+                            "outcome": "@entity.outcome",
                             "verdict": "@entity.verdict",
                             "input": "@entity.input",
-                            "outcome": "@entity.outcome"
+                            "recordedAt": "@entity.recordedAt",
+                            "sink": "@entity.sink"
                           }
                         ],
                         [
@@ -1192,19 +1192,19 @@
               ]
             },
             "config": {
-              "sampleRate": {
-                "type": "float",
-                "default": 1,
-                "label": "Sample rate",
-                "description": "Fraction of examples to keep (1 = capture all). A prob/flip trial per observation.",
-                "tier": "policy"
-              },
               "sink": {
                 "type": "string",
                 "default": "knowledge-tracing",
                 "label": "Label sink",
                 "description": "Named destination this batch of examples is attributed to; interpreted downstream (the physical label store is not yet decided).",
                 "tier": "infra"
+              },
+              "sampleRate": {
+                "type": "float",
+                "default": 1,
+                "label": "Sample rate",
+                "description": "Fraction of examples to keep (1 = capture all). A prob/flip trial per observation.",
+                "tier": "policy"
               }
             },
             "scope": "instance",
@@ -1296,14 +1296,6 @@
           "renames": [],
           "owner": "workspace"
         },
-        "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
-          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
-          "kind": "entity",
-          "bakedName": "KnowledgeState",
-          "curName": "KnowledgeState",
-          "renames": [],
-          "owner": "workspace"
-        },
         "evt_01M055GH5SC5MER6VGX1V0QMXP": {
           "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
           "kind": "event",
@@ -1321,14 +1313,13 @@
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01M055GH5SPSSPVR4KFDT936G3": {
-          "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
-          "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
+        "trt_01M055GH5S3EQBR96Q27R8Q4MH": {
+          "id": "trt_01M055GH5S3EQBR96Q27R8Q4MH",
+          "kind": "trait",
+          "bakedName": "Labels",
+          "curName": "Labels",
           "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+          "owner": "workspace"
         },
         "trt_01M055GH5S071KYNGZ5DG0J6K3": {
           "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
@@ -1337,15 +1328,6 @@
           "curName": "ObservationRelay",
           "renames": [],
           "owner": "workspace"
-        },
-        "evt_01M055GH5SJRF4GEBT3G9WA18Q": {
-          "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
-          "kind": "event",
-          "bakedName": "CAPTURE_LABEL",
-          "curName": "CAPTURE_LABEL",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
         "evt_01M055GH5S6N5RDG1Q63GAB0M8": {
           "id": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
@@ -1365,19 +1347,37 @@
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
-        "trt_01M055GH5S3EQBR96Q27R8Q4MH": {
-          "id": "trt_01M055GH5S3EQBR96Q27R8Q4MH",
-          "kind": "trait",
-          "bakedName": "Labels",
-          "curName": "Labels",
-          "renames": [],
-          "owner": "workspace"
-        },
         "trt_01M055GH5SE12B5GWSSEVJRR69": {
           "id": "trt_01M055GH5SE12B5GWSSEVJRR69",
           "kind": "trait",
           "bakedName": "PosteriorTracker",
           "curName": "PosteriorTracker",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GH5SPSSPVR4KFDT936G3": {
+          "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "evt_01M055GH5SJRF4GEBT3G9WA18Q": {
+          "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+          "kind": "event",
+          "bakedName": "CAPTURE_LABEL",
+          "curName": "CAPTURE_LABEL",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
+          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+          "kind": "entity",
+          "bakedName": "KnowledgeState",
+          "curName": "KnowledgeState",
           "renames": [],
           "owner": "workspace"
         }
