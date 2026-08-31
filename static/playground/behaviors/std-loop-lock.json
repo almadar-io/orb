@@ -1,0 +1,793 @@
+{
+  "name": "std-loop-lock",
+  "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority).",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-loop-lock",
+    "version": "1.0.0",
+    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority).",
+    "orbitals": [
+      {
+        "name": "LoopLockOrbital",
+        "id": "orb_01M119MVXM55QAFWY6F0BTF8FT",
+        "entity": {
+          "name": "LoopLockData",
+          "id": "ent_01M119MVXMDX7KPCDQRRYHABX8",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "locks",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "turns": {
+                    "name": "turns",
+                    "type": "number",
+                    "required": true
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "inside": {
+                    "name": "inside",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "reported": {
+                    "name": "reported",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "lastAngle": {
+                    "name": "lastAngle",
+                    "type": "number",
+                    "required": false
+                  },
+                  "unlocked": {
+                    "name": "unlocked",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "band": {
+                    "name": "band",
+                    "type": "number",
+                    "required": true
+                  },
+                  "radius": {
+                    "name": "radius",
+                    "type": "number",
+                    "required": true
+                  },
+                  "swept": {
+                    "name": "swept",
+                    "type": "number",
+                    "required": false
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "LoopLock",
+            "id": "trt_01M119MVXMETN5BG3SCSWD03ZZ",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "locks"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "LoopLockData",
+            "linkedEntityId": "ent_01M119MVXMDX7KPCDQRRYHABX8",
+            "entityRefIds": {
+              "LoopLockData": "ent_01M119MVXMDX7KPCDQRRYHABX8"
+            },
+            "emits": [
+              {
+                "event": "LOOP_UNLOCKED",
+                "eventId": "evt_01M119MVXMEK1Z3KT723H1BM95",
+                "description": "A lock's angular sweep reached turns × 2π and it flipped unlocked; boards layer treasure fx and rewards. When several locks open on one move, the first reports and the shared entity carries the rest.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M119MVXMJAZTPAEY07C7C9XC",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M119MVXMZ1D551Q50N583X54",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "LOOP_UNLOCKED",
+                  "id": "evt_01M119MVXMEK1Z3KT723H1BM95",
+                  "name": "Loop Unlocked",
+                  "description": "A lock's angular sweep reached turns × 2π and it flipped unlocked; boards layer treasure fx and rewards. When several locks open on one move, the first reports and the shared entity carries the rest.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M119MVXMJAZTPAEY07C7C9XC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.locks",
+                      [
+                        "array/map",
+                        [],
+                        [
+                          "fn",
+                          "l",
+                          [
+                            "object/merge",
+                            "@l",
+                            {
+                              "reported": false,
+                              "lastAngle": 0,
+                              "swept": 0,
+                              "unlocked": false,
+                              "inside": false
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M119MVXMZ1D551Q50N583X54",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.locks",
+                      [
+                        "array/map",
+                        "@entity.locks",
+                        [
+                          "fn",
+                          "l",
+                          [
+                            "let",
+                            [
+                              [
+                                "dx",
+                                [
+                                  "-",
+                                  "@payload.x",
+                                  [
+                                    "object/get",
+                                    "@l",
+                                    "x"
+                                  ]
+                                ]
+                              ],
+                              [
+                                "dy",
+                                [
+                                  "-",
+                                  "@payload.y",
+                                  [
+                                    "object/get",
+                                    "@l",
+                                    "y"
+                                  ]
+                                ]
+                              ]
+                            ],
+                            [
+                              "let",
+                              [
+                                [
+                                  "dist",
+                                  [
+                                    "math/hypot",
+                                    "@dx",
+                                    "@dy"
+                                  ]
+                                ],
+                                [
+                                  "ang",
+                                  [
+                                    "math/atan2",
+                                    "@dy",
+                                    "@dx"
+                                  ]
+                                ]
+                              ],
+                              [
+                                "let",
+                                [
+                                  [
+                                    "in",
+                                    [
+                                      "<=",
+                                      [
+                                        "math/abs",
+                                        [
+                                          "-",
+                                          "@dist",
+                                          [
+                                            "object/get",
+                                            "@l",
+                                            "radius"
+                                          ]
+                                        ]
+                                      ],
+                                      [
+                                        "object/get",
+                                        "@l",
+                                        "band"
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "let",
+                                  [
+                                    [
+                                      "d",
+                                      [
+                                        "if",
+                                        [
+                                          "and",
+                                          "@in",
+                                          [
+                                            "==",
+                                            [
+                                              "object/get",
+                                              "@l",
+                                              "inside"
+                                            ],
+                                            true
+                                          ]
+                                        ],
+                                        [
+                                          "math/atan2",
+                                          [
+                                            "math/sin",
+                                            [
+                                              "-",
+                                              "@ang",
+                                              [
+                                                "object/get",
+                                                "@l",
+                                                "lastAngle"
+                                              ]
+                                            ]
+                                          ],
+                                          [
+                                            "math/cos",
+                                            [
+                                              "-",
+                                              "@ang",
+                                              [
+                                                "object/get",
+                                                "@l",
+                                                "lastAngle"
+                                              ]
+                                            ]
+                                          ]
+                                        ],
+                                        0
+                                      ]
+                                    ]
+                                  ],
+                                  [
+                                    "let",
+                                    [
+                                      [
+                                        "swept",
+                                        [
+                                          "+",
+                                          [
+                                            "object/get",
+                                            "@l",
+                                            "swept"
+                                          ],
+                                          "@d"
+                                        ]
+                                      ]
+                                    ],
+                                    [
+                                      "object/merge",
+                                      "@l",
+                                      {
+                                        "swept": "@swept",
+                                        "lastAngle": [
+                                          "if",
+                                          "@in",
+                                          "@ang",
+                                          [
+                                            "object/get",
+                                            "@l",
+                                            "lastAngle"
+                                          ]
+                                        ],
+                                        "inside": "@in",
+                                        "unlocked": [
+                                          "or",
+                                          [
+                                            "object/get",
+                                            "@l",
+                                            "unlocked"
+                                          ],
+                                          [
+                                            ">=",
+                                            [
+                                              "math/abs",
+                                              "@swept"
+                                            ],
+                                            [
+                                              "*",
+                                              [
+                                                "object/get",
+                                                "@l",
+                                                "turns"
+                                              ],
+                                              6.283185307179586
+                                            ]
+                                          ]
+                                        ]
+                                      }
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "let",
+                      [
+                        [
+                          "newly",
+                          [
+                            "array/filter",
+                            "@entity.locks",
+                            [
+                              "fn",
+                              "l",
+                              [
+                                "and",
+                                [
+                                  "==",
+                                  [
+                                    "object/get",
+                                    "@l",
+                                    "unlocked"
+                                  ],
+                                  true
+                                ],
+                                [
+                                  "==",
+                                  [
+                                    "object/get",
+                                    "@l",
+                                    "reported"
+                                  ],
+                                  false
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          ">",
+                          [
+                            "array/len",
+                            "@newly"
+                          ],
+                          0
+                        ],
+                        [
+                          "do",
+                          [
+                            "set",
+                            "@entity.locks",
+                            [
+                              "array/map",
+                              "@entity.locks",
+                              [
+                                "fn",
+                                "l",
+                                [
+                                  "if",
+                                  [
+                                    "==",
+                                    [
+                                      "object/get",
+                                      "@l",
+                                      "id"
+                                    ],
+                                    [
+                                      "object/get",
+                                      [
+                                        "array/first",
+                                        "@newly"
+                                      ],
+                                      "id"
+                                    ]
+                                  ],
+                                  [
+                                    "object/merge",
+                                    "@l",
+                                    {
+                                      "reported": true
+                                    }
+                                  ],
+                                  "@l"
+                                ]
+                              ]
+                            ]
+                          ],
+                          [
+                            "emit",
+                            "LOOP_UNLOCKED",
+                            {
+                              "id": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@newly"
+                                ],
+                                "id"
+                              ],
+                              "y": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@newly"
+                                ],
+                                "y"
+                              ],
+                              "x": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@newly"
+                                ],
+                                "x"
+                              ]
+                            }
+                          ]
+                        ],
+                        null
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.locks",
+                      [
+                        "array/map",
+                        [],
+                        [
+                          "fn",
+                          "l",
+                          [
+                            "object/merge",
+                            "@l",
+                            {
+                              "reported": false,
+                              "unlocked": false,
+                              "swept": 0,
+                              "inside": false,
+                              "lastAngle": 0
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "locks": {
+                "type": "[LoopLock]",
+                "default": [],
+                "label": "Locks",
+                "description": "One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "inside": {
+                      "name": "inside",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "lastAngle": {
+                      "name": "lastAngle",
+                      "type": "number",
+                      "required": false
+                    },
+                    "radius": {
+                      "name": "radius",
+                      "type": "number",
+                      "required": true
+                    },
+                    "band": {
+                      "name": "band",
+                      "type": "number",
+                      "required": true
+                    },
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "swept": {
+                      "name": "swept",
+                      "type": "number",
+                      "required": false
+                    },
+                    "reported": {
+                      "name": "reported",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "unlocked": {
+                      "name": "unlocked",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "turns": {
+                      "name": "turns",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, BODY_MOVED accumulates angular sweep and unlocks locks; toggle to freeze every lock as-is.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "LoopLockPage",
+            "id": "pag_01M119MVXMEKXSA909Q3ZW8ZE7",
+            "path": "/loop-lock",
+            "traits": [
+              {
+                "ref": "LoopLock",
+                "refId": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "evt_01M119MVXMJAZTPAEY07C7C9XC": {
+          "id": "evt_01M119MVXMJAZTPAEY07C7C9XC",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+        },
+        "evt_01M119MVXMZ1D551Q50N583X54": {
+          "id": "evt_01M119MVXMZ1D551Q50N583X54",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+        },
+        "pag_01M119MVXMEKXSA909Q3ZW8ZE7": {
+          "id": "pag_01M119MVXMEKXSA909Q3ZW8ZE7",
+          "kind": "page",
+          "bakedName": "LoopLockPage",
+          "curName": "LoopLockPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "orb_01M119MVXM55QAFWY6F0BTF8FT": {
+          "id": "orb_01M119MVXM55QAFWY6F0BTF8FT",
+          "kind": "orbital",
+          "bakedName": "LoopLockOrbital",
+          "curName": "LoopLockOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M119MVXMDX7KPCDQRRYHABX8": {
+          "id": "ent_01M119MVXMDX7KPCDQRRYHABX8",
+          "kind": "entity",
+          "bakedName": "LoopLockData",
+          "curName": "LoopLockData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M119MVXMEK1Z3KT723H1BM95": {
+          "id": "evt_01M119MVXMEK1Z3KT723H1BM95",
+          "kind": "event",
+          "bakedName": "LOOP_UNLOCKED",
+          "curName": "LOOP_UNLOCKED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+        },
+        "trt_01M119MVXMETN5BG3SCSWD03ZZ": {
+          "id": "trt_01M119MVXMETN5BG3SCSWD03ZZ",
+          "kind": "trait",
+          "bakedName": "LoopLock",
+          "curName": "LoopLock",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M119MVXMEM68Q7N4HQT3DPSC": {
+          "id": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-loop-lock \"1.0.0\"\n\"Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority).\"\norbital LoopLockOrbital {\n  type LoopLock = {\n    id : string!\n    x : number!\n    y : number!\n    radius : number!\n    band : number!\n    turns : number!\n    swept : number\n    lastAngle : number\n    inside : boolean\n    unlocked : boolean\n    reported : boolean\n  }\n\n  entity LoopLockData [runtime, shared] {\n    id : string!\n    locks : [LoopLock] = []\n  }\n\n  trait LoopLock -> @rebindable LoopLockData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.locks (array/map @config.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n\n      BODY_MOVED -> active when @config.running\n        (set @entity.locks (array/map @entity.locks (fn l\n          (let ((dx (- @payload.x (object/get @l x))) (dy (- @payload.y (object/get @l y))))\n          (let ((dist (math/hypot @dx @dy)) (ang (math/atan2 @dy @dx)))\n          (let ((in (<= (math/abs (- @dist (object/get @l radius))) (object/get @l band))))\n          (let ((d (if (and @in (== (object/get @l inside) true))\n                     (math/atan2 (math/sin (- @ang (object/get @l lastAngle))) (math/cos (- @ang (object/get @l lastAngle))))\n                     0)))\n          (let ((swept (+ (object/get @l swept) @d)))\n            (object/merge @l { inside: @in, lastAngle: (if @in @ang (object/get @l lastAngle)), swept: @swept, unlocked: (or (object/get @l unlocked) (>= (math/abs @swept) (* (object/get @l turns) 6.283185307179586))) })))))))))\n        (let ((newly (array/filter @entity.locks (fn l (and (== (object/get @l unlocked) true) (== (object/get @l reported) false))))))\n        (if (> (array/len @newly) 0)\n          (do\n            (set @entity.locks (array/map @entity.locks (fn l (if (== (object/get @l id) (object/get (array/first @newly) id)) (object/merge @l { reported: true }) @l))))\n            (emit LOOP_UNLOCKED { id: (object/get (array/first @newly) id), x: (object/get (array/first @newly) x), y: (object/get (array/first @newly) y) }))\n          null))\n\n      RESTART -> active\n        (set @entity.locks (array/map @config.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n    }\n\n    emits {\n      LOOP_UNLOCKED -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"A lock's angular sweep reached turns × 2π and it flipped unlocked; boards layer treasure fx and rewards. When several locks open on one move, the first reports and the shared entity carries the rest.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED accumulates angular sweep and unlocks locks; toggle to freeze every lock as-is.\"\n        @tier \"domain\"\n      locks : [LoopLock] = []\n        @label \"Locks\"\n        @description \"One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/loop-lock\" as LoopLockPage -> LoopLock\n}\n"
+}

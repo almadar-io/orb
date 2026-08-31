@@ -85,7 +85,7 @@
   },
   {
     "name": "std-approval-gate",
-    "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
+    "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces the PENDING ones in a review queue showing what is being approved and who asked, with Approve / Deny actions — Deny captures a written reason. approverRoles is ENFORCED by the review transitions themselves: an APPROVE/DENY from a viewer whose role is not listed does not fire. blockSelfApproval additionally stops a reviewer approving their own request (four-eyes) — DENY stays allowed as self-withdrawal. On approval emits ApprovalGranted; on denial emits ApprovalDenied (with the reason). Hosts that replay the gated action MUST route a failed replay back via APPROVAL_REPLAY_FAILED so the request reopens instead of being silently consumed. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created (stamp subjectLabel/subjectId/requestedBy so reviewers see what they are judging), and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
     "level": "atom",
     "topic": "infra"
   },
@@ -108,6 +108,12 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-area-fill",
+    "description": "Headless area-fill mechanic: the player paints area under a curve by moving through a fill region. Listens BODY_MOVED and, per fill, accumulates height(x) × |dx| while the player is inside the fill's x-range (the per-tick step is clamped to 0.5 world units — the physical per-tick maximum — so teleports and respawns paint nothing) — height is linear interpolation of the config curve samples above the fill's baseline (the platformer body's leftSamp/rightSamp idiom). rateMode picks the rate: \"area\" (height × |dx|, default — fills fastest where the curve is tallest), \"speed\" (|dx| only, flat rate), or \"ride\" (|dx| only while the move reports skating — walking the same distance paints nothing). When a fill's filled reaches its target it flips reported and emits AREA_FILLED once (the shared entity carries the rest); each fill also stamps a frontier (x0 + span × min(1, filled/target)) so boards can shade the painted region left-to-right as the gauge grows. RESTART resets every fill. Renders nothing; boards shade the painted region and read filled/frontier from the shared entity (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-audit-capture",
     "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind (empty = capture all). Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
     "level": "atom",
@@ -121,7 +127,7 @@
   },
   {
     "name": "std-board",
-    "description": "std-board — generic N-column board primitive. `config.columns` is an array of column definitions ({ key, label, icon, variant }); the trait `array/map`s them on `BoardItemsLoaded` into `@entity.boards` where each board carries its filtered items + a count. The render is a `data-grid` over `@entity.boards` (one card per column) whose `renderItem` lambda nests a `data-list` over `@col.items` (the cards in that stage). N is config-driven — pass any number of columns; the outer `data-grid`'s `cols` is bound to `@config.gridCols` so the grid wraps if you exceed it. Topology = loading / viewing_board / viewing_card / adding / error — distinct from the cookie-cutter `loading/browsing/viewing_single/error` CRUD shape. App-level atoms (e.g. std-pipeline) compose std-board via `uses` and add a sibling persistor + extended source entity. `config.boardLook` switches the board body between the default N-column grid ('columns') and a Trello-style wide-column kanban ('kanban-classic').",
+    "description": "std-board — generic N-column board primitive. `config.columns` is an array of column definitions ({ key, label, icon, variant }); the trait `array/map`s them on `BoardItemsLoaded` into `@entity.boards` where each board carries its filtered items + a count. The render is a `data-grid` over `@entity.boards` (one card per column) whose `renderItem` lambda nests a `data-list` over `@col.items` (the cards in that stage). N is config-driven — pass any number of columns; the outer `data-grid`'s `cols` is bound to `@config.gridCols` so the grid wraps if you exceed it. Topology = loading / viewing_board / viewing_card / adding / error — distinct from the cookie-cutter `loading/browsing/viewing_single/error` CRUD shape. App-level atoms (e.g. std-pipeline) compose std-board via `uses` and add a sibling persistor + extended source entity. `config.boardLook` switches the board body between the default N-column grid ('columns') and a Trello-style wide-column kanban ('kanban-classic'). `viewing_board` listens for REFETCH_QUERY/REFETCH_FILTER/REFETCH_PAGE (the std-search/std-filter/std-pagination wiring targets, no render on refetch — @entity.boards is bound reactively) and can optionally render its own search box (config.bodySearch, default false) and filter bar (config.filters, default []); no pagination control is rendered — a board's columns are not a paged list.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -162,10 +168,22 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-choice-gate",
+    "description": "Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-circuit-breaker",
     "description": "std-circuit-breaker as a Function",
     "level": "atom",
     "topic": "infra"
+  },
+  {
+    "name": "std-coef-pad",
+    "description": "Headless coefficient-pad mechanic for graph-riding boards: floor pads that reshape the road the player is riding (y = a·f(x−h) + k). Listens BODY_MOVED and, when the player stands grounded on an unapplied pad (|dx| <= reachX, |dy| <= reachY of the pad center — the pad-lock touch pattern), stamps the pad applied on the shared entity and emits COEF_PAD_APPLIED carrying the pad position AND its mod (x0, x1, a, h, k), so the board can append the mod to the body authority's curveMods (std-platformer-body with curveModsEnabled) and hop the player onto the reshaped surface. When every pad is applied it emits COEF_PAD_SET_COMPLETED once. RESTART un-applies every pad (the board clears curveMods alongside — the pad reports, the board owns the road). Renders nothing; boards draw the pads and read applied from the shared entity (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
   },
   {
     "name": "std-confirmation",
@@ -190,6 +208,12 @@
     "description": "std-cross-reference — join-table primitive for N:M relationships. Listens for LinkRequested/UnlinkRequested/FETCH_LINKS_FOR and manages the junction collection (default CrossRefLink [persistent: cross_ref_links]). Rebind via linkedEntity={YourJunction} to your consumer junction; if your junction's id fields differ from leftId/rightId, override them with fields{} renames at the call site. A rebind target must supply leftId, rightId, createdAt, filteredLinks. Emits LinkCreated, LinkRemoved, LinksLoaded as external broadcasts for downstream consumers.",
     "level": "atom",
     "topic": "infra"
+  },
+  {
+    "name": "std-curve-fog",
+    "description": "Headless prediction-fog mechanic for graph-riding boards: in configured world regions the road ahead is only partially REVEALED — the atom listens BODY_MOVED and stamps fogX (the reveal horizon = player x + the region's lookAhead) onto the shared entity, and the board's render layer clips or ghosts every road sample past it, so the player must commit to jumps before the landing is visible and internalize where the function GOES (blowup, flattening, slow growth, divergence). Outside every region fogX sits at a large sentinel, i.e. fully revealed. Physics is untouched: the collider keeps the whole curve — the fog is purely visual. Renders nothing; boards clip their own curve/region samples against @entity.fogX (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
   },
   {
     "name": "std-dashboard-grid-embedded",
@@ -564,6 +588,12 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-loop-lock",
+    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-market-board-3d",
     "description": "3D single-hero market-service board FRAME: composes hero-nav (hero movement) + patience (stationary customers + starve timers) + fx-particles + market-flow (win/lose) onto one shared GameState with a single render authority. Games consume this molecule and supply only theme/assets/units/customers via config.",
     "level": "organism",
@@ -762,6 +792,12 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-pad-lock",
+    "description": "Headless pad-lock mechanic: floor pads that light when the player steps on them, completing a set when every pad is lit. Listens BODY_MOVED and lights any unlit live pad the player's rect touches (|dx| <= reachX, |dy| <= reachY of the pad center); a lit pad stays lit. Pads may carry a group number (grp 0 = ungrouped, always live): when groups are used, only pads of the lowest uncompleted group are live — pads of later groups refuse to light until the current group finishes, so one sum must be finished before the next. When a group completes the trait emits PAD_GROUP_COMPLETED once for it (first newly completed group reports; the shared entity carries the rest); when every pad in the set is lit it stamps completed and emits PAD_SET_COMPLETED once. The lowest uncompleted group is stamped on the shared entity as currentGrp so boards can pulse exactly the live pads (0 = no group open / ungrouped pads). RESTART unlights every pad and resets the set. Renders nothing; boards draw the pads and read lit from the shared entity (the render authority).",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-pagination",
     "description": "std-pagination — single primitive: pagination control. PAGE accepts the Pagination component's `{page}` emit; ITEMS_LOADED accepts an upstream `{data:[ObjectSpec]}` payload and derives totalPages = ceil(len/pageSize). Molecules wire `BrowseItemLoaded -> ITEMS_LOADED` to keep it in lockstep with the data hub.",
     "level": "atom",
@@ -775,7 +811,7 @@
   },
   {
     "name": "std-patrol-hazard",
-    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
+    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -787,7 +823,7 @@
   },
   {
     "name": "std-platformer-body",
-    "description": "Headless run/jump platformer-physics authority: the SOLE writer of body + fell + hazardId + goalId on side-view boards. Where std-motion-body owns free 2D drift (no collision), this atom owns the platformer contract: every 33ms physics tick it integrates gravity into the body's vertical velocity, steps position in per-second units, and collides the body rect against the config platforms with one-way semantics — a body moving in the gravity direction that overlaps a ground/platform tile lands on its anti-gravity face (vy zeroed, grounded set), while a body moving against gravity passes through, so jumping up through a platform and walking up a staircase both just work. The sign of gravity IS the vertical convention: positive pulls toward +y (screen boards, y down — sprite canvases), negative toward −y (math canvases, y up); jumps always fire against it. Intents: STEER sets horizontal velocity (dir −1/0/1 × moveSpeed, hold-to-run: keydown steers, keyup steers 0), JUMP kicks vertical velocity when grounded, PLACE teleports (spawns, hazard respawns), RESTART reseeds. Emits BODY_MOVED every tick for the render layer (boards that don't subscribe pay nothing), plus the sparse rule signals a board needs to score: BODY_JUMPED, BODY_LANDED (with impact speed), BODY_HAZARD (once per hazard entry, re-arms on exit), BODY_GOAL (same arming), BODY_FELL (once per fall past killY, re-armed by PLACE/RESTART). Curve skating: when config.skate is on and the grounded body comes within skateSnap of the config.skateCurve surface, the body rides the curve — y snaps to the interpolated surface and tangential gravity (g·slope/(1+slope²)) accelerates vx, so the body slides downhill along the graph itself and launches ballistically off its ends; jumping kicks free. Sparse BODY_SKATE_START/BODY_SKATE_END signals fire on engage/disengage so boards can layer fx. Lives, score, and win/lose stay downstream — this atom simulates, it never judges. Renders nothing.",
+    "description": "Headless run/jump platformer-physics authority: the SOLE writer of body + fell + hazardId + goalId on side-view boards. Where std-motion-body owns free 2D drift (no collision), this atom owns the platformer contract: every 33ms physics tick it integrates gravity into the body's vertical velocity, steps position in per-second units, and collides the body rect against the config platforms with one-way semantics — a body moving in the gravity direction that overlaps a ground/platform tile lands on its anti-gravity face (vy zeroed, grounded set), while a body moving against gravity passes through, so jumping up through a platform and walking up a staircase both just work. The sign of gravity IS the vertical convention: positive pulls toward +y (screen boards, y down — sprite canvases), negative toward −y (math canvases, y up); jumps always fire against it. Intents: STEER sets horizontal velocity (dir −1/0/1 × moveSpeed, hold-to-run: keydown steers, keyup steers 0), JUMP kicks vertical velocity when grounded, PLACE teleports (spawns, hazard respawns), RESTART reseeds. Emits BODY_MOVED every tick for the render layer (boards that don't subscribe pay nothing), plus the sparse rule signals a board needs to score: BODY_JUMPED, BODY_LANDED (with impact speed), BODY_HAZARD (once per hazard entry, re-arms on exit), BODY_GOAL (same arming), BODY_FELL (once per fall past killY, re-armed by PLACE/RESTART). Drift regions: config.driftRegions lists axis-aligned rects each carrying a constant acceleration (ax, ay) applied with the same 0.033s dt whenever the body's center is inside (empty list = zero behavior change). Curve skating: when config.skate is on and the grounded body comes within skateSnap of the config.skateCurve surface, the body rides the curve — y snaps to the interpolated surface and tangential gravity (g·slope/(1+slope²)) accelerates vx, and the vertical velocity is the tangential projection (s = vx·cos θ, vy = s·sin θ — no discontinuous jumps at sample boundaries), so the body slides downhill along the graph itself and launches ballistically off its ends; jumping kicks free. Sparse BODY_SKATE_START/BODY_SKATE_END signals fire on engage/disengage so boards can layer fx. Lives, score, and win/lose stay downstream — this atom simulates, it never judges. Renders nothing.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -810,6 +846,12 @@
     "topic": "ui/core"
   },
   {
+    "name": "std-record-detail",
+    "description": "std-record-detail — single primitive: detail-panel. Owns the fetch-one-record state machine (loading → viewing → error, with RETRY), the record counterpart to std-browse's collection machine. Consumers configure fields/sections/actions and the title/subtitle/status bindings; the atom fetches by the id (or, for slug-routed records, the slug) carried on INIT and renders the panel. `detailLook` (panel default / slide-over / page / document) selects the render body, exactly as std-browse's browseLook selects a collection shape. The `document` look is for records whose shape IS a document (wiki page, note, article): the pure writing surface — a big inline-editable title with the rich-text body DIRECTLY beneath it, Edit/Done and the actions menu tucked into the header corner — where clicking the body drops a cursor in, every typing pause autosaves (CONTENT_SAVED, which the host persists QUIETLY — no refetch, or the editor unmounts mid-keystroke), and Done emits CONTENT_COMMITTED (the host refetches and snapshots version history on this one). Metadata never sits between the title and the words: compose the sibling RecordItemDetails trait beside the doc for a Gutenberg-style settings rail. A row minted blank by a document-first create arrives with draft=1 on INIT and opens straight in the editor. Pair with std-detail-layout for the back + breadcrumb chrome — that atom owns navigation, this one owns the record — exactly as a list page pairs std-browse with std-app-layout.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-recurrence",
     "description": "std-recurrence — recurring-rule definition + upcoming runs (Stripe Subscriptions / Cron Hub style). The viewing state shows a plain-English rule sentence and the next N dated runs as an agenda timeline. Per-run exception modal supports skip / reschedule. Topology = loading / defining_rule / viewing / awaiting_exception_decision / cancelled / error.",
     "level": "atom",
@@ -826,12 +868,6 @@
     "description": "std-reminder-scheduler — deadline reminders for a target entity. A periodic tick scans the target for records whose `dateField` deadline (a ms-epoch number or an ISO datetime string) is within `offsetHours` of now and that have not been reminded yet, and emits `ReminderDue` for each — every matching record, via a self-driving scan loop. Marks each record `remindedAt` so it isn't reminded twice. Compose alongside std-notify-on-event to deliver the reminder.",
     "level": "atom",
     "topic": "infra"
-  },
-  {
-    "name": "std-rich-editor",
-    "description": "std-rich-editor — wiki/CMS Notion-style block editor. Browses documents in `browsing`; opens the rich-block-editor on a selected row; persists block edits + publish status. `BlockEdit` is a rebindable single-row IN-PLACE body editor: an organism embeds it where the content belongs, rebinds it to its own entity (WikiPage, Note, …), hands it the row's id + blocksJson via OPEN, and routes the emitted BLOCKS_SAVED into its own persistor — this atom never fetches or persists. The read-only body is itself the edit affordance; an empty row paints an empty state that starts the first block; and OPEN_DRAFT opens straight into the authoring editor for a row that was just minted blank (document-first creation).",
-    "level": "atom",
-    "topic": "ui/core"
   },
   {
     "name": "std-round-flow",
@@ -948,6 +984,12 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-tag-strip",
+    "description": "std-tag-strip — inline tag editing ON the document surface: the record's tags render as removable chips with a type-to-add input (a typed name that matches an existing tag attaches it; an unknown name is created in the shared taxonomy first), plus one-click chips for every existing tag not yet attached. Emits TAGS_CHANGED { id, tagIds } — the host organism routes it into its persistor's update; the document's refetch re-scopes the strip. Binds any record carrying a tagIds relation array; the tag store is the shared `tags` collection (std-tag-taxonomy's).",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-tag-taxonomy",
     "description": "std-tag-taxonomy — hierarchical category tag tree (parent/child). TagBrowse fetches root-level Tag rows (parentId = \"\") on INIT and renders the active level via data-grid; SELECT_TAG drills into the chosen tag's children by fetching rows whose parentId matches it, binding @entity.id to that parent so the level is remembered; SHOW_ROOT resets back to the root level, surfaced as a back affordance while drilled in. Flat taxonomies (all parentId \"\") render exactly one level, unchanged. TagSelected is emitted on selection for consumers to filter content by tag.",
     "level": "atom",
@@ -955,7 +997,7 @@
   },
   {
     "name": "std-thread",
-    "description": "std-thread — forum-style nested replies with collapse + flat-mode toggle. Owns ThreadPost (persistent). flat:true covers 1:1 linear inquiry threads; flat:false renders forum-style nested. INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). REPLY persists a child post under @payload.parentId, stamped with the real @user identity. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps the frame and refetches filtered by the payload; the after-create and after-select refetch arms keep filtering by @config.threadRootId, so a mutation re-widens the panel until the consumer re-fires SET_THREAD_ROOT. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens.",
+    "description": "std-thread — forum-style nested replies with collapse + flat-mode toggle. Owns ThreadPost (persistent). flat:true covers 1:1 linear inquiry threads; flat:false renders forum-style nested. INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). REPLY persists a child post under @payload.parentId, stamped with the real @user identity. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps the frame and refetches filtered by the payload; the after-create and after-select refetch arms keep filtering by @config.threadRootId, so a mutation re-widens the panel until the consumer re-fires SET_THREAD_ROOT. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens. A non-empty sectionTitle switches the default bodyContent into titled-comments mode: header + post list + a standalone composer button (without it an empty thread has no REPLY emitter at all — the affordance only existed per-row).",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -967,7 +1009,7 @@
   },
   {
     "name": "std-tree",
-    "description": "std-tree — generic hierarchical node browser. Fetches a flat TreeNode collection and renders it through file-tree's flat `items` mode (parentId-nested at render time by the component, not the .lolo); OPEN_NODE is the external handoff for a selected node's id. Rebindable: pass `fields` at the call site to retarget it at any parent-pointer entity (categories, org units, comment threads).",
+    "description": "std-tree — generic hierarchical node browser. Fetches a flat TreeNode collection and renders it through file-tree's flat `items` mode (parentId-nested at render time by the component, not the .lolo); OPEN_NODE is the external handoff for a selected node's id. Rebindable: pass `fields` at the call site to retarget it at any parent-pointer entity (categories, org units, comment threads). Search/filter are wired (REFETCH_QUERY/REFETCH_FILTER re-fetch the flat node set server-side). `look: rail` renders the compact sidebar-navigation form (slim caption, nav-styled rows) for mounting in an app layout's sidebarTrait; SET_CURRENT marks the open record so the row highlights and its ancestors auto-expand; `childAction: true` renders a hover plus-affordance per row emitting CHILD_REQUESTED { parentId } for the host's create-draft writer; pagination is deliberately NOT offered — a hierarchy is not a paged list, and paging a flat node set would sever children from parents that fell on another page.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -980,6 +1022,12 @@
   {
     "name": "std-tutorial-overlay",
     "description": "Tutorial modal with live-demo steps for game boards and learning shells: a paged overlay — title, a live previewTrait frame playing the mechanic via std-tutorial-autodemo (a bare game canvas, no shell chrome), one line of body copy, a step counter, and Back / Next / Skip — composed entirely from registered render types (stack + text + button + trait frame) into the overlay slot, so no new UI component is needed. autoShow opens it on INIT for first-time players; a board's help button re-opens it any time via SHOW (which rewinds to step one). DISMISS (or finishing the last step) marks the run done, clears the overlay, and emits TUTORIAL_DONE so the board can unpause or log. Steps are pure config — a board teaches a new mechanic by adding one { id, title, body, demoId } row plus a previewTrait binding.",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
+    "name": "std-velocity-gate",
+    "description": "Headless velocity-gate mechanic: gates that open only when the player crosses them inside a speed band, optionally in a required direction, optionally sustained for a dwell. Listens BODY_MOVED and, per closed gate, tests the player's rect (padded by reachMargin), their speed against [minSpeed, maxSpeed], and their horizontal direction against dir (0 = either). Instant gates (dwellMs 0) open on the first passing cross; dwell gates (dwellMs > 0) accumulate ~33ms per passing move and open once held reaches dwellMs — a failing move resets the hold. The first newly opened gate emits VELOCITY_GATE_OPENED (the shared entity carries the rest). Entering a closed INSTANT gate while NOT passing emits VELOCITY_GATE_DENIED once per approach — re-arming only after the player steps out — so the board can answer with a PLACE back and a hint fx; dwell gates never deny (a hot entry is fine — coming to rest inside is the point), a failed hold simply resets. RESTART re-closes every gate. Renders nothing; boards draw the gate band/chest and read open/held from the shared entity (the render authority).",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -1016,6 +1064,12 @@
   {
     "name": "std-xp",
     "description": "Headless XP/progression mechanic: grants xp when the enemy survivor count drops (UNITS_CHANGED), and on reaching xpToNext levels up — raising the threshold and emitting a HEAL reward the grid-tactics authority applies. Owns only xp/xpToNext/level (+ kill baseline); never writes units.",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
+    "name": "std-zone-card",
+    "description": "Headless zone-guidance mechanic for side-view boards: tracks which band of the world the player is in and holds up that zone's card — name, concept, objective — for a while after every crossing. Listens BODY_MOVED and, when the player's x crosses into a different config zone, stamps the shared entity (zoneId, card, enteredAt) and emits ZONE_CHANGED carrying the card fields; the card self-clears ttlTicks BODY_MOVED ticks later (a per-move tick counter on the entity, so pauses at speed zero still age it out) and boards clear it early via CARD_DISMISS (renamed to a board-scoped progress event) on any mechanic completion. RESTART clears the card and the clock. Renders nothing; boards draw the card from the shared entity (the render authority).",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -1436,6 +1490,18 @@
   {
     "name": "ui-doc-toc",
     "description": "DocToc — UI factory (1:1 with the @almadar/ui doc-toc pattern).",
+    "level": "molecule",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-document-details",
+    "description": "DocumentDetails — the document's metadata as a compact settings card for the rail beside a DocumentPanel, each property committing in place. — UI factory (1:1 with the @almadar/ui document-details pattern).",
+    "level": "molecule",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-document-panel",
+    "description": "DocumentPanel — a record rendered as one continuous document: editable title over the rich-text body, editing controls tucked into the header corner. — UI factory (1:1 with the @almadar/ui document-panel pattern).",
     "level": "molecule",
     "topic": "ui/core"
   },
@@ -2100,8 +2166,8 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-rich-block-editor",
-    "description": "RichBlockEditor — UI factory (1:1 with the @almadar/ui rich-block-editor pattern).",
+    "name": "ui-rich-text-editor",
+    "description": "RichTextEditor — UI factory (1:1 with the @almadar/ui rich-text-editor pattern).",
     "level": "molecule",
     "topic": "ui/core"
   },

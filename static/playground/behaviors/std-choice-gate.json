@@ -1,0 +1,863 @@
+{
+  "name": "std-choice-gate",
+  "description": "Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority).",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-choice-gate",
+    "version": "1.0.0",
+    "description": "Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority).",
+    "orbitals": [
+      {
+        "name": "ChoiceGateOrbital",
+        "id": "orb_01M144Y1KF6CQJ8A3FJ3RX7TQ9",
+        "entity": {
+          "name": "ChoiceGateData",
+          "id": "ent_01M144Y1KF1D8W68N3195C53AC",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "choices",
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chosen": {
+                    "name": "chosen",
+                    "type": "string",
+                    "required": false
+                  },
+                  "hint": {
+                    "name": "hint",
+                    "type": "string",
+                    "required": false
+                  },
+                  "solved": {
+                    "name": "solved",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "options": {
+                    "name": "options",
+                    "type": "array",
+                    "required": true,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        "correct": {
+                          "name": "correct",
+                          "type": "boolean",
+                          "required": true
+                        },
+                        "dx": {
+                          "name": "dx",
+                          "type": "number",
+                          "required": true
+                        },
+                        "label": {
+                          "name": "label",
+                          "type": "string",
+                          "required": true
+                        }
+                      }
+                    }
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              }
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "ChoiceGate",
+            "id": "trt_01M144Y1KFRV1XZJ1EE77ZDESR",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "choices"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "ChoiceGateData",
+            "linkedEntityId": "ent_01M144Y1KF1D8W68N3195C53AC",
+            "entityRefIds": {
+              "ChoiceGateData": "ent_01M144Y1KF1D8W68N3195C53AC"
+            },
+            "emits": [
+              {
+                "event": "CHOICE_CORRECT",
+                "eventId": "evt_01M144Y1KFKY565GDY3P64AVJQ",
+                "description": "The player landed grounded on the gate's correct option; fires once per gate (solved gates stop judging). Carries the gate center so boards can burst the unlock there.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "event": "CHOICE_WRONG",
+                "eventId": "evt_01M144Y1KF4SVX6MZ08VNE7C8A",
+                "description": "The player landed grounded on a wrong option; carries the gate id, the chosen optionId, and the option's world position so boards can bounce the player back to the approach and float the gate's hint.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "optionId",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M144Y1KFEFSM2YBBVJ9V0NHA",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M144Y1KF13Z3QV2ZWZME49WQ",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M144Y1KFQN2TYBD17DKFE0VX",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "CHOICE_CORRECT",
+                  "id": "evt_01M144Y1KFKY565GDY3P64AVJQ",
+                  "name": "Choice Correct",
+                  "description": "The player landed grounded on the gate's correct option; fires once per gate (solved gates stop judging). Carries the gate center so boards can burst the unlock there.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CHOICE_WRONG",
+                  "id": "evt_01M144Y1KF4SVX6MZ08VNE7C8A",
+                  "name": "Choice Wrong",
+                  "description": "The player landed grounded on a wrong option; carries the gate id, the chosen optionId, and the option's world position so boards can bounce the player back to the approach and float the gate's hint.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "optionId",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M144Y1KFEFSM2YBBVJ9V0NHA",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.choices",
+                      [
+                        "array/map",
+                        [],
+                        [
+                          "fn",
+                          "g",
+                          [
+                            "object/merge",
+                            "@g",
+                            {
+                              "solved": false,
+                              "chosen": ""
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M144Y1KF13Z3QV2ZWZME49WQ",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "touch",
+                          [
+                            "array/filter",
+                            "@entity.choices",
+                            [
+                              "fn",
+                              "g",
+                              [
+                                "and",
+                                [
+                                  "==",
+                                  [
+                                    "object/get",
+                                    "@g",
+                                    "solved"
+                                  ],
+                                  false
+                                ],
+                                [
+                                  ">",
+                                  [
+                                    "array/len",
+                                    [
+                                      "array/filter",
+                                      [
+                                        "object/get",
+                                        "@g",
+                                        "options"
+                                      ],
+                                      [
+                                        "fn",
+                                        "o",
+                                        [
+                                          "and",
+                                          [
+                                            "==",
+                                            "@payload.grounded",
+                                            true
+                                          ],
+                                          [
+                                            "and",
+                                            [
+                                              "<=",
+                                              [
+                                                "math/abs",
+                                                [
+                                                  "-",
+                                                  "@payload.x",
+                                                  [
+                                                    "+",
+                                                    [
+                                                      "object/get",
+                                                      "@g",
+                                                      "x"
+                                                    ],
+                                                    [
+                                                      "object/get",
+                                                      "@o",
+                                                      "dx"
+                                                    ]
+                                                  ]
+                                                ]
+                                              ],
+                                              0.7
+                                            ],
+                                            [
+                                              "<=",
+                                              [
+                                                "math/abs",
+                                                [
+                                                  "-",
+                                                  "@payload.y",
+                                                  [
+                                                    "object/get",
+                                                    "@g",
+                                                    "y"
+                                                  ]
+                                                ]
+                                              ],
+                                              1.2
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ],
+                                  0
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          ">",
+                          [
+                            "array/len",
+                            "@touch"
+                          ],
+                          0
+                        ],
+                        [
+                          "let",
+                          [
+                            [
+                              "g",
+                              [
+                                "array/first",
+                                "@touch"
+                              ]
+                            ]
+                          ],
+                          [
+                            "let",
+                            [
+                              [
+                                "o",
+                                [
+                                  "array/first",
+                                  [
+                                    "array/filter",
+                                    [
+                                      "object/get",
+                                      "@g",
+                                      "options"
+                                    ],
+                                    [
+                                      "fn",
+                                      "oo",
+                                      [
+                                        "and",
+                                        [
+                                          "==",
+                                          "@payload.grounded",
+                                          true
+                                        ],
+                                        [
+                                          "and",
+                                          [
+                                            "<=",
+                                            [
+                                              "math/abs",
+                                              [
+                                                "-",
+                                                "@payload.x",
+                                                [
+                                                  "+",
+                                                  [
+                                                    "object/get",
+                                                    "@g",
+                                                    "x"
+                                                  ],
+                                                  [
+                                                    "object/get",
+                                                    "@oo",
+                                                    "dx"
+                                                  ]
+                                                ]
+                                              ]
+                                            ],
+                                            0.7
+                                          ],
+                                          [
+                                            "<=",
+                                            [
+                                              "math/abs",
+                                              [
+                                                "-",
+                                                "@payload.y",
+                                                [
+                                                  "object/get",
+                                                  "@g",
+                                                  "y"
+                                                ]
+                                              ]
+                                            ],
+                                            1.2
+                                          ]
+                                        ]
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                "==",
+                                [
+                                  "object/get",
+                                  "@o",
+                                  "correct"
+                                ],
+                                true
+                              ],
+                              [
+                                "do",
+                                [
+                                  "set",
+                                  "@entity.choices",
+                                  [
+                                    "array/map",
+                                    "@entity.choices",
+                                    [
+                                      "fn",
+                                      "c",
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          [
+                                            "object/get",
+                                            "@c",
+                                            "id"
+                                          ],
+                                          [
+                                            "object/get",
+                                            "@g",
+                                            "id"
+                                          ]
+                                        ],
+                                        [
+                                          "object/merge",
+                                          "@c",
+                                          {
+                                            "solved": true,
+                                            "chosen": [
+                                              "object/get",
+                                              "@o",
+                                              "id"
+                                            ]
+                                          }
+                                        ],
+                                        "@c"
+                                      ]
+                                    ]
+                                  ]
+                                ],
+                                [
+                                  "emit",
+                                  "CHOICE_CORRECT",
+                                  {
+                                    "y": [
+                                      "object/get",
+                                      "@g",
+                                      "y"
+                                    ],
+                                    "id": [
+                                      "object/get",
+                                      "@g",
+                                      "id"
+                                    ],
+                                    "x": [
+                                      "object/get",
+                                      "@g",
+                                      "x"
+                                    ]
+                                  }
+                                ]
+                              ],
+                              [
+                                "emit",
+                                "CHOICE_WRONG",
+                                {
+                                  "id": [
+                                    "object/get",
+                                    "@g",
+                                    "id"
+                                  ],
+                                  "y": [
+                                    "object/get",
+                                    "@g",
+                                    "y"
+                                  ],
+                                  "x": [
+                                    "+",
+                                    [
+                                      "object/get",
+                                      "@g",
+                                      "x"
+                                    ],
+                                    [
+                                      "object/get",
+                                      "@o",
+                                      "dx"
+                                    ]
+                                  ],
+                                  "optionId": [
+                                    "object/get",
+                                    "@o",
+                                    "id"
+                                  ]
+                                }
+                              ]
+                            ]
+                          ]
+                        ],
+                        null
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M144Y1KFQN2TYBD17DKFE0VX",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.choices",
+                      [
+                        "array/map",
+                        [],
+                        [
+                          "fn",
+                          "g",
+                          [
+                            "object/merge",
+                            "@g",
+                            {
+                              "chosen": "",
+                              "solved": false
+                            }
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, BODY_MOVED judges option landings; toggle to freeze every gate as-is.",
+                "tier": "domain"
+              },
+              "reachX": {
+                "type": "number",
+                "default": 0.7,
+                "label": "Reach X",
+                "description": "Horizontal tolerance (world units) around an option platform's center when testing a landing (approximates the body's half-width plus a step).",
+                "tier": "domain"
+              },
+              "reachY": {
+                "type": "number",
+                "default": 1.2,
+                "label": "Reach Y",
+                "description": "Vertical tolerance (world units) around the gate's option plane when testing a landing (covers small hops onto the platform surface).",
+                "tier": "domain"
+              },
+              "gates": {
+                "type": "[ChoiceGate]",
+                "default": [],
+                "label": "Choice Gates",
+                "description": "One row per gate: id, gate center (x, y — y is the option-platform surface the judge tests against), the hint floated on a wrong answer, and the options: id, dx offset from the gate center, the label drawn above the platform, and correct. solved/chosen are stamped at runtime.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    "chosen": {
+                      "name": "chosen",
+                      "type": "string",
+                      "required": false
+                    },
+                    "options": {
+                      "name": "options",
+                      "type": "array",
+                      "required": true,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "correct": {
+                            "name": "correct",
+                            "type": "boolean",
+                            "required": true
+                          },
+                          "id": {
+                            "name": "id",
+                            "type": "string",
+                            "required": true
+                          },
+                          "dx": {
+                            "name": "dx",
+                            "type": "number",
+                            "required": true
+                          },
+                          "label": {
+                            "name": "label",
+                            "type": "string",
+                            "required": true
+                          }
+                        }
+                      }
+                    },
+                    "solved": {
+                      "name": "solved",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "hint": {
+                      "name": "hint",
+                      "type": "string",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "ChoiceGatePage",
+            "id": "pag_01M144Y1KF9JNTNJB605234HGT",
+            "path": "/choice-gate",
+            "traits": [
+              {
+                "ref": "ChoiceGate",
+                "refId": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "ent_01M144Y1KF1D8W68N3195C53AC": {
+          "id": "ent_01M144Y1KF1D8W68N3195C53AC",
+          "kind": "entity",
+          "bakedName": "ChoiceGateData",
+          "curName": "ChoiceGateData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M144Y1KF13Z3QV2ZWZME49WQ": {
+          "id": "evt_01M144Y1KF13Z3QV2ZWZME49WQ",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+        },
+        "evt_01M144Y1KF4SVX6MZ08VNE7C8A": {
+          "id": "evt_01M144Y1KF4SVX6MZ08VNE7C8A",
+          "kind": "event",
+          "bakedName": "CHOICE_WRONG",
+          "curName": "CHOICE_WRONG",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+        },
+        "evt_01M144Y1KFQN2TYBD17DKFE0VX": {
+          "id": "evt_01M144Y1KFQN2TYBD17DKFE0VX",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+        },
+        "orb_01M144Y1KF6CQJ8A3FJ3RX7TQ9": {
+          "id": "orb_01M144Y1KF6CQJ8A3FJ3RX7TQ9",
+          "kind": "orbital",
+          "bakedName": "ChoiceGateOrbital",
+          "curName": "ChoiceGateOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01M144Y1KF9JNTNJB605234HGT": {
+          "id": "pag_01M144Y1KF9JNTNJB605234HGT",
+          "kind": "page",
+          "bakedName": "ChoiceGatePage",
+          "curName": "ChoiceGatePage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M144Y1KFRV1XZJ1EE77ZDESR": {
+          "id": "trt_01M144Y1KFRV1XZJ1EE77ZDESR",
+          "kind": "trait",
+          "bakedName": "ChoiceGate",
+          "curName": "ChoiceGate",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M144Y1KFKY565GDY3P64AVJQ": {
+          "id": "evt_01M144Y1KFKY565GDY3P64AVJQ",
+          "kind": "event",
+          "bakedName": "CHOICE_CORRECT",
+          "curName": "CHOICE_CORRECT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+        },
+        "evt_01M144Y1KFEFSM2YBBVJ9V0NHA": {
+          "id": "evt_01M144Y1KFEFSM2YBBVJ9V0NHA",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M144Y1KFRV1XZJ1EE77ZDESR"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-choice-gate \"1.0.0\"\n\"Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority).\"\norbital ChoiceGateOrbital {\n  type ChoiceOption = {\n    id : string!\n    dx : number!\n    label : string!\n    correct : boolean!\n  }\n  type ChoiceGate = {\n    id : string!\n    x : number!\n    y : number!\n    hint : string\n    options : [ChoiceOption]!\n    solved : boolean\n    chosen : string\n  }\n\n  entity ChoiceGateData [runtime, shared] {\n    id : string!\n    choices : [ChoiceGate] = []\n  }\n\n  trait ChoiceGate -> @rebindable ChoiceGateData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.choices (array/map @config.gates (fn g (object/merge @g { solved: false, chosen: \"\" }))))\n\n      BODY_MOVED -> active when @config.running\n        (let ((touch (array/filter @entity.choices (fn g\n          (and (== (object/get @g solved) false)\n            (> (array/len (array/filter (object/get @g options) (fn o\n              (and (== @payload.grounded true)\n                (and (<= (math/abs (- @payload.x (+ (object/get @g x) (object/get @o dx)))) @config.reachX)\n                  (<= (math/abs (- @payload.y (object/get @g y))) @config.reachY)))))) 0))))))\n        (if (> (array/len @touch) 0)\n          (let ((g (array/first @touch)))\n          (let ((o (array/first (array/filter (object/get @g options) (fn oo\n            (and (== @payload.grounded true)\n              (and (<= (math/abs (- @payload.x (+ (object/get @g x) (object/get @oo dx)))) @config.reachX)\n                (<= (math/abs (- @payload.y (object/get @g y))) @config.reachY))))))))\n          (if (== (object/get @o correct) true)\n            (do\n              (set @entity.choices (array/map @entity.choices (fn c (if (== (object/get @c id) (object/get @g id)) (object/merge @c { solved: true, chosen: (object/get @o id) }) @c))))\n              (emit CHOICE_CORRECT { id: (object/get @g id), x: (object/get @g x), y: (object/get @g y) }))\n            (emit CHOICE_WRONG { id: (object/get @g id), optionId: (object/get @o id), x: (+ (object/get @g x) (object/get @o dx)), y: (object/get @g y) }))))\n          null))\n\n      RESTART -> active\n        (set @entity.choices (array/map @config.gates (fn g (object/merge @g { solved: false, chosen: \"\" }))))\n    }\n\n    emits {\n      CHOICE_CORRECT -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"The player landed grounded on the gate's correct option; fires once per gate (solved gates stop judging). Carries the gate center so boards can burst the unlock there.\"\n        @tier \"domain\"\n      CHOICE_WRONG -> external {\n        id : string!\n        optionId : string!\n        x : number!\n        y : number!\n      }\n        @description \"The player landed grounded on a wrong option; carries the gate id, the chosen optionId, and the option's world position so boards can bounce the player back to the approach and float the gate's hint.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED judges option landings; toggle to freeze every gate as-is.\"\n        @tier \"domain\"\n      gates : [ChoiceGate] = []\n        @label \"Choice Gates\"\n        @description \"One row per gate: id, gate center (x, y — y is the option-platform surface the judge tests against), the hint floated on a wrong answer, and the options: id, dx offset from the gate center, the label drawn above the platform, and correct. solved/chosen are stamped at runtime.\"\n        @tier \"domain\"\n      reachX : number = 0.7\n        @label \"Reach X\"\n        @description \"Horizontal tolerance (world units) around an option platform's center when testing a landing (approximates the body's half-width plus a step).\"\n        @tier \"domain\"\n      reachY : number = 1.2\n        @label \"Reach Y\"\n        @description \"Vertical tolerance (world units) around the gate's option plane when testing a landing (covers small hops onto the platform surface).\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/choice-gate\" as ChoiceGatePage -> ChoiceGate\n}\n"
+}

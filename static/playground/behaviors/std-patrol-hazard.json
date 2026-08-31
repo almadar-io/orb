@@ -1,12 +1,12 @@
 {
   "name": "std-patrol-hazard",
-  "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
+  "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
   "level": "atom",
   "topic": "ui/game",
   "schema": {
     "name": "std-patrol-hazard",
     "version": "1.0.0",
-    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
+    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
     "orbitals": [
       {
         "name": "PatrolHazardOrbital",
@@ -33,28 +33,18 @@
                     "type": "number",
                     "required": false
                   },
-                  "speed": {
-                    "name": "speed",
-                    "type": "number",
-                    "required": true
-                  },
-                  "touching": {
-                    "name": "touching",
+                  "hit": {
+                    "name": "hit",
                     "type": "boolean",
+                    "required": false
+                  },
+                  "cy": {
+                    "name": "cy",
+                    "type": "number",
                     "required": false
                   },
                   "x0": {
                     "name": "x0",
-                    "type": "number",
-                    "required": true
-                  },
-                  "x1": {
-                    "name": "x1",
-                    "type": "number",
-                    "required": true
-                  },
-                  "y": {
-                    "name": "y",
                     "type": "number",
                     "required": true
                   },
@@ -63,14 +53,44 @@
                     "type": "number",
                     "required": false
                   },
-                  "hit": {
-                    "name": "hit",
-                    "type": "boolean",
-                    "required": false
-                  },
                   "id": {
                     "name": "id",
                     "type": "string",
+                    "required": true
+                  },
+                  "t": {
+                    "name": "t",
+                    "type": "number",
+                    "required": false
+                  },
+                  "waveAmp": {
+                    "name": "waveAmp",
+                    "type": "number",
+                    "required": false
+                  },
+                  "touching": {
+                    "name": "touching",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "wavePeriod": {
+                    "name": "wavePeriod",
+                    "type": "number",
+                    "required": false
+                  },
+                  "speed": {
+                    "name": "speed",
+                    "type": "number",
+                    "required": true
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "x1": {
+                    "name": "x1",
+                    "type": "number",
                     "required": true
                   }
                 }
@@ -245,13 +265,19 @@
                             "object/merge",
                             "@p",
                             {
+                              "t": 0,
+                              "touching": false,
                               "x": [
                                 "object/get",
                                 "@p",
                                 "x0"
                               ],
-                              "touching": false,
                               "dir": 1,
+                              "cy": [
+                                "object/get",
+                                "@p",
+                                "y"
+                              ],
                               "hit": false
                             }
                           ]
@@ -307,14 +333,20 @@
                             "object/merge",
                             "@p",
                             {
-                              "touching": false,
                               "x": [
                                 "object/get",
                                 "@p",
                                 "x0"
                               ],
-                              "hit": false,
-                              "dir": 1
+                              "touching": false,
+                              "cy": [
+                                "object/get",
+                                "@p",
+                                "y"
+                              ],
+                              "dir": 1,
+                              "t": 0,
+                              "hit": false
                             }
                           ]
                         ]
@@ -458,61 +490,155 @@
                                 "let",
                                 [
                                   [
-                                    "near",
+                                    "nt",
                                     [
-                                      "and",
+                                      "+",
                                       [
-                                        "<=",
-                                        [
-                                          "math/abs",
-                                          [
-                                            "-",
-                                            "@entity.px",
-                                            "@cx"
-                                          ]
-                                        ],
-                                        0.7
+                                        "object/get",
+                                        "@p",
+                                        "t"
                                       ],
-                                      [
-                                        "<=",
-                                        [
-                                          "math/abs",
-                                          [
-                                            "-",
-                                            "@entity.py",
-                                            [
-                                              "object/get",
-                                              "@p",
-                                              "y"
-                                            ]
-                                          ]
-                                        ],
-                                        0.7
-                                      ]
+                                      0.033
                                     ]
                                   ]
                                 ],
                                 [
-                                  "object/merge",
-                                  "@p",
-                                  {
-                                    "dir": "@cdir",
-                                    "x": "@cx",
-                                    "touching": "@near",
-                                    "hit": [
-                                      "and",
-                                      "@near",
+                                  "let",
+                                  [
+                                    [
+                                      "amp",
                                       [
-                                        "==",
+                                        "if",
+                                        [
+                                          "==",
+                                          [
+                                            "object/get",
+                                            "@p",
+                                            "waveAmp"
+                                          ],
+                                          null
+                                        ],
+                                        0,
                                         [
                                           "object/get",
                                           "@p",
-                                          "touching"
+                                          "waveAmp"
+                                        ]
+                                      ]
+                                    ],
+                                    [
+                                      "period",
+                                      [
+                                        "if",
+                                        [
+                                          "==",
+                                          [
+                                            "object/get",
+                                            "@p",
+                                            "wavePeriod"
+                                          ],
+                                          null
                                         ],
-                                        false
+                                        3,
+                                        [
+                                          "object/get",
+                                          "@p",
+                                          "wavePeriod"
+                                        ]
                                       ]
                                     ]
-                                  }
+                                  ],
+                                  [
+                                    "let",
+                                    [
+                                      [
+                                        "cy",
+                                        [
+                                          "+",
+                                          [
+                                            "object/get",
+                                            "@p",
+                                            "y"
+                                          ],
+                                          [
+                                            "*",
+                                            "@amp",
+                                            [
+                                              "math/sin",
+                                              [
+                                                "/",
+                                                [
+                                                  "*",
+                                                  6.283185307179586,
+                                                  "@nt"
+                                                ],
+                                                "@period"
+                                              ]
+                                            ]
+                                          ]
+                                        ]
+                                      ]
+                                    ],
+                                    [
+                                      "let",
+                                      [
+                                        [
+                                          "near",
+                                          [
+                                            "and",
+                                            [
+                                              "<=",
+                                              [
+                                                "math/abs",
+                                                [
+                                                  "-",
+                                                  "@entity.px",
+                                                  "@cx"
+                                                ]
+                                              ],
+                                              0.7
+                                            ],
+                                            [
+                                              "<=",
+                                              [
+                                                "math/abs",
+                                                [
+                                                  "-",
+                                                  "@entity.py",
+                                                  "@cy"
+                                                ]
+                                              ],
+                                              0.7
+                                            ]
+                                          ]
+                                        ]
+                                      ],
+                                      [
+                                        "object/merge",
+                                        "@p",
+                                        {
+                                          "x": "@cx",
+                                          "t": "@nt",
+                                          "hit": [
+                                            "and",
+                                            "@near",
+                                            [
+                                              "==",
+                                              [
+                                                "object/get",
+                                                "@p",
+                                                "touching"
+                                              ],
+                                              false
+                                            ]
+                                          ],
+                                          "touching": "@near",
+                                          "cy": "@cy",
+                                          "dir": "@cdir"
+                                        }
+                                      ]
+                                    ]
+                                  ]
                                 ]
                               ]
                             ]
@@ -559,14 +685,6 @@
                         "emit",
                         "PATROL_HIT",
                         {
-                          "id": [
-                            "object/get",
-                            [
-                              "array/first",
-                              "@hits"
-                            ],
-                            "id"
-                          ],
                           "x": [
                             "object/get",
                             [
@@ -581,7 +699,15 @@
                               "array/first",
                               "@hits"
                             ],
-                            "y"
+                            "cy"
+                          ],
+                          "id": [
+                            "object/get",
+                            [
+                              "array/first",
+                              "@hits"
+                            ],
+                            "id"
                           ]
                         }
                       ],
@@ -596,29 +722,19 @@
                 "type": "[Patrol]",
                 "default": [],
                 "label": "Patrols",
-                "description": "One row per patroller: id, the [x0, x1] beat it walks, its fixed y, and its speed in units/s. Current x/dir/touching/hit are stamped at runtime.",
+                "description": "One row per patroller: id, the [x0, x1] beat it walks, its base y, its speed in units/s, and optionally waveAmp/wavePeriod for a vertical sine bob (waveAmp 0 = flat ping-pong). Current x/dir/t/cy/touching/hit are stamped at runtime.",
                 "tier": "domain",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "y": {
-                      "name": "y",
-                      "type": "number",
-                      "required": true
-                    },
-                    "dir": {
-                      "name": "dir",
-                      "type": "number",
-                      "required": false
-                    },
                     "id": {
                       "name": "id",
                       "type": "string",
                       "required": true
                     },
-                    "touching": {
-                      "name": "touching",
-                      "type": "boolean",
+                    "x": {
+                      "name": "x",
+                      "type": "number",
                       "required": false
                     },
                     "x1": {
@@ -626,10 +742,10 @@
                       "type": "number",
                       "required": true
                     },
-                    "x0": {
-                      "name": "x0",
+                    "cy": {
+                      "name": "cy",
                       "type": "number",
-                      "required": true
+                      "required": false
                     },
                     "hit": {
                       "name": "hit",
@@ -641,19 +757,49 @@
                       "type": "number",
                       "required": true
                     },
-                    "x": {
-                      "name": "x",
+                    "t": {
+                      "name": "t",
+                      "type": "number",
+                      "required": false
+                    },
+                    "wavePeriod": {
+                      "name": "wavePeriod",
+                      "type": "number",
+                      "required": false
+                    },
+                    "dir": {
+                      "name": "dir",
+                      "type": "number",
+                      "required": false
+                    },
+                    "x0": {
+                      "name": "x0",
+                      "type": "number",
+                      "required": true
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "touching": {
+                      "name": "touching",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "waveAmp": {
+                      "name": "waveAmp",
                       "type": "number",
                       "required": false
                     }
                   }
                 }
               },
-              "playerSpawnX": {
-                "type": "number",
-                "default": 0,
-                "label": "Player Spawn X",
-                "description": "Player x assumed before the first BODY_MOVED arrives (match the body authority's spawn).",
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the 33ms tick moves patrols and tests contact; toggle to freeze every patrol in place.",
                 "tier": "domain"
               },
               "hitRadius": {
@@ -663,11 +809,11 @@
                 "description": "Per-axis distance (world units) within which a patrol counts as touching the player; smaller values demand precise contact, larger values forgive.",
                 "tier": "domain"
               },
-              "running": {
-                "type": "boolean",
-                "default": true,
-                "label": "Running",
-                "description": "When true the 33ms tick moves patrols and tests contact; toggle to freeze every patrol in place.",
+              "playerSpawnX": {
+                "type": "number",
+                "default": 0,
+                "label": "Player Spawn X",
+                "description": "Player x assumed before the first BODY_MOVED arrives (match the body authority's spawn).",
                 "tier": "domain"
               },
               "playerSpawnY": {
@@ -700,6 +846,14 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
+        "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6": {
+          "id": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6",
+          "kind": "trait",
+          "bakedName": "PatrolHazard",
+          "curName": "PatrolHazard",
+          "renames": [],
+          "owner": "workspace"
+        },
         "evt_01M0PCAKKX4Q8XWSYERBAF5HQ2": {
           "id": "evt_01M0PCAKKX4Q8XWSYERBAF5HQ2",
           "kind": "event",
@@ -708,6 +862,22 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6"
+        },
+        "orb_01M0PCAKKX0Z1Y4YYMHYN88XSB": {
+          "id": "orb_01M0PCAKKX0Z1Y4YYMHYN88XSB",
+          "kind": "orbital",
+          "bakedName": "PatrolHazardOrbital",
+          "curName": "PatrolHazardOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M0PCAKKXX0TFABTMPC8BNH64": {
+          "id": "ent_01M0PCAKKXX0TFABTMPC8BNH64",
+          "kind": "entity",
+          "bakedName": "PatrolState",
+          "curName": "PatrolState",
+          "renames": [],
+          "owner": "workspace"
         },
         "pag_01M0PCAKKYG6SZ7JK2WYNR99H2": {
           "id": "pag_01M0PCAKKYG6SZ7JK2WYNR99H2",
@@ -726,21 +896,14 @@
           "owner": "workspace",
           "parent": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6"
         },
-        "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6": {
-          "id": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6",
-          "kind": "trait",
-          "bakedName": "PatrolHazard",
-          "curName": "PatrolHazard",
+        "evt_01M0PCAKKXFZTMW79Z96WV5A60": {
+          "id": "evt_01M0PCAKKXFZTMW79Z96WV5A60",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
           "renames": [],
-          "owner": "workspace"
-        },
-        "orb_01M0PCAKKX0Z1Y4YYMHYN88XSB": {
-          "id": "orb_01M0PCAKKX0Z1Y4YYMHYN88XSB",
-          "kind": "orbital",
-          "bakedName": "PatrolHazardOrbital",
-          "curName": "PatrolHazardOrbital",
-          "renames": [],
-          "owner": "workspace"
+          "owner": "workspace",
+          "parent": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6"
         },
         "evt_01M0PCAKKXG9B0VPZMP3H1B5F9": {
           "id": "evt_01M0PCAKKXG9B0VPZMP3H1B5F9",
@@ -750,27 +913,10 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6"
-        },
-        "ent_01M0PCAKKXX0TFABTMPC8BNH64": {
-          "id": "ent_01M0PCAKKXX0TFABTMPC8BNH64",
-          "kind": "entity",
-          "bakedName": "PatrolState",
-          "curName": "PatrolState",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01M0PCAKKXFZTMW79Z96WV5A60": {
-          "id": "evt_01M0PCAKKXFZTMW79Z96WV5A60",
-          "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0PCAKKXTHKSQ9FKTMSFDTQ6"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-patrol-hazard \"1.0.0\"\n\"Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.\"\norbital PatrolHazardOrbital {\n  type Patrol = {\n    id : string!\n    x0 : number!\n    x1 : number!\n    y : number!\n    speed : number!\n    x : number\n    dir : number\n    touching : boolean\n    hit : boolean\n  }\n\n  entity PatrolState [runtime, shared] {\n    id : string!\n    patrols : [Patrol] = []\n    px : number = 0\n    py : number = 0\n  }\n\n  trait PatrolHazard -> @rebindable PatrolState [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.patrols (array/map @config.patrols (fn p (object/merge @p { x: (object/get @p x0), dir: 1, touching: false, hit: false }))))\n        (set @entity.px @config.playerSpawnX)\n        (set @entity.py @config.playerSpawnY)\n\n      BODY_MOVED -> active\n        (set @entity.px @payload.x)\n        (set @entity.py @payload.y)\n\n      RESTART -> active\n        (set @entity.patrols (array/map @config.patrols (fn p (object/merge @p { x: (object/get @p x0), dir: 1, touching: false, hit: false }))))\n    }\n\n    ticks {\n      patrolTick every 33ms\n        when (and @config.running (> (array/len @entity.patrols) 0))\n        (set @entity.patrols (array/map @entity.patrols (fn p\n          (let ((nx (+ (object/get @p x) (* (* (object/get @p dir) (object/get @p speed)) 0.033))))\n          (let ((overshoot (> @nx (object/get @p x1))) (undershoot (< @nx (object/get @p x0))))\n          (let ((cx (if @overshoot (object/get @p x1) (if @undershoot (object/get @p x0) @nx)))\n                (cdir (if @overshoot -1 (if @undershoot 1 (object/get @p dir)))))\n          (let ((near (and (<= (math/abs (- @entity.px @cx)) @config.hitRadius) (<= (math/abs (- @entity.py (object/get @p y))) @config.hitRadius))))\n            (object/merge @p { x: @cx, dir: @cdir, hit: (and @near (== (object/get @p touching) false)), touching: @near }))))))))\n        (let ((hits (array/filter @entity.patrols (fn p (== (object/get @p hit) true)))))\n        (if (> (array/len @hits) 0)\n          (emit PATROL_HIT { id: (object/get (array/first @hits) id), x: (object/get (array/first @hits) x), y: (object/get (array/first @hits) y) })\n          null))\n    }\n\n    emits {\n      PATROL_HIT -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"A patrol made contact with the player this tick; fires once per contact and re-arms only after separation — boards route it to their damage rule (std-lives DAMAGE).\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the 33ms tick moves patrols and tests contact; toggle to freeze every patrol in place.\"\n        @tier \"domain\"\n      patrols : [Patrol] = []\n        @label \"Patrols\"\n        @description \"One row per patroller: id, the [x0, x1] beat it walks, its fixed y, and its speed in units/s. Current x/dir/touching/hit are stamped at runtime.\"\n        @tier \"domain\"\n      hitRadius : number = 0.7\n        @label \"Hit Radius\"\n        @description \"Per-axis distance (world units) within which a patrol counts as touching the player; smaller values demand precise contact, larger values forgive.\"\n        @tier \"domain\"\n      playerSpawnX : number = 0\n        @label \"Player Spawn X\"\n        @description \"Player x assumed before the first BODY_MOVED arrives (match the body authority's spawn).\"\n        @tier \"domain\"\n      playerSpawnY : number = 0\n        @label \"Player Spawn Y\"\n        @description \"Player y assumed before the first BODY_MOVED arrives.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/patrol-hazard\" as PatrolHazardPage -> PatrolHazard\n}\n"
+  "lolo": "app std-patrol-hazard \"1.0.0\"\n\"Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.\"\norbital PatrolHazardOrbital {\n  type Patrol = {\n    id : string!\n    x0 : number!\n    x1 : number!\n    y : number!\n    speed : number!\n    waveAmp : number\n    wavePeriod : number\n    x : number\n    dir : number\n    t : number\n    cy : number\n    touching : boolean\n    hit : boolean\n  }\n\n  entity PatrolState [runtime, shared] {\n    id : string!\n    patrols : [Patrol] = []\n    px : number = 0\n    py : number = 0\n  }\n\n  trait PatrolHazard -> @rebindable PatrolState [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.patrols (array/map @config.patrols (fn p (object/merge @p { x: (object/get @p x0), dir: 1, t: 0, cy: (object/get @p y), touching: false, hit: false }))))\n        (set @entity.px @config.playerSpawnX)\n        (set @entity.py @config.playerSpawnY)\n\n      BODY_MOVED -> active\n        (set @entity.px @payload.x)\n        (set @entity.py @payload.y)\n\n      RESTART -> active\n        (set @entity.patrols (array/map @config.patrols (fn p (object/merge @p { x: (object/get @p x0), dir: 1, t: 0, cy: (object/get @p y), touching: false, hit: false }))))\n    }\n\n    ticks {\n      patrolTick every 33ms\n        when (and @config.running (> (array/len @entity.patrols) 0))\n        (set @entity.patrols (array/map @entity.patrols (fn p\n          (let ((nx (+ (object/get @p x) (* (* (object/get @p dir) (object/get @p speed)) 0.033))))\n          (let ((overshoot (> @nx (object/get @p x1))) (undershoot (< @nx (object/get @p x0))))\n          (let ((cx (if @overshoot (object/get @p x1) (if @undershoot (object/get @p x0) @nx)))\n                (cdir (if @overshoot -1 (if @undershoot 1 (object/get @p dir)))))\n          (let ((nt (+ (object/get @p t) 0.033)))\n          (let ((amp (if (== (object/get @p waveAmp) null) 0 (object/get @p waveAmp))) (period (if (== (object/get @p wavePeriod) null) 3 (object/get @p wavePeriod))))\n          (let ((cy (+ (object/get @p y) (* @amp (math/sin (/ (* 6.283185307179586 @nt) @period))))))\n          (let ((near (and (<= (math/abs (- @entity.px @cx)) @config.hitRadius) (<= (math/abs (- @entity.py @cy)) @config.hitRadius))))\n            (object/merge @p { x: @cx, dir: @cdir, t: @nt, cy: @cy, hit: (and @near (== (object/get @p touching) false)), touching: @near })))))))))))\n        (let ((hits (array/filter @entity.patrols (fn p (== (object/get @p hit) true)))))\n        (if (> (array/len @hits) 0)\n          (emit PATROL_HIT { id: (object/get (array/first @hits) id), x: (object/get (array/first @hits) x), y: (object/get (array/first @hits) cy) })\n          null))\n    }\n\n    emits {\n      PATROL_HIT -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"A patrol made contact with the player this tick; fires once per contact and re-arms only after separation — boards route it to their damage rule (std-lives DAMAGE).\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the 33ms tick moves patrols and tests contact; toggle to freeze every patrol in place.\"\n        @tier \"domain\"\n      patrols : [Patrol] = []\n        @label \"Patrols\"\n        @description \"One row per patroller: id, the [x0, x1] beat it walks, its base y, its speed in units/s, and optionally waveAmp/wavePeriod for a vertical sine bob (waveAmp 0 = flat ping-pong). Current x/dir/t/cy/touching/hit are stamped at runtime.\"\n        @tier \"domain\"\n      hitRadius : number = 0.7\n        @label \"Hit Radius\"\n        @description \"Per-axis distance (world units) within which a patrol counts as touching the player; smaller values demand precise contact, larger values forgive.\"\n        @tier \"domain\"\n      playerSpawnX : number = 0\n        @label \"Player Spawn X\"\n        @description \"Player x assumed before the first BODY_MOVED arrives (match the body authority's spawn).\"\n        @tier \"domain\"\n      playerSpawnY : number = 0\n        @label \"Player Spawn Y\"\n        @description \"Player y assumed before the first BODY_MOVED arrives.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/patrol-hazard\" as PatrolHazardPage -> PatrolHazard\n}\n"
 }

@@ -1,0 +1,345 @@
+{
+  "name": "std-curve-fog",
+  "description": "Headless prediction-fog mechanic for graph-riding boards: in configured world regions the road ahead is only partially REVEALED — the atom listens BODY_MOVED and stamps fogX (the reveal horizon = player x + the region's lookAhead) onto the shared entity, and the board's render layer clips or ghosts every road sample past it, so the player must commit to jumps before the landing is visible and internalize where the function GOES (blowup, flattening, slow growth, divergence). Outside every region fogX sits at a large sentinel, i.e. fully revealed. Physics is untouched: the collider keeps the whole curve — the fog is purely visual. Renders nothing; boards clip their own curve/region samples against @entity.fogX (the render authority).",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-curve-fog",
+    "version": "1.0.0",
+    "description": "Headless prediction-fog mechanic for graph-riding boards: in configured world regions the road ahead is only partially REVEALED — the atom listens BODY_MOVED and stamps fogX (the reveal horizon = player x + the region's lookAhead) onto the shared entity, and the board's render layer clips or ghosts every road sample past it, so the player must commit to jumps before the landing is visible and internalize where the function GOES (blowup, flattening, slow growth, divergence). Outside every region fogX sits at a large sentinel, i.e. fully revealed. Physics is untouched: the collider keeps the whole curve — the fog is purely visual. Renders nothing; boards clip their own curve/region samples against @entity.fogX (the render authority).",
+    "orbitals": [
+      {
+        "name": "CurveFogOrbital",
+        "id": "orb_01M1432AXM1T9RTRP1PCJ9XB74",
+        "entity": {
+          "name": "CurveFogData",
+          "id": "ent_01M1432AXMP8A6S2GYA39MDTNH",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "fogX",
+              "type": "number",
+              "default": 99999
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "CurveFog",
+            "id": "trt_01M1432AXMEJAS9NMRDB3ETGC4",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "fogX"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "CurveFogData",
+            "linkedEntityId": "ent_01M1432AXMP8A6S2GYA39MDTNH",
+            "entityRefIds": {
+              "CurveFogData": "ent_01M1432AXMP8A6S2GYA39MDTNH"
+            },
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M1432AXMKVDEJNW03QHCVH5W",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "BODY_MOVED",
+                  "id": "evt_01M1432AXMHYGBM68WP34P215T",
+                  "name": "Body Moved",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vy",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "grounded",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "skating",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "speed",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M1432AXM2ZS75B3MVKWPF4BG",
+                  "name": "Restart",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M1432AXMKVDEJNW03QHCVH5W",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.fogX",
+                      99999
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "BODY_MOVED",
+                  "eventId": "evt_01M1432AXMHYGBM68WP34P215T",
+                  "guard": true,
+                  "effects": [
+                    [
+                      "let",
+                      [
+                        [
+                          "rmatch",
+                          [
+                            "array/filter",
+                            [],
+                            [
+                              "fn",
+                              "r",
+                              [
+                                "and",
+                                [
+                                  ">=",
+                                  "@payload.x",
+                                  [
+                                    "object/get",
+                                    "@r",
+                                    "x0"
+                                  ]
+                                ],
+                                [
+                                  "<",
+                                  "@payload.x",
+                                  [
+                                    "object/get",
+                                    "@r",
+                                    "x1"
+                                  ]
+                                ]
+                              ]
+                            ]
+                          ]
+                        ]
+                      ],
+                      [
+                        "if",
+                        [
+                          ">",
+                          [
+                            "array/len",
+                            "@rmatch"
+                          ],
+                          0
+                        ],
+                        [
+                          "set",
+                          "@entity.fogX",
+                          [
+                            "+",
+                            "@payload.x",
+                            [
+                              "object/get",
+                              [
+                                "array/first",
+                                "@rmatch"
+                              ],
+                              "lookAhead"
+                            ]
+                          ]
+                        ],
+                        [
+                          "set",
+                          "@entity.fogX",
+                          99999
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M1432AXM2ZS75B3MVKWPF4BG",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.fogX",
+                      99999
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "regions": {
+                "type": "[CurveFogRegion]",
+                "default": [],
+                "label": "Fog Regions",
+                "description": "One row per fogged world span: x-range (x0..x1) and lookAhead — how far past the player the road stays revealed while inside. Small values force prediction (blowups), large values suit slow tail lessons. Empty list = no fog anywhere.",
+                "tier": "domain",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "lookAhead": {
+                      "name": "lookAhead",
+                      "type": "number",
+                      "required": true
+                    },
+                    "x0": {
+                      "name": "x0",
+                      "type": "number",
+                      "required": true
+                    },
+                    "x1": {
+                      "name": "x1",
+                      "type": "number",
+                      "required": true
+                    }
+                  }
+                }
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, BODY_MOVED tracks the reveal horizon; toggle to freeze the fog where it is.",
+                "tier": "domain"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CurveFogPage",
+            "id": "pag_01M1432AXN09KDF24242P6SHHW",
+            "path": "/curve-fog",
+            "traits": [
+              {
+                "ref": "CurveFog",
+                "refId": "trt_01M1432AXMEJAS9NMRDB3ETGC4"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "trt_01M1432AXMEJAS9NMRDB3ETGC4": {
+          "id": "trt_01M1432AXMEJAS9NMRDB3ETGC4",
+          "kind": "trait",
+          "bakedName": "CurveFog",
+          "curName": "CurveFog",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "orb_01M1432AXM1T9RTRP1PCJ9XB74": {
+          "id": "orb_01M1432AXM1T9RTRP1PCJ9XB74",
+          "kind": "orbital",
+          "bakedName": "CurveFogOrbital",
+          "curName": "CurveFogOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M1432AXMP8A6S2GYA39MDTNH": {
+          "id": "ent_01M1432AXMP8A6S2GYA39MDTNH",
+          "kind": "entity",
+          "bakedName": "CurveFogData",
+          "curName": "CurveFogData",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M1432AXMKVDEJNW03QHCVH5W": {
+          "id": "evt_01M1432AXMKVDEJNW03QHCVH5W",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1432AXMEJAS9NMRDB3ETGC4"
+        },
+        "evt_01M1432AXM2ZS75B3MVKWPF4BG": {
+          "id": "evt_01M1432AXM2ZS75B3MVKWPF4BG",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1432AXMEJAS9NMRDB3ETGC4"
+        },
+        "evt_01M1432AXMHYGBM68WP34P215T": {
+          "id": "evt_01M1432AXMHYGBM68WP34P215T",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1432AXMEJAS9NMRDB3ETGC4"
+        },
+        "pag_01M1432AXN09KDF24242P6SHHW": {
+          "id": "pag_01M1432AXN09KDF24242P6SHHW",
+          "kind": "page",
+          "bakedName": "CurveFogPage",
+          "curName": "CurveFogPage",
+          "renames": [],
+          "owner": "workspace"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-curve-fog \"1.0.0\"\n\"Headless prediction-fog mechanic for graph-riding boards: in configured world regions the road ahead is only partially REVEALED — the atom listens BODY_MOVED and stamps fogX (the reveal horizon = player x + the region's lookAhead) onto the shared entity, and the board's render layer clips or ghosts every road sample past it, so the player must commit to jumps before the landing is visible and internalize where the function GOES (blowup, flattening, slow growth, divergence). Outside every region fogX sits at a large sentinel, i.e. fully revealed. Physics is untouched: the collider keeps the whole curve — the fog is purely visual. Renders nothing; boards clip their own curve/region samples against @entity.fogX (the render authority).\"\norbital CurveFogOrbital {\n  type CurveFogRegion = {\n    x0 : number!\n    x1 : number!\n    lookAhead : number!\n  }\n\n  entity CurveFogData [runtime, shared] {\n    id : string!\n    fogX : number = 99999\n  }\n\n  trait CurveFog -> @rebindable CurveFogData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.fogX 99999)\n\n      BODY_MOVED -> active when @config.running\n        (let ((rmatch (array/filter @config.regions (fn r (and (>= @payload.x (object/get @r x0)) (< @payload.x (object/get @r x1)))))))\n        (if (> (array/len @rmatch) 0)\n          (set @entity.fogX (+ @payload.x (object/get (array/first @rmatch) lookAhead)))\n          (set @entity.fogX 99999)))\n\n      RESTART -> active\n        (set @entity.fogX 99999)\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED tracks the reveal horizon; toggle to freeze the fog where it is.\"\n        @tier \"domain\"\n      regions : [CurveFogRegion] = []\n        @label \"Fog Regions\"\n        @description \"One row per fogged world span: x-range (x0..x1) and lookAhead — how far past the player the road stays revealed while inside. Small values force prediction (blowups), large values suit slow tail lessons. Empty list = no fog anywhere.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/curve-fog\" as CurveFogPage -> CurveFog\n}\n"
+}

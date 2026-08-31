@@ -63,8 +63,26 @@
                 ]
               },
               {
+                "event": "StatusPersisted",
+                "eventId": "evt_01M16B4D84NQ48FBP2K2PFGP33",
+                "description": "Internal: the status write landed; carries the persisted row flat.",
+                "scope": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
                 "event": "StatusChangeFailed",
                 "eventId": "evt_01KXG04FHB2WR4ZY4SV29CFF0D",
+                "scope": "external",
                 "payloadSchema": [
                   {
                     "name": "error",
@@ -100,6 +118,22 @@
                     },
                     {
                       "name": "to",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "key": "StatusPersisted",
+                  "id": "evt_01M16B4D84NQ48FBP2K2PFGP33",
+                  "name": "Status persisted",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "status",
                       "type": "string"
                     }
                   ]
@@ -148,16 +182,16 @@
                       "array/some",
                       [
                         {
-                          "from": "draft",
-                          "label": "Activate",
+                          "to": "active",
                           "event": "ACTIVATE",
-                          "to": "active"
+                          "label": "Activate",
+                          "from": "draft"
                         },
                         {
                           "from": "active",
                           "event": "ARCHIVE",
-                          "label": "Archive",
-                          "to": "archived"
+                          "to": "archived",
+                          "label": "Archive"
                         }
                       ],
                       [
@@ -202,17 +236,42 @@
                       ],
                       {
                         "emit": {
-                          "failure": "StatusChangeFailed",
-                          "success": "StatusChanged"
+                          "success": "StatusPersisted",
+                          "failure": "StatusChangeFailed"
                         }
                       }
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "StatusPersisted",
+                  "eventId": "evt_01M16B4D84NQ48FBP2K2PFGP33",
+                  "guard": [
+                    "!=",
+                    [
+                      "str/default",
+                      "@payload.id",
+                      ""
                     ],
+                    ""
+                  ],
+                  "effects": [
                     [
                       "emit",
                       "StatusChanged",
                       {
                         "entityId": "@payload.id",
-                        "status": "@payload.to"
+                        "status": [
+                          "str/default",
+                          [
+                            "object/get",
+                            "@payload",
+                            "status"
+                          ],
+                          ""
+                        ]
                       }
                     ]
                   ]
@@ -241,20 +300,12 @@
                   "type": "string"
                 }
               },
-              "initialStatus": {
+              "statusField": {
                 "type": "string",
-                "default": "draft",
-                "label": "What status do new records start in?",
-                "description": "The status assigned when a record is first created.",
-                "synonyms": "starting state, default status, first stage, initial state",
-                "tier": "domain"
-              },
-              "enabled": {
-                "type": "boolean",
-                "default": false,
-                "label": "Enforce status lifecycle rules?",
-                "description": "Validate and apply status transitions against the configured table. Off by default.",
-                "synonyms": "lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply",
+                "default": "status",
+                "label": "Which field holds the status?",
+                "description": "Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').",
+                "synonyms": "state field, stage field, status column, lifecycle field",
                 "tier": "infra"
               },
               "targetEntity": {
@@ -269,16 +320,16 @@
                 "type": "[TransitionSpec]",
                 "default": [
                   {
-                    "from": "draft",
-                    "label": "Activate",
+                    "to": "active",
                     "event": "ACTIVATE",
-                    "to": "active"
+                    "label": "Activate",
+                    "from": "draft"
                   },
                   {
                     "from": "active",
                     "event": "ARCHIVE",
-                    "label": "Archive",
-                    "to": "archived"
+                    "to": "archived",
+                    "label": "Archive"
                   }
                 ],
                 "label": "Which status moves are allowed?",
@@ -288,16 +339,6 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "from": {
-                      "name": "from",
-                      "type": "string",
-                      "required": true
-                    },
-                    "to": {
-                      "name": "to",
-                      "type": "string",
-                      "required": true
-                    },
                     "event": {
                       "name": "event",
                       "type": "string",
@@ -307,17 +348,35 @@
                       "name": "label",
                       "type": "string",
                       "required": false
+                    },
+                    "to": {
+                      "name": "to",
+                      "type": "string",
+                      "required": true
+                    },
+                    "from": {
+                      "name": "from",
+                      "type": "string",
+                      "required": true
                     }
                   }
                 }
               },
-              "statusField": {
-                "type": "string",
-                "default": "status",
-                "label": "Which field holds the status?",
-                "description": "Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').",
-                "synonyms": "state field, stage field, status column, lifecycle field",
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Enforce status lifecycle rules?",
+                "description": "Validate and apply status transitions against the configured table. Off by default.",
+                "synonyms": "lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply",
                 "tier": "infra"
+              },
+              "initialStatus": {
+                "type": "string",
+                "default": "draft",
+                "label": "What status do new records start in?",
+                "description": "The status assigned when a record is first created.",
+                "synonyms": "starting state, default status, first stage, initial state",
+                "tier": "domain"
               }
             },
             "scope": "instance"
@@ -342,29 +401,14 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "trt_01KXG04FHBK5YSDQ1S4CCJRKYW": {
-          "id": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW",
-          "kind": "trait",
-          "bakedName": "StatusMachine",
-          "curName": "StatusMachine",
+        "evt_01KXG04FHBQRWXTSQMY1T5XP3R": {
+          "id": "evt_01KXG04FHBQRWXTSQMY1T5XP3R",
+          "kind": "event",
+          "bakedName": "StatusChanged",
+          "curName": "StatusChanged",
           "renames": [],
-          "owner": "workspace"
-        },
-        "ent_01KXG04FHBGCYC7QC5HAYX5BYC": {
-          "id": "ent_01KXG04FHBGCYC7QC5HAYX5BYC",
-          "kind": "entity",
-          "bakedName": "StatusRecord",
-          "curName": "StatusRecord",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "orb_01KXG04FHBQAS21E3QH0H7VC27": {
-          "id": "orb_01KXG04FHBQAS21E3QH0H7VC27",
-          "kind": "orbital",
-          "bakedName": "StatusLifecycleOrbital",
-          "curName": "StatusLifecycleOrbital",
-          "renames": [],
-          "owner": "workspace"
+          "owner": "workspace",
+          "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
         },
         "evt_01KXG04FHB2WR4ZY4SV29CFF0D": {
           "id": "evt_01KXG04FHB2WR4ZY4SV29CFF0D",
@@ -384,14 +428,22 @@
           "owner": "workspace",
           "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
         },
-        "evt_01KXG04FHBQRWXTSQMY1T5XP3R": {
-          "id": "evt_01KXG04FHBQRWXTSQMY1T5XP3R",
+        "evt_01M16B4D84NQ48FBP2K2PFGP33": {
+          "id": "evt_01M16B4D84NQ48FBP2K2PFGP33",
           "kind": "event",
-          "bakedName": "StatusChanged",
-          "curName": "StatusChanged",
+          "bakedName": "StatusPersisted",
+          "curName": "StatusPersisted",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
+        },
+        "ent_01KXG04FHBGCYC7QC5HAYX5BYC": {
+          "id": "ent_01KXG04FHBGCYC7QC5HAYX5BYC",
+          "kind": "entity",
+          "bakedName": "StatusRecord",
+          "curName": "StatusRecord",
+          "renames": [],
+          "owner": "workspace"
         },
         "pag_01KXG04FHBGPMJ72A9YT2JZGXX": {
           "id": "pag_01KXG04FHBGPMJ72A9YT2JZGXX",
@@ -400,10 +452,26 @@
           "curName": "StatusLifecyclePage",
           "renames": [],
           "owner": "workspace"
+        },
+        "orb_01KXG04FHBQAS21E3QH0H7VC27": {
+          "id": "orb_01KXG04FHBQAS21E3QH0H7VC27",
+          "kind": "orbital",
+          "bakedName": "StatusLifecycleOrbital",
+          "curName": "StatusLifecycleOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KXG04FHBK5YSDQ1S4CCJRKYW": {
+          "id": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW",
+          "kind": "trait",
+          "bakedName": "StatusMachine",
+          "curName": "StatusMachine",
+          "renames": [],
+          "owner": "workspace"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-status-lifecycle \"0.1.0\"\n\"Infra substrate: data-driven entity status lifecycle. The statuses and the allowed transitions are config data over a fixed single-state topology, so a host organism can expand or collapse its lifecycle without forking. Compose onto an entity, rename the ChangeStatusRequested listen to the host's status-change action, and supply `states` + `transitions`. A requested move is validated against the `transitions` table (illegal moves are rejected), then the new value is written to `statusField` on the target entity and StatusChanged is emitted. Surfaces nothing — the host renders the badge and buttons.\"\norbital StatusLifecycleOrbital {\n    type TransitionSpec = { from : string!, to : string!, event : string, label : string }\n\n    type ChangeStatusRequested = Event { id : string, from : string, to : string } \"Rename via traitOverrides.events to the host's status-change action (e.g. CONTRACT_STATUS_CHANGE). Carries the record id, its current status, and the requested status.\"\n\n    type StatusChanged = Event { entityId : string, status : string } \"Re-emitted per record after a legal transition; rename to wire downstream reactions (notify, audit, archive).\"\n\n    type StatusChangeFailed = Event { error : string, code : string } \"Internal: persist of the new status failed.\"\n\n  entity StatusRecord [persistent: status_records] {\n    id : string!\n    status : string @description \"Current lifecycle status of the record.\" @synonyms \"state, stage, phase\" = \"\"\n  }\n\n  trait StatusMachine -> @rebindable StatusRecord [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      ChangeStatusRequested -> idle when (and @config.enabled (array/some @config.transitions (fn t (and [\"=\", (object/get @t from), ?from] [\"=\", (object/get @t to), ?to]))))\n        (persist update @config.targetEntity (object/set { id: ?id } @config.statusField ?to) {\n          emit: { failure: StatusChangeFailed, success: StatusChanged }\n        })\n        (emit StatusChanged { entityId: ?id, status: ?to })\n      StatusChangeFailed -> idle\n    }\n\n    emits {\n      StatusChanged -> external {\n        entityId : string\n        status : string\n      }\n      StatusChangeFailed {\n        error : string\n        code : string\n      }\n    }\n\n    listens {\n      ChangeStatusRequested {\n        id : string\n        from : string\n        to : string\n      }\n      StatusChangeFailed {\n        error : string\n        code : string\n      }\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Enforce status lifecycle rules?\"\n        @description \"Validate and apply status transitions against the configured table. Off by default.\"\n        @synonyms \"lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply\"\n        @tier \"infra\"\n      targetEntity : entity = StatusRecord\n        @label \"Target entity\"\n        @description \"Entity name whose status field this lifecycle drives (e.g. 'Contract'). Rebind per composition. Typed `entity`, so a rename of the bound entity threads through to this value automatically.\"\n        @tier \"internal\"\n      statusField : string = \"status\"\n        @label \"Which field holds the status?\"\n        @description \"Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').\"\n        @synonyms \"state field, stage field, status column, lifecycle field\"\n        @tier \"infra\"\n      initialStatus : string = \"draft\"\n        @label \"What status do new records start in?\"\n        @description \"The status assigned when a record is first created.\"\n        @synonyms \"starting state, default status, first stage, initial state\"\n        @tier \"domain\"\n      states : [string] = (draft active archived)\n        @label \"What are the possible statuses?\"\n        @description \"The complete set of statuses a record can hold.\"\n        @synonyms \"states, stages, phases, statuses, lifecycle, workflow steps\"\n        @tier \"domain\"\n      transitions : [TransitionSpec] = [{\n        event: ACTIVATE\n        from: draft\n        label: \"Activate\"\n        to: active\n      }, {\n        event: ARCHIVE\n        from: active\n        label: \"Archive\"\n        to: archived\n      }]\n        @label \"Which status moves are allowed?\"\n        @description \"Legal transitions as { from, to, event, label }. Only matching moves are applied.\"\n        @synonyms \"edges, allowed moves, status flow, workflow transitions\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/status-lifecycle\" as StatusLifecyclePage -> StatusMachine\n}\n"
+  "lolo": "app std-status-lifecycle \"0.1.0\"\n\"Infra substrate: data-driven entity status lifecycle. The statuses and the allowed transitions are config data over a fixed single-state topology, so a host organism can expand or collapse its lifecycle without forking. Compose onto an entity, rename the ChangeStatusRequested listen to the host's status-change action, and supply `states` + `transitions`. A requested move is validated against the `transitions` table (illegal moves are rejected), then the new value is written to `statusField` on the target entity and StatusChanged is emitted. Surfaces nothing — the host renders the badge and buttons.\"\norbital StatusLifecycleOrbital {\n    type TransitionSpec = { from : string!, to : string!, event : string, label : string }\n\n    type ChangeStatusRequested = Event { id : string, from : string, to : string } \"Rename via traitOverrides.events to the host's status-change action (e.g. CONTRACT_STATUS_CHANGE). Carries the record id, its current status, and the requested status.\"\n\n    type StatusChanged = Event { entityId : string, status : string } \"Re-emitted per record after a legal transition; rename to wire downstream reactions (notify, audit, archive).\"\n\n    type StatusPersisted = Event StatusRecord \"Internal: the status write landed; carries the persisted row flat.\"\n\n    type StatusChangeFailed = Event { error : string, code : string } \"Internal: persist of the new status failed.\"\n\n  entity StatusRecord [persistent: status_records] {\n    id : string!\n    status : string @description \"Current lifecycle status of the record.\" @synonyms \"state, stage, phase\" = \"\"\n  }\n\n  trait StatusMachine -> @rebindable StatusRecord [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      ChangeStatusRequested -> idle when (and @config.enabled (array/some @config.transitions (fn t (and [\"=\", (object/get @t from), ?from] [\"=\", (object/get @t to), ?to]))))\n        (persist update @config.targetEntity (object/set { id: ?id } @config.statusField ?to) {\n          emit: { failure: StatusChangeFailed, success: StatusPersisted }\n        })\n      ;; StatusChanged is re-emitted ONLY off the persist's success (guarded\n      ;; on ?id against the optimistic/authoritative double-fire) — the old\n      ;; synchronous emit fired even when the write failed, so a denied\n      ;; mutation still looked like a completed transition downstream.\n      StatusPersisted -> idle when [\"!=\", (str/default ?id \"\"), \"\"]\n        (emit StatusChanged { entityId: ?id, status: (str/default (object/get @payload @config.statusField) \"\") })\n      StatusChangeFailed -> idle\n    }\n\n    emits {\n      StatusChanged -> external {\n        entityId : string\n        status : string\n      }\n      StatusPersisted\n      StatusChangeFailed -> external {\n        error : string\n        code : string\n      }\n    }\n\n    listens {\n      ChangeStatusRequested {\n        id : string\n        from : string\n        to : string\n      }\n      StatusPersisted\n      StatusChangeFailed {\n        error : string\n        code : string\n      }\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Enforce status lifecycle rules?\"\n        @description \"Validate and apply status transitions against the configured table. Off by default.\"\n        @synonyms \"lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply\"\n        @tier \"infra\"\n      targetEntity : entity = StatusRecord\n        @label \"Target entity\"\n        @description \"Entity name whose status field this lifecycle drives (e.g. 'Contract'). Rebind per composition. Typed `entity`, so a rename of the bound entity threads through to this value automatically.\"\n        @tier \"internal\"\n      statusField : string = \"status\"\n        @label \"Which field holds the status?\"\n        @description \"Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').\"\n        @synonyms \"state field, stage field, status column, lifecycle field\"\n        @tier \"infra\"\n      initialStatus : string = \"draft\"\n        @label \"What status do new records start in?\"\n        @description \"The status assigned when a record is first created.\"\n        @synonyms \"starting state, default status, first stage, initial state\"\n        @tier \"domain\"\n      states : [string] = (draft active archived)\n        @label \"What are the possible statuses?\"\n        @description \"The complete set of statuses a record can hold.\"\n        @synonyms \"states, stages, phases, statuses, lifecycle, workflow steps\"\n        @tier \"domain\"\n      transitions : [TransitionSpec] = [{\n        event: ACTIVATE\n        from: draft\n        label: \"Activate\"\n        to: active\n      }, {\n        event: ARCHIVE\n        from: active\n        label: \"Archive\"\n        to: archived\n      }]\n        @label \"Which status moves are allowed?\"\n        @description \"Legal transitions as { from, to, event, label }. Only matching moves are applied.\"\n        @synonyms \"edges, allowed moves, status flow, workflow transitions\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/status-lifecycle\" as StatusLifecyclePage -> StatusMachine\n}\n"
 }

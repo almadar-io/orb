@@ -45,6 +45,18 @@
               "synonyms": "state, condition, flag"
             },
             {
+              "name": "seedRow",
+              "type": "relation",
+              "default": {},
+              "relation": {
+                "entity": "ModalRecord",
+                "entityId": "ent_01KXG04GVS68RDSK2NDK0G2TT5",
+                "cardinality": "one"
+              },
+              "intrinsic": true,
+              "description": "The row an edit-mode OPEN pre-fills from when its payload carries no row. Stashed by SEED — hosts route the surface's loaded event here (e.g. a document look's RecordItemLoaded) so scalar-only action events ({ id }) can still open a fully seeded settings form."
+            },
+            {
               "name": "createdAt",
               "type": "string"
             }
@@ -57,7 +69,9 @@
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
-              "provides": []
+              "provides": [
+                "seedRow"
+              ]
             },
             "category": "interaction",
             "linkedEntity": "ModalRecord",
@@ -93,6 +107,10 @@
                       {
                         "name": "status",
                         "type": "string"
+                      },
+                      {
+                        "name": "seedRow",
+                        "type": "relation"
                       },
                       {
                         "name": "createdAt",
@@ -159,6 +177,46 @@
                   "name": "Initialize"
                 },
                 {
+                  "key": "SEED",
+                  "id": "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK",
+                  "name": "Seed",
+                  "description": "Stash the row an edit-mode OPEN will pre-fill from. Hosts route the owning surface's loaded event here (e.g. RecordItemLoaded from a document look) so an OPEN carrying only { id } still opens a fully seeded form.",
+                  "synonyms": "preload row, stash record, seed form, prefill",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "row",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "seedRow",
+                          "type": "ModalRecord"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
                   "key": "OPEN",
                   "id": "evt_01KXG04GVS6WNYYGFS0H53BHKC",
                   "name": "Open",
@@ -172,7 +230,33 @@
                     },
                     {
                       "name": "row",
-                      "type": "ModalRecord"
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string"
+                        },
+                        {
+                          "name": "name",
+                          "type": "string"
+                        },
+                        {
+                          "name": "description",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "seedRow",
+                          "type": "ModalRecord"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -212,6 +296,10 @@
                         {
                           "name": "status",
                           "type": "string"
+                        },
+                        {
+                          "name": "seedRow",
+                          "type": "relation"
                         },
                         {
                           "name": "createdAt",
@@ -266,10 +354,27 @@
                       "ModalRecord",
                       {
                         "emit": {
-                          "failure": "ModalRecordLoadFailed",
-                          "success": "ModalRecordLoaded"
+                          "success": "ModalRecordLoaded",
+                          "failure": "ModalRecordLoadFailed"
                         }
                       }
+                    ]
+                  ]
+                },
+                {
+                  "from": "closed",
+                  "to": "closed",
+                  "event": "SEED",
+                  "eventId": "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.seedRow",
+                      [
+                        "object/merge",
+                        "@payload.row",
+                        {}
+                      ]
                     ]
                   ]
                 },
@@ -285,7 +390,20 @@
                       "create",
                       "create"
                     ],
-                    "@payload.row"
+                    "@payload.row",
+                    [
+                      "!=",
+                      [
+                        "str/default",
+                        [
+                          "object/get",
+                          "@entity.seedRow",
+                          "id"
+                        ],
+                        ""
+                      ],
+                      ""
+                    ]
                   ],
                   "effects": [
                     [
@@ -300,37 +418,62 @@
                         "type": "stack",
                         "children": [
                           {
-                            "direction": "horizontal",
-                            "type": "stack",
-                            "gap": "sm",
                             "children": [
                               {
-                                "type": "icon",
-                                "name": "layout-panel-top"
+                                "name": "layout-panel-top",
+                                "type": "icon"
                               },
                               {
                                 "type": "typography",
                                 "variant": "h3",
                                 "content": "Details"
                               }
-                            ]
+                            ],
+                            "type": "stack",
+                            "gap": "sm",
+                            "direction": "horizontal"
                           },
                           {
                             "type": "divider"
                           },
                           {
-                            "submitEvent": "SAVE",
-                            "entity": "@payload.row",
-                            "fieldOverrides": [],
-                            "mode": "create",
+                            "cancelEvent": "CLOSE",
                             "type": "form-section",
+                            "fieldOverrides": [],
+                            "entity": [
+                              "object/merge",
+                              "@entity.seedRow",
+                              [
+                                "object/merge",
+                                "@payload.row",
+                                {}
+                              ]
+                            ],
                             "fields": [],
-                            "cancelEvent": "CLOSE"
+                            "submitEvent": "SAVE",
+                            "mode": "create"
                           }
                         ],
                         "direction": "vertical",
                         "gap": "md"
                       }
+                    ]
+                  ]
+                },
+                {
+                  "from": "open",
+                  "to": "open",
+                  "event": "SEED",
+                  "eventId": "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.seedRow",
+                      [
+                        "object/merge",
+                        "@payload.row",
+                        {}
+                      ]
                     ]
                   ]
                 },
@@ -368,44 +511,6 @@
               ]
             },
             "config": {
-              "title": {
-                "type": "string",
-                "default": "Details",
-                "label": "What should the modal heading say?",
-                "description": "Heading displayed at the top of the modal.",
-                "synonyms": "modal title, dialog heading, panel title, form title",
-                "tier": "presentation"
-              },
-              "detailPattern": {
-                "type": "pattern",
-                "default": "stack",
-                "label": "Layout pattern",
-                "description": "Pattern used to arrange the form body",
-                "tier": "internal"
-              },
-              "icon": {
-                "type": "string",
-                "default": "layout-panel-top",
-                "label": "Which icon appears in the modal header?",
-                "description": "Lucide icon name shown next to the modal title.",
-                "synonyms": "header icon, modal icon, title icon",
-                "tier": "presentation"
-              },
-              "mode": {
-                "type": "string",
-                "default": "create",
-                "label": "Is this for creating or editing?",
-                "description": "create = blank form; edit = pre-filled from the selected row.",
-                "synonyms": "form mode, create or edit, new or update, add or modify",
-                "tier": "internal"
-              },
-              "detailSlot": {
-                "type": "slot",
-                "default": "modal",
-                "label": "Render slot",
-                "description": "UI slot the modal renders into",
-                "tier": "internal"
-              },
               "fields": {
                 "type": "[string]",
                 "default": [],
@@ -427,11 +532,6 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "name": {
-                      "name": "name",
-                      "type": "string",
-                      "required": true
-                    },
                     "hint": {
                       "name": "hint",
                       "type": "string",
@@ -442,6 +542,11 @@
                       "type": "string",
                       "required": false
                     },
+                    "name": {
+                      "name": "name",
+                      "type": "string",
+                      "required": true
+                    },
                     "placeholder": {
                       "name": "placeholder",
                       "type": "string",
@@ -449,6 +554,48 @@
                     }
                   }
                 }
+              },
+              "detailSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Render slot",
+                "description": "UI slot the modal renders into",
+                "tier": "internal"
+              },
+              "detailPattern": {
+                "type": "pattern",
+                "default": "stack",
+                "label": "Layout pattern",
+                "description": "Pattern used to arrange the form body",
+                "tier": "internal"
+              },
+              "title": {
+                "type": "string",
+                "default": "Details",
+                "label": "What should the modal heading say?",
+                "description": "Heading displayed at the top of the modal.",
+                "synonyms": "modal title, dialog heading, panel title, form title",
+                "tier": "presentation"
+              },
+              "mode": {
+                "type": "string",
+                "default": "create",
+                "label": "Is this for creating or editing?",
+                "description": "create = blank form; edit = pre-filled from the selected row.",
+                "synonyms": "form mode, create or edit, new or update, add or modify",
+                "tier": "internal",
+                "values": [
+                  "create",
+                  "edit"
+                ]
+              },
+              "icon": {
+                "type": "string",
+                "default": "layout-panel-top",
+                "label": "Which icon appears in the modal header?",
+                "description": "Lucide icon name shown next to the modal title.",
+                "synonyms": "header icon, modal icon, title icon",
+                "tier": "presentation"
               }
             },
             "scope": "instance"
@@ -499,14 +646,14 @@
           {
             "trait": "ModalRecordModal",
             "patternPath": "root.children.2",
-            "prop": "mode",
-            "knob": "mode"
+            "prop": "fields",
+            "knob": "fields"
           },
           {
             "trait": "ModalRecordModal",
             "patternPath": "root.children.2",
-            "prop": "fields",
-            "knob": "fields"
+            "prop": "mode",
+            "knob": "mode"
           }
         ]
       }
@@ -515,11 +662,11 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "evt_01KXG04GVS6WNYYGFS0H53BHKC": {
-          "id": "evt_01KXG04GVS6WNYYGFS0H53BHKC",
+        "evt_01KXG04GVS3BQFMQRN09N23MX6": {
+          "id": "evt_01KXG04GVS3BQFMQRN09N23MX6",
           "kind": "event",
-          "bakedName": "OPEN",
-          "curName": "OPEN",
+          "bakedName": "ModalRecordLoaded",
+          "curName": "ModalRecordLoaded",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
@@ -542,37 +689,28 @@
           "owner": "workspace",
           "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
         },
-        "evt_01KXG04GVS3BQFMQRN09N23MX6": {
-          "id": "evt_01KXG04GVS3BQFMQRN09N23MX6",
+        "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK": {
+          "id": "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK",
           "kind": "event",
-          "bakedName": "ModalRecordLoaded",
-          "curName": "ModalRecordLoaded",
+          "bakedName": "SEED",
+          "curName": "SEED",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
+        },
+        "pag_01KXG04GVS0WAVKFJ83G3TMZBR": {
+          "id": "pag_01KXG04GVS0WAVKFJ83G3TMZBR",
+          "kind": "page",
+          "bakedName": "ModalRecordModalPage",
+          "curName": "ModalRecordModalPage",
+          "renames": [],
+          "owner": "workspace"
         },
         "ent_01KXG04GVS68RDSK2NDK0G2TT5": {
           "id": "ent_01KXG04GVS68RDSK2NDK0G2TT5",
           "kind": "entity",
           "bakedName": "ModalRecord",
           "curName": "ModalRecord",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KXG04GVSBXP7PA6YXW44W87X": {
-          "id": "evt_01KXG04GVSBXP7PA6YXW44W87X",
-          "kind": "event",
-          "bakedName": "CLOSE",
-          "curName": "CLOSE",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
-        },
-        "trt_01KXG04GVS1W2103BQKJT7KZRZ": {
-          "id": "trt_01KXG04GVS1W2103BQKJT7KZRZ",
-          "kind": "trait",
-          "bakedName": "ModalRecordModal",
-          "curName": "ModalRecordModal",
           "renames": [],
           "owner": "workspace"
         },
@@ -593,17 +731,35 @@
           "renames": [],
           "owner": "workspace"
         },
-        "pag_01KXG04GVS0WAVKFJ83G3TMZBR": {
-          "id": "pag_01KXG04GVS0WAVKFJ83G3TMZBR",
-          "kind": "page",
-          "bakedName": "ModalRecordModalPage",
-          "curName": "ModalRecordModalPage",
+        "trt_01KXG04GVS1W2103BQKJT7KZRZ": {
+          "id": "trt_01KXG04GVS1W2103BQKJT7KZRZ",
+          "kind": "trait",
+          "bakedName": "ModalRecordModal",
+          "curName": "ModalRecordModal",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01KXG04GVSBXP7PA6YXW44W87X": {
+          "id": "evt_01KXG04GVSBXP7PA6YXW44W87X",
+          "kind": "event",
+          "bakedName": "CLOSE",
+          "curName": "CLOSE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
+        },
+        "evt_01KXG04GVS6WNYYGFS0H53BHKC": {
+          "id": "evt_01KXG04GVS6WNYYGFS0H53BHKC",
+          "kind": "event",
+          "bakedName": "OPEN",
+          "curName": "OPEN",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04GVS1W2103BQKJT7KZRZ"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-modal \"1.0.0\"\n\"std-modal as a Function\"\n;;\n;; Modal-only trait: renders ONLY to the `modal` slot. The parent molecule's\n;; layout/browse trait is responsible for the `main` slot (the list, the\n;; trigger buttons, etc.). Consumers configure icon/title/fields/mode at\n;; the trait-ref call site via `config: { ... }`. Side effects (persist,\n;; notify) belong in a sibling coordinator trait that\n;; `listens { ModalTrait SAVE -> DO_PERSIST }`.\norbital ModalRecordOrbital {\n    type ModalFieldOverride = {\n      name : string!\n      label : string\n      placeholder : string\n      hint : string\n    }\n\n    type ModalRecordLoaded = Event { data : [ModalRecord] }\n\n    type ModalRecordLoadFailed = Event { error : string, code : string }\n\n  entity ModalRecord [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the modal.\" @synonyms \"title, label, identifier\"\n    description : string @description \"A textual explanation of the modal's content or function.\" @synonyms \"details, explanation, notes, summary\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the record.\" @synonyms \"state, condition, flag\" = active\n    createdAt : string\n  }\n\n  trait ModalRecordModal -> @rebindable ModalRecord [interaction, instance] {\n    initial: closed\n\n    state closed {\n      INIT -> closed\n        (fetch ModalRecord {\n          emit: { failure: ModalRecordLoadFailed, success: ModalRecordLoaded }\n        })\n      ;; Mode-aware guard: in create mode the modal opens unconditionally\n      ;; (no row exists yet); in edit mode @payload.row must be present\n      ;; or the OPEN is rejected (no silent first-row fallback). The\n      ;; @config.mode literal is substituted at molecule inline time —\n      ;; atoms validate this with @config allowed-but-unresolved.\n      OPEN -> open when (or [\"=\", @config.mode, create] ?row)\n        (set @entity.id ?id)\n        (render-ui @config.detailSlot {\n          children: [{\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            cancelEvent: CLOSE\n            entity: ?row\n            fieldOverrides: @config.fieldOverrides\n            fields: @config.fields\n            mode: @config.mode\n            submitEvent: SAVE\n            type: form-section\n          }]\n          direction: vertical\n          gap: md\n          type: @config.detailPattern\n        })\n    }\n\n    state open {\n      CLOSE -> closed\n        (render-ui @config.detailSlot null)\n        (notify Cancelled info)\n      SAVE -> closed\n        (render-ui @config.detailSlot null)\n    }\n\n    emits {\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data save operation.\"\n        @synonyms \"submit, persist, confirm\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the modal window is being closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      ModalRecordLoadFailed\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n      ModalRecordLoaded\n        @description \"Signals that the modal's data has been successfully loaded.\"\n        @synonyms \"loaded, data ready, populated\"\n        @tier \"domain\"\n    }\n\n    listens {\n      OPEN {\n        id : string\n        row : ModalRecord\n      }\n        @description \"A request to display the modal window.\"\n        @synonyms \"show, display, present, reveal\"\n        @tier \"domain\"\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data submission or confirmation.\"\n        @synonyms \"submit, confirm, accept, persist\"\n        @tier \"domain\"\n      ModalRecordLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = layout-panel-top\n        @label \"Which icon appears in the modal header?\"\n        @description \"Lucide icon name shown next to the modal title.\"\n        @synonyms \"header icon, modal icon, title icon\"\n        @tier \"presentation\"\n      title : string = Details\n        @label \"What should the modal heading say?\"\n        @description \"Heading displayed at the top of the modal.\"\n        @synonyms \"modal title, dialog heading, panel title, form title\"\n        @tier \"presentation\"\n      fields : [string] = []\n        @label \"Which fields appear in the form?\"\n        @description \"Entity fields rendered as inputs inside the modal form.\"\n        @synonyms \"form fields, inputs, editable fields, field list\"\n        @tier \"domain\"\n      fieldOverrides : [ModalFieldOverride] = []\n        @label \"Any per-field display copy overrides?\"\n        @description \"Per-field label/placeholder/hint overrides, keyed by field name. Types, options and required-ness stay entity-schema-driven (declare once on the entity); override only display copy the entity's @description doesn't fit.\"\n        @synonyms \"field labels, custom labels, help text overrides, placeholder text\"\n        @tier \"presentation\"\n      mode : string = create\n        @label \"Is this for creating or editing?\"\n        @description \"create = blank form; edit = pre-filled from the selected row.\"\n        @synonyms \"form mode, create or edit, new or update, add or modify\"\n        @tier \"internal\"\n      detailSlot : slot = modal\n        @label \"Render slot\"\n        @description \"UI slot the modal renders into\"\n        @tier \"internal\"\n      detailPattern : pattern = stack\n        @label \"Layout pattern\"\n        @description \"Pattern used to arrange the form body\"\n        @tier \"internal\"\n    }\n  }\n\n  ;; consumer: a sibling coordinator trait listens for SAVE to run (persist create|update ...)\n  ;; For edit mode, OPEN's payload.id seeds @entity.id so form-section\n  ;; pre-fills the target row AND carries that id into the SAVE payload\n  ;; (so (persist update X @payload.data) can find the right row).\n  page \"/modalrecords/modal\" as ModalRecordModalPage -> ModalRecordModal\n}"
+  "lolo": "app std-modal \"1.0.0\"\n\"std-modal as a Function\"\n;;\n;; Modal-only trait: renders ONLY to the `modal` slot. The parent molecule's\n;; layout/browse trait is responsible for the `main` slot (the list, the\n;; trigger buttons, etc.). Consumers configure icon/title/fields/mode at\n;; the trait-ref call site via `config: { ... }`. Side effects (persist,\n;; notify) belong in a sibling coordinator trait that\n;; `listens { ModalTrait SAVE -> DO_PERSIST }`.\norbital ModalRecordOrbital {\n    type ModalFieldOverride = {\n      name : string!\n      label : string\n      placeholder : string\n      hint : string\n    }\n\n    type ModalRecordLoaded = Event { data : [ModalRecord] }\n\n    type ModalRecordLoadFailed = Event { error : string, code : string }\n\n  entity ModalRecord [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the modal.\" @synonyms \"title, label, identifier\"\n    description : string @description \"A textual explanation of the modal's content or function.\" @synonyms \"details, explanation, notes, summary\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the record.\" @synonyms \"state, condition, flag\" = active\n    seedRow : ModalRecord @intrinsic @description \"The row an edit-mode OPEN pre-fills from when its payload carries no row. Stashed by SEED — hosts route the surface's loaded event here (e.g. a document look's RecordItemLoaded) so scalar-only action events ({ id }) can still open a fully seeded settings form.\" = {}\n    createdAt : string\n  }\n\n  trait ModalRecordModal -> @rebindable ModalRecord [interaction, instance] {\n    initial: closed\n\n    state closed {\n      INIT -> closed\n        (fetch ModalRecord {\n          emit: { failure: ModalRecordLoadFailed, success: ModalRecordLoaded }\n        })\n      ;; stash only — a SEED never opens anything; OPEN reads it on demand\n      SEED -> closed\n        (set @entity.seedRow (object/merge ?row {}))\n      ;; Mode-aware guard: in create mode the modal opens unconditionally\n      ;; (no row exists yet); in edit mode the row must be present — on the\n      ;; OPEN payload or already stashed by SEED — or the OPEN is rejected\n      ;; (no silent first-row fallback). The @config.mode literal is\n      ;; substituted at molecule inline time — atoms validate this with\n      ;; @config allowed-but-unresolved.\n      OPEN -> open when (or [\"=\", @config.mode, create] ?row [\"!=\", (str/default (object/get @entity.seedRow id) \"\"), \"\"])\n        (set @entity.id ?id)\n        (render-ui @config.detailSlot {\n          children: [{\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            cancelEvent: CLOSE\n            entity: (object/merge @entity.seedRow (object/merge ?row {}))\n            fieldOverrides: @config.fieldOverrides\n            fields: @config.fields\n            mode: @config.mode\n            submitEvent: SAVE\n            type: form-section\n          }]\n          direction: vertical\n          gap: md\n          type: @config.detailPattern\n        })\n    }\n\n    state open {\n      ;; a refetch echo while the modal is open refreshes the stash in place\n      SEED -> open\n        (set @entity.seedRow (object/merge ?row {}))\n      CLOSE -> closed\n        (render-ui @config.detailSlot null)\n        (notify Cancelled info)\n      SAVE -> closed\n        (render-ui @config.detailSlot null)\n    }\n\n    emits {\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data save operation.\"\n        @synonyms \"submit, persist, confirm\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the modal window is being closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      ModalRecordLoadFailed\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n      ModalRecordLoaded\n        @description \"Signals that the modal's data has been successfully loaded.\"\n        @synonyms \"loaded, data ready, populated\"\n        @tier \"domain\"\n    }\n\n    listens {\n      OPEN {\n        id : string\n        row : ModalRecord\n      }\n        @description \"A request to display the modal window.\"\n        @synonyms \"show, display, present, reveal\"\n        @tier \"domain\"\n      SEED {\n        row : ModalRecord\n      }\n        @description \"Stash the row an edit-mode OPEN will pre-fill from. Hosts route the owning surface's loaded event here (e.g. RecordItemLoaded from a document look) so an OPEN carrying only { id } still opens a fully seeded form.\"\n        @synonyms \"preload row, stash record, seed form, prefill\"\n        @tier \"domain\"\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data submission or confirmation.\"\n        @synonyms \"submit, confirm, accept, persist\"\n        @tier \"domain\"\n      ModalRecordLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = layout-panel-top\n        @label \"Which icon appears in the modal header?\"\n        @description \"Lucide icon name shown next to the modal title.\"\n        @synonyms \"header icon, modal icon, title icon\"\n        @tier \"presentation\"\n      title : string = Details\n        @label \"What should the modal heading say?\"\n        @description \"Heading displayed at the top of the modal.\"\n        @synonyms \"modal title, dialog heading, panel title, form title\"\n        @tier \"presentation\"\n      fields : [string] = []\n        @label \"Which fields appear in the form?\"\n        @description \"Entity fields rendered as inputs inside the modal form.\"\n        @synonyms \"form fields, inputs, editable fields, field list\"\n        @tier \"domain\"\n      fieldOverrides : [ModalFieldOverride] = []\n        @label \"Any per-field display copy overrides?\"\n        @description \"Per-field label/placeholder/hint overrides, keyed by field name. Types, options and required-ness stay entity-schema-driven (declare once on the entity); override only display copy the entity's @description doesn't fit.\"\n        @synonyms \"field labels, custom labels, help text overrides, placeholder text\"\n        @tier \"presentation\"\n      mode : \"create\" | \"edit\" = create\n        @label \"Is this for creating or editing?\"\n        @description \"create = blank form; edit = pre-filled from the selected row.\"\n        @synonyms \"form mode, create or edit, new or update, add or modify\"\n        @tier \"internal\"\n      detailSlot : slot = modal\n        @label \"Render slot\"\n        @description \"UI slot the modal renders into\"\n        @tier \"internal\"\n      detailPattern : pattern = stack\n        @label \"Layout pattern\"\n        @description \"Pattern used to arrange the form body\"\n        @tier \"internal\"\n    }\n  }\n\n  ;; consumer: a sibling coordinator trait listens for SAVE to run (persist create|update ...)\n  ;; For edit mode, OPEN's payload.id seeds @entity.id so form-section\n  ;; pre-fills the target row AND carries that id into the SAVE payload\n  ;; (so (persist update X @payload.data) can find the right row).\n  page \"/modalrecords/modal\" as ModalRecordModalPage -> ModalRecordModal\n}"
 }

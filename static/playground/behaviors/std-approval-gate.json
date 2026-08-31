@@ -1,12 +1,12 @@
 {
   "name": "std-approval-gate",
-  "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
+  "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces the PENDING ones in a review queue showing what is being approved and who asked, with Approve / Deny actions — Deny captures a written reason. approverRoles is ENFORCED by the review transitions themselves: an APPROVE/DENY from a viewer whose role is not listed does not fire. blockSelfApproval additionally stops a reviewer approving their own request (four-eyes) — DENY stays allowed as self-withdrawal. On approval emits ApprovalGranted; on denial emits ApprovalDenied (with the reason). Hosts that replay the gated action MUST route a failed replay back via APPROVAL_REPLAY_FAILED so the request reopens instead of being silently consumed. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created (stamp subjectLabel/subjectId/requestedBy so reviewers see what they are judging), and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
   "level": "atom",
   "topic": "infra",
   "schema": {
     "name": "std-approval-gate",
-    "version": "1.0.1",
-    "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
+    "version": "1.1.0",
+    "description": "std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces the PENDING ones in a review queue showing what is being approved and who asked, with Approve / Deny actions — Deny captures a written reason. approverRoles is ENFORCED by the review transitions themselves: an APPROVE/DENY from a viewer whose role is not listed does not fire. blockSelfApproval additionally stops a reviewer approving their own request (four-eyes) — DENY stays allowed as self-withdrawal. On approval emits ApprovalGranted; on denial emits ApprovalDenied (with the reason). Hosts that replay the gated action MUST route a failed replay back via APPROVAL_REPLAY_FAILED so the request reopens instead of being silently consumed. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created (stamp subjectLabel/subjectId/requestedBy so reviewers see what they are judging), and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.",
     "orbitals": [
       {
         "name": "ApprovalGateOrbital",
@@ -56,6 +56,34 @@
               "synonyms": "trigger, event, source"
             },
             {
+              "name": "subjectLabel",
+              "type": "string",
+              "default": "",
+              "description": "Human title of the thing being approved (the article's headline, the page's title) — what the reviewer sees in the queue.",
+              "synonyms": "title, subject, what is being approved"
+            },
+            {
+              "name": "subjectId",
+              "type": "string",
+              "default": "",
+              "description": "Id of the record being approved, for a queue row's View click-through to the subject's own surface.",
+              "synonyms": "record id, target id, article id, page id"
+            },
+            {
+              "name": "requestedBy",
+              "type": "string",
+              "default": "",
+              "description": "User id of the submitter.",
+              "synonyms": "submitter, author, requester id"
+            },
+            {
+              "name": "requestedByName",
+              "type": "string",
+              "default": "",
+              "description": "Display name of the submitter shown in the queue.",
+              "synonyms": "submitter name, requester, who asked"
+            },
+            {
               "name": "status",
               "type": "string",
               "default": "pending",
@@ -100,8 +128,8 @@
               "name": "notes",
               "type": "string",
               "default": "",
-              "description": "Free-form text providing additional context or details.",
-              "synonyms": "comments, remarks, explanation, details"
+              "description": "The reviewer's written reason, captured by the deny step.",
+              "synonyms": "comments, remarks, explanation, reason, details"
             },
             {
               "name": "payload",
@@ -110,12 +138,15 @@
               "description": "The held data of the gated action, replayed by the downstream listener when the request is granted.",
               "synonyms": "request data, held payload, pending data, gated data"
             }
-          ]
+          ],
+          "access_waivers": {
+            "read": "Shared review surface: submitters watch their requests, approvers work the queue; decision authority is enforced at the transitions, not by hiding rows."
+          }
         },
         "traits": [
           {
             "name": "LoadingSpinner",
-            "id": "trt_01KXG04KQTE55FSTDE4V4XKESN",
+            "id": "trt_01KY21K6QC4NB1EVQJ94HWPN3B",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -137,7 +168,7 @@
               "events": [
                 {
                   "key": "INIT",
-                  "id": "evt_01KXG04KQT817HHS06THABYV17",
+                  "id": "evt_FGFCCYGGPP8BB77HZMVVGQ1D9R",
                   "name": "Initialize"
                 }
               ],
@@ -146,15 +177,15 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "INIT",
-                  "eventId": "evt_01KXG04KQT817HHS06THABYV17",
+                  "eventId": "evt_FGFCCYGGPP8BB77HZMVVGQ1D9R",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
                         "overlay": "@config.overlay",
-                        "size": "md",
                         "className": "@config.className",
+                        "size": "md",
                         "type": "spinner"
                       }
                     ]
@@ -163,18 +194,6 @@
               ]
             },
             "config": {
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "Additional CSS classes applied to the root element.",
-                "tier": "presentation"
-              },
-              "overlay": {
-                "type": "boolean",
-                "label": "Overlay",
-                "description": "Renders a centered overlay backdrop instead of inline.",
-                "tier": "presentation"
-              },
               "size": {
                 "type": "string",
                 "default": "md",
@@ -187,6 +206,18 @@
                   "md",
                   "lg"
                 ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional CSS classes applied to the root element.",
+                "tier": "presentation"
+              },
+              "overlay": {
+                "type": "boolean",
+                "label": "Overlay",
+                "description": "Renders a centered overlay backdrop instead of inline.",
+                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -210,7 +241,7 @@
           },
           {
             "name": "ErrorSpinner",
-            "id": "trt_01KXG04KQTE55FSTDE4V4XKESN",
+            "id": "trt_01KY21K6QCCHHN53WV6VF6NKE4",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -232,7 +263,7 @@
               "events": [
                 {
                   "key": "INIT",
-                  "id": "evt_01KXG04KQT817HHS06THABYV17",
+                  "id": "evt_ES3W2F2D7H6KRHYARF5SRH2QQS",
                   "name": "Initialize"
                 }
               ],
@@ -241,15 +272,15 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "INIT",
-                  "eventId": "evt_01KXG04KQT817HHS06THABYV17",
+                  "eventId": "evt_ES3W2F2D7H6KRHYARF5SRH2QQS",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
                         "overlay": "@config.overlay",
-                        "size": "sm",
                         "className": "@config.className",
+                        "size": "sm",
                         "type": "spinner"
                       }
                     ]
@@ -258,18 +289,6 @@
               ]
             },
             "config": {
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "Additional CSS classes applied to the root element.",
-                "tier": "presentation"
-              },
-              "overlay": {
-                "type": "boolean",
-                "label": "Overlay",
-                "description": "Renders a centered overlay backdrop instead of inline.",
-                "tier": "presentation"
-              },
               "size": {
                 "type": "string",
                 "default": "sm",
@@ -282,6 +301,18 @@
                   "md",
                   "lg"
                 ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional CSS classes applied to the root element.",
+                "tier": "presentation"
+              },
+              "overlay": {
+                "type": "boolean",
+                "label": "Overlay",
+                "description": "Renders a centered overlay backdrop instead of inline.",
+                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -305,7 +336,7 @@
           },
           {
             "name": "LoadingText",
-            "id": "trt_01KXG04MN4YEZRM29MVNFTYM98",
+            "id": "trt_01KY21K6QCNEAQZG0D3H1NG7MV",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -327,7 +358,7 @@
               "events": [
                 {
                   "key": "INIT",
-                  "id": "evt_01KXG04MN4G63KSJQPSAJ9TYAV",
+                  "id": "evt_KX3VYYZEB8Q5M798PYZDJTQH41",
                   "name": "Initialize"
                 }
               ],
@@ -336,26 +367,26 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "INIT",
-                  "eventId": "evt_01KXG04MN4G63KSJQPSAJ9TYAV",
+                  "eventId": "evt_KX3VYYZEB8Q5M798PYZDJTQH41",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
-                        "size": "none",
-                        "color": "muted",
-                        "content": "Loading approval queue…",
                         "align": "left",
-                        "type": "typography",
+                        "className": "@config.className",
+                        "color": "muted",
+                        "format": "none",
+                        "children": "@config.children",
+                        "level": "@config.level",
+                        "size": "none",
                         "style": {},
                         "truncate": false,
-                        "children": "@config.children",
-                        "weight": "none",
+                        "type": "typography",
                         "overflow": "visible",
-                        "className": "@config.className",
-                        "level": "@config.level",
-                        "variant": "caption",
-                        "format": "none"
+                        "weight": "none",
+                        "content": "Loading approval queue…",
+                        "variant": "caption"
                       }
                     ]
                   ]
@@ -363,17 +394,65 @@
               ]
             },
             "config": {
-              "align": {
+              "overflow": {
                 "type": "string",
-                "default": "left",
-                "label": "Align",
-                "description": "Text alignment",
+                "default": "visible",
+                "label": "Overflow",
+                "description": "Overflow handling mode",
                 "tier": "presentation",
                 "values": [
-                  "left",
-                  "center",
-                  "right"
+                  "visible",
+                  "hidden",
+                  "wrap",
+                  "clamp-2",
+                  "clamp-3"
                 ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional class names",
+                "tier": "presentation"
+              },
+              "content": {
+                "type": "node",
+                "default": "Loading approval queue…",
+                "label": "Content",
+                "description": "Text content (alternative to children)",
+                "tier": "presentation"
+              },
+              "size": {
+                "type": "string",
+                "default": "none",
+                "label": "Size",
+                "description": "Font size override",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "xs",
+                  "sm",
+                  "md",
+                  "lg",
+                  "xl",
+                  "2xl",
+                  "3xl"
+                ]
+              },
+              "style": {
+                "type": "Map<string,string>",
+                "default": {},
+                "label": "Style",
+                "description": "Inline style",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "children": {
+                "type": "node",
+                "label": "Children",
+                "description": "Children elements",
+                "tier": "presentation"
               },
               "format": {
                 "type": "string",
@@ -407,54 +486,24 @@
                   "inherit"
                 ]
               },
-              "level": {
-                "type": "number",
-                "label": "Level",
-                "description": "Heading level (1-6) - alternative to variant for headings",
-                "tier": "presentation"
-              },
-              "overflow": {
+              "align": {
                 "type": "string",
-                "default": "visible",
-                "label": "Overflow",
-                "description": "Overflow handling mode",
+                "default": "left",
+                "label": "Align",
+                "description": "Text alignment",
                 "tier": "presentation",
                 "values": [
-                  "visible",
-                  "hidden",
-                  "wrap",
-                  "clamp-2",
-                  "clamp-3"
+                  "left",
+                  "center",
+                  "right"
                 ]
               },
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "Additional class names",
+              "truncate": {
+                "type": "boolean",
+                "default": false,
+                "label": "Truncate",
+                "description": "Truncate with ellipsis (single line)",
                 "tier": "presentation"
-              },
-              "children": {
-                "type": "node",
-                "label": "Children",
-                "description": "Children elements",
-                "tier": "presentation"
-              },
-              "content": {
-                "type": "node",
-                "default": "Loading approval queue…",
-                "label": "Content",
-                "description": "Text content (alternative to children)",
-                "tier": "presentation"
-              },
-              "style": {
-                "type": "Map<string,string>",
-                "default": {},
-                "label": "Style",
-                "description": "Inline style",
-                "tier": "presentation",
-                "items": {
-                  "type": "string"
-                }
               },
               "variant": {
                 "type": "string",
@@ -496,28 +545,10 @@
                   "bold"
                 ]
               },
-              "size": {
-                "type": "string",
-                "default": "none",
-                "label": "Size",
-                "description": "Font size override",
-                "tier": "presentation",
-                "values": [
-                  "none",
-                  "xs",
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl",
-                  "2xl",
-                  "3xl"
-                ]
-              },
-              "truncate": {
-                "type": "boolean",
-                "default": false,
-                "label": "Truncate",
-                "description": "Truncate with ellipsis (single line)",
+              "level": {
+                "type": "number",
+                "label": "Level",
+                "description": "Heading level (1-6) - alternative to variant for headings",
                 "tier": "presentation"
               }
             },
@@ -542,7 +573,7 @@
           },
           {
             "name": "ShieldCheckIcon",
-            "id": "trt_01KXG04K2JE4GSQVWEWHAHDE2A",
+            "id": "trt_01KY21K6QC1BZWD7V4FGS1KPB5",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -579,15 +610,15 @@
                       "render-ui",
                       "main",
                       {
-                        "name": "shield-check",
                         "size": "md",
                         "strokeWidth": "@config.strokeWidth",
                         "className": "@config.className",
-                        "style": {},
-                        "icon": "@config.icon",
-                        "type": "icon",
                         "animation": "none",
-                        "color": "primary"
+                        "type": "icon",
+                        "name": "shield-check",
+                        "color": "primary",
+                        "style": {},
+                        "icon": "@config.icon"
                       }
                     ]
                   ]
@@ -595,11 +626,29 @@
               ]
             },
             "config": {
-              "className": {
+              "size": {
                 "type": "string",
-                "label": "Class Name",
-                "description": "Additional CSS classes",
-                "tier": "presentation"
+                "default": "md",
+                "label": "Size",
+                "description": "Size of the icon",
+                "tier": "presentation",
+                "values": [
+                  "xs",
+                  "sm",
+                  "md",
+                  "lg",
+                  "xl"
+                ]
+              },
+              "style": {
+                "type": "Map<string,string>",
+                "default": {},
+                "label": "Style",
+                "description": "Inline style",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
               },
               "color": {
                 "type": "string",
@@ -616,49 +665,6 @@
                   "muted"
                 ]
               },
-              "icon": {
-                "type": "icon",
-                "label": "Icon",
-                "description": "Lucide icon component (preferred for type-safe usage), OR a canonical kebab-case icon name string — a string is treated exactly like `name` so trait/factory authors can pass an icon by name through the `icon` prop.",
-                "tier": "presentation"
-              },
-              "strokeWidth": {
-                "type": "number",
-                "label": "Stroke Width",
-                "description": "Icon stroke width - uses theme default if not specified",
-                "tier": "presentation"
-              },
-              "style": {
-                "type": "Map<string,string>",
-                "default": {},
-                "label": "Style",
-                "description": "Inline style",
-                "tier": "presentation",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "size": {
-                "type": "string",
-                "default": "md",
-                "label": "Size",
-                "description": "Size of the icon",
-                "tier": "presentation",
-                "values": [
-                  "xs",
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              "name": {
-                "type": "string",
-                "default": "shield-check",
-                "label": "Name",
-                "description": "Icon name as string (resolved from iconMap)",
-                "tier": "presentation"
-              },
               "animation": {
                 "type": "string",
                 "default": "none",
@@ -670,6 +676,31 @@
                   "pulse",
                   "none"
                 ]
+              },
+              "name": {
+                "type": "string",
+                "default": "shield-check",
+                "label": "Name",
+                "description": "Icon name as string (resolved from iconMap)",
+                "tier": "presentation"
+              },
+              "strokeWidth": {
+                "type": "number",
+                "label": "Stroke Width",
+                "description": "Icon stroke width - uses theme default if not specified",
+                "tier": "presentation"
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional CSS classes",
+                "tier": "presentation"
+              },
+              "icon": {
+                "type": "icon",
+                "label": "Icon",
+                "description": "Lucide icon component (preferred for type-safe usage), OR a canonical kebab-case icon name string — a string is treated exactly like `name` so trait/factory authors can pass an icon by name through the `icon` prop.",
+                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -693,7 +724,7 @@
           },
           {
             "name": "ApprovalQueueTitle",
-            "id": "trt_01KXG04MN4YEZRM29MVNFTYM98",
+            "id": "trt_01KY21K6QCC5BFGZKJF8Q6HYMM",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -715,7 +746,7 @@
               "events": [
                 {
                   "key": "INIT",
-                  "id": "evt_01KXG04MN4G63KSJQPSAJ9TYAV",
+                  "id": "evt_9X5WASG6EB375QFY5YNN843MW4",
                   "name": "Initialize"
                 }
               ],
@@ -724,26 +755,26 @@
                   "from": "idle",
                   "to": "idle",
                   "event": "INIT",
-                  "eventId": "evt_01KXG04MN4G63KSJQPSAJ9TYAV",
+                  "eventId": "evt_9X5WASG6EB375QFY5YNN843MW4",
                   "effects": [
                     [
                       "render-ui",
                       "main",
                       {
-                        "size": "none",
-                        "color": "primary",
-                        "content": "Approval queue",
                         "align": "left",
-                        "type": "typography",
+                        "className": "@config.className",
+                        "color": "primary",
+                        "format": "none",
+                        "children": "@config.children",
+                        "level": "@config.level",
+                        "size": "none",
                         "style": {},
                         "truncate": false,
-                        "children": "@config.children",
-                        "weight": "none",
+                        "type": "typography",
                         "overflow": "visible",
-                        "className": "@config.className",
-                        "level": "@config.level",
-                        "variant": "h3",
-                        "format": "none"
+                        "weight": "none",
+                        "content": "Approval queue",
+                        "variant": "h3"
                       }
                     ]
                   ]
@@ -751,17 +782,65 @@
               ]
             },
             "config": {
-              "align": {
+              "overflow": {
                 "type": "string",
-                "default": "left",
-                "label": "Align",
-                "description": "Text alignment",
+                "default": "visible",
+                "label": "Overflow",
+                "description": "Overflow handling mode",
                 "tier": "presentation",
                 "values": [
-                  "left",
-                  "center",
-                  "right"
+                  "visible",
+                  "hidden",
+                  "wrap",
+                  "clamp-2",
+                  "clamp-3"
                 ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional class names",
+                "tier": "presentation"
+              },
+              "content": {
+                "type": "node",
+                "default": "Approval queue",
+                "label": "Content",
+                "description": "Text content (alternative to children)",
+                "tier": "presentation"
+              },
+              "size": {
+                "type": "string",
+                "default": "none",
+                "label": "Size",
+                "description": "Font size override",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "xs",
+                  "sm",
+                  "md",
+                  "lg",
+                  "xl",
+                  "2xl",
+                  "3xl"
+                ]
+              },
+              "style": {
+                "type": "Map<string,string>",
+                "default": {},
+                "label": "Style",
+                "description": "Inline style",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "children": {
+                "type": "node",
+                "label": "Children",
+                "description": "Children elements",
+                "tier": "presentation"
               },
               "format": {
                 "type": "string",
@@ -795,54 +874,24 @@
                   "inherit"
                 ]
               },
-              "level": {
-                "type": "number",
-                "label": "Level",
-                "description": "Heading level (1-6) - alternative to variant for headings",
-                "tier": "presentation"
-              },
-              "overflow": {
+              "align": {
                 "type": "string",
-                "default": "visible",
-                "label": "Overflow",
-                "description": "Overflow handling mode",
+                "default": "left",
+                "label": "Align",
+                "description": "Text alignment",
                 "tier": "presentation",
                 "values": [
-                  "visible",
-                  "hidden",
-                  "wrap",
-                  "clamp-2",
-                  "clamp-3"
+                  "left",
+                  "center",
+                  "right"
                 ]
               },
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "Additional class names",
+              "truncate": {
+                "type": "boolean",
+                "default": false,
+                "label": "Truncate",
+                "description": "Truncate with ellipsis (single line)",
                 "tier": "presentation"
-              },
-              "children": {
-                "type": "node",
-                "label": "Children",
-                "description": "Children elements",
-                "tier": "presentation"
-              },
-              "content": {
-                "type": "node",
-                "default": "Approval queue",
-                "label": "Content",
-                "description": "Text content (alternative to children)",
-                "tier": "presentation"
-              },
-              "style": {
-                "type": "Map<string,string>",
-                "default": {},
-                "label": "Style",
-                "description": "Inline style",
-                "tier": "presentation",
-                "items": {
-                  "type": "string"
-                }
               },
               "variant": {
                 "type": "string",
@@ -884,6 +933,119 @@
                   "bold"
                 ]
               },
+              "level": {
+                "type": "number",
+                "label": "Level",
+                "description": "Heading level (1-6) - alternative to variant for headings",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/ui-typography",
+              "alias": "Typography",
+              "originalName": "TypographyRender"
+            },
+            "sourceEntityDefinition": {
+              "name": "TypographyItem",
+              "id": "ent_01KXG04MN4REEAHBPJMNDV9QGH",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          },
+          {
+            "name": "DenyReasonTitle",
+            "id": "trt_01M169J81G3JQKD0N73BVPJPS4",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "interaction",
+            "linkedEntity": "ApprovalRequest",
+            "linkedEntityId": "ent_01KXG04EYQFWN6TM97JNWHHSF4",
+            "entityRefIds": {
+              "TypographyItem": "ent_01KXG04MN4REEAHBPJMNDV9QGH"
+            },
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_T3FENBEK1Z9GZQQRM9VH6AZ94T",
+                  "name": "Initialize"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_T3FENBEK1Z9GZQQRM9VH6AZ94T",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "left",
+                        "className": "@config.className",
+                        "color": "primary",
+                        "format": "none",
+                        "children": "@config.children",
+                        "level": "@config.level",
+                        "size": "none",
+                        "style": {},
+                        "truncate": false,
+                        "type": "typography",
+                        "overflow": "visible",
+                        "weight": "none",
+                        "content": "Deny request",
+                        "variant": "h3"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "overflow": {
+                "type": "string",
+                "default": "visible",
+                "label": "Overflow",
+                "description": "Overflow handling mode",
+                "tier": "presentation",
+                "values": [
+                  "visible",
+                  "hidden",
+                  "wrap",
+                  "clamp-2",
+                  "clamp-3"
+                ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional class names",
+                "tier": "presentation"
+              },
+              "content": {
+                "type": "node",
+                "default": "Deny request",
+                "label": "Content",
+                "description": "Text content (alternative to children)",
+                "tier": "presentation"
+              },
               "size": {
                 "type": "string",
                 "default": "none",
@@ -901,11 +1063,354 @@
                   "3xl"
                 ]
               },
+              "style": {
+                "type": "Map<string,string>",
+                "default": {},
+                "label": "Style",
+                "description": "Inline style",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "children": {
+                "type": "node",
+                "label": "Children",
+                "description": "Children elements",
+                "tier": "presentation"
+              },
+              "format": {
+                "type": "string",
+                "default": "none",
+                "label": "Format",
+                "description": "Value formatting applied to string/number/Date content — `none` (the default) renders content as-is. Covers the raw-ISO-date class: a bound datetime renders human-readable via `format='date'|'time'|'datetime'`.",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "date",
+                  "time",
+                  "datetime",
+                  "number",
+                  "currency",
+                  "percent"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "default": "primary",
+                "label": "Color",
+                "description": "Text color",
+                "tier": "presentation",
+                "values": [
+                  "primary",
+                  "secondary",
+                  "muted",
+                  "error",
+                  "success",
+                  "warning",
+                  "inherit"
+                ]
+              },
+              "align": {
+                "type": "string",
+                "default": "left",
+                "label": "Align",
+                "description": "Text alignment",
+                "tier": "presentation",
+                "values": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
               "truncate": {
                 "type": "boolean",
                 "default": false,
                 "label": "Truncate",
                 "description": "Truncate with ellipsis (single line)",
+                "tier": "presentation"
+              },
+              "variant": {
+                "type": "string",
+                "default": "h3",
+                "label": "Variant",
+                "description": "Typography variant",
+                "tier": "presentation",
+                "values": [
+                  "h1",
+                  "h2",
+                  "h3",
+                  "h4",
+                  "h5",
+                  "h6",
+                  "heading",
+                  "subheading",
+                  "body1",
+                  "body2",
+                  "body",
+                  "caption",
+                  "overline",
+                  "small",
+                  "large",
+                  "label"
+                ]
+              },
+              "weight": {
+                "type": "string",
+                "default": "none",
+                "label": "Weight",
+                "description": "Font weight override — `none` = no override, the variant's baked weight applies",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "light",
+                  "normal",
+                  "medium",
+                  "semibold",
+                  "bold"
+                ]
+              },
+              "level": {
+                "type": "number",
+                "label": "Level",
+                "description": "Heading level (1-6) - alternative to variant for headings",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance",
+            "sourceBehavior": {
+              "behavior": "std/behaviors/ui-typography",
+              "alias": "Typography",
+              "originalName": "TypographyRender"
+            },
+            "sourceEntityDefinition": {
+              "name": "TypographyItem",
+              "id": "ent_01KXG04MN4REEAHBPJMNDV9QGH",
+              "persistence": "runtime",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true
+                }
+              ]
+            }
+          },
+          {
+            "name": "DenyReasonHint",
+            "id": "trt_01M169J81G73K4NB9HRPVZA8HX",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": []
+            },
+            "category": "interaction",
+            "linkedEntity": "ApprovalRequest",
+            "linkedEntityId": "ent_01KXG04EYQFWN6TM97JNWHHSF4",
+            "entityRefIds": {
+              "TypographyItem": "ent_01KXG04MN4REEAHBPJMNDV9QGH"
+            },
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "idle",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_HEZSHW23WC1Y6DKKPZD2NCM35D",
+                  "name": "Initialize"
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "idle",
+                  "to": "idle",
+                  "event": "INIT",
+                  "eventId": "evt_HEZSHW23WC1Y6DKKPZD2NCM35D",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "align": "left",
+                        "className": "@config.className",
+                        "color": "muted",
+                        "format": "none",
+                        "children": "@config.children",
+                        "level": "@config.level",
+                        "size": "none",
+                        "style": {},
+                        "truncate": false,
+                        "type": "typography",
+                        "overflow": "visible",
+                        "weight": "none",
+                        "content": "Tell the submitter why — the reason is recorded on the request.",
+                        "variant": "caption"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            "config": {
+              "overflow": {
+                "type": "string",
+                "default": "visible",
+                "label": "Overflow",
+                "description": "Overflow handling mode",
+                "tier": "presentation",
+                "values": [
+                  "visible",
+                  "hidden",
+                  "wrap",
+                  "clamp-2",
+                  "clamp-3"
+                ]
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional class names",
+                "tier": "presentation"
+              },
+              "content": {
+                "type": "node",
+                "default": "Tell the submitter why — the reason is recorded on the request.",
+                "label": "Content",
+                "description": "Text content (alternative to children)",
+                "tier": "presentation"
+              },
+              "size": {
+                "type": "string",
+                "default": "none",
+                "label": "Size",
+                "description": "Font size override",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "xs",
+                  "sm",
+                  "md",
+                  "lg",
+                  "xl",
+                  "2xl",
+                  "3xl"
+                ]
+              },
+              "style": {
+                "type": "Map<string,string>",
+                "default": {},
+                "label": "Style",
+                "description": "Inline style",
+                "tier": "presentation",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "children": {
+                "type": "node",
+                "label": "Children",
+                "description": "Children elements",
+                "tier": "presentation"
+              },
+              "format": {
+                "type": "string",
+                "default": "none",
+                "label": "Format",
+                "description": "Value formatting applied to string/number/Date content — `none` (the default) renders content as-is. Covers the raw-ISO-date class: a bound datetime renders human-readable via `format='date'|'time'|'datetime'`.",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "date",
+                  "time",
+                  "datetime",
+                  "number",
+                  "currency",
+                  "percent"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "default": "muted",
+                "label": "Color",
+                "description": "Text color",
+                "tier": "presentation",
+                "values": [
+                  "primary",
+                  "secondary",
+                  "muted",
+                  "error",
+                  "success",
+                  "warning",
+                  "inherit"
+                ]
+              },
+              "align": {
+                "type": "string",
+                "default": "left",
+                "label": "Align",
+                "description": "Text alignment",
+                "tier": "presentation",
+                "values": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "truncate": {
+                "type": "boolean",
+                "default": false,
+                "label": "Truncate",
+                "description": "Truncate with ellipsis (single line)",
+                "tier": "presentation"
+              },
+              "variant": {
+                "type": "string",
+                "default": "caption",
+                "label": "Variant",
+                "description": "Typography variant",
+                "tier": "presentation",
+                "values": [
+                  "h1",
+                  "h2",
+                  "h3",
+                  "h4",
+                  "h5",
+                  "h6",
+                  "heading",
+                  "subheading",
+                  "body1",
+                  "body2",
+                  "body",
+                  "caption",
+                  "overline",
+                  "small",
+                  "large",
+                  "label"
+                ]
+              },
+              "weight": {
+                "type": "string",
+                "default": "none",
+                "label": "Weight",
+                "description": "Font weight override — `none` = no override, the variant's baked weight applies",
+                "tier": "presentation",
+                "values": [
+                  "none",
+                  "light",
+                  "normal",
+                  "medium",
+                  "semibold",
+                  "bold"
+                ]
+              },
+              "level": {
+                "type": "number",
+                "label": "Level",
+                "description": "Heading level (1-6) - alternative to variant for headings",
                 "tier": "presentation"
               }
             },
@@ -930,7 +1435,7 @@
           },
           {
             "name": "CloseButton",
-            "id": "trt_01KXG04JBQPWD7RW8X33NXPXG9",
+            "id": "trt_01KY21K6QCRRFVK1BRAD774HXP",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -996,19 +1501,19 @@
                       "main",
                       {
                         "actionPayload": {},
-                        "iconRight": "@config.iconRight",
-                        "variant": "ghost",
                         "size": "md",
-                        "leftIcon": "@config.leftIcon",
-                        "disabled": "@config.disabled",
-                        "isLoading": false,
-                        "rightIcon": "@config.rightIcon",
                         "className": "@config.className",
+                        "iconRight": "@config.iconRight",
+                        "disabled": "@config.disabled",
+                        "icon": "x",
+                        "rightIcon": "@config.rightIcon",
                         "label": "Close",
                         "type": "button",
-                        "icon": "x",
-                        "action": "CLOSE",
-                        "iconAsset": "@config.iconAsset"
+                        "variant": "ghost",
+                        "iconAsset": "@config.iconAsset",
+                        "leftIcon": "@config.leftIcon",
+                        "isLoading": false,
+                        "action": "CLOSE"
                       }
                     ]
                   ]
@@ -1016,159 +1521,6 @@
               ]
             },
             "config": {
-              "iconRight": {
-                "type": "icon",
-                "label": "Icon Right",
-                "description": "Alias for rightIcon",
-                "tier": "presentation"
-              },
-              "leftIcon": {
-                "type": "icon",
-                "label": "Left Icon",
-                "description": "Left icon: a Lucide component or a canonical icon name string (e.g. 'plus', 'trash').",
-                "tier": "presentation"
-              },
-              "icon": {
-                "type": "icon",
-                "default": "x",
-                "label": "Icon",
-                "description": "Alias for leftIcon",
-                "tier": "presentation"
-              },
-              "isLoading": {
-                "type": "boolean",
-                "default": false,
-                "label": "Is Loading",
-                "description": "isLoading prop",
-                "tier": "presentation"
-              },
-              "action": {
-                "type": "string",
-                "default": "CLOSE",
-                "label": "Action",
-                "description": "Declarative event name — emits UI:{action} via eventBus on click",
-                "tier": "presentation"
-              },
-              "actionPayload": {
-                "type": "json",
-                "default": {},
-                "label": "Action Payload",
-                "description": "Payload to include with the action event",
-                "tier": "presentation"
-              },
-              "disabled": {
-                "type": "boolean",
-                "label": "Disabled",
-                "description": "Disable the button (greys out, blocks click events)",
-                "tier": "presentation"
-              },
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "Additional CSS classes applied to the root element.",
-                "tier": "presentation"
-              },
-              "iconAsset": {
-                "type": "ButtonIconAsset",
-                "label": "Icon Asset",
-                "description": "Asset image rendered as the leading icon; takes precedence over icon/leftIcon when provided.",
-                "tier": "presentation",
-                "properties": {
-                  "category": {
-                    "name": "category",
-                    "type": "string",
-                    "required": true
-                  },
-                  "thumbnailUrl": {
-                    "name": "thumbnailUrl",
-                    "type": "string",
-                    "required": false
-                  },
-                  "animations": {
-                    "name": "animations",
-                    "type": "array",
-                    "required": false,
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "sprite": {
-                    "name": "sprite",
-                    "type": "string",
-                    "required": false
-                  },
-                  "name": {
-                    "name": "name",
-                    "type": "string",
-                    "required": false
-                  },
-                  "aspect": {
-                    "name": "aspect",
-                    "type": "string",
-                    "required": false,
-                    "values": [
-                      "1:1",
-                      "16:9",
-                      "5:7",
-                      "8:1"
-                    ]
-                  },
-                  "atlas": {
-                    "name": "atlas",
-                    "type": "string",
-                    "required": false
-                  },
-                  "dimension": {
-                    "name": "dimension",
-                    "type": "string",
-                    "required": false,
-                    "values": [
-                      "2d",
-                      "3d"
-                    ]
-                  },
-                  "style": {
-                    "name": "style",
-                    "type": "string",
-                    "required": false,
-                    "values": [
-                      "pixel",
-                      "vector",
-                      "hd",
-                      "1-bit",
-                      "isometric"
-                    ]
-                  },
-                  "variant": {
-                    "name": "variant",
-                    "type": "string",
-                    "required": false
-                  },
-                  "role": {
-                    "name": "role",
-                    "type": "string",
-                    "required": true
-                  },
-                  "url": {
-                    "name": "url",
-                    "type": "string",
-                    "required": true
-                  }
-                }
-              },
-              "label": {
-                "type": "string",
-                "default": "Close",
-                "label": "Label",
-                "description": "Button label text (alternative to children for schema-driven rendering)",
-                "tier": "presentation"
-              },
-              "rightIcon": {
-                "type": "icon",
-                "label": "Right Icon",
-                "description": "Right icon: a Lucide component or a canonical icon name string.",
-                "tier": "presentation"
-              },
               "size": {
                 "type": "string",
                 "default": "md",
@@ -1180,6 +1532,59 @@
                   "md",
                   "lg"
                 ]
+              },
+              "icon": {
+                "type": "icon",
+                "default": "x",
+                "label": "Icon",
+                "description": "Alias for leftIcon",
+                "tier": "presentation"
+              },
+              "className": {
+                "type": "string",
+                "label": "Class Name",
+                "description": "Additional CSS classes applied to the root element.",
+                "tier": "presentation"
+              },
+              "action": {
+                "type": "event",
+                "default": "CLOSE",
+                "label": "Action",
+                "description": "Declarative event name — emits UI:{action} via eventBus on click",
+                "tier": "presentation"
+              },
+              "label": {
+                "type": "string",
+                "default": "Close",
+                "label": "Label",
+                "description": "Button label text (alternative to children for schema-driven rendering)",
+                "tier": "presentation"
+              },
+              "actionPayload": {
+                "type": "json",
+                "default": {},
+                "label": "Action Payload",
+                "description": "Payload to include with the action event",
+                "tier": "presentation"
+              },
+              "rightIcon": {
+                "type": "icon",
+                "label": "Right Icon",
+                "description": "Right icon: a Lucide component or a canonical icon name string.",
+                "tier": "presentation"
+              },
+              "iconRight": {
+                "type": "icon",
+                "label": "Icon Right",
+                "description": "Alias for rightIcon",
+                "tier": "presentation"
+              },
+              "isLoading": {
+                "type": "boolean",
+                "default": false,
+                "label": "Is Loading",
+                "description": "isLoading prop",
+                "tier": "presentation"
               },
               "variant": {
                 "type": "string",
@@ -1196,6 +1601,106 @@
                   "warning",
                   "default"
                 ]
+              },
+              "iconAsset": {
+                "type": "ButtonIconAsset",
+                "label": "Icon Asset",
+                "description": "Asset image rendered as the leading icon; takes precedence over icon/leftIcon when provided.",
+                "tier": "presentation",
+                "properties": {
+                  "aspect": {
+                    "name": "aspect",
+                    "type": "string",
+                    "required": false,
+                    "values": [
+                      "1:1",
+                      "16:9",
+                      "5:7",
+                      "8:1"
+                    ]
+                  },
+                  "role": {
+                    "name": "role",
+                    "type": "string",
+                    "required": true
+                  },
+                  "style": {
+                    "name": "style",
+                    "type": "string",
+                    "required": false,
+                    "values": [
+                      "pixel",
+                      "vector",
+                      "hd",
+                      "1-bit",
+                      "isometric"
+                    ]
+                  },
+                  "sprite": {
+                    "name": "sprite",
+                    "type": "string",
+                    "required": false
+                  },
+                  "thumbnailUrl": {
+                    "name": "thumbnailUrl",
+                    "type": "string",
+                    "required": false
+                  },
+                  "variant": {
+                    "name": "variant",
+                    "type": "string",
+                    "required": false
+                  },
+                  "atlas": {
+                    "name": "atlas",
+                    "type": "string",
+                    "required": false
+                  },
+                  "category": {
+                    "name": "category",
+                    "type": "string",
+                    "required": true
+                  },
+                  "dimension": {
+                    "name": "dimension",
+                    "type": "string",
+                    "required": false,
+                    "values": [
+                      "2d",
+                      "3d"
+                    ]
+                  },
+                  "animations": {
+                    "name": "animations",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "url": {
+                    "name": "url",
+                    "type": "string",
+                    "required": true
+                  },
+                  "name": {
+                    "name": "name",
+                    "type": "string",
+                    "required": false
+                  }
+                }
+              },
+              "disabled": {
+                "type": "boolean",
+                "label": "Disabled",
+                "description": "Disable the button (greys out, blocks click events)",
+                "tier": "presentation"
+              },
+              "leftIcon": {
+                "type": "icon",
+                "label": "Left Icon",
+                "description": "Left icon: a Lucide component or a canonical icon name string (e.g. 'plus', 'trash').",
+                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -1219,7 +1724,7 @@
           },
           {
             "name": "ApprovalDivider",
-            "id": "trt_01KXG04JVTJZ479S2KPR7HD1KB",
+            "id": "trt_01KY21K6QC0P4NS69R6ATZPC18",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -1256,11 +1761,11 @@
                       "render-ui",
                       "main",
                       {
-                        "label": "@config.label",
                         "orientation": "horizontal",
-                        "className": "@config.className",
+                        "type": "divider",
                         "variant": "solid",
-                        "type": "divider"
+                        "className": "@config.className",
+                        "label": "@config.label"
                       }
                     ]
                   ]
@@ -1325,7 +1830,7 @@
           },
           {
             "name": "ErrorAlert",
-            "id": "trt_01KXG04MT125AX1BGFS3ZNGX67",
+            "id": "trt_01KY21K6QC64ZQCX4WH65V7SKA",
             "entityRebindable": true,
             "entityContract": {
               "requires": [],
@@ -1416,17 +1921,17 @@
                       "render-ui",
                       "main",
                       {
-                        "type": "alert",
-                        "variant": "error",
-                        "onClose": "CLOSE",
+                        "className": "@config.className",
                         "actions": "@config.actions",
-                        "message": "@config.message",
+                        "onClose": "CLOSE",
                         "dismissEvent": "DISMISS",
-                        "onDismiss": "DISMISS",
-                        "title": "@config.title",
-                        "children": "@config.children",
                         "dismissible": false,
-                        "className": "@config.className"
+                        "type": "alert",
+                        "title": "@config.title",
+                        "variant": "error",
+                        "message": "@config.message",
+                        "children": "@config.children",
+                        "onDismiss": "DISMISS"
                       }
                     ]
                   ]
@@ -1447,17 +1952,23 @@
                 "tier": "presentation"
               },
               "onDismiss": {
-                "type": "string",
+                "type": "event",
                 "default": "DISMISS",
                 "label": "On Dismiss",
                 "description": "onDismiss prop",
                 "tier": "presentation"
               },
-              "dismissEvent": {
+              "className": {
                 "type": "string",
-                "default": "DISMISS",
-                "label": "Dismiss Event",
-                "description": "Declarative dismiss event — emits UI:{dismissEvent} via eventBus when alert is dismissed",
+                "label": "Class Name",
+                "description": "className prop",
+                "tier": "presentation"
+              },
+              "onClose": {
+                "type": "event",
+                "default": "CLOSE",
+                "label": "On Close",
+                "description": "onClose prop",
                 "tier": "presentation"
               },
               "dismissible": {
@@ -1474,16 +1985,17 @@
                 "description": "Alert message (alias for children)",
                 "tier": "presentation"
               },
+              "dismissEvent": {
+                "type": "event",
+                "default": "DISMISS",
+                "label": "Dismiss Event",
+                "description": "Declarative dismiss event — emits UI:{dismissEvent} via eventBus when alert is dismissed",
+                "tier": "presentation"
+              },
               "title": {
                 "type": "string",
                 "label": "Title",
                 "description": "title prop",
-                "tier": "presentation"
-              },
-              "className": {
-                "type": "string",
-                "label": "Class Name",
-                "description": "className prop",
                 "tier": "presentation"
               },
               "variant": {
@@ -1498,13 +2010,6 @@
                   "warning",
                   "error"
                 ]
-              },
-              "onClose": {
-                "type": "string",
-                "default": "CLOSE",
-                "label": "On Close",
-                "description": "onClose prop",
-                "tier": "presentation"
               }
             },
             "scope": "instance",
@@ -1533,8 +2038,11 @@
             "entityContract": {
               "requires": [],
               "provides": [
+                "decidedAt",
+                "notes",
                 "reviewer",
-                "status"
+                "status",
+                "subjectLabel"
               ]
             },
             "category": "interaction",
@@ -1547,14 +2055,16 @@
               "ApprovalRequest": "ent_01KXG04EYQFWN6TM97JNWHHSF4"
             },
             "traitEmbedIds": {
+              "DenyReasonTitle": "trt_01M169J81G3JQKD0N73BVPJPS4",
               "LoadingText": "trt_01KY21K6QCNEAQZG0D3H1NG7MV",
               "ApprovalQueueTitle": "trt_01KY21K6QCC5BFGZKJF8Q6HYMM",
-              "CloseButton": "trt_01KY21K6QCRRFVK1BRAD774HXP",
-              "ShieldCheckIcon": "trt_01KY21K6QC1BZWD7V4FGS1KPB5",
               "LoadingSpinner": "trt_01KY21K6QC4NB1EVQJ94HWPN3B",
+              "DenyReasonHint": "trt_01M169J81G73K4NB9HRPVZA8HX",
               "ErrorSpinner": "trt_01KY21K6QCCHHN53WV6VF6NKE4",
+              "CloseButton": "trt_01KY21K6QCRRFVK1BRAD774HXP",
+              "ErrorAlert": "trt_01KY21K6QC64ZQCX4WH65V7SKA",
               "ApprovalDivider": "trt_01KY21K6QC0P4NS69R6ATZPC18",
-              "ErrorAlert": "trt_01KY21K6QC64ZQCX4WH65V7SKA"
+              "ShieldCheckIcon": "trt_01KY21K6QC1BZWD7V4FGS1KPB5"
             },
             "emits": [
               {
@@ -1580,6 +2090,22 @@
                       },
                       {
                         "name": "gatedEvent",
+                        "type": "string"
+                      },
+                      {
+                        "name": "subjectLabel",
+                        "type": "string"
+                      },
+                      {
+                        "name": "subjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedByName",
                         "type": "string"
                       },
                       {
@@ -1617,7 +2143,7 @@
               {
                 "event": "DENY",
                 "eventId": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
-                "description": "Signals that an approval request has been denied.",
+                "description": "Opens the deny step for a request; the decision commits with the written reason.",
                 "synonyms": "reject, decline",
                 "tier": "domain",
                 "payloadSchema": [
@@ -1637,6 +2163,22 @@
                       },
                       {
                         "name": "gatedEvent",
+                        "type": "string"
+                      },
+                      {
+                        "name": "subjectLabel",
+                        "type": "string"
+                      },
+                      {
+                        "name": "subjectId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedBy",
+                        "type": "string"
+                      },
+                      {
+                        "name": "requestedByName",
                         "type": "string"
                       },
                       {
@@ -1672,6 +2214,60 @@
                 ]
               },
               {
+                "event": "OPEN_SUBJECT",
+                "eventId": "evt_01M169J81G7ZGXNXN8MZSP7K88",
+                "description": "A reviewer clicked View on a queue row. Hosts route subjectId to the subject record's own surface so the reviewer can read what they are approving. Scalars only — the row stays in the queue.",
+                "synonyms": "view subject, open record, inspect request, see the article",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "subjectId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "subjectLabel",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "event": "CONFIRM_DENY",
+                "eventId": "evt_01M169J81GZWG6Q9MYCQT7F92E",
+                "description": "The deny form committed; data carries the request id + the written reason.",
+                "synonyms": "submit denial, confirm rejection",
+                "tier": "internal",
+                "payloadSchema": [
+                  {
+                    "name": "data",
+                    "type": "object",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "type": "string",
+                        "required": true
+                      },
+                      {
+                        "name": "notes",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "event": "CANCEL_DENY",
+                "eventId": "evt_01M169J81GX0QRNWDXQE75V3E8",
+                "description": "The deny form was dismissed without committing; the queue repaints.",
+                "synonyms": "cancel denial, back to queue",
+                "tier": "internal"
+              },
+              {
                 "event": "CLOSE",
                 "eventId": "evt_01KXG04EZ0MS01J775W2VPESMJ",
                 "description": "Dismisses the review queue overlay.",
@@ -1681,7 +2277,7 @@
               {
                 "event": "ApprovalGranted",
                 "eventId": "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ",
-                "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay.",
+                "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay. Contract: if the replay fails (access denial, write failure), the host MUST emit APPROVAL_REPLAY_FAILED back so the request reopens.",
                 "synonyms": "approved, authorized, confirmed, validated",
                 "tier": "domain",
                 "scope": "external",
@@ -1699,13 +2295,17 @@
               {
                 "event": "ApprovalDenied",
                 "eventId": "evt_01KXG04EZ0JF1Y4KS5KF3R9X8X",
-                "description": "Indicates an approval request has been denied.",
+                "description": "Indicates an approval request has been denied, with the reviewer's written reason.",
                 "synonyms": "rejected, declined",
                 "tier": "domain",
                 "scope": "external",
                 "payloadSchema": [
                   {
                     "name": "requestId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "reason",
                     "type": "string"
                   }
                 ]
@@ -1746,49 +2346,60 @@
                 "description": "Signals that an approval request has been reviewed.",
                 "synonyms": "reviewed, processed, examined",
                 "tier": "internal",
+                "scope": "internal",
                 "payloadSchema": [
                   {
-                    "name": "row",
-                    "type": "object",
-                    "properties": [
-                      {
-                        "name": "id",
-                        "type": "string",
-                        "required": true
-                      },
-                      {
-                        "name": "gatedEvent",
-                        "type": "string"
-                      },
-                      {
-                        "name": "status",
-                        "type": "string"
-                      },
-                      {
-                        "name": "reviewer",
-                        "type": "string"
-                      },
-                      {
-                        "name": "requestedAt",
-                        "type": "number"
-                      },
-                      {
-                        "name": "decidedAt",
-                        "type": "number"
-                      },
-                      {
-                        "name": "escalatedAt",
-                        "type": "number"
-                      },
-                      {
-                        "name": "notes",
-                        "type": "string"
-                      },
-                      {
-                        "name": "payload",
-                        "type": "object"
-                      }
-                    ]
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "gatedEvent",
+                    "type": "string"
+                  },
+                  {
+                    "name": "subjectLabel",
+                    "type": "string"
+                  },
+                  {
+                    "name": "subjectId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestedBy",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestedByName",
+                    "type": "string"
+                  },
+                  {
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "name": "reviewer",
+                    "type": "string"
+                  },
+                  {
+                    "name": "requestedAt",
+                    "type": "number"
+                  },
+                  {
+                    "name": "decidedAt",
+                    "type": "number"
+                  },
+                  {
+                    "name": "escalatedAt",
+                    "type": "number"
+                  },
+                  {
+                    "name": "notes",
+                    "type": "string"
+                  },
+                  {
+                    "name": "payload",
+                    "type": "object"
                   }
                 ]
               },
@@ -1819,7 +2430,7 @@
                 "source": {
                   "kind": "trait",
                   "trait": "CloseButton",
-                  "traitId": "trt_01KXG04JBQPWD7RW8X33NXPXG9"
+                  "traitId": "trt_01KY21K6QCRRFVK1BRAD774HXP"
                 }
               }
             ],
@@ -1834,6 +2445,9 @@
                 },
                 {
                   "name": "reviewing"
+                },
+                {
+                  "name": "denying"
                 },
                 {
                   "name": "error"
@@ -1878,6 +2492,25 @@
                   ]
                 },
                 {
+                  "key": "APPROVAL_REPLAY_FAILED",
+                  "id": "evt_01M169J81G3QNKWFZEEWM8N90Z",
+                  "name": "Approval Replay Failed",
+                  "description": "The host could not apply the granted action (access denial, failed write). The request reopens as pending so a decision is never silently lost.",
+                  "synonyms": "replay failed, apply failed, approval rollback",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "requestId",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "error",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
                   "key": "OPEN",
                   "id": "evt_01KXG04EZ05HP9JSWYNV5XV2QW",
                   "name": "Open",
@@ -1908,7 +2541,62 @@
                     },
                     {
                       "name": "row",
-                      "type": "ApprovalRequest"
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "gatedEvent",
+                          "type": "string"
+                        },
+                        {
+                          "name": "subjectLabel",
+                          "type": "string"
+                        },
+                        {
+                          "name": "subjectId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedBy",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedByName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "reviewer",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "decidedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "escalatedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "notes",
+                          "type": "string"
+                        },
+                        {
+                          "name": "payload",
+                          "type": "object"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -1916,7 +2604,7 @@
                   "key": "DENY",
                   "id": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
                   "name": "Deny",
-                  "description": "Signals that an approval request has been denied.",
+                  "description": "Opens the deny step for a request; the decision commits with the written reason.",
                   "synonyms": "reject, decline",
                   "tier": "domain",
                   "payloadSchema": [
@@ -1927,7 +2615,85 @@
                     },
                     {
                       "name": "row",
-                      "type": "ApprovalRequest"
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "gatedEvent",
+                          "type": "string"
+                        },
+                        {
+                          "name": "subjectLabel",
+                          "type": "string"
+                        },
+                        {
+                          "name": "subjectId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedBy",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedByName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "status",
+                          "type": "string"
+                        },
+                        {
+                          "name": "reviewer",
+                          "type": "string"
+                        },
+                        {
+                          "name": "requestedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "decidedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "escalatedAt",
+                          "type": "number"
+                        },
+                        {
+                          "name": "notes",
+                          "type": "string"
+                        },
+                        {
+                          "name": "payload",
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "OPEN_SUBJECT",
+                  "id": "evt_01M169J81G7ZGXNXN8MZSP7K88",
+                  "name": "Open Subject",
+                  "description": "A reviewer clicked View on a queue row. Hosts route subjectId to the subject record's own surface so the reviewer can read what they are approving. Scalars only — the row stays in the queue.",
+                  "synonyms": "view subject, open record, inspect request, see the article",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "subjectId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "subjectLabel",
+                      "type": "string"
                     }
                   ]
                 },
@@ -1940,8 +2706,57 @@
                   "tier": "internal",
                   "payloadSchema": [
                     {
-                      "name": "row",
-                      "type": "ApprovalRequest"
+                      "name": "id",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "gatedEvent",
+                      "type": "string"
+                    },
+                    {
+                      "name": "subjectLabel",
+                      "type": "string"
+                    },
+                    {
+                      "name": "subjectId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestedBy",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestedByName",
+                      "type": "string"
+                    },
+                    {
+                      "name": "status",
+                      "type": "string"
+                    },
+                    {
+                      "name": "reviewer",
+                      "type": "string"
+                    },
+                    {
+                      "name": "requestedAt",
+                      "type": "number"
+                    },
+                    {
+                      "name": "decidedAt",
+                      "type": "number"
+                    },
+                    {
+                      "name": "escalatedAt",
+                      "type": "number"
+                    },
+                    {
+                      "name": "notes",
+                      "type": "string"
+                    },
+                    {
+                      "name": "payload",
+                      "type": "object"
                     }
                   ]
                 },
@@ -1964,10 +2779,43 @@
                   ]
                 },
                 {
+                  "key": "CONFIRM_DENY",
+                  "id": "evt_01M169J81GZWG6Q9MYCQT7F92E",
+                  "name": "Confirm Deny",
+                  "description": "The deny form committed; data carries the request id + the written reason.",
+                  "synonyms": "submit denial, confirm rejection",
+                  "tier": "internal",
+                  "payloadSchema": [
+                    {
+                      "name": "data",
+                      "type": "object",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "notes",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "CANCEL_DENY",
+                  "id": "evt_01M169J81GX0QRNWDXQE75V3E8",
+                  "name": "Cancel Deny",
+                  "description": "The deny form was dismissed without committing; the queue repaints.",
+                  "synonyms": "cancel denial, back to queue",
+                  "tier": "internal"
+                },
+                {
                   "key": "ApprovalGranted",
                   "id": "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ",
                   "name": "Approval granted",
-                  "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay.",
+                  "description": "Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay. Contract: if the replay fails (access denial, write failure), the host MUST emit APPROVAL_REPLAY_FAILED back so the request reopens.",
                   "synonyms": "approved, authorized, confirmed, validated",
                   "tier": "domain",
                   "payloadSchema": [
@@ -1985,12 +2833,16 @@
                   "key": "ApprovalDenied",
                   "id": "evt_01KXG04EZ0JF1Y4KS5KF3R9X8X",
                   "name": "Approval denied",
-                  "description": "Indicates an approval request has been denied.",
+                  "description": "Indicates an approval request has been denied, with the reviewer's written reason.",
                   "synonyms": "rejected, declined",
                   "tier": "domain",
                   "payloadSchema": [
                     {
                       "name": "requestId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "reason",
                       "type": "string"
                     }
                   ]
@@ -2007,6 +2859,15 @@
                       "fetch",
                       "ApprovalRequest",
                       {
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ],
                         "emit": {
                           "failure": "ApprovalRequestLoadFailed",
                           "success": "ApprovalRequestLoaded"
@@ -2029,6 +2890,51 @@
                 },
                 {
                   "from": "idle",
+                  "to": "idle",
+                  "event": "APPROVAL_REPLAY_FAILED",
+                  "eventId": "evt_01M169J81G3QNKWFZEEWM8N90Z",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.requestId"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "pending"
+                    ],
+                    [
+                      "set",
+                      "@entity.reviewer",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.decidedAt",
+                      0
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ApprovalRequest",
+                      "@entity",
+                      {
+                        "emit": {
+                          "success": "ApprovalRequestReviewed",
+                          "failure": "ApprovalRequestReviewFailed"
+                        }
+                      }
+                    ],
+                    [
+                      "notify",
+                      "Approval could not be applied — the request was reopened.",
+                      "error"
+                    ]
+                  ]
+                },
+                {
+                  "from": "idle",
                   "to": "loading",
                   "event": "OPEN",
                   "eventId": "evt_01KXG04EZ05HP9JSWYNV5XV2QW",
@@ -2038,6 +2944,15 @@
                       "fetch",
                       "ApprovalRequest",
                       {
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ],
                         "emit": {
                           "failure": "ApprovalRequestLoadFailed",
                           "success": "ApprovalRequestLoaded"
@@ -2048,15 +2963,15 @@
                       "render-ui",
                       "modal",
                       {
-                        "gap": "md",
-                        "align": "center",
                         "children": [
                           "@trait.LoadingSpinner",
                           "@trait.LoadingText"
                         ],
-                        "className": "py-12",
                         "direction": "vertical",
-                        "type": "stack"
+                        "className": "py-12",
+                        "gap": "md",
+                        "type": "stack",
+                        "align": "center"
                       }
                     ]
                   ]
@@ -2071,70 +2986,81 @@
                       "render-ui",
                       "modal",
                       {
+                        "direction": "vertical",
+                        "gap": "md",
+                        "type": "stack",
                         "children": [
                           {
+                            "type": "stack",
+                            "direction": "horizontal",
                             "children": [
                               {
+                                "align": "center",
+                                "gap": "sm",
+                                "type": "stack",
                                 "direction": "horizontal",
                                 "children": [
                                   "@trait.ShieldCheckIcon",
                                   "@trait.ApprovalQueueTitle"
-                                ],
-                                "gap": "sm",
-                                "align": "center",
-                                "type": "stack"
+                                ]
                               },
                               "@trait.CloseButton"
                             ],
-                            "direction": "horizontal",
                             "gap": "sm",
-                            "justify": "between",
                             "align": "center",
-                            "type": "stack"
+                            "justify": "between"
                           },
                           "@trait.ApprovalDivider",
                           {
-                            "cols": 1,
-                            "gap": "sm",
-                            "look": "dense",
                             "fields": [
                               {
-                                "name": "gatedEvent",
+                                "name": "subjectLabel",
+                                "variant": "h4",
+                                "label": "What"
+                              },
+                              {
                                 "label": "Action",
-                                "variant": "badge"
+                                "variant": "badge",
+                                "name": "gatedEvent"
+                              },
+                              {
+                                "label": "Requested by",
+                                "name": "requestedByName",
+                                "variant": "caption"
                               },
                               {
                                 "name": "requestedAt",
                                 "label": "Requested",
                                 "variant": "caption"
-                              },
-                              {
-                                "variant": "badge",
-                                "label": "Status",
-                                "name": "status"
                               }
                             ],
+                            "entity": "@payload.data",
+                            "cols": 1,
+                            "look": "dense",
                             "itemActions": [
                               {
-                                "label": "Approve",
-                                "event": "APPROVE",
-                                "icon": "check",
-                                "variant": "primary"
+                                "label": "View",
+                                "variant": "ghost",
+                                "icon": "eye",
+                                "event": "OPEN_SUBJECT"
                               },
                               {
-                                "event": "DENY",
-                                "icon": "x",
+                                "icon": "check",
+                                "variant": "primary",
+                                "event": "APPROVE",
+                                "label": "Approve"
+                              },
+                              {
                                 "label": "Deny",
+                                "icon": "x",
+                                "event": "DENY",
                                 "variant": "danger"
                               }
                             ],
                             "type": "data-grid",
-                            "entity": "@payload.data"
+                            "gap": "sm"
                           }
-                        ],
-                        "direction": "vertical",
-                        "gap": "md",
-                        "type": "stack"
+                        ]
                       }
                     ]
                   ]
@@ -2149,10 +3075,10 @@
                       "render-ui",
                       "modal",
                       {
+                        "type": "stack",
                         "children": [
                           "@trait.ErrorAlert"
-                        ],
-                        "type": "stack"
+                        ]
                       }
                     ]
                   ]
@@ -2175,6 +3101,42 @@
                   "to": "reviewing",
                   "event": "APPROVE",
                   "eventId": "evt_01KXG04EZ0H0D5WC8FJKBRGBQE",
+                  "guard": [
+                    "and",
+                    [
+                      "or",
+                      [
+                        "=",
+                        [
+                          "array/len",
+                          []
+                        ],
+                        0
+                      ],
+                      [
+                        "array/includes",
+                        [],
+                        "@user.role"
+                      ]
+                    ],
+                    [
+                      "or",
+                      [
+                        "=",
+                        false,
+                        false
+                      ],
+                      [
+                        "!=",
+                        [
+                          "object/get",
+                          "@payload.row",
+                          "requestedBy"
+                        ],
+                        "@user.id"
+                      ]
+                    ]
+                  ],
                   "effects": [
                     [
                       "set",
@@ -2192,6 +3154,13 @@
                       "@user.id"
                     ],
                     [
+                      "set",
+                      "@entity.decidedAt",
+                      [
+                        "time/now"
+                      ]
+                    ],
+                    [
                       "persist",
                       "update",
                       "ApprovalRequest",
@@ -2207,8 +3176,86 @@
                       "emit",
                       "ApprovalGranted",
                       {
-                        "payload": "@payload.row.payload",
-                        "requestId": "@payload.id"
+                        "requestId": "@payload.id",
+                        "payload": "@payload.row.payload"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "denying",
+                  "event": "DENY",
+                  "eventId": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
+                  "guard": [
+                    "or",
+                    [
+                      "=",
+                      [
+                        "array/len",
+                        []
+                      ],
+                      0
+                    ],
+                    [
+                      "array/includes",
+                      [],
+                      "@user.role"
+                    ]
+                  ],
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      "@payload.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.subjectLabel",
+                      [
+                        "str/default",
+                        [
+                          "object/get",
+                          "@payload.row",
+                          "subjectLabel"
+                        ],
+                        ""
+                      ]
+                    ],
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "direction": "vertical",
+                        "children": [
+                          {
+                            "justify": "between",
+                            "align": "center",
+                            "direction": "horizontal",
+                            "type": "stack",
+                            "children": [
+                              "@trait.DenyReasonTitle",
+                              "@trait.CloseButton"
+                            ],
+                            "gap": "sm"
+                          },
+                          "@trait.DenyReasonHint",
+                          "@trait.ApprovalDivider",
+                          {
+                            "mode": "edit",
+                            "fields": [
+                              "notes"
+                            ],
+                            "entity": {
+                              "id": "@entity.id"
+                            },
+                            "type": "form-section",
+                            "cancelEvent": "CANCEL_DENY",
+                            "submitEvent": "CONFIRM_DENY"
+                          }
+                        ],
+                        "type": "stack",
+                        "gap": "md"
                       }
                     ]
                   ]
@@ -2216,13 +3263,126 @@
                 {
                   "from": "reviewing",
                   "to": "reviewing",
-                  "event": "DENY",
-                  "eventId": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
+                  "event": "OPEN_SUBJECT",
+                  "eventId": "evt_01M169J81G7ZGXNXN8MZSP7K88"
+                },
+                {
+                  "from": "reviewing",
+                  "to": "loading",
+                  "event": "ApprovalRequestReviewed",
+                  "eventId": "evt_01KXG04EZ0XXBA89NVB97J1NAM",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "emit": {
+                          "success": "ApprovalRequestLoaded",
+                          "failure": "ApprovalRequestLoadFailed"
+                        },
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "ApprovalRequestReviewFailed",
+                  "eventId": "evt_01KXG04EZ0HX0YV7MH4PXFQCM0",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      {
+                        "type": "stack",
+                        "children": [
+                          "@trait.ErrorAlert"
+                        ]
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "reviewing",
+                  "event": "APPROVAL_REPLAY_FAILED",
+                  "eventId": "evt_01M169J81G3QNKWFZEEWM8N90Z",
                   "effects": [
                     [
                       "set",
                       "@entity.id",
-                      "@payload.id"
+                      "@payload.requestId"
+                    ],
+                    [
+                      "set",
+                      "@entity.status",
+                      "pending"
+                    ],
+                    [
+                      "set",
+                      "@entity.reviewer",
+                      ""
+                    ],
+                    [
+                      "set",
+                      "@entity.decidedAt",
+                      0
+                    ],
+                    [
+                      "persist",
+                      "update",
+                      "ApprovalRequest",
+                      "@entity",
+                      {
+                        "emit": {
+                          "failure": "ApprovalRequestReviewFailed",
+                          "success": "ApprovalRequestReviewed"
+                        }
+                      }
+                    ],
+                    [
+                      "notify",
+                      "Approval could not be applied — the request was reopened.",
+                      "error"
+                    ]
+                  ]
+                },
+                {
+                  "from": "reviewing",
+                  "to": "idle",
+                  "event": "CLOSE",
+                  "eventId": "evt_01KXG04EZ0MS01J775W2VPESMJ",
+                  "effects": [
+                    [
+                      "render-ui",
+                      "modal",
+                      null
+                    ]
+                  ]
+                },
+                {
+                  "from": "denying",
+                  "to": "reviewing",
+                  "event": "CONFIRM_DENY",
+                  "eventId": "evt_01M169J81GZWG6Q9MYCQT7F92E",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.id",
+                      [
+                        "object/get",
+                        "@payload.data",
+                        "id"
+                      ]
                     ],
                     [
                       "set",
@@ -2233,6 +3393,26 @@
                       "set",
                       "@entity.reviewer",
                       "@user.id"
+                    ],
+                    [
+                      "set",
+                      "@entity.decidedAt",
+                      [
+                        "time/now"
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.notes",
+                      [
+                        "str/default",
+                        [
+                          "object/get",
+                          "@payload.data",
+                          "notes"
+                        ],
+                        ""
+                      ]
                     ],
                     [
                       "persist",
@@ -2250,21 +3430,43 @@
                       "emit",
                       "ApprovalDenied",
                       {
-                        "requestId": "@payload.id"
+                        "reason": [
+                          "str/default",
+                          [
+                            "object/get",
+                            "@payload.data",
+                            "notes"
+                          ],
+                          ""
+                        ],
+                        "requestId": [
+                          "object/get",
+                          "@payload.data",
+                          "id"
+                        ]
                       }
                     ]
                   ]
                 },
                 {
-                  "from": "reviewing",
+                  "from": "denying",
                   "to": "loading",
-                  "event": "ApprovalRequestReviewed",
-                  "eventId": "evt_01KXG04EZ0XXBA89NVB97J1NAM",
+                  "event": "CANCEL_DENY",
+                  "eventId": "evt_01M169J81GX0QRNWDXQE75V3E8",
                   "effects": [
                     [
                       "fetch",
                       "ApprovalRequest",
                       {
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ],
                         "emit": {
                           "success": "ApprovalRequestLoaded",
                           "failure": "ApprovalRequestLoadFailed"
@@ -2274,8 +3476,35 @@
                   ]
                 },
                 {
-                  "from": "reviewing",
-                  "to": "reviewing",
+                  "from": "denying",
+                  "to": "loading",
+                  "event": "ApprovalRequestReviewed",
+                  "eventId": "evt_01KXG04EZ0XXBA89NVB97J1NAM",
+                  "effects": [
+                    [
+                      "fetch",
+                      "ApprovalRequest",
+                      {
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ],
+                        "emit": {
+                          "failure": "ApprovalRequestLoadFailed",
+                          "success": "ApprovalRequestLoaded"
+                        }
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "from": "denying",
+                  "to": "denying",
                   "event": "ApprovalRequestReviewFailed",
                   "eventId": "evt_01KXG04EZ0HX0YV7MH4PXFQCM0",
                   "effects": [
@@ -2283,16 +3512,16 @@
                       "render-ui",
                       "modal",
                       {
+                        "type": "stack",
                         "children": [
                           "@trait.ErrorAlert"
-                        ],
-                        "type": "stack"
+                        ]
                       }
                     ]
                   ]
                 },
                 {
-                  "from": "reviewing",
+                  "from": "denying",
                   "to": "idle",
                   "event": "CLOSE",
                   "eventId": "evt_01KXG04EZ0MS01J775W2VPESMJ",
@@ -2317,7 +3546,16 @@
                         "emit": {
                           "failure": "ApprovalRequestLoadFailed",
                           "success": "ApprovalRequestLoaded"
-                        }
+                        },
+                        "filter": [
+                          "=",
+                          [
+                            "object/get",
+                            "@entity",
+                            "status"
+                          ],
+                          "pending"
+                        ]
                       }
                     ],
                     [
@@ -2348,24 +3586,27 @@
               ]
             },
             "config": {
-              "approverRoles": {
+              "escalationRoles": {
                 "type": "[string]",
                 "default": [],
-                "label": "Who can approve requests?",
-                "description": "Roles eligible to approve. The host application enforces role-gating on the page.",
-                "synonyms": "approver, reviewer, authorized roles, sign-off roles, who approves",
+                "label": "Who gets notified when a request escalates?",
+                "description": "Roles notified on escalation (compose sibling std-notify-on-event to deliver).",
+                "synonyms": "escalation contacts, escalate to, notify roles, escalated approver",
                 "tier": "policy",
                 "items": {
                   "type": "string"
                 }
               },
-              "escalationHours": {
-                "type": "number",
-                "default": 0,
-                "label": "Escalate after how many hours pending?",
-                "description": "Hours a request can sit pending before escalating. v1.0 declarative only.",
-                "synonyms": "escalation time, SLA hours, pending timeout, escalate after",
-                "tier": "policy"
+              "approverRoles": {
+                "type": "[string]",
+                "default": [],
+                "label": "Who can approve requests?",
+                "description": "Roles eligible to decide. ENFORCED by the APPROVE/DENY transition guards: a viewer whose @user.role is not listed cannot fire a decision, from the button or from the bus. Empty = every signed-in viewer may decide (ungated).",
+                "synonyms": "approver, reviewer, authorized roles, sign-off roles, who approves",
+                "tier": "policy",
+                "items": {
+                  "type": "string"
+                }
               },
               "tableLook": {
                 "type": "string",
@@ -2382,38 +3623,12 @@
                   "card-rows"
                 ]
               },
-              "reviewSlot": {
-                "type": "slot",
-                "default": "modal",
-                "label": "Review slot",
-                "description": "UI slot the review queue renders into. Defaults to the modal overlay so the queue never seizes the host's main content; summoned via OPEN, cleared via CLOSE.",
-                "tier": "internal"
-              },
               "autoApproveBelowThreshold": {
                 "type": "boolean",
                 "default": true,
                 "label": "Skip review queue for low-value requests?",
                 "description": "When true, auto-approves requests below the threshold without queuing. v1.0 declarative only.",
                 "synonyms": "auto approve, skip review, bypass queue, automatic approval",
-                "tier": "policy"
-              },
-              "escalationRoles": {
-                "type": "[string]",
-                "default": [],
-                "label": "Who gets notified when a request escalates?",
-                "description": "Roles notified on escalation (compose sibling std-notify-on-event to deliver).",
-                "synonyms": "escalation contacts, escalate to, notify roles, escalated approver",
-                "tier": "policy",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "threshold": {
-                "type": "number",
-                "default": 0,
-                "label": "Auto-approve below this value",
-                "description": "Requests whose gated value is below this threshold are auto-approved. v1.0 declarative only.",
-                "synonyms": "auto approve amount, skip review under, threshold, limit",
                 "tier": "policy"
               },
               "valueField": {
@@ -2423,12 +3638,43 @@
                 "description": "Payload field name to compare against threshold (e.g. 'amount' on a RefundRequested event). v1.0 declarative only.",
                 "tier": "internal"
               },
+              "escalationHours": {
+                "type": "number",
+                "default": 0,
+                "label": "Escalate after how many hours pending?",
+                "description": "Hours a request can sit pending before escalating. v1.0 declarative only.",
+                "synonyms": "escalation time, SLA hours, pending timeout, escalate after",
+                "tier": "policy"
+              },
+              "reviewSlot": {
+                "type": "slot",
+                "default": "modal",
+                "label": "Review slot",
+                "description": "UI slot the review queue renders into. Defaults to the modal overlay so the queue never seizes the host's main content; summoned via OPEN, cleared via CLOSE.",
+                "tier": "internal"
+              },
               "enabled": {
                 "type": "boolean",
                 "default": false,
                 "label": "Require approval",
                 "description": "Require sign-off before a record is finalized. Off by default.",
                 "synonyms": "enable, turn on, enforce, require, activate, apply, switch on, approval, needs approval, sign-off, signed off, review before, gatekeeper, editor approval, publishing approval, draft approval, content review, requires approval, manager approval, supervisor approval, admin approval, before going live",
+                "tier": "policy"
+              },
+              "blockSelfApproval": {
+                "type": "boolean",
+                "default": false,
+                "label": "Block approving your own requests?",
+                "description": "When on, a reviewer cannot APPROVE a request they submitted themselves (requestedBy = the viewer's id) — enforced by the APPROVE transition guard, from the button or from the bus. Requires hosts to stamp requestedBy at request creation. DENY stays allowed on your own request (denying your own request withdraws it). Off by default.",
+                "synonyms": "self approval, self-approval, four eyes, four-eyes, separation of duties, cannot approve own, no self sign-off, dual control",
+                "tier": "policy"
+              },
+              "threshold": {
+                "type": "number",
+                "default": 0,
+                "label": "Auto-approve below this value",
+                "description": "Requests whose gated value is below this threshold are auto-approved. v1.0 declarative only.",
+                "synonyms": "auto approve amount, skip review under, threshold, limit",
                 "tier": "policy"
               }
             },
@@ -2468,8 +3714,8 @@
           {
             "trait": "LoadingText",
             "patternPath": "root",
-            "prop": "size",
-            "knob": "size"
+            "prop": "align",
+            "knob": "align"
           },
           {
             "trait": "LoadingText",
@@ -2480,14 +3726,14 @@
           {
             "trait": "LoadingText",
             "patternPath": "root",
-            "prop": "content",
-            "knob": "content"
+            "prop": "format",
+            "knob": "format"
           },
           {
             "trait": "LoadingText",
             "patternPath": "root",
-            "prop": "align",
-            "knob": "align"
+            "prop": "size",
+            "knob": "size"
           },
           {
             "trait": "LoadingText",
@@ -2504,14 +3750,20 @@
           {
             "trait": "LoadingText",
             "patternPath": "root",
+            "prop": "overflow",
+            "knob": "overflow"
+          },
+          {
+            "trait": "LoadingText",
+            "patternPath": "root",
             "prop": "weight",
             "knob": "weight"
           },
           {
             "trait": "LoadingText",
             "patternPath": "root",
-            "prop": "overflow",
-            "knob": "overflow"
+            "prop": "content",
+            "knob": "content"
           },
           {
             "trait": "LoadingText",
@@ -2520,28 +3772,10 @@
             "knob": "variant"
           },
           {
-            "trait": "LoadingText",
-            "patternPath": "root",
-            "prop": "format",
-            "knob": "format"
-          },
-          {
-            "trait": "ShieldCheckIcon",
-            "patternPath": "root",
-            "prop": "name",
-            "knob": "name"
-          },
-          {
             "trait": "ShieldCheckIcon",
             "patternPath": "root",
             "prop": "size",
             "knob": "size"
-          },
-          {
-            "trait": "ShieldCheckIcon",
-            "patternPath": "root",
-            "prop": "style",
-            "knob": "style"
           },
           {
             "trait": "ShieldCheckIcon",
@@ -2552,32 +3786,44 @@
           {
             "trait": "ShieldCheckIcon",
             "patternPath": "root",
-            "prop": "color",
-            "knob": "color"
+            "prop": "name",
+            "knob": "name"
           },
           {
-            "trait": "ApprovalQueueTitle",
-            "patternPath": "root",
-            "prop": "size",
-            "knob": "size"
-          },
-          {
-            "trait": "ApprovalQueueTitle",
+            "trait": "ShieldCheckIcon",
             "patternPath": "root",
             "prop": "color",
             "knob": "color"
           },
           {
-            "trait": "ApprovalQueueTitle",
+            "trait": "ShieldCheckIcon",
             "patternPath": "root",
-            "prop": "content",
-            "knob": "content"
+            "prop": "style",
+            "knob": "style"
           },
           {
             "trait": "ApprovalQueueTitle",
             "patternPath": "root",
             "prop": "align",
             "knob": "align"
+          },
+          {
+            "trait": "ApprovalQueueTitle",
+            "patternPath": "root",
+            "prop": "color",
+            "knob": "color"
+          },
+          {
+            "trait": "ApprovalQueueTitle",
+            "patternPath": "root",
+            "prop": "format",
+            "knob": "format"
+          },
+          {
+            "trait": "ApprovalQueueTitle",
+            "patternPath": "root",
+            "prop": "size",
+            "knob": "size"
           },
           {
             "trait": "ApprovalQueueTitle",
@@ -2594,14 +3840,20 @@
           {
             "trait": "ApprovalQueueTitle",
             "patternPath": "root",
+            "prop": "overflow",
+            "knob": "overflow"
+          },
+          {
+            "trait": "ApprovalQueueTitle",
+            "patternPath": "root",
             "prop": "weight",
             "knob": "weight"
           },
           {
             "trait": "ApprovalQueueTitle",
             "patternPath": "root",
-            "prop": "overflow",
-            "knob": "overflow"
+            "prop": "content",
+            "knob": "content"
           },
           {
             "trait": "ApprovalQueueTitle",
@@ -2610,10 +3862,124 @@
             "knob": "variant"
           },
           {
-            "trait": "ApprovalQueueTitle",
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "align",
+            "knob": "align"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "color",
+            "knob": "color"
+          },
+          {
+            "trait": "DenyReasonTitle",
             "patternPath": "root",
             "prop": "format",
             "knob": "format"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "size",
+            "knob": "size"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "style",
+            "knob": "style"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "truncate",
+            "knob": "truncate"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "overflow",
+            "knob": "overflow"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "weight",
+            "knob": "weight"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "content",
+            "knob": "content"
+          },
+          {
+            "trait": "DenyReasonTitle",
+            "patternPath": "root",
+            "prop": "variant",
+            "knob": "variant"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "align",
+            "knob": "align"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "color",
+            "knob": "color"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "format",
+            "knob": "format"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "size",
+            "knob": "size"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "style",
+            "knob": "style"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "truncate",
+            "knob": "truncate"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "overflow",
+            "knob": "overflow"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "weight",
+            "knob": "weight"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "content",
+            "knob": "content"
+          },
+          {
+            "trait": "DenyReasonHint",
+            "patternPath": "root",
+            "prop": "variant",
+            "knob": "variant"
           },
           {
             "trait": "CloseButton",
@@ -2624,20 +3990,14 @@
           {
             "trait": "CloseButton",
             "patternPath": "root",
-            "prop": "variant",
-            "knob": "variant"
-          },
-          {
-            "trait": "CloseButton",
-            "patternPath": "root",
             "prop": "size",
             "knob": "size"
           },
           {
             "trait": "CloseButton",
             "patternPath": "root",
-            "prop": "isLoading",
-            "knob": "isLoading"
+            "prop": "icon",
+            "knob": "icon"
           },
           {
             "trait": "CloseButton",
@@ -2648,8 +4008,14 @@
           {
             "trait": "CloseButton",
             "patternPath": "root",
-            "prop": "icon",
-            "knob": "icon"
+            "prop": "variant",
+            "knob": "variant"
+          },
+          {
+            "trait": "CloseButton",
+            "patternPath": "root",
+            "prop": "isLoading",
+            "knob": "isLoading"
           },
           {
             "trait": "CloseButton",
@@ -2672,20 +4038,8 @@
           {
             "trait": "ErrorAlert",
             "patternPath": "root",
-            "prop": "variant",
-            "knob": "variant"
-          },
-          {
-            "trait": "ErrorAlert",
-            "patternPath": "root",
             "prop": "onClose",
             "knob": "onClose"
-          },
-          {
-            "trait": "ErrorAlert",
-            "patternPath": "root",
-            "prop": "message",
-            "knob": "message"
           },
           {
             "trait": "ErrorAlert",
@@ -2696,14 +4050,26 @@
           {
             "trait": "ErrorAlert",
             "patternPath": "root",
-            "prop": "onDismiss",
-            "knob": "onDismiss"
+            "prop": "dismissible",
+            "knob": "dismissible"
           },
           {
             "trait": "ErrorAlert",
             "patternPath": "root",
-            "prop": "dismissible",
-            "knob": "dismissible"
+            "prop": "variant",
+            "knob": "variant"
+          },
+          {
+            "trait": "ErrorAlert",
+            "patternPath": "root",
+            "prop": "message",
+            "knob": "message"
+          },
+          {
+            "trait": "ErrorAlert",
+            "patternPath": "root",
+            "prop": "onDismiss",
+            "knob": "onDismiss"
           },
           {
             "trait": "ApprovalGateReview",
@@ -2718,6 +4084,42 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
+        "evt_FGFCCYGGPP8BB77HZMVVGQ1D9R": {
+          "id": "evt_FGFCCYGGPP8BB77HZMVVGQ1D9R",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KY21K6QC4NB1EVQJ94HWPN3B"
+        },
+        "evt_01KXG04EZ0MS01J775W2VPESMJ": {
+          "id": "evt_01KXG04EZ0MS01J775W2VPESMJ",
+          "kind": "event",
+          "bakedName": "CLOSE",
+          "curName": "CLOSE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "evt_01KXG04EZ0ZFMGKFBB34B7PMEE": {
+          "id": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
+          "kind": "event",
+          "bakedName": "DENY",
+          "curName": "DENY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "evt_01M169J81G7ZGXNXN8MZSP7K88": {
+          "id": "evt_01M169J81G7ZGXNXN8MZSP7K88",
+          "kind": "event",
+          "bakedName": "OPEN_SUBJECT",
+          "curName": "OPEN_SUBJECT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
         "evt_01KXG04EZ05HP9JSWYNV5XV2QW": {
           "id": "evt_01KXG04EZ05HP9JSWYNV5XV2QW",
           "kind": "event",
@@ -2727,11 +4129,55 @@
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
         },
-        "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ": {
-          "id": "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ",
+        "evt_01KXG04EZ0XXBA89NVB97J1NAM": {
+          "id": "evt_01KXG04EZ0XXBA89NVB97J1NAM",
           "kind": "event",
-          "bakedName": "ApprovalGranted",
-          "curName": "ApprovalGranted",
+          "bakedName": "ApprovalRequestReviewed",
+          "curName": "ApprovalRequestReviewed",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "evt_01KXG04EZ0BNTY7ZWPWS7Z1AFH": {
+          "id": "evt_01KXG04EZ0BNTY7ZWPWS7Z1AFH",
+          "kind": "event",
+          "bakedName": "ApprovalRequestLoaded",
+          "curName": "ApprovalRequestLoaded",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "evt_01M169J81GX0QRNWDXQE75V3E8": {
+          "id": "evt_01M169J81GX0QRNWDXQE75V3E8",
+          "kind": "event",
+          "bakedName": "CANCEL_DENY",
+          "curName": "CANCEL_DENY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "evt_01M169J81GZWG6Q9MYCQT7F92E": {
+          "id": "evt_01M169J81GZWG6Q9MYCQT7F92E",
+          "kind": "event",
+          "bakedName": "CONFIRM_DENY",
+          "curName": "CONFIRM_DENY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "trt_01KY21K6QCRRFVK1BRAD774HXP": {
+          "id": "trt_01KY21K6QCRRFVK1BRAD774HXP",
+          "kind": "trait",
+          "bakedName": "CloseButton",
+          "curName": "CloseButton",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04EZ0H0D5WC8FJKBRGBQE": {
+          "id": "evt_01KXG04EZ0H0D5WC8FJKBRGBQE",
+          "kind": "event",
+          "bakedName": "APPROVE",
+          "curName": "APPROVE",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
@@ -2745,102 +4191,11 @@
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
         },
-        "trt_01KY21K6QCNEAQZG0D3H1NG7MV": {
-          "id": "trt_01KY21K6QCNEAQZG0D3H1NG7MV",
-          "kind": "trait",
-          "bakedName": "LoadingText",
-          "curName": "LoadingText",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "trt_01KXG04EYQYT20ZWYKAD2EJAHM": {
-          "id": "trt_01KXG04EYQYT20ZWYKAD2EJAHM",
-          "kind": "trait",
-          "bakedName": "ApprovalGateReview",
-          "curName": "ApprovalGateReview",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "orb_01KXG04EYQYD1ZSZEZ5TG89KZ6": {
-          "id": "orb_01KXG04EYQYD1ZSZEZ5TG89KZ6",
-          "kind": "orbital",
-          "bakedName": "ApprovalGateOrbital",
-          "curName": "ApprovalGateOrbital",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "trt_01KY21K6QCRRFVK1BRAD774HXP": {
-          "id": "trt_01KY21K6QCRRFVK1BRAD774HXP",
-          "kind": "trait",
-          "bakedName": "CloseButton",
-          "curName": "CloseButton",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "ent_01KXG04EYQFWN6TM97JNWHHSF4": {
-          "id": "ent_01KXG04EYQFWN6TM97JNWHHSF4",
-          "kind": "entity",
-          "bakedName": "ApprovalRequest",
-          "curName": "ApprovalRequest",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KXG04EZ0HX0YV7MH4PXFQCM0": {
-          "id": "evt_01KXG04EZ0HX0YV7MH4PXFQCM0",
+        "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ": {
+          "id": "evt_01KXG04EZ09QDH2K4ZAGX0JZDQ",
           "kind": "event",
-          "bakedName": "ApprovalRequestReviewFailed",
-          "curName": "ApprovalRequestReviewFailed",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
-        },
-        "trt_01KY21K6QC64ZQCX4WH65V7SKA": {
-          "id": "trt_01KY21K6QC64ZQCX4WH65V7SKA",
-          "kind": "trait",
-          "bakedName": "ErrorAlert",
-          "curName": "ErrorAlert",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "trt_01KY21K6QC0P4NS69R6ATZPC18": {
-          "id": "trt_01KY21K6QC0P4NS69R6ATZPC18",
-          "kind": "trait",
-          "bakedName": "ApprovalDivider",
-          "curName": "ApprovalDivider",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KXG04EZ0ZFMGKFBB34B7PMEE": {
-          "id": "evt_01KXG04EZ0ZFMGKFBB34B7PMEE",
-          "kind": "event",
-          "bakedName": "DENY",
-          "curName": "DENY",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
-        },
-        "trt_01KY21K6QC1BZWD7V4FGS1KPB5": {
-          "id": "trt_01KY21K6QC1BZWD7V4FGS1KPB5",
-          "kind": "trait",
-          "bakedName": "ShieldCheckIcon",
-          "curName": "ShieldCheckIcon",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KXG04EZ0XXBA89NVB97J1NAM": {
-          "id": "evt_01KXG04EZ0XXBA89NVB97J1NAM",
-          "kind": "event",
-          "bakedName": "ApprovalRequestReviewed",
-          "curName": "ApprovalRequestReviewed",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
-        },
-        "evt_01KXG04EZ0H0D5WC8FJKBRGBQE": {
-          "id": "evt_01KXG04EZ0H0D5WC8FJKBRGBQE",
-          "kind": "event",
-          "bakedName": "APPROVE",
-          "curName": "APPROVE",
+          "bakedName": "ApprovalGranted",
+          "curName": "ApprovalGranted",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
@@ -2854,6 +4209,40 @@
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
         },
+        "evt_01M169J81G3QNKWFZEEWM8N90Z": {
+          "id": "evt_01M169J81G3QNKWFZEEWM8N90Z",
+          "kind": "event",
+          "bakedName": "APPROVAL_REPLAY_FAILED",
+          "curName": "APPROVAL_REPLAY_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
+        },
+        "trt_01KY21K6QC4NB1EVQJ94HWPN3B": {
+          "id": "trt_01KY21K6QC4NB1EVQJ94HWPN3B",
+          "kind": "trait",
+          "bakedName": "LoadingSpinner",
+          "curName": "LoadingSpinner",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M169J81G73K4NB9HRPVZA8HX": {
+          "id": "trt_01M169J81G73K4NB9HRPVZA8HX",
+          "kind": "trait",
+          "bakedName": "DenyReasonHint",
+          "curName": "DenyReasonHint",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_KX3VYYZEB8Q5M798PYZDJTQH41": {
+          "id": "evt_KX3VYYZEB8Q5M798PYZDJTQH41",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KY21K6QCNEAQZG0D3H1NG7MV"
+        },
         "pag_01KXG04EZ0C4RB9MKVPTXMVS32": {
           "id": "pag_01KXG04EZ0C4RB9MKVPTXMVS32",
           "kind": "page",
@@ -2862,11 +4251,20 @@
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01KXG04EZ0BNTY7ZWPWS7Z1AFH": {
-          "id": "evt_01KXG04EZ0BNTY7ZWPWS7Z1AFH",
+        "evt_HEZSHW23WC1Y6DKKPZD2NCM35D": {
+          "id": "evt_HEZSHW23WC1Y6DKKPZD2NCM35D",
           "kind": "event",
-          "bakedName": "ApprovalRequestLoaded",
-          "curName": "ApprovalRequestLoaded",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M169J81G73K4NB9HRPVZA8HX"
+        },
+        "evt_01KXG04EZ0HX0YV7MH4PXFQCM0": {
+          "id": "evt_01KXG04EZ0HX0YV7MH4PXFQCM0",
+          "kind": "event",
+          "bakedName": "ApprovalRequestReviewFailed",
+          "curName": "ApprovalRequestReviewFailed",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
@@ -2879,6 +4277,14 @@
           "renames": [],
           "owner": "workspace"
         },
+        "ent_01KXG04EYQFWN6TM97JNWHHSF4": {
+          "id": "ent_01KXG04EYQFWN6TM97JNWHHSF4",
+          "kind": "entity",
+          "bakedName": "ApprovalRequest",
+          "curName": "ApprovalRequest",
+          "renames": [],
+          "owner": "workspace"
+        },
         "trt_01KY21K6QCCHHN53WV6VF6NKE4": {
           "id": "trt_01KY21K6QCCHHN53WV6VF6NKE4",
           "kind": "trait",
@@ -2886,15 +4292,6 @@
           "curName": "ErrorSpinner",
           "renames": [],
           "owner": "workspace"
-        },
-        "evt_01KXG04EZ0MS01J775W2VPESMJ": {
-          "id": "evt_01KXG04EZ0MS01J775W2VPESMJ",
-          "kind": "event",
-          "bakedName": "CLOSE",
-          "curName": "CLOSE",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
         },
         "evt_01KXG04EZ0ZFHMHXT4NN21VK6N": {
           "id": "evt_01KXG04EZ0ZFHMHXT4NN21VK6N",
@@ -2905,17 +4302,92 @@
           "owner": "workspace",
           "parent": "trt_01KXG04EYQYT20ZWYKAD2EJAHM"
         },
-        "trt_01KY21K6QC4NB1EVQJ94HWPN3B": {
-          "id": "trt_01KY21K6QC4NB1EVQJ94HWPN3B",
+        "trt_01M169J81G3JQKD0N73BVPJPS4": {
+          "id": "trt_01M169J81G3JQKD0N73BVPJPS4",
           "kind": "trait",
-          "bakedName": "LoadingSpinner",
-          "curName": "LoadingSpinner",
+          "bakedName": "DenyReasonTitle",
+          "curName": "DenyReasonTitle",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_T3FENBEK1Z9GZQQRM9VH6AZ94T": {
+          "id": "evt_T3FENBEK1Z9GZQQRM9VH6AZ94T",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M169J81G3JQKD0N73BVPJPS4"
+        },
+        "trt_01KY21K6QC0P4NS69R6ATZPC18": {
+          "id": "trt_01KY21K6QC0P4NS69R6ATZPC18",
+          "kind": "trait",
+          "bakedName": "ApprovalDivider",
+          "curName": "ApprovalDivider",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KXG04EYQYT20ZWYKAD2EJAHM": {
+          "id": "trt_01KXG04EYQYT20ZWYKAD2EJAHM",
+          "kind": "trait",
+          "bakedName": "ApprovalGateReview",
+          "curName": "ApprovalGateReview",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KY21K6QC64ZQCX4WH65V7SKA": {
+          "id": "trt_01KY21K6QC64ZQCX4WH65V7SKA",
+          "kind": "trait",
+          "bakedName": "ErrorAlert",
+          "curName": "ErrorAlert",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_ES3W2F2D7H6KRHYARF5SRH2QQS": {
+          "id": "evt_ES3W2F2D7H6KRHYARF5SRH2QQS",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KY21K6QCCHHN53WV6VF6NKE4"
+        },
+        "trt_01KY21K6QCNEAQZG0D3H1NG7MV": {
+          "id": "trt_01KY21K6QCNEAQZG0D3H1NG7MV",
+          "kind": "trait",
+          "bakedName": "LoadingText",
+          "curName": "LoadingText",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01KY21K6QC1BZWD7V4FGS1KPB5": {
+          "id": "trt_01KY21K6QC1BZWD7V4FGS1KPB5",
+          "kind": "trait",
+          "bakedName": "ShieldCheckIcon",
+          "curName": "ShieldCheckIcon",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "orb_01KXG04EYQYD1ZSZEZ5TG89KZ6": {
+          "id": "orb_01KXG04EYQYD1ZSZEZ5TG89KZ6",
+          "kind": "orbital",
+          "bakedName": "ApprovalGateOrbital",
+          "curName": "ApprovalGateOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_9X5WASG6EB375QFY5YNN843MW4": {
+          "id": "evt_9X5WASG6EB375QFY5YNN843MW4",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KY21K6QCC5BFGZKJF8Q6HYMM"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-approval-gate \"1.0.1\"\n\"std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces them in a review queue with Approve / Deny / Reject actions, optionally requiring a written rejection reason or feedback comment. On approval emits ApprovalGranted; on denial emits ApprovalDenied. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created, and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.\"\norbital ApprovalGateOrbital {\n    uses Spinner from \"std/behaviors/ui-spinner\"\n    uses Typography from \"std/behaviors/ui-typography\"\n    uses Icon from \"std/behaviors/ui-icon\"\n    uses Button from \"std/behaviors/ui-button\"\n    uses Divider from \"std/behaviors/ui-divider\"\n    uses Alert from \"std/behaviors/ui-alert\"\n\n    type ApprovalRequestLoaded = Event { data : [ApprovalRequest] } \"Fired when the approval queue collection finishes loading\"\n\n    type ApprovalRequestLoadFailed = Event { error : string, code : string } \"Fired when the approval queue fails to load\"\n\n    type ApprovalRequestReviewed = Event { row : ApprovalRequest } \"Fired after a row's status persists (approve / deny)\"\n\n    type ApprovalRequestReviewFailed = Event { error : string, code : string } \"Fired when the persist fails\"\n\n    type ApprovalGranted = Event { requestId : string, payload : object } \"Re-emitted on approval; carries the held payload so the downstream listener can replay the gated action without a lookup.\"\n\n    type ApprovalDenied = Event { requestId : string } \"Emitted on denial; downstream listeners can log or notify.\"\n\n  entity ApprovalRequest [persistent: approval_requests] {\n    id : string!\n    gatedEvent : string @description \"The event that triggered the approval request.\" @synonyms \"trigger, event, source\" = \"\"\n    status : \"pending\" | \"approved\" | \"denied\" | \"escalated\" @description \"Current state of the approval process.\" @synonyms \"approval status, state, condition\" = pending\n    reviewer : string @description \"The user or system responsible for reviewing the request.\" @synonyms \"assignee, owner, approver, responsible party\" = \"\"\n    requestedAt : number @description \"Timestamp indicating when the approval request was initiated.\" @synonyms \"creation time, request date, submission time\" = 0\n    decidedAt : number @description \"Timestamp indicating when a decision was made on the request.\" @synonyms \"decision time, resolved at, completed at\" = 0\n    escalatedAt : number @description \"Timestamp indicating when the request was escalated.\" @synonyms \"escalation time, escalation timestamp, escalated time\" = 0\n    notes : string @description \"Free-form text providing additional context or details.\" @synonyms \"comments, remarks, explanation, details\" = \"\"\n    payload : object @description \"The held data of the gated action, replayed by the downstream listener when the request is granted.\" @synonyms \"request data, held payload, pending data, gated data\" = {}\n  }\n\n  trait LoadingSpinner = Spinner.traits.SpinnerRender -> ApprovalRequest {\n    config {}\n  }\n\n  trait ErrorSpinner = Spinner.traits.SpinnerRender -> ApprovalRequest {\n    config {\n      size: sm\n    }\n  }\n\n  trait LoadingText = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      color: muted\n      content: \"Loading approval queue…\"\n      variant: caption\n    }\n  }\n\n  trait ShieldCheckIcon = Icon.traits.IconRender -> ApprovalRequest {\n    config {\n      name: shield-check\n    }\n  }\n\n  trait ApprovalQueueTitle = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      content: \"Approval queue\"\n      variant: h3\n    }\n  }\n\n  trait CloseButton = Button.traits.ButtonRender -> ApprovalRequest {\n    config {\n      action: CLOSE\n      icon: x\n      label: Close\n      variant: ghost\n    }\n  }\n\n  trait ApprovalDivider = Divider.traits.DividerRender -> ApprovalRequest {\n    config {}\n  }\n\n  trait ErrorAlert = Alert.traits.AlertRender -> ApprovalRequest {\n    config {\n      message: ?error\n      variant: error\n    }\n  }\n\n  trait ApprovalGateReview -> @rebindable ApprovalRequest [interaction, collection, approval] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (fetch ApprovalRequest {\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestLoaded -> idle\n      ApprovalRequestLoadFailed -> idle\n      OPEN -> loading when @config.enabled\n        (fetch ApprovalRequest {\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n        (render-ui @config.reviewSlot {\n          align: center\n          children: [@trait.LoadingSpinner, @trait.LoadingText]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state loading {\n      ApprovalRequestLoaded -> reviewing\n        (render-ui @config.reviewSlot {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldCheckIcon, @trait.ApprovalQueueTitle]\n              direction: horizontal\n              gap: sm\n              type: stack\n            }, @trait.CloseButton]\n            direction: horizontal\n            gap: sm\n            justify: between\n            type: stack\n          }, @trait.ApprovalDivider, {\n            cols: 1\n            entity: ?data\n            fields: [{\n              label: Action\n              name: gatedEvent\n              variant: badge\n            }, {\n              label: Requested\n              name: requestedAt\n              variant: caption\n            }, {\n              label: Status\n              name: status\n              variant: badge\n            }]\n            gap: sm\n            itemActions: [{\n              event: APPROVE\n              icon: check\n              label: Approve\n              variant: primary\n            }, {\n              event: DENY\n              icon: x\n              label: Deny\n              variant: danger\n            }]\n            look: @config.tableLook\n            type: data-grid\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ApprovalRequestLoadFailed -> error\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorAlert]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    state reviewing {\n      APPROVE -> reviewing\n        (set @entity.id ?id)\n        (set @entity.status approved)\n        (set @entity.reviewer @user.id)\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (emit ApprovalGranted { payload: ?row.payload, requestId: ?id })\n      DENY -> reviewing\n        (set @entity.id ?id)\n        (set @entity.status denied)\n        (set @entity.reviewer @user.id)\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (emit ApprovalDenied { requestId: ?id })\n      ApprovalRequestReviewed -> loading\n        (fetch ApprovalRequest {\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestReviewFailed -> reviewing\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorAlert]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    state error {\n      OPEN -> loading\n        (fetch ApprovalRequest {\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorSpinner]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    emits {\n      APPROVE {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Signals that an approval request has been approved.\"\n        @synonyms \"accept, authorize, confirm, pass\"\n        @tier \"domain\"\n      DENY {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Signals that an approval request has been denied.\"\n        @synonyms \"reject, decline\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Dismisses the review queue overlay.\"\n        @synonyms \"dismiss, hide, cancel, done\"\n        @tier \"domain\"\n      ApprovalGranted -> external {\n        requestId : string\n        payload : object\n      }\n        @description \"Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay.\"\n        @synonyms \"approved, authorized, confirmed, validated\"\n        @tier \"domain\"\n      ApprovalDenied -> external {\n        requestId : string\n      }\n        @description \"Indicates an approval request has been denied.\"\n        @synonyms \"rejected, declined\"\n        @tier \"domain\"\n      ApprovalRequestLoaded {\n        data : [ApprovalRequest]\n      }\n        @description \"Indicates an approval request has been successfully loaded.\"\n        @synonyms \"loaded, fetched, retrieved\"\n        @tier \"internal\"\n      ApprovalRequestLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates failure to load an approval request.\"\n        @synonyms \"load error, failed load, request failure\"\n        @tier \"internal\"\n      ApprovalRequestReviewed {\n        row : ApprovalRequest\n      }\n        @description \"Signals that an approval request has been reviewed.\"\n        @synonyms \"reviewed, processed, examined\"\n        @tier \"internal\"\n      ApprovalRequestReviewFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load or process an approval request for review.\"\n        @synonyms \"load error, failed review, processing failure\"\n        @tier \"internal\"\n    }\n\n    listens {\n      CloseButton.CLOSE -> CLOSE\n      OPEN\n        @description \"Summons the review queue (host nav/affordance requests it).\"\n        @synonyms \"open, show, review, view queue, open approvals\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Dismisses the review queue overlay.\"\n        @synonyms \"dismiss, hide, cancel, done\"\n        @tier \"domain\"\n      APPROVE {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Indicates an approval action has been completed.\"\n        @synonyms \"accept, authorize, confirm, validate\"\n        @tier \"domain\"\n      DENY {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Indicates an approval request has been rejected.\"\n        @synonyms \"reject, decline, deny\"\n        @tier \"domain\"\n      ApprovalRequestLoaded {\n        data : [ApprovalRequest]\n      }\n        @description \"Indicates an approval request has been successfully retrieved.\"\n        @synonyms \"loaded, fetched, retrieved\"\n        @tier \"internal\"\n      ApprovalRequestLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates failure to load an approval request.\"\n        @synonyms \"load error, failed load, request failure\"\n        @tier \"internal\"\n      ApprovalRequestReviewed {\n        row : ApprovalRequest\n      }\n        @description \"Indicates an approval request has been reviewed.\"\n        @synonyms \"reviewed, checked, processed\"\n        @tier \"domain\"\n      ApprovalRequestReviewFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load or process an approval request.\"\n        @synonyms \"error, failure, problem, issue\"\n        @tier \"internal\"\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Require approval\"\n        @description \"Require sign-off before a record is finalized. Off by default.\"\n        @synonyms \"enable, turn on, enforce, require, activate, apply, switch on, approval, needs approval, sign-off, signed off, review before, gatekeeper, editor approval, publishing approval, draft approval, content review, requires approval, manager approval, supervisor approval, admin approval, before going live\"\n        @tier \"policy\"\n      approverRoles : [string] = []\n        @label \"Who can approve requests?\"\n        @description \"Roles eligible to approve. The host application enforces role-gating on the page.\"\n        @synonyms \"approver, reviewer, authorized roles, sign-off roles, who approves\"\n        @tier \"policy\"\n      threshold : number = 0\n        @label \"Auto-approve below this value\"\n        @description \"Requests whose gated value is below this threshold are auto-approved. v1.0 declarative only.\"\n        @synonyms \"auto approve amount, skip review under, threshold, limit\"\n        @tier \"policy\"\n      autoApproveBelowThreshold : boolean = true\n        @label \"Skip review queue for low-value requests?\"\n        @description \"When true, auto-approves requests below the threshold without queuing. v1.0 declarative only.\"\n        @synonyms \"auto approve, skip review, bypass queue, automatic approval\"\n        @tier \"policy\"\n      valueField : string = \"\"\n        @label \"Value field\"\n        @description \"Payload field name to compare against threshold (e.g. 'amount' on a RefundRequested event). v1.0 declarative only.\"\n        @tier \"internal\"\n      escalationHours : number = 0\n        @label \"Escalate after how many hours pending?\"\n        @description \"Hours a request can sit pending before escalating. v1.0 declarative only.\"\n        @synonyms \"escalation time, SLA hours, pending timeout, escalate after\"\n        @tier \"policy\"\n      escalationRoles : [string] = []\n        @label \"Who gets notified when a request escalates?\"\n        @description \"Roles notified on escalation (compose sibling std-notify-on-event to deliver).\"\n        @synonyms \"escalation contacts, escalate to, notify roles, escalated approver\"\n        @tier \"policy\"\n      tableLook : \"dense\" | \"spacious\" | \"striped\" | \"borderless\" | \"card-rows\" = dense\n        @label \"Review queue table style\"\n        @description \"Visual treatment for the approval-queue data table.\"\n        @synonyms \"table style, grid look, compact, spacious, striped\"\n        @tier \"presentation\"\n      reviewSlot : slot = modal\n        @label \"Review slot\"\n        @description \"UI slot the review queue renders into. Defaults to the modal overlay so the queue never seizes the host's main content; summoned via OPEN, cleared via CLOSE.\"\n        @tier \"internal\"\n    }\n  }\n\n  page \"/approvals/queue\" as ApprovalGateReviewPage -> ApprovalGateReview\n}"
+  "lolo": "app std-approval-gate \"1.1.0\"\n\"std-approval-gate — generic approval gate / approver workflow. Use when a user voices that an action must be reviewed, approved, signed off, or authorized by a privileged role before it proceeds (admin approval, supervisor sign-off, manager approval, gatekeeper review, editor approval, senior editor approval, reviewer approval, publishing approval, draft approval, content review, submit drafts then editors review and approve or reject, needs approval before going live, requires sign-off before publish). Persists ApprovalRequest rows + surfaces the PENDING ones in a review queue showing what is being approved and who asked, with Approve / Deny actions — Deny captures a written reason. approverRoles is ENFORCED by the review transitions themselves: an APPROVE/DENY from a viewer whose role is not listed does not fire. blockSelfApproval additionally stops a reviewer approving their own request (four-eyes) — DENY stays allowed as self-withdrawal. On approval emits ApprovalGranted; on denial emits ApprovalDenied (with the reason). Hosts that replay the gated action MUST route a failed replay back via APPROVAL_REPLAY_FAILED so the request reopens instead of being silently consumed. Compose onto any orbital whose action you want to gate: the target orbital emits an external event, an ApprovalRequest row is created (stamp subjectLabel/subjectId/requestedBy so reviewers see what they are judging), and downstream effects wait on ApprovalGranted. Differs from std-mod-queue, which is content-moderation-specific.\"\norbital ApprovalGateOrbital {\n    uses Spinner from \"std/behaviors/ui-spinner\"\n    uses Typography from \"std/behaviors/ui-typography\"\n    uses Icon from \"std/behaviors/ui-icon\"\n    uses Button from \"std/behaviors/ui-button\"\n    uses Divider from \"std/behaviors/ui-divider\"\n    uses Alert from \"std/behaviors/ui-alert\"\n\n    type ApprovalRequestLoaded = Event { data : [ApprovalRequest] } \"Fired when the approval queue collection finishes loading\"\n\n    type ApprovalRequestLoadFailed = Event { error : string, code : string } \"Fired when the approval queue fails to load\"\n\n    type ApprovalRequestReviewed = Event @entity \"Fired after a row's status persists (approve / deny)\"\n\n    type ApprovalRequestReviewFailed = Event { error : string, code : string } \"Fired when the persist fails\"\n\n    type ApprovalGranted = Event { requestId : string, payload : object } \"Re-emitted on approval; carries the held payload so the downstream listener can replay the gated action without a lookup.\"\n\n    type DenyCommit = { id : string!, notes : string }\n\n    type ApprovalDenied = Event { requestId : string, reason : string } \"Emitted on denial; carries the reviewer's written reason. Downstream listeners log, notify, or return the subject to its prior state.\"\n\n  ;; The queue is a shared review surface — every signed-in role may need to\n  ;; SEE what is pending about their own submissions; WHO may decide is the\n  ;; role guard on the APPROVE/DENY transitions (the FSM enforces it on the\n  ;; affordance and on any bus-delivered event alike). Entity-layer access\n  ;; predicates CANNOT live here: a generic atom declares no [identity]\n  ;; entity, and ORB_S_ACCESS_POLICY_REQUIRES_IDENTITY (correctly) rejects a\n  ;; @user-reading directive without a roster — while a host cannot add\n  ;; predicates to a foreign atom's entity. Ledgered\n  ;; (R-APPROVAL-REQUEST-ENTITY-LAYER-UNGATED); the guard layer above is the\n  ;; enforcement both paths carry today.\n  entity ApprovalRequest [persistent: approval_requests] {\n    @read none \"Shared review surface: submitters watch their requests, approvers work the queue; decision authority is enforced at the transitions, not by hiding rows.\"\n    id : string!\n    gatedEvent : string @description \"The event that triggered the approval request.\" @synonyms \"trigger, event, source\" = \"\"\n    subjectLabel : string @description \"Human title of the thing being approved (the article's headline, the page's title) — what the reviewer sees in the queue.\" @synonyms \"title, subject, what is being approved\" = \"\"\n    subjectId : string @description \"Id of the record being approved, for a queue row's View click-through to the subject's own surface.\" @synonyms \"record id, target id, article id, page id\" = \"\"\n    requestedBy : string @description \"User id of the submitter.\" @synonyms \"submitter, author, requester id\" = \"\"\n    requestedByName : string @description \"Display name of the submitter shown in the queue.\" @synonyms \"submitter name, requester, who asked\" = \"\"\n    status : \"pending\" | \"approved\" | \"denied\" | \"escalated\" @description \"Current state of the approval process.\" @synonyms \"approval status, state, condition\" = pending\n    reviewer : string @description \"The user or system responsible for reviewing the request.\" @synonyms \"assignee, owner, approver, responsible party\" = \"\"\n    requestedAt : number @description \"Timestamp indicating when the approval request was initiated.\" @synonyms \"creation time, request date, submission time\" = 0\n    decidedAt : number @description \"Timestamp indicating when a decision was made on the request.\" @synonyms \"decision time, resolved at, completed at\" = 0\n    escalatedAt : number @description \"Timestamp indicating when the request was escalated.\" @synonyms \"escalation time, escalation timestamp, escalated time\" = 0\n    notes : string @description \"The reviewer's written reason, captured by the deny step.\" @synonyms \"comments, remarks, explanation, reason, details\" = \"\"\n    payload : object @description \"The held data of the gated action, replayed by the downstream listener when the request is granted.\" @synonyms \"request data, held payload, pending data, gated data\" = {}\n  }\n\n  trait LoadingSpinner = Spinner.traits.SpinnerRender -> ApprovalRequest {\n    config {}\n  }\n\n  trait ErrorSpinner = Spinner.traits.SpinnerRender -> ApprovalRequest {\n    config {\n      size: sm\n    }\n  }\n\n  trait LoadingText = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      color: muted\n      content: \"Loading approval queue…\"\n      variant: caption\n    }\n  }\n\n  trait ShieldCheckIcon = Icon.traits.IconRender -> ApprovalRequest {\n    config {\n      name: shield-check\n    }\n  }\n\n  trait ApprovalQueueTitle = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      content: \"Approval queue\"\n      variant: h3\n    }\n  }\n\n  trait DenyReasonTitle = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      content: \"Deny request\"\n      variant: h3\n    }\n  }\n\n  trait DenyReasonHint = Typography.traits.TypographyRender -> ApprovalRequest {\n    config {\n      color: muted\n      content: \"Tell the submitter why — the reason is recorded on the request.\"\n      variant: caption\n    }\n  }\n\n  trait CloseButton = Button.traits.ButtonRender -> ApprovalRequest {\n    config {\n      action: CLOSE\n      icon: x\n      label: Close\n      variant: ghost\n    }\n  }\n\n  trait ApprovalDivider = Divider.traits.DividerRender -> ApprovalRequest {\n    config {}\n  }\n\n  trait ErrorAlert = Alert.traits.AlertRender -> ApprovalRequest {\n    config {\n      message: ?error\n      variant: error\n    }\n  }\n\n  trait ApprovalGateReview -> @rebindable ApprovalRequest [interaction, collection, approval] {\n    initial: idle\n\n    ;; Every queue fetch is scoped to PENDING rows: a decided row must leave\n    ;; the queue, or its still-live Approve action re-emits ApprovalGranted\n    ;; with the ORIGINAL payload and replays a stale edit over current state.\n    state idle {\n      INIT -> idle\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestLoaded -> idle\n      ApprovalRequestLoadFailed -> idle\n      ;; A replay failure can also arrive while the queue is closed.\n      APPROVAL_REPLAY_FAILED -> idle\n        (set @entity.id ?requestId)\n        (set @entity.status pending)\n        (set @entity.reviewer \"\")\n        (set @entity.decidedAt 0)\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (notify \"Approval could not be applied — the request was reopened.\" error)\n      OPEN -> loading when @config.enabled\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n        (render-ui @config.reviewSlot {\n          align: center\n          children: [@trait.LoadingSpinner, @trait.LoadingText]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state loading {\n      ApprovalRequestLoaded -> reviewing\n        (render-ui @config.reviewSlot {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldCheckIcon, @trait.ApprovalQueueTitle]\n              direction: horizontal\n              gap: sm\n              type: stack\n            }, @trait.CloseButton]\n            direction: horizontal\n            gap: sm\n            justify: between\n            type: stack\n          }, @trait.ApprovalDivider, {\n            cols: 1\n            entity: ?data\n            fields: [{\n              label: What\n              name: subjectLabel\n              variant: h4\n            }, {\n              label: Action\n              name: gatedEvent\n              variant: badge\n            }, {\n              label: \"Requested by\"\n              name: requestedByName\n              variant: caption\n            }, {\n              label: Requested\n              name: requestedAt\n              variant: caption\n            }]\n            gap: sm\n            itemActions: [{\n              event: OPEN_SUBJECT\n              icon: eye\n              label: View\n              variant: ghost\n            }, {\n              event: APPROVE\n              icon: check\n              label: Approve\n              variant: primary\n            }, {\n              event: DENY\n              icon: x\n              label: Deny\n              variant: danger\n            }]\n            look: @config.tableLook\n            type: data-grid\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ApprovalRequestLoadFailed -> error\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorAlert]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    state reviewing {\n      ;; The role guard IS the enforcement (both execution paths honor\n      ;; transition guards, for the button and for a bus-delivered event\n      ;; alike): empty approverRoles = ungated, otherwise the viewer's role\n      ;; must be listed or the decision does not fire. blockSelfApproval\n      ;; additionally blocks APPROVE when ?row.requestedBy is the viewer.\n      APPROVE -> reviewing when (and (or [\"=\", (array/len @config.approverRoles), 0] (array/includes @config.approverRoles @user.role)) (or [\"=\", @config.blockSelfApproval, false] [\"!=\", (object/get ?row requestedBy), @user.id]))\n        (set @entity.id ?id)\n        (set @entity.status approved)\n        (set @entity.reviewer @user.id)\n        (set @entity.decidedAt (time/now))\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (emit ApprovalGranted { payload: ?row.payload, requestId: ?id })\n      ;; Deny is a two-step: capture the written reason first, commit second.\n      DENY -> denying when (or [\"=\", (array/len @config.approverRoles), 0] (array/includes @config.approverRoles @user.role))\n        (set @entity.id ?id)\n        (set @entity.subjectLabel (str/default (object/get ?row subjectLabel) \"\"))\n        (render-ui @config.reviewSlot {\n          children: [{\n            align: center\n            children: [@trait.DenyReasonTitle, @trait.CloseButton]\n            direction: horizontal\n            gap: sm\n            justify: between\n            type: stack\n          }, @trait.DenyReasonHint, @trait.ApprovalDivider, {\n            cancelEvent: CANCEL_DENY\n            entity: { id: @entity.id }\n            fields: (notes)\n            mode: edit\n            submitEvent: CONFIRM_DENY\n            type: form-section\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      OPEN_SUBJECT -> reviewing\n      ApprovalRequestReviewed -> loading\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestReviewFailed -> reviewing\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorAlert]\n          type: stack\n        })\n      ;; A host reports the gated action could not be applied after approval\n      ;; (an entity-access denial, a failed write): reopen the request so it\n      ;; is never silently consumed.\n      APPROVAL_REPLAY_FAILED -> reviewing\n        (set @entity.id ?requestId)\n        (set @entity.status pending)\n        (set @entity.reviewer \"\")\n        (set @entity.decidedAt 0)\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (notify \"Approval could not be applied — the request was reopened.\" error)\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    state denying {\n      CONFIRM_DENY -> reviewing\n        (set @entity.id (object/get ?data id))\n        (set @entity.status denied)\n        (set @entity.reviewer @user.id)\n        (set @entity.decidedAt (time/now))\n        (set @entity.notes (str/default (object/get ?data notes) \"\"))\n        (persist update ApprovalRequest @entity {\n          emit: { failure: ApprovalRequestReviewFailed, success: ApprovalRequestReviewed }\n        })\n        (emit ApprovalDenied { requestId: (object/get ?data id), reason: (str/default (object/get ?data notes) \"\") })\n      CANCEL_DENY -> loading\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestReviewed -> loading\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n      ApprovalRequestReviewFailed -> denying\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorAlert]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    state error {\n      OPEN -> loading\n        (fetch ApprovalRequest {\n          filter: [\"=\", (object/get @entity status), \"pending\"]\n          emit: { failure: ApprovalRequestLoadFailed, success: ApprovalRequestLoaded }\n        })\n        (render-ui @config.reviewSlot {\n          children: [@trait.ErrorSpinner]\n          type: stack\n        })\n      CLOSE -> idle\n        (render-ui @config.reviewSlot null)\n    }\n\n    emits {\n      APPROVE {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Signals that an approval request has been approved.\"\n        @synonyms \"accept, authorize, confirm, pass\"\n        @tier \"domain\"\n      DENY {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Opens the deny step for a request; the decision commits with the written reason.\"\n        @synonyms \"reject, decline\"\n        @tier \"domain\"\n      OPEN_SUBJECT -> external {\n        id : string!\n        subjectId : string\n        subjectLabel : string\n      }\n        @description \"A reviewer clicked View on a queue row. Hosts route subjectId to the subject record's own surface so the reviewer can read what they are approving. Scalars only — the row stays in the queue.\"\n        @synonyms \"view subject, open record, inspect request, see the article\"\n        @tier \"domain\"\n      CONFIRM_DENY {\n        data : DenyCommit\n      }\n        @description \"The deny form committed; data carries the request id + the written reason.\"\n        @synonyms \"submit denial, confirm rejection\"\n        @tier \"internal\"\n      CANCEL_DENY\n        @description \"The deny form was dismissed without committing; the queue repaints.\"\n        @synonyms \"cancel denial, back to queue\"\n        @tier \"internal\"\n      CLOSE\n        @description \"Dismisses the review queue overlay.\"\n        @synonyms \"dismiss, hide, cancel, done\"\n        @tier \"domain\"\n      ApprovalGranted -> external {\n        requestId : string\n        payload : object\n      }\n        @description \"Signals that an approval process has been successfully completed; carries the held payload for the downstream listener to replay. Contract: if the replay fails (access denial, write failure), the host MUST emit APPROVAL_REPLAY_FAILED back so the request reopens.\"\n        @synonyms \"approved, authorized, confirmed, validated\"\n        @tier \"domain\"\n      ApprovalDenied -> external {\n        requestId : string\n        reason : string\n      }\n        @description \"Indicates an approval request has been denied, with the reviewer's written reason.\"\n        @synonyms \"rejected, declined\"\n        @tier \"domain\"\n      ApprovalRequestLoaded {\n        data : [ApprovalRequest]\n      }\n        @description \"Indicates an approval request has been successfully loaded.\"\n        @synonyms \"loaded, fetched, retrieved\"\n        @tier \"internal\"\n      ApprovalRequestLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates failure to load an approval request.\"\n        @synonyms \"load error, failed load, request failure\"\n        @tier \"internal\"\n      ApprovalRequestReviewed\n        @description \"Signals that an approval request has been reviewed.\"\n        @synonyms \"reviewed, processed, examined\"\n        @tier \"internal\"\n      ApprovalRequestReviewFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load or process an approval request for review.\"\n        @synonyms \"load error, failed review, processing failure\"\n        @tier \"internal\"\n    }\n\n    listens {\n      CloseButton.CLOSE -> CLOSE\n      OPEN\n        @description \"Summons the review queue (host nav/affordance requests it).\"\n        @synonyms \"open, show, review, view queue, open approvals\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Dismisses the review queue overlay.\"\n        @synonyms \"dismiss, hide, cancel, done\"\n        @tier \"domain\"\n      APPROVE {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Indicates an approval action has been completed.\"\n        @synonyms \"accept, authorize, confirm, validate\"\n        @tier \"domain\"\n      DENY {\n        id : string!\n        row : ApprovalRequest\n      }\n        @description \"Opens the deny step for a request.\"\n        @synonyms \"reject, decline, deny\"\n        @tier \"domain\"\n      OPEN_SUBJECT {\n        id : string!\n        subjectId : string\n        subjectLabel : string\n      }\n        @description \"A reviewer asked to view the subject of a queue row; the host routes the navigation.\"\n        @synonyms \"view subject, open record, inspect\"\n        @tier \"domain\"\n      CONFIRM_DENY {\n        data : DenyCommit\n      }\n        @description \"The deny form committed with the written reason.\"\n        @synonyms \"submit denial, confirm rejection\"\n        @tier \"internal\"\n      CANCEL_DENY\n        @description \"The deny form was dismissed; return to the queue.\"\n        @synonyms \"cancel denial, back\"\n        @tier \"internal\"\n      APPROVAL_REPLAY_FAILED {\n        requestId : string!\n        error : string\n      }\n        @description \"The host could not apply the granted action (access denial, failed write). The request reopens as pending so a decision is never silently lost.\"\n        @synonyms \"replay failed, apply failed, approval rollback\"\n        @tier \"domain\"\n      ApprovalRequestLoaded {\n        data : [ApprovalRequest]\n      }\n        @description \"Indicates an approval request has been successfully retrieved.\"\n        @synonyms \"loaded, fetched, retrieved\"\n        @tier \"internal\"\n      ApprovalRequestLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates failure to load an approval request.\"\n        @synonyms \"load error, failed load, request failure\"\n        @tier \"internal\"\n      ApprovalRequestReviewed\n        @description \"Indicates an approval request has been reviewed.\"\n        @synonyms \"reviewed, checked, processed\"\n        @tier \"domain\"\n      ApprovalRequestReviewFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load or process an approval request.\"\n        @synonyms \"error, failure, problem, issue\"\n        @tier \"internal\"\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Require approval\"\n        @description \"Require sign-off before a record is finalized. Off by default.\"\n        @synonyms \"enable, turn on, enforce, require, activate, apply, switch on, approval, needs approval, sign-off, signed off, review before, gatekeeper, editor approval, publishing approval, draft approval, content review, requires approval, manager approval, supervisor approval, admin approval, before going live\"\n        @tier \"policy\"\n      approverRoles : [string] = []\n        @label \"Who can approve requests?\"\n        @description \"Roles eligible to decide. ENFORCED by the APPROVE/DENY transition guards: a viewer whose @user.role is not listed cannot fire a decision, from the button or from the bus. Empty = every signed-in viewer may decide (ungated).\"\n        @synonyms \"approver, reviewer, authorized roles, sign-off roles, who approves\"\n        @tier \"policy\"\n      blockSelfApproval : boolean = false\n        @label \"Block approving your own requests?\"\n        @description \"When on, a reviewer cannot APPROVE a request they submitted themselves (requestedBy = the viewer's id) — enforced by the APPROVE transition guard, from the button or from the bus. Requires hosts to stamp requestedBy at request creation. DENY stays allowed on your own request (denying your own request withdraws it). Off by default.\"\n        @synonyms \"self approval, self-approval, four eyes, four-eyes, separation of duties, cannot approve own, no self sign-off, dual control\"\n        @tier \"policy\"\n      threshold : number = 0\n        @label \"Auto-approve below this value\"\n        @description \"Requests whose gated value is below this threshold are auto-approved. v1.0 declarative only.\"\n        @synonyms \"auto approve amount, skip review under, threshold, limit\"\n        @tier \"policy\"\n      autoApproveBelowThreshold : boolean = true\n        @label \"Skip review queue for low-value requests?\"\n        @description \"When true, auto-approves requests below the threshold without queuing. v1.0 declarative only.\"\n        @synonyms \"auto approve, skip review, bypass queue, automatic approval\"\n        @tier \"policy\"\n      valueField : string = \"\"\n        @label \"Value field\"\n        @description \"Payload field name to compare against threshold (e.g. 'amount' on a RefundRequested event). v1.0 declarative only.\"\n        @tier \"internal\"\n      escalationHours : number = 0\n        @label \"Escalate after how many hours pending?\"\n        @description \"Hours a request can sit pending before escalating. v1.0 declarative only.\"\n        @synonyms \"escalation time, SLA hours, pending timeout, escalate after\"\n        @tier \"policy\"\n      escalationRoles : [string] = []\n        @label \"Who gets notified when a request escalates?\"\n        @description \"Roles notified on escalation (compose sibling std-notify-on-event to deliver).\"\n        @synonyms \"escalation contacts, escalate to, notify roles, escalated approver\"\n        @tier \"policy\"\n      tableLook : \"dense\" | \"spacious\" | \"striped\" | \"borderless\" | \"card-rows\" = dense\n        @label \"Review queue table style\"\n        @description \"Visual treatment for the approval-queue data table.\"\n        @synonyms \"table style, grid look, compact, spacious, striped\"\n        @tier \"presentation\"\n      reviewSlot : slot = modal\n        @label \"Review slot\"\n        @description \"UI slot the review queue renders into. Defaults to the modal overlay so the queue never seizes the host's main content; summoned via OPEN, cleared via CLOSE.\"\n        @tier \"internal\"\n    }\n  }\n\n  page \"/approvals/queue\" as ApprovalGateReviewPage -> ApprovalGateReview\n}\n"
 }
