@@ -14,8 +14,7 @@
         "entity": {
           "name": "CooldownRecord",
           "id": "ent_01KXG04F8TJJ9ASFRDGES09D5K",
-          "collection": "cooldown_states",
-          "persistence": "persistent",
+          "persistence": "runtime",
           "fields": [
             {
               "name": "id",
@@ -240,6 +239,23 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
+        "pag_01KXG04F8TMZ620DXEPBMX5J6Z": {
+          "id": "pag_01KXG04F8TMZ620DXEPBMX5J6Z",
+          "kind": "page",
+          "bakedName": "CooldownPage",
+          "curName": "CooldownPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KXG04F8TJP6CWK74T4E3DJV6": {
+          "id": "evt_01KXG04F8TJP6CWK74T4E3DJV6",
+          "kind": "event",
+          "bakedName": "START",
+          "curName": "START",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04F8TPNA9G1FTCT8Z1308"
+        },
         "evt_01KXG04F8THBCYE2J41N8B1K8T": {
           "id": "evt_01KXG04F8THBCYE2J41N8B1K8T",
           "kind": "event",
@@ -257,27 +273,19 @@
           "renames": [],
           "owner": "workspace"
         },
-        "ent_01KXG04F8TJJ9ASFRDGES09D5K": {
-          "id": "ent_01KXG04F8TJJ9ASFRDGES09D5K",
-          "kind": "entity",
-          "bakedName": "CooldownRecord",
-          "curName": "CooldownRecord",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "pag_01KXG04F8TMZ620DXEPBMX5J6Z": {
-          "id": "pag_01KXG04F8TMZ620DXEPBMX5J6Z",
-          "kind": "page",
-          "bakedName": "CooldownPage",
-          "curName": "CooldownPage",
-          "renames": [],
-          "owner": "workspace"
-        },
         "trt_01KXG04F8TPNA9G1FTCT8Z1308": {
           "id": "trt_01KXG04F8TPNA9G1FTCT8Z1308",
           "kind": "trait",
           "bakedName": "Cooldown",
           "curName": "Cooldown",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KXG04F8TJJ9ASFRDGES09D5K": {
+          "id": "ent_01KXG04F8TJJ9ASFRDGES09D5K",
+          "kind": "entity",
+          "bakedName": "CooldownRecord",
+          "curName": "CooldownRecord",
           "renames": [],
           "owner": "workspace"
         },
@@ -289,19 +297,10 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04F8TPNA9G1FTCT8Z1308"
-        },
-        "evt_01KXG04F8TJP6CWK74T4E3DJV6": {
-          "id": "evt_01KXG04F8TJP6CWK74T4E3DJV6",
-          "kind": "event",
-          "bakedName": "START",
-          "curName": "START",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04F8TPNA9G1FTCT8Z1308"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-cooldown \"1.0.0\"\n\"std-cooldown — ability/action cooldown primitive; START begins the countdown, READY fires when it expires.\"\norbital CooldownOrbital {\n    type CooldownReady = Event { entityId : string } \"Emitted when the cooldown expires and the action is available again.\"\n\n  entity CooldownRecord [persistent: cooldown_states] {\n    id : string!\n    remainingMs : number @description \"Milliseconds remaining on the active cooldown.\" @synonyms \"time left, remaining, countdown, ms left\" = 0\n    active : boolean @description \"Whether the cooldown is currently counting down.\" @synonyms \"cooling, on cooldown, busy, in progress\" = false\n  }\n\n  trait Cooldown -> CooldownRecord [game-core, instance] {\n    initial: ready\n\n    state ready {\n      START -> cooling\n        (set @entity.remainingMs @config.defaultDurationMs)\n        (set @entity.active true)\n    }\n\n    state cooling {\n      EXPIRE -> ready\n        (set @entity.active false)\n        (set @entity.remainingMs 0)\n        (emit CooldownReady { entityId: @entity.id })\n    }\n\n    emits {\n      CooldownReady -> external {\n        entityId : string\n      }\n        @description \"Fired when the cooldown expires; wire to re-enable the ability or action.\"\n        @synonyms \"ready, cooldown-done, available, recharged, action-ready\"\n        @tier \"domain\"\n\n      EXPIRE { }\n        @description \"Internal: fired by the expiry tick to drive the cooling→ready transition.\"\n    }\n\n    listens {\n      START { durationMs : number }\n      EXPIRE { }\n    }\n\n    ticks {\n      cooldownTick every 100ms\n        when (== @entity.active true)\n        (set @entity.remainingMs (math/max 0 (- @entity.remainingMs 100)))\n\n      expiryCheck every 100ms\n        when (and (== @entity.active true) (<= @entity.remainingMs 0))\n        (emit EXPIRE { })\n    }\n\n    config {\n      defaultDurationMs : number = 3000\n        @label \"Default cooldown duration (ms)\"\n        @description \"Milliseconds the cooldown runs when START is received without an explicit durationMs payload.\"\n        @synonyms \"cooldown time, duration, delay, recharge time, wait time\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/game/cooldown\" as CooldownPage -> Cooldown\n}\n"
+  "lolo": "app std-cooldown \"1.0.0\"\n\"std-cooldown — ability/action cooldown primitive; START begins the countdown, READY fires when it expires.\"\norbital CooldownOrbital {\n    type CooldownReady = Event { entityId : string } \"Emitted when the cooldown expires and the action is available again.\"\n\n  entity CooldownRecord [runtime] {\n    id : string!\n    remainingMs : number @description \"Milliseconds remaining on the active cooldown.\" @synonyms \"time left, remaining, countdown, ms left\" = 0\n    active : boolean @description \"Whether the cooldown is currently counting down.\" @synonyms \"cooling, on cooldown, busy, in progress\" = false\n  }\n\n  trait Cooldown -> CooldownRecord [game-core, instance] {\n    initial: ready\n\n    state ready {\n      START -> cooling\n        (set @entity.remainingMs @config.defaultDurationMs)\n        (set @entity.active true)\n    }\n\n    state cooling {\n      EXPIRE -> ready\n        (set @entity.active false)\n        (set @entity.remainingMs 0)\n        (emit CooldownReady { entityId: @entity.id })\n    }\n\n    emits {\n      CooldownReady -> external {\n        entityId : string\n      }\n        @description \"Fired when the cooldown expires; wire to re-enable the ability or action.\"\n        @synonyms \"ready, cooldown-done, available, recharged, action-ready\"\n        @tier \"domain\"\n\n      EXPIRE { }\n        @description \"Internal: fired by the expiry tick to drive the cooling→ready transition.\"\n    }\n\n    listens {\n      START { durationMs : number }\n      EXPIRE { }\n    }\n\n    ticks {\n      cooldownTick every 100ms\n        when (== @entity.active true)\n        (set @entity.remainingMs (math/max 0 (- @entity.remainingMs 100)))\n\n      expiryCheck every 100ms\n        when (and (== @entity.active true) (<= @entity.remainingMs 0))\n        (emit EXPIRE { })\n    }\n\n    config {\n      defaultDurationMs : number = 3000\n        @label \"Default cooldown duration (ms)\"\n        @description \"Milliseconds the cooldown runs when START is received without an explicit durationMs payload.\"\n        @synonyms \"cooldown time, duration, delay, recharge time, wait time\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/game/cooldown\" as CooldownPage -> Cooldown\n}\n"
 }

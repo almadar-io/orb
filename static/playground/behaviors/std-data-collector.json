@@ -21,7 +21,7 @@
               "type": "array",
               "default": [],
               "items": {
-                "type": "string"
+                "type": "opaque"
               },
               "description": "Data points accumulated in the current cycle."
             },
@@ -71,7 +71,7 @@
                 "payloadSchema": [
                   {
                     "name": "buffer",
-                    "type": "[any]",
+                    "type": "[opaque]",
                     "required": true
                   },
                   {
@@ -102,7 +102,7 @@
                   "payloadSchema": [
                     {
                       "name": "point",
-                      "type": "any",
+                      "type": "opaque",
                       "required": true
                     }
                   ]
@@ -116,7 +116,7 @@
                   "payloadSchema": [
                     {
                       "name": "buffer",
-                      "type": "[any]",
+                      "type": "[opaque]",
                       "required": true
                     },
                     {
@@ -265,14 +265,13 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "evt_01KYE96EQ2W7TXBK25RMPEHPSN": {
-          "id": "evt_01KYE96EQ2W7TXBK25RMPEHPSN",
-          "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
+        "orb_01KYE96EQ2ZHXP0FZB846M3HKV": {
+          "id": "orb_01KYE96EQ2ZHXP0FZB846M3HKV",
+          "kind": "orbital",
+          "bakedName": "MlDataCollectorOrbital",
+          "curName": "MlDataCollectorOrbital",
           "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
+          "owner": "workspace"
         },
         "evt_01KYE96EQ2J97DR6K32J75A655": {
           "id": "evt_01KYE96EQ2J97DR6K32J75A655",
@@ -283,28 +282,20 @@
           "owner": "workspace",
           "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
         },
-        "evt_01KYE96EQ244DCAVTH74M166Y2": {
-          "id": "evt_01KYE96EQ244DCAVTH74M166Y2",
+        "evt_01KYE96EQ2W7TXBK25RMPEHPSN": {
+          "id": "evt_01KYE96EQ2W7TXBK25RMPEHPSN",
           "kind": "event",
-          "bakedName": "BUFFER_READY",
-          "curName": "BUFFER_READY",
+          "bakedName": "INIT",
+          "curName": "INIT",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
         },
-        "ent_01KYE96EQ2HD6QXS53RKDX1V3Z": {
-          "id": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z",
-          "kind": "entity",
-          "bakedName": "DataBuffer",
-          "curName": "DataBuffer",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "orb_01KYE96EQ2ZHXP0FZB846M3HKV": {
-          "id": "orb_01KYE96EQ2ZHXP0FZB846M3HKV",
-          "kind": "orbital",
-          "bakedName": "MlDataCollectorOrbital",
-          "curName": "MlDataCollectorOrbital",
+        "trt_01KYE96EQ272HPSFDTQ3YCB1SG": {
+          "id": "trt_01KYE96EQ272HPSFDTQ3YCB1SG",
+          "kind": "trait",
+          "bakedName": "DataCollectorRun",
+          "curName": "DataCollectorRun",
           "renames": [],
           "owner": "workspace"
         },
@@ -316,17 +307,26 @@
           "renames": [],
           "owner": "workspace"
         },
-        "trt_01KYE96EQ272HPSFDTQ3YCB1SG": {
-          "id": "trt_01KYE96EQ272HPSFDTQ3YCB1SG",
-          "kind": "trait",
-          "bakedName": "DataCollectorRun",
-          "curName": "DataCollectorRun",
+        "ent_01KYE96EQ2HD6QXS53RKDX1V3Z": {
+          "id": "ent_01KYE96EQ2HD6QXS53RKDX1V3Z",
+          "kind": "entity",
+          "bakedName": "DataBuffer",
+          "curName": "DataBuffer",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01KYE96EQ244DCAVTH74M166Y2": {
+          "id": "evt_01KYE96EQ244DCAVTH74M166Y2",
+          "kind": "event",
+          "bakedName": "BUFFER_READY",
+          "curName": "BUFFER_READY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYE96EQ272HPSFDTQ3YCB1SG"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-data-collector \"1.0.0\"\n\"std-data-collector — pure buffer-accumulation atom, parameterized for any ML domain. Collects data points into a buffer and fires BUFFER_READY with the full accumulated buffer once it reaches config.bufferSize, then resets for the next cycle. No ML compute, no model call — state machine + array operators only. Use ahead of a training loop, a batch inference call, or any downstream rung that needs a fixed-size window of accumulated observations.\"\norbital MlDataCollectorOrbital {\n\n  entity DataBuffer [runtime] {\n    buffer : [any] @description \"Data points accumulated in the current cycle.\" = []\n    count : int @description \"Number of points currently in the buffer.\" = 0\n    status : \"idle\" | \"collecting\" = idle\n  }\n\n  trait DataCollectorRun -> @rebindable DataBuffer [lifecycle, instance] {\n    initial: collecting\n\n    state collecting {\n      INIT -> collecting\n        (set @entity.buffer [])\n        (set @entity.count 0)\n        (set @entity.status idle)\n\n      COLLECT -> collecting\n        (let ((newBuffer (array/append @entity.buffer ?point))\n              (newCount (+ @entity.count 1)))\n          (if (>= @newCount @config.bufferSize)\n              (do\n                (set @entity.buffer [])\n                (set @entity.count 0)\n                (set @entity.status idle)\n                (emit BUFFER_READY { buffer: @newBuffer, count: @newCount }))\n              (do\n                (set @entity.buffer @newBuffer)\n                (set @entity.count @newCount)\n                (set @entity.status collecting))))\n    }\n\n    emits {\n      BUFFER_READY -> external { buffer : [any]!, count : int! }\n        @description \"Fired when the buffer reaches config.bufferSize; carries the full accumulated buffer and its count, then the buffer resets for the next cycle.\"\n        @tier \"primary\"\n    }\n\n    listens {\n      COLLECT {\n        point : any!\n      }\n    }\n\n    config {\n      bufferSize : int = 100\n        @label \"Buffer size\"\n        @description \"Number of data points collected before BUFFER_READY fires.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/ml-data-collector\" as MlDataCollectorPage -> DataCollectorRun\n}\n"
+  "lolo": "app std-data-collector \"1.0.0\"\n\"std-data-collector — pure buffer-accumulation atom, parameterized for any ML domain. Collects data points into a buffer and fires BUFFER_READY with the full accumulated buffer once it reaches config.bufferSize, then resets for the next cycle. No ML compute, no model call — state machine + array operators only. Use ahead of a training loop, a batch inference call, or any downstream rung that needs a fixed-size window of accumulated observations.\"\norbital MlDataCollectorOrbital {\n\n  entity DataBuffer [runtime] {\n    buffer : [opaque] @description \"Data points accumulated in the current cycle.\" = []\n    count : int @description \"Number of points currently in the buffer.\" = 0\n    status : \"idle\" | \"collecting\" = idle\n  }\n\n  trait DataCollectorRun -> @rebindable DataBuffer [lifecycle, instance] {\n    initial: collecting\n\n    state collecting {\n      INIT -> collecting\n        (set @entity.buffer [])\n        (set @entity.count 0)\n        (set @entity.status idle)\n\n      COLLECT -> collecting\n        (let ((newBuffer (array/append @entity.buffer ?point))\n              (newCount (+ @entity.count 1)))\n          (if (>= @newCount @config.bufferSize)\n              (do\n                (set @entity.buffer [])\n                (set @entity.count 0)\n                (set @entity.status idle)\n                (emit BUFFER_READY { buffer: @newBuffer, count: @newCount }))\n              (do\n                (set @entity.buffer @newBuffer)\n                (set @entity.count @newCount)\n                (set @entity.status collecting))))\n    }\n\n    emits {\n      BUFFER_READY -> external { buffer : [opaque]!, count : int! }\n        @description \"Fired when the buffer reaches config.bufferSize; carries the full accumulated buffer and its count, then the buffer resets for the next cycle.\"\n        @tier \"primary\"\n    }\n\n    listens {\n      COLLECT {\n        point : opaque!\n      }\n    }\n\n    config {\n      bufferSize : int = 100\n        @label \"Buffer size\"\n        @description \"Number of data points collected before BUFFER_READY fires.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/ml-data-collector\" as MlDataCollectorPage -> DataCollectorRun\n}\n"
 }

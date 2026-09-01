@@ -18,7 +18,7 @@
           "fields": [
             {
               "name": "input",
-              "type": "object",
+              "type": "opaque",
               "default": {}
             },
             {
@@ -39,7 +39,102 @@
               "type": "array",
               "default": [],
               "items": {
-                "type": "object"
+                "type": "union",
+                "values": [
+                  "ShapeMismatchViolation",
+                  "RangeViolationDetail",
+                  "NotATensorViolation"
+                ],
+                "properties": {
+                  "ShapeMismatchViolation": {
+                    "name": "ShapeMismatchViolation",
+                    "type": "object",
+                    "properties": {
+                      "expected": {
+                        "name": "expected",
+                        "type": "array",
+                        "required": true,
+                        "items": {
+                          "type": "number"
+                        }
+                      },
+                      "type": {
+                        "name": "type",
+                        "type": "string",
+                        "required": false,
+                        "values": [
+                          "shape_mismatch"
+                        ]
+                      },
+                      "actual": {
+                        "name": "actual",
+                        "type": "array",
+                        "required": true,
+                        "items": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  },
+                  "RangeViolationDetail": {
+                    "name": "RangeViolationDetail",
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "name": "type",
+                        "type": "string",
+                        "required": false,
+                        "values": [
+                          "range_violation"
+                        ]
+                      },
+                      "actualMax": {
+                        "name": "actualMax",
+                        "type": "number",
+                        "required": true
+                      },
+                      "max": {
+                        "name": "max",
+                        "type": "number",
+                        "required": true
+                      },
+                      "min": {
+                        "name": "min",
+                        "type": "number",
+                        "required": true
+                      },
+                      "actualMin": {
+                        "name": "actualMin",
+                        "type": "number",
+                        "required": true
+                      },
+                      "dim": {
+                        "name": "dim",
+                        "type": "number",
+                        "required": true
+                      }
+                    }
+                  },
+                  "NotATensorViolation": {
+                    "name": "NotATensorViolation",
+                    "type": "object",
+                    "properties": {
+                      "actualType": {
+                        "name": "actualType",
+                        "type": "string",
+                        "required": true
+                      },
+                      "type": {
+                        "name": "type",
+                        "type": "string",
+                        "required": false,
+                        "values": [
+                          "not_a_tensor"
+                        ]
+                      }
+                    }
+                  }
+                }
               }
             },
             {
@@ -49,7 +144,7 @@
             },
             {
               "name": "request",
-              "type": "object",
+              "type": "opaque",
               "default": {}
             },
             {
@@ -125,7 +220,7 @@
                   },
                   {
                     "name": "violations",
-                    "type": "[object]",
+                    "type": "[ContractViolation]",
                     "required": true
                   }
                 ]
@@ -144,12 +239,12 @@
                   },
                   {
                     "name": "violations",
-                    "type": "[object]",
+                    "type": "[ContractViolation]",
                     "required": true
                   },
                   {
                     "name": "request",
-                    "type": "object"
+                    "type": "opaque"
                   }
                 ]
               }
@@ -180,12 +275,12 @@
                   "payloadSchema": [
                     {
                       "name": "input",
-                      "type": "object",
+                      "type": "opaque",
                       "required": true
                     },
                     {
                       "name": "request",
-                      "type": "object"
+                      "type": "opaque"
                     }
                   ]
                 },
@@ -246,7 +341,7 @@
                     },
                     {
                       "name": "violations",
-                      "type": "[object]",
+                      "type": "[ContractViolation]",
                       "required": true
                     }
                   ]
@@ -265,12 +360,12 @@
                     },
                     {
                       "name": "violations",
-                      "type": "[object]",
+                      "type": "[ContractViolation]",
                       "required": true
                     },
                     {
                       "name": "request",
-                      "type": "object"
+                      "type": "opaque"
                     }
                   ]
                 }
@@ -350,8 +445,8 @@
                       },
                       {
                         "emit": {
-                          "failure": "INFER_CALL_FAILED",
-                          "success": "INFERRED_RAW"
+                          "success": "INFERRED_RAW",
+                          "failure": "INFER_CALL_FAILED"
                         }
                       }
                     ]
@@ -460,8 +555,8 @@
                               "emit",
                               "INFER_ABSTAINED",
                               {
-                                "request": "@entity.request",
                                 "reason": "low confidence",
+                                "request": "@entity.request",
                                 "violations": "@entity.violations"
                               }
                             ]
@@ -494,9 +589,9 @@
                             "emit",
                             "INFER_ABSTAINED",
                             {
-                              "violations": "@entity.violations",
+                              "reason": "contract violation",
                               "request": "@entity.request",
-                              "reason": "contract violation"
+                              "violations": "@entity.violations"
                             }
                           ]
                         ]
@@ -539,9 +634,9 @@
                       "emit",
                       "INFER_ABSTAINED",
                       {
-                        "reason": "unavailable",
+                        "request": "@entity.request",
                         "violations": "@entity.violations",
-                        "request": "@entity.request"
+                        "reason": "unavailable"
                       }
                     ]
                   ]
@@ -605,20 +700,6 @@
               ]
             },
             "config": {
-              "confidenceFloor": {
-                "type": "float",
-                "default": 0.7,
-                "label": "Confidence floor",
-                "description": "Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence",
-                "tier": "policy"
-              },
-              "model": {
-                "type": "string",
-                "default": "",
-                "label": "Model reference",
-                "description": "hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action",
-                "tier": "infra"
-              },
               "outputContract": {
                 "type": "OutputContract",
                 "default": {
@@ -628,14 +709,6 @@
                 "description": "Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained",
                 "tier": "domain",
                 "properties": {
-                  "shape": {
-                    "name": "shape",
-                    "type": "array",
-                    "required": false,
-                    "items": {
-                      "type": "number"
-                    }
-                  },
                   "ranges": {
                     "name": "ranges",
                     "type": "object",
@@ -655,8 +728,30 @@
                         }
                       }
                     }
+                  },
+                  "shape": {
+                    "name": "shape",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                      "type": "number"
+                    }
                   }
                 }
+              },
+              "model": {
+                "type": "string",
+                "default": "",
+                "label": "Model reference",
+                "description": "hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action",
+                "tier": "infra"
+              },
+              "confidenceFloor": {
+                "type": "float",
+                "default": 0.7,
+                "label": "Confidence floor",
+                "description": "Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence",
+                "tier": "policy"
               }
             },
             "scope": "instance"
@@ -681,15 +776,6 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "evt_01KYBPCRRY49ZNB6TD5ZPAY80T": {
-          "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
-          "kind": "event",
-          "bakedName": "INFERRED_RAW",
-          "curName": "INFERRED_RAW",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
         "evt_01KYBPCRRY1764RNVM07X1HN1W": {
           "id": "evt_01KYBPCRRY1764RNVM07X1HN1W",
           "kind": "event",
@@ -706,57 +792,6 @@
           "curName": "Inference",
           "renames": [],
           "owner": "workspace"
-        },
-        "evt_01KYBPCRRY466WKYEHEYJJD4NJ": {
-          "id": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
-          "kind": "event",
-          "bakedName": "INFER_ABSTAINED",
-          "curName": "INFER_ABSTAINED",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
-        "evt_01KYBPCRRYVWRB6GXDRKPNX561": {
-          "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
-          "kind": "event",
-          "bakedName": "INFER",
-          "curName": "INFER",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
-        "orb_01KYBPCRRYEW3P2BD0V50BY174": {
-          "id": "orb_01KYBPCRRYEW3P2BD0V50BY174",
-          "kind": "orbital",
-          "bakedName": "MlInferOrbital",
-          "curName": "MlInferOrbital",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "pag_01KYBPCRRY18XQ2SBPNFRTP0SN": {
-          "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
-          "kind": "page",
-          "bakedName": "MlInferPage",
-          "curName": "MlInferPage",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX": {
-          "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
-          "kind": "trait",
-          "bakedName": "InferenceRun",
-          "curName": "InferenceRun",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KYBPCRRY2FMY57YT8MYD3NWX": {
-          "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
-          "kind": "event",
-          "bakedName": "INFER_CALL_FAILED",
-          "curName": "INFER_CALL_FAILED",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
         },
         "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49": {
           "id": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
@@ -775,10 +810,70 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRY2FMY57YT8MYD3NWX": {
+          "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
+          "kind": "event",
+          "bakedName": "INFER_CALL_FAILED",
+          "curName": "INFER_CALL_FAILED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRY466WKYEHEYJJD4NJ": {
+          "id": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
+          "kind": "event",
+          "bakedName": "INFER_ABSTAINED",
+          "curName": "INFER_ABSTAINED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "orb_01KYBPCRRYEW3P2BD0V50BY174": {
+          "id": "orb_01KYBPCRRYEW3P2BD0V50BY174",
+          "kind": "orbital",
+          "bakedName": "MlInferOrbital",
+          "curName": "MlInferOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRYVWRB6GXDRKPNX561": {
+          "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
+          "kind": "event",
+          "bakedName": "INFER",
+          "curName": "INFER",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX": {
+          "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
+          "kind": "trait",
+          "bakedName": "InferenceRun",
+          "curName": "InferenceRun",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRY49ZNB6TD5ZPAY80T": {
+          "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+          "kind": "event",
+          "bakedName": "INFERRED_RAW",
+          "curName": "INFERRED_RAW",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "pag_01KYBPCRRY18XQ2SBPNFRTP0SN": {
+          "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
+          "kind": "page",
+          "bakedName": "MlInferPage",
+          "curName": "MlInferPage",
+          "renames": [],
+          "owner": "workspace"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-ml-infer \"1.0.0\"\n\"std-ml-infer — the learned rung (R4) of the intelligence ladder, and the seam between a .lolo circuit and a trained model deployed on masar (or off-the-shelf HuggingFace weights) reached through the ml service. Sends the caller-supplied input straight to call-service ml infer, then guards the raw output before it ever becomes an effect: validates it against the declared outputContract, clamps it into range, and only then decides. Emits INFERRED when the output satisfies the contract and confidence clears confidenceFloor — carrying the clamped output, confidence, and an empty violations list. Otherwise abstains with INFER_ABSTAINED, whose reason is one of: low confidence (contract satisfied but below floor, violations empty), contract violation (violations populated via contract/violations for diagnosis), or unavailable (the service call itself failed — a masar cold start or a down endpoint, never surfaced as a user-visible error). Use when a numeric or tensor-shaped model answer needs a licensed guard before becoming a decision — classification scores, regressions, embedding-derived predictions — and the next rung (R5 generative) should take over on any abstain.\"\n\ntype Range = { min: float!, max: float! }\ntype OutputContract = { shape: [int], ranges: Map string Range }\n\norbital MlInferOrbital {\n\n  entity Inference [runtime] {\n    input      : object   = {}\n    output     : [float]  = []\n    confidence : float    = 0\n    violations : [object] = []\n    reason     : string   = \"\"\n    request    : object   = {}\n    status     : \"idle\" | \"inferring\" | \"resolved\" = idle\n  }\n\n  trait InferenceRun -> Inference [lifecycle, instance] {\n    initial: idle\n\n    config {\n      model : string = \"\"\n        @label \"Model reference\"\n        @description \"hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action\"\n        @tier \"infra\"\n      confidenceFloor : float = 0.7\n        @label \"Confidence floor\"\n        @description \"Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence\"\n        @tier \"policy\"\n      outputContract : OutputContract = { ranges: {} }\n        @label \"Output contract\"\n        @description \"Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained\"\n        @tier \"domain\"\n    }\n\n    state idle {\n      INIT -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n\n      INFER -> inferring\n        (set @entity.input ?input)\n        (set @entity.request ?request)\n        (set @entity.status inferring)\n        (call-service \"ml\" \"infer\" { model: @config.model, input: @entity.input }\n          { emit: { success: INFERRED_RAW, failure: INFER_CALL_FAILED } })\n    }\n\n    state inferring {\n      INFERRED_RAW -> resolved\n        (set @entity.output ?output)\n        (set @entity.confidence ?confidence)\n        (let ((validation (contract/validate-output @entity.output @config.outputContract)))\n          (if (object/get @validation \"valid\")\n            (if (>= @entity.confidence @config.confidenceFloor)\n              (do\n                (set @entity.output (contract/clamp-output @entity.output @config.outputContract))\n                (set @entity.violations [])\n                (set @entity.reason \"\")\n                (set @entity.status resolved)\n                (emit INFERRED { output: @entity.output, confidence: @entity.confidence, violations: @entity.violations }))\n              (do\n                (set @entity.violations [])\n                (set @entity.reason \"low confidence\")\n                (set @entity.status resolved)\n                (emit INFER_ABSTAINED { reason: \"low confidence\", violations: @entity.violations, request: @entity.request })))\n            (do\n              (set @entity.violations (contract/violations @entity.output @config.outputContract))\n              (set @entity.reason \"contract violation\")\n              (set @entity.status resolved)\n              (emit INFER_ABSTAINED { reason: \"contract violation\", violations: @entity.violations, request: @entity.request }))))\n\n      INFER_CALL_FAILED -> resolved\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"unavailable\")\n        (set @entity.status resolved)\n        (emit INFER_ABSTAINED { reason: \"unavailable\", violations: @entity.violations, request: @entity.request })\n    }\n\n    state resolved {\n      INIT -> resolved\n        (set @entity.status resolved)\n      RESET -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n    }\n\n    emits {\n      INFERRED_RAW {\n        output     : [float]!\n        confidence : number!\n      }\n        @description \"Raw ml.infer service result, flattened onto the payload by the call-service effect executor\"\n        @tier \"secondary\"\n\n      INFER_CALL_FAILED {\n        error : string!\n      }\n        @description \"call-service infer failure signal — a masar cold start or a down endpoint lands here, not as a user-visible error\"\n        @tier \"secondary\"\n\n      INFERRED -> external {\n        output     : [float]!\n        confidence : float!\n        violations : [object]!\n      }\n        @description \"The service answered, the output satisfies outputContract, and confidence clears confidenceFloor — output already clamped\"\n        @tier \"primary\"\n\n      INFER_ABSTAINED -> external {\n        reason     : string!\n        violations : [object]!\n        request    : object\n      }\n        @description \"The abstain — reason is one of: low confidence, contract violation, unavailable. violations is populated only on the contract violation path. request echoes the originating request untouched so the next rung can project its own inputs out of it\"\n        @tier \"primary\"\n    }\n\n    listens {\n      INFER {\n        input : object!\n        request : object\n      }\n    }\n  }\n\n  page \"/ml-infer\" as MlInferPage -> InferenceRun\n}\n"
+  "lolo": "app std-ml-infer \"1.0.0\"\n\"std-ml-infer — the learned rung (R4) of the intelligence ladder, and the seam between a .lolo circuit and a trained model deployed on masar (or off-the-shelf HuggingFace weights) reached through the ml service. Sends the caller-supplied input straight to call-service ml infer, then guards the raw output before it ever becomes an effect: validates it against the declared outputContract, clamps it into range, and only then decides. Emits INFERRED when the output satisfies the contract and confidence clears confidenceFloor — carrying the clamped output, confidence, and an empty violations list. Otherwise abstains with INFER_ABSTAINED, whose reason is one of: low confidence (contract satisfied but below floor, violations empty), contract violation (violations populated via contract/violations for diagnosis), or unavailable (the service call itself failed — a masar cold start or a down endpoint, never surfaced as a user-visible error). Use when a numeric or tensor-shaped model answer needs a licensed guard before becoming a decision — classification scores, regressions, embedding-derived predictions — and the next rung (R5 generative) should take over on any abstain.\"\n\ntype Range = { min: float!, max: float! }\ntype OutputContract = { shape: [int], ranges: Map string Range }\ntype ShapeMismatchViolation = { type: \"shape_mismatch\", expected: [int]!, actual: [int]! }\ntype RangeViolationDetail = { type: \"range_violation\", dim: int!, min: float!, max: float!, actualMin: float!, actualMax: float! }\ntype NotATensorViolation = { type: \"not_a_tensor\", actualType: string! }\ntype ContractViolation = ShapeMismatchViolation | RangeViolationDetail | NotATensorViolation\n\norbital MlInferOrbital {\n\n  entity Inference [runtime] {\n    input      : opaque   = {}\n    output     : [float]  = []\n    confidence : float    = 0\n    violations : [ContractViolation] = []\n    reason     : string   = \"\"\n    request    : opaque   = {}\n    status     : \"idle\" | \"inferring\" | \"resolved\" = idle\n  }\n\n  trait InferenceRun -> Inference [lifecycle, instance] {\n    initial: idle\n\n    config {\n      model : string = \"\"\n        @label \"Model reference\"\n        @description \"hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action\"\n        @tier \"infra\"\n      confidenceFloor : float = 0.7\n        @label \"Confidence floor\"\n        @description \"Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence\"\n        @tier \"policy\"\n      outputContract : OutputContract = { ranges: {} }\n        @label \"Output contract\"\n        @description \"Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained\"\n        @tier \"domain\"\n    }\n\n    state idle {\n      INIT -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n\n      INFER -> inferring\n        (set @entity.input ?input)\n        (set @entity.request ?request)\n        (set @entity.status inferring)\n        (call-service \"ml\" \"infer\" { model: @config.model, input: @entity.input }\n          { emit: { success: INFERRED_RAW, failure: INFER_CALL_FAILED } })\n    }\n\n    state inferring {\n      INFERRED_RAW -> resolved\n        (set @entity.output ?output)\n        (set @entity.confidence ?confidence)\n        (let ((validation (contract/validate-output @entity.output @config.outputContract)))\n          (if (object/get @validation \"valid\")\n            (if (>= @entity.confidence @config.confidenceFloor)\n              (do\n                (set @entity.output (contract/clamp-output @entity.output @config.outputContract))\n                (set @entity.violations [])\n                (set @entity.reason \"\")\n                (set @entity.status resolved)\n                (emit INFERRED { output: @entity.output, confidence: @entity.confidence, violations: @entity.violations }))\n              (do\n                (set @entity.violations [])\n                (set @entity.reason \"low confidence\")\n                (set @entity.status resolved)\n                (emit INFER_ABSTAINED { reason: \"low confidence\", violations: @entity.violations, request: @entity.request })))\n            (do\n              (set @entity.violations (contract/violations @entity.output @config.outputContract))\n              (set @entity.reason \"contract violation\")\n              (set @entity.status resolved)\n              (emit INFER_ABSTAINED { reason: \"contract violation\", violations: @entity.violations, request: @entity.request }))))\n\n      INFER_CALL_FAILED -> resolved\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"unavailable\")\n        (set @entity.status resolved)\n        (emit INFER_ABSTAINED { reason: \"unavailable\", violations: @entity.violations, request: @entity.request })\n    }\n\n    state resolved {\n      INIT -> resolved\n        (set @entity.status resolved)\n      RESET -> idle\n        (set @entity.input {})\n        (set @entity.output [])\n        (set @entity.confidence 0)\n        (set @entity.violations [])\n        (set @entity.reason \"\")\n        (set @entity.request {})\n        (set @entity.status idle)\n    }\n\n    emits {\n      INFERRED_RAW {\n        output     : [float]!\n        confidence : number!\n      }\n        @description \"Raw ml.infer service result, flattened onto the payload by the call-service effect executor\"\n        @tier \"secondary\"\n\n      INFER_CALL_FAILED {\n        error : string!\n      }\n        @description \"call-service infer failure signal — a masar cold start or a down endpoint lands here, not as a user-visible error\"\n        @tier \"secondary\"\n\n      INFERRED -> external {\n        output     : [float]!\n        confidence : float!\n        violations : [ContractViolation]!\n      }\n        @description \"The service answered, the output satisfies outputContract, and confidence clears confidenceFloor — output already clamped\"\n        @tier \"primary\"\n\n      INFER_ABSTAINED -> external {\n        reason     : string!\n        violations : [ContractViolation]!\n        request    : opaque\n      }\n        @description \"The abstain — reason is one of: low confidence, contract violation, unavailable. violations is populated only on the contract violation path. request echoes the originating request untouched so the next rung can project its own inputs out of it\"\n        @tier \"primary\"\n    }\n\n    listens {\n      INFER {\n        input : opaque!\n        request : opaque\n      }\n    }\n  }\n\n  page \"/ml-infer\" as MlInferPage -> InferenceRun\n}\n"
 }
