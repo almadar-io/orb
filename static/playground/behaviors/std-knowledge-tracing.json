@@ -200,10 +200,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "intervalLow": "@payload.intervalLow",
-                  "intervalHigh": "@payload.intervalHigh",
                   "mean": "@payload.mean",
-                  "status": "mastered"
+                  "status": "mastered",
+                  "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow"
                 },
                 "source": {
                   "kind": "trait",
@@ -216,10 +216,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "mean": "@payload.mean",
                   "intervalLow": "@payload.intervalLow",
+                  "intervalHigh": "@payload.intervalHigh",
                   "status": "remediate",
-                  "intervalHigh": "@payload.intervalHigh"
+                  "mean": "@payload.mean"
                 },
                 "source": {
                   "kind": "trait",
@@ -233,9 +233,9 @@
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
                   "mean": "@payload.mean",
-                  "intervalLow": "@payload.intervalLow",
                   "status": "insufficient",
-                  "intervalHigh": "@payload.intervalHigh"
+                  "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow"
                 },
                 "source": {
                   "kind": "trait",
@@ -431,16 +431,16 @@
                       "emit",
                       "CAPTURE_LABEL",
                       {
+                        "input": {
+                          "skillId": "@entity.skillId"
+                        },
+                        "source": "posterior",
                         "outcome": "@entity.lastOutcome",
                         "verdict": {
                           "intervalHigh": "@payload.intervalHigh",
-                          "intervalLow": "@payload.intervalLow",
                           "mean": "@payload.mean",
+                          "intervalLow": "@payload.intervalLow",
                           "status": "@payload.status"
-                        },
-                        "source": "posterior",
-                        "input": {
-                          "skillId": "@entity.skillId"
                         }
                       }
                     ]
@@ -865,9 +865,9 @@
                                 "emit",
                                 "MASTERY_REACHED",
                                 {
-                                  "intervalHigh": "@high",
+                                  "intervalLow": "@low",
                                   "mean": "@entity.mean",
-                                  "intervalLow": "@low"
+                                  "intervalHigh": "@high"
                                 }
                               ]
                             ],
@@ -889,9 +889,9 @@
                                   "emit",
                                   "REMEDIATION_NEEDED",
                                   {
-                                    "intervalHigh": "@high",
                                     "intervalLow": "@low",
-                                    "mean": "@entity.mean"
+                                    "mean": "@entity.mean",
+                                    "intervalHigh": "@high"
                                   }
                                 ]
                               ],
@@ -906,9 +906,9 @@
                                   "emit",
                                   "EVIDENCE_INSUFFICIENT",
                                   {
+                                    "intervalHigh": "@high",
                                     "intervalLow": "@low",
-                                    "mean": "@entity.mean",
-                                    "intervalHigh": "@high"
+                                    "mean": "@entity.mean"
                                   }
                                 ]
                               ]
@@ -922,11 +922,25 @@
               ]
             },
             "config": {
+              "sampleCount": {
+                "type": "int",
+                "default": 200,
+                "label": "Posterior sample count",
+                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
+                "tier": "infra"
+              },
               "masteryFloor": {
                 "type": "float",
                 "default": 0.85,
                 "label": "Mastery floor",
                 "description": "Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.",
+                "tier": "policy"
+              },
+              "remediationCeiling": {
+                "type": "float",
+                "default": 0.35,
+                "label": "Remediation ceiling",
+                "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
                 "tier": "policy"
               },
               "priorAlpha": {
@@ -936,33 +950,19 @@
                 "description": "Beta prior success pseudo-count before any observation.",
                 "tier": "domain"
               },
-              "priorBeta": {
-                "type": "float",
-                "default": 1,
-                "label": "Prior beta",
-                "description": "Beta prior failure pseudo-count before any observation.",
-                "tier": "domain"
-              },
-              "remediationCeiling": {
-                "type": "float",
-                "default": 0.35,
-                "label": "Remediation ceiling",
-                "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
-                "tier": "policy"
-              },
-              "sampleCount": {
-                "type": "int",
-                "default": 200,
-                "label": "Posterior sample count",
-                "description": "Number of Monte Carlo draws from the Beta posterior used to estimate the credible interval.",
-                "tier": "infra"
-              },
               "intervalWidthMax": {
                 "type": "float",
                 "default": 0.25,
                 "label": "Max credible-interval width",
                 "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
                 "tier": "policy"
+              },
+              "priorBeta": {
+                "type": "float",
+                "default": 1,
+                "label": "Prior beta",
+                "description": "Beta prior failure pseudo-count before any observation.",
+                "tier": "domain"
               }
             },
             "scope": "instance",
@@ -1226,12 +1226,12 @@
                           "create",
                           "KnowledgeState",
                           {
-                            "input": "@entity.input",
-                            "recordedAt": "@entity.recordedAt",
-                            "sink": "@entity.sink",
                             "source": "@entity.source",
-                            "verdict": "@entity.verdict",
-                            "outcome": "@entity.outcome"
+                            "input": "@entity.input",
+                            "outcome": "@entity.outcome",
+                            "sink": "@entity.sink",
+                            "recordedAt": "@entity.recordedAt",
+                            "verdict": "@entity.verdict"
                           }
                         ],
                         [
@@ -1346,30 +1346,31 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "pag_01M055GH5SSYEVKVNE6QTVE0CV": {
-          "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
-          "kind": "page",
-          "bakedName": "KnowledgeTracingPage",
-          "curName": "KnowledgeTracingPage",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01M055GH5SPSSPVR4KFDT936G3": {
-          "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
+        "evt_01M055GH5SC5MER6VGX1V0QMXP": {
+          "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
           "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
+          "bakedName": "OBSERVATION_MADE",
+          "curName": "OBSERVATION_MADE",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
-        "trt_01M055GH5SE12B5GWSSEVJRR69": {
-          "id": "trt_01M055GH5SE12B5GWSSEVJRR69",
-          "kind": "trait",
-          "bakedName": "PosteriorTracker",
-          "curName": "PosteriorTracker",
+        "orb_01M055GH5SQ4PW0JE8JXG0YT6E": {
+          "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
+          "kind": "orbital",
+          "bakedName": "KnowledgeTracingOrbital",
+          "curName": "KnowledgeTracingOrbital",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01M055GH5S8WRWJBGCGT5YQJ9W": {
+          "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
+          "kind": "event",
+          "bakedName": "OBSERVE_SKILL",
+          "curName": "OBSERVE_SKILL",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
         "evt_01M055GH5S6N5RDG1Q63GAB0M8": {
           "id": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
@@ -1379,22 +1380,6 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
-        },
-        "trt_01M055GH5S071KYNGZ5DG0J6K3": {
-          "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
-          "kind": "trait",
-          "bakedName": "ObservationRelay",
-          "curName": "ObservationRelay",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "orb_01M055GH5SQ4PW0JE8JXG0YT6E": {
-          "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
-          "kind": "orbital",
-          "bakedName": "KnowledgeTracingOrbital",
-          "curName": "KnowledgeTracingOrbital",
-          "renames": [],
-          "owner": "workspace"
         },
         "trt_01M055GH5S3EQBR96Q27R8Q4MH": {
           "id": "trt_01M055GH5S3EQBR96Q27R8Q4MH",
@@ -1413,29 +1398,44 @@
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
-        "evt_01M055GH5SC5MER6VGX1V0QMXP": {
-          "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
-          "kind": "event",
-          "bakedName": "OBSERVATION_MADE",
-          "curName": "OBSERVATION_MADE",
+        "pag_01M055GH5SSYEVKVNE6QTVE0CV": {
+          "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
+          "kind": "page",
+          "bakedName": "KnowledgeTracingPage",
+          "curName": "KnowledgeTracingPage",
           "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
-        },
-        "evt_01M055GH5S8WRWJBGCGT5YQJ9W": {
-          "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
-          "kind": "event",
-          "bakedName": "OBSERVE_SKILL",
-          "curName": "OBSERVE_SKILL",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+          "owner": "workspace"
         },
         "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
           "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
           "kind": "entity",
           "bakedName": "KnowledgeState",
           "curName": "KnowledgeState",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M055GH5SPSSPVR4KFDT936G3": {
+          "id": "evt_01M055GH5SPSSPVR4KFDT936G3",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
+        },
+        "trt_01M055GH5S071KYNGZ5DG0J6K3": {
+          "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
+          "kind": "trait",
+          "bakedName": "ObservationRelay",
+          "curName": "ObservationRelay",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M055GH5SE12B5GWSSEVJRR69": {
+          "id": "trt_01M055GH5SE12B5GWSSEVJRR69",
+          "kind": "trait",
+          "bakedName": "PosteriorTracker",
+          "curName": "PosteriorTracker",
           "renames": [],
           "owner": "workspace"
         }
