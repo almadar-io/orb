@@ -87,7 +87,12 @@ jobs:
 
             echo "Publishing @almadar/orb-${platform}@${VERSION}..."
             cd "$PKG_DIR"
-            npm publish --access public || echo "Failed to publish @almadar/orb-${platform}"
+            # Fail on real publish errors; only an already-published version is a no-op.
+            if npm view "@almadar/orb-${platform}@${VERSION}" version >/dev/null 2>&1; then
+              echo "@almadar/orb-${platform}@${VERSION} already on the registry — skipping publish."
+            else
+              npm publish --access public
+            fi
             cd "$ROOT_DIR"
           done
 
@@ -118,8 +123,9 @@ jobs:
               shell_name=$(basename "$shell_dir")
               echo "  Copying $shell_name..."
               mkdir -p "$PKG_DIR/shells/$shell_name"
-              rsync -a --exclude='node_modules' --exclude='.git' --exclude='generated' --exclude='dist' \
-                "$shell_dir" "$PKG_DIR/shells/$shell_name/"
+              # tar, not rsync: the almadar-local fleet runners don't ship rsync (exit 127, 2026-09-03)
+              tar -C "$shell_dir" --exclude='node_modules' --exclude='.git' --exclude='generated' --exclude='dist' -cf - . \
+                | tar -C "$PKG_DIR/shells/$shell_name" -xf -
             done
           fi
 
@@ -127,7 +133,13 @@ jobs:
           # Stamp version + align optionalDependencies versions
           jq --arg v "$VERSION" '.version = $v | .optionalDependencies |= with_entries(.value = $v)' package.json > tmp.json && mv tmp.json package.json
           echo "Publishing @almadar/orb@${VERSION}..."
-          npm publish --access public || echo "Failed to publish @almadar/orb"
+          # Fail the job on a real publish error; only an already-published version is a no-op
+          # (the old `|| echo` swallowed every failure and kept the job green).
+          if npm view "@almadar/orb@${VERSION}" version >/dev/null 2>&1; then
+            echo "@almadar/orb@${VERSION} already on the registry — skipping publish."
+          else
+            npm publish --access public
+          fi
 
   update-homebrew:
     name: Update Homebrew Tap
