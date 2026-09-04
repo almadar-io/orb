@@ -102,6 +102,12 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-audio-cue",
+    "description": "Headless-ish sound driver: the SOLE writer of cue/cueSeq/music/muted/volume, rendered through the game-audio-cue atom which mounts @almadar/ui's useGameAudio hook. Intents: CUE plays a one-shot SFX by manifest key (cueSeq increments so the same key can re-fire), MUSIC crossfades to a looping track by key, STOP_MUSIC fades it out, MUTE/UNMUTE/TOGGLE_MUTE flip playback and emit AUDIO_MUTED, SET_VOLUME sets master volume, RESTART reseeds from config. The manifest and baseUrl are config, not runtime state — swap them per game by rebinding this atom's config, never by hand-authoring a second audio layer.",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-audit-capture",
     "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind (empty = capture all). Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
     "level": "atom",
@@ -144,6 +150,12 @@
     "topic": "infra"
   },
   {
+    "name": "std-camera-rig",
+    "description": "Headless camera authority: the SOLE writer of camX/camY/camZoom on side-view and top-down boards. Every 33ms camera tick it eases camX/camY toward (camTargetX + camLead, camTargetY) — a dead-zone camera: inside deadzoneX/deadzoneY the axis holds, outside it lerps by stiffness — clamps the result to bounds, eases camZoom toward camTargetZoom the same way, and decays camShake toward 0 by shakeDecay. Intents: FOLLOW retargets from a moving body's x/y/vx (vx feeds camLead, the horizontal look-ahead), CUT snaps position+target instantly (no ease, for teleports/cutscenes), SET_ZOOM retargets zoom (clamped to minZoom/maxZoom), SHAKE sets camShake for a consumer to jitter with at bind time — this atom never writes shake into camX/camY itself, RESTART reseeds from config. Emits CAMERA_MOVED every tick. Renders nothing — a board binds its own canvas camera prop straight to camX/camY/camZoom.",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-cascade-on-delete",
     "description": "std-cascade-on-delete — relational `owns` cascade. Listens for a parent-deleted sentinel (`ParentDeleted` — rename via traitOverrides.events to the consumer's actual parent-deleted event), then deletes every dependent row whose `foreignKeyField` points at the deleted parent — via a self-driving loop (delete the head of the matching set, re-fetch until none remain). Emits `CascadeRowDeleted` per row and `CascadeCompleted` when done.",
     "level": "atom",
@@ -157,7 +169,7 @@
   },
   {
     "name": "std-choice-gate",
-    "description": "Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority).",
+    "description": "Headless choice-gate mechanic for side-view boards: a gate of N labeled option platforms where progress stops until the player commits to an answer. Listens BODY_MOVED and judges a gate when the player stands grounded on one of its option platforms (|dx| <= reachX of the option center, |dy| <= reachY of the gate's option plane — the pad-lock touch pattern): the correct option stamps the gate solved + chosen on the shared entity and emits CHOICE_CORRECT once (a solved gate never judges again, so the path stays open); a wrong option emits CHOICE_WRONG carrying the gate id, the chosen optionId, and the option's world position, so the board can bounce the player back and float the gate's hint (the board owns the bounce — the atom only reports). RESTART unsolves every gate. Renders nothing; boards draw the option platforms and labels from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, agency.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -295,13 +307,13 @@
   },
   {
     "name": "std-fx-narrative",
-    "description": "Headless pedagogy→fx translator for game boards and learning shells: turns high-level narrative events into big transient screen-space or world-space text effects consumed by std-fx-particles / fx-overlay. Levels emit NARRATE { text, style } and get a correctly styled, centered (or positioned) floating text burst without hand-rolling particle structs. Tutorials emit TUTORIAL_SHOW and the atom forwards SHOW to a composed std-tutorial-overlay trait. Renders nothing; centralizes the FX vocabulary so every level's teaching text looks and behaves the same.",
+    "description": "Headless pedagogy→fx translator for game boards and learning shells: turns high-level narrative events into big transient screen-space or world-space text effects consumed by std-fx-particles / fx-overlay. Levels emit NARRATE { text, style } and get a correctly styled, centered (or positioned) floating text burst without hand-rolling particle structs. Tutorials emit TUTORIAL_SHOW and the atom forwards SHOW to a composed std-tutorial-overlay trait. Renders nothing; centralizes the FX vocabulary so every level's teaching text looks and behaves the same. Corresponds to the design-sheet field(s): feedback.",
     "level": "atom",
     "topic": "ui/game"
   },
   {
     "name": "std-fx-particles",
-    "description": "Headless transient-fx mechanic serving BOTH game boards and learning shells: appends spawned particles on BURST — stamping maxTtl (fade envelope) and bornAt (epoch ms, smooth render interpolation) when absent — decays each entry's ttl every tick, drops the dead ones, and clears on RESTART. Name-blind mechanism: the effect-kind vocabulary is consumer-declared (FxPreset tables at the render call sites). Composed onto a [runtime, shared] entity; renders nothing — the board/shell owns the single render authority (draw-fx-layer for space \"world\", fx-overlay for space \"screen\").",
+    "description": "Headless transient-fx mechanic serving BOTH game boards and learning shells: appends spawned particles on BURST — stamping maxTtl (fade envelope) and bornAt (epoch ms, smooth render interpolation) when absent — decays each entry's ttl every tick, drops the dead ones, and clears on RESTART. Name-blind mechanism: the effect-kind vocabulary is consumer-declared (FxPreset tables at the render call sites). Composed onto a [runtime, shared] entity; renders nothing — the board/shell owns the single render authority (draw-fx-layer for space \"world\", fx-overlay for space \"screen\"). Corresponds to the design-sheet field(s): feedback, rewards.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -324,8 +336,14 @@
     "topic": "infra"
   },
   {
+    "name": "std-game-design-sheet",
+    "description": "Headless game-design metadata authority: every game or level in the std library MUST compose this atom and fill its design sheet before declaring mechanics. The sheet forces the author to state the core loop, challenge, goals, feedback, agency, mechanics, dynamics, engagement drivers, and rewards. The atom owns no rendering and no rules; it is the single source of truth for intent metadata. Domain-specific extensions (e.g., math target or grade level for an educational game) live in the consuming package, not here. Future game atoms (platformer-body, objective-flow, fx-narrative, pickup, gate-lock, etc.) correspond to fields here, and level organisms bind those atoms together while declaring how each field is realized.",
+    "level": "atom",
+    "topic": "ui/game"
+  },
+  {
     "name": "std-gate-lock",
-    "description": "Headless collectible-gate mechanic: doors that stay shut until the player's collected total reaches their cost. Listens COLLECT (the board's running total — stars, coins, keys) and flips every door whose cost is met, stamping open on the shared door rows and emitting GATE_OPENED for the first newly opened door (the shared entity is the render authority for the rest). While a closed door's rect contains the player it emits GATE_BLOCKED once per approach — re-arming only after the player steps out — so the board can answer with a PLACE back and a locked fx. RESTART re-locks every door and zeroes the total. Renders nothing; boards draw closed doors as bars/walls and open ones as gaps.",
+    "description": "Headless collectible-gate mechanic: doors that stay shut until the player's collected total reaches their cost. Listens COLLECT (the board's running total — stars, coins, keys) and flips every door whose cost is met, stamping open on the shared door rows and emitting GATE_OPENED for the first newly opened door (the shared entity is the render authority for the rest). While a closed door's rect contains the player it emits GATE_BLOCKED once per approach — re-arming only after the player steps out — so the board can answer with a PLACE back and a locked fx. RESTART re-locks every door and zeroes the total. Renders nothing; boards draw closed doors as bars/walls and open ones as gaps. Corresponds to the design-sheet field(s): challenge, rewards.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -577,13 +595,13 @@
   },
   {
     "name": "std-lives",
-    "description": "Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity.",
+    "description": "Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity. Corresponds to the design-sheet field(s): challenge, feedback.",
     "level": "atom",
     "topic": "ui/game"
   },
   {
     "name": "std-loop-lock",
-    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority).",
+    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -738,6 +756,12 @@
     "topic": "ui/core"
   },
   {
+    "name": "std-modal-editor",
+    "description": "UI substrate: modal keyboard editing over any editable CodeBlock. The topology is fixed (NORMAL / INSERT / VISUAL / OPERATOR_PENDING / COMMAND) and every binding is config: mode-entry keys, motions, operators, ex-commands, the digit table that accumulates a repeat count, and the per-mode captured-key table the host's keyboard router reads. Vim ships as the default flavor; a Kakoune/Helix binding is the same topology with different config, never a fork. Emits are the mechanical vocabulary an editable CodeBlock listens to (SET_MODE / MOTION / OPERATE / INSERT_TEXT) plus one neutral EX_COMMAND for a buffered ':' line — std names no host command; a realization maps EX_COMMAND.name onto its own host vocabulary.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-motion-body",
     "description": "Headless continuous-motion authority: the SOLE writer of bodies + gravity + bias on physics boards. Every 50ms motion tick it integrates each body — thrust acceleration plus the board-wide bias field (biasAx/biasAy — the hill-force / wind / conveyor-belt channel, written only through the SET_BIAS intent) plus gravity feed velocity, damping bleeds it, maxSpeed caps it, velocity steps position, and the world walls clamp it (a clamped axis kills that axis's velocity). Intents: THRUST sets a body's acceleration (hold-to-push input: keydown pushes, keyup zeroes), IMPULSE kicks velocity instantly (jumps, d-pad nudges), PLACE teleports (spawns, curve-riding pins), SET_GRAVITY retunes the pull live, SET_BIAS steers the bias field, RESTART reseeds. Emits BODY_MOVED for the lead body (bodies[0]) every tick so boards that subscribe can react — boards that don't subscribe pay nothing. Renders nothing.",
     "level": "atom",
@@ -775,7 +799,7 @@
   },
   {
     "name": "std-objective-flow",
-    "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing.",
+    "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing. Corresponds to the design-sheet field(s): goals, feedback.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -787,7 +811,7 @@
   },
   {
     "name": "std-pad-lock",
-    "description": "Headless pad-lock mechanic: floor pads that light when the player steps on them, completing a set when every pad is lit. Listens BODY_MOVED and lights any unlit live pad the player's rect touches (|dx| <= reachX, |dy| <= reachY of the pad center); a lit pad stays lit. Pads may carry a group number (grp 0 = ungrouped, always live): when groups are used, only pads of the lowest uncompleted group are live — pads of later groups refuse to light until the current group finishes, so one sum must be finished before the next. When a group completes the trait emits PAD_GROUP_COMPLETED once for it (first newly completed group reports; the shared entity carries the rest); when every pad in the set is lit it stamps completed and emits PAD_SET_COMPLETED once. The lowest uncompleted group is stamped on the shared entity as currentGrp so boards can pulse exactly the live pads (0 = no group open / ungrouped pads). RESTART unlights every pad and resets the set. Renders nothing; boards draw the pads and read lit from the shared entity (the render authority).",
+    "description": "Headless pad-lock mechanic: floor pads that light when the player steps on them, completing a set when every pad is lit. Listens BODY_MOVED and lights any unlit live pad the player's rect touches (|dx| <= reachX, |dy| <= reachY of the pad center); a lit pad stays lit. Pads may carry a group number (grp 0 = ungrouped, always live): when groups are used, only pads of the lowest uncompleted group are live — pads of later groups refuse to light until the current group finishes, so one sum must be finished before the next. When a group completes the trait emits PAD_GROUP_COMPLETED once for it (first newly completed group reports; the shared entity carries the rest); when every pad in the set is lit it stamps completed and emits PAD_SET_COMPLETED once. The lowest uncompleted group is stamped on the shared entity as currentGrp so boards can pulse exactly the live pads (0 = no group open / ungrouped pads). RESTART unlights every pad and resets the set. Renders nothing; boards draw the pads and read lit from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, mechanics.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -805,13 +829,13 @@
   },
   {
     "name": "std-patrol-hazard",
-    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing.",
+    "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. Renders nothing. Corresponds to the design-sheet field(s): challenge, dynamics.",
     "level": "atom",
     "topic": "ui/game"
   },
   {
     "name": "std-pickup",
-    "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count. kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity.",
+    "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count. kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -823,7 +847,7 @@
   },
   {
     "name": "std-platformer-body",
-    "description": "Headless run/jump platformer-physics authority: the SOLE writer of body + fell + hazardId + goalId on side-view boards. Where std-motion-body owns free 2D drift (no collision), this atom owns the platformer contract: every 33ms physics tick it integrates gravity into the body's vertical velocity, steps position in per-second units, and collides the body rect against the config platforms with one-way semantics — a body moving in the gravity direction that overlaps a ground/platform tile lands on its anti-gravity face (vy zeroed, grounded set), while a body moving against gravity passes through, so jumping up through a platform and walking up a staircase both just work. The sign of gravity IS the vertical convention: positive pulls toward +y (screen boards, y down — sprite canvases), negative toward −y (math canvases, y up); jumps always fire against it. Intents: STEER sets horizontal velocity (dir −1/0/1 × moveSpeed, hold-to-run: keydown steers, keyup steers 0), JUMP kicks vertical velocity when grounded, PLACE teleports (spawns, hazard respawns), RESTART reseeds. Emits BODY_MOVED every tick for the render layer (boards that don't subscribe pay nothing), plus the sparse rule signals a board needs to score: BODY_JUMPED, BODY_LANDED (with impact speed), BODY_HAZARD (once per hazard entry, re-arms on exit), BODY_GOAL (same arming), BODY_FELL (once per fall past killY, re-armed by PLACE/RESTART). Drift regions: config.driftRegions lists axis-aligned rects each carrying a constant acceleration (ax, ay) applied with the same 0.033s dt whenever the body's center is inside (empty list = zero behavior change). Curve skating: when config.skate is on and the grounded body comes within skateSnap of the config.skateCurve surface, the body rides the curve — y snaps to the interpolated surface and tangential gravity (g·slope/(1+slope²)) accelerates vx, and the vertical velocity is the tangential projection (s = vx·cos θ, vy = s·sin θ — no discontinuous jumps at sample boundaries), so the body slides downhill along the graph itself and launches ballistically off its ends; jumping kicks free. Sparse BODY_SKATE_START/BODY_SKATE_END signals fire on engage/disengage so boards can layer fx. Lives, score, and win/lose stay downstream — this atom simulates, it never judges. Renders nothing.",
+    "description": "Headless run/jump platformer-physics authority: the SOLE writer of body + fell + hazardId + goalId on side-view boards. Where std-motion-body owns free 2D drift (no collision), this atom owns the platformer contract: every 33ms physics tick it integrates gravity into the body's vertical velocity, steps position in per-second units, and collides the body rect against the config platforms with one-way semantics — a body moving in the gravity direction that overlaps a ground/platform tile lands on its anti-gravity face (vy zeroed, grounded set), while a body moving against gravity passes through, so jumping up through a platform and walking up a staircase both just work. The sign of gravity IS the vertical convention: positive pulls toward +y (screen boards, y down — sprite canvases), negative toward −y (math canvases, y up); jumps always fire against it. Intents: STEER sets horizontal velocity (dir −1/0/1 × moveSpeed, hold-to-run: keydown steers, keyup steers 0), JUMP kicks vertical velocity when grounded, PLACE teleports (spawns, hazard respawns), RESTART reseeds. Emits BODY_MOVED every tick for the render layer (boards that don't subscribe pay nothing), plus the sparse rule signals a board needs to score: BODY_JUMPED, BODY_LANDED (with impact speed), BODY_HAZARD (once per hazard entry, re-arms on exit), BODY_GOAL (same arming), BODY_FELL (once per fall past killY, re-armed by PLACE/RESTART). Drift regions: config.driftRegions lists axis-aligned rects each carrying a constant acceleration (ax, ay) applied with the same 0.033s dt whenever the body's center is inside (empty list = zero behavior change). Curve skating: when config.skate is on and the grounded body comes within skateSnap of the config.skateCurve surface, the body rides the curve — y snaps to the interpolated surface and tangential gravity (g·slope/(1+slope²)) accelerates vx, and the vertical velocity is the tangential projection (s = vx·cos θ, vy = s·sin θ — no discontinuous jumps at sample boundaries), so the body slides downhill along the graph itself and launches ballistically off its ends; jumping kicks free. Sparse BODY_SKATE_START/BODY_SKATE_END signals fire on engage/disengage so boards can layer fx. Lives, score, and win/lose stay downstream — this atom simulates, it never judges. Renders nothing. Corresponds to the design-sheet field(s): mechanics, dynamics.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -1021,13 +1045,13 @@
   },
   {
     "name": "std-tutorial-overlay",
-    "description": "Tutorial modal with live-demo steps for game boards and learning shells: a paged overlay — title, a live previewTrait frame playing the mechanic via std-tutorial-autodemo (a bare game canvas, no shell chrome), one line of body copy, a step counter, and Back / Next / Skip — composed entirely from registered render types (stack + text + button + trait frame) into the overlay slot, so no new UI component is needed. autoShow opens it on INIT for first-time players; a board's help button re-opens it any time via SHOW (which rewinds to step one). DISMISS (or finishing the last step) marks the run done, clears the overlay, and emits TUTORIAL_DONE so the board can unpause or log. Steps are pure config — a board teaches a new mechanic by adding one { id, title, body, demoId } row plus a previewTrait binding.",
+    "description": "Tutorial modal with live-demo steps for game boards and learning shells: a paged overlay — title, a live previewTrait frame playing the mechanic via std-tutorial-autodemo (a bare game canvas, no shell chrome), one line of body copy, a step counter, and Back / Next / Skip — composed entirely from registered render types (stack + text + button + trait frame) into the overlay slot, so no new UI component is needed. autoShow opens it on INIT for first-time players; a board's help button re-opens it any time via SHOW (which rewinds to step one). DISMISS (or finishing the last step) marks the run done, clears the overlay, and emits TUTORIAL_DONE so the board can unpause or log. Steps are pure config — a board teaches a new mechanic by adding one { id, title, body, demoId } row plus a previewTrait binding. Corresponds to the design-sheet field(s): feedback, agency.",
     "level": "atom",
     "topic": "ui/game"
   },
   {
     "name": "std-velocity-gate",
-    "description": "Headless velocity-gate mechanic: gates that open only when the player crosses them inside a speed band, optionally in a required direction, optionally sustained for a dwell. Listens BODY_MOVED and, per closed gate, tests the player's rect (padded by reachMargin), their speed against [minSpeed, maxSpeed], and their horizontal direction against dir (0 = either). Instant gates (dwellMs 0) open on the first passing cross; dwell gates (dwellMs > 0) accumulate ~33ms per passing move and open once held reaches dwellMs — a failing move resets the hold. The first newly opened gate emits VELOCITY_GATE_OPENED (the shared entity carries the rest). Entering a closed INSTANT gate while NOT passing emits VELOCITY_GATE_DENIED once per approach — re-arming only after the player steps out — so the board can answer with a PLACE back and a hint fx; dwell gates never deny (a hot entry is fine — coming to rest inside is the point), a failed hold simply resets. RESTART re-closes every gate. Renders nothing; boards draw the gate band/chest and read open/held from the shared entity (the render authority).",
+    "description": "Headless velocity-gate mechanic: gates that open only when the player crosses them inside a speed band, optionally in a required direction, optionally sustained for a dwell. Listens BODY_MOVED and, per closed gate, tests the player's rect (padded by reachMargin), their speed against [minSpeed, maxSpeed], and their horizontal direction against dir (0 = either). Instant gates (dwellMs 0) open on the first passing cross; dwell gates (dwellMs > 0) accumulate ~33ms per passing move and open once held reaches dwellMs — a failing move resets the hold. The first newly opened gate emits VELOCITY_GATE_OPENED (the shared entity carries the rest). Entering a closed INSTANT gate while NOT passing emits VELOCITY_GATE_DENIED once per approach — re-arming only after the player steps out — so the board can answer with a PLACE back and a hint fx; dwell gates never deny (a hot entry is fine — coming to rest inside is the point), a failed hold simply resets. RESTART re-closes every gate. Renders nothing; boards draw the gate band/chest and read open/held from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, mechanics.",
     "level": "atom",
     "topic": "ui/game"
   },
@@ -1335,6 +1359,12 @@
     "name": "ui-code-runner-panel",
     "description": "CodeRunnerPanel — UI factory (1:1 with the @almadar/ui code-runner-panel pattern).",
     "level": "organism",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-command-palette",
+    "description": "CommandPalette — UI factory (1:1 with the @almadar/ui command-palette pattern).",
+    "level": "molecule",
     "topic": "ui/core"
   },
   {
@@ -1738,6 +1768,12 @@
     "description": "FxOverlay — UI factory (1:1 with the @almadar/ui fx-overlay pattern).",
     "level": "molecule",
     "topic": "ui/core"
+  },
+  {
+    "name": "ui-game-audio-cue",
+    "description": "GameAudioCue — UI factory (1:1 with the @almadar/ui game-audio-cue pattern).",
+    "level": "atom",
+    "topic": "ui/game"
   },
   {
     "name": "ui-game-audio-toggle",

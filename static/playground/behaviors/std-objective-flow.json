@@ -1,12 +1,12 @@
 {
   "name": "std-objective-flow",
-  "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing.",
+  "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing. Corresponds to the design-sheet field(s): goals, feedback.",
   "level": "atom",
   "topic": "ui/game",
   "schema": {
     "name": "std-objective-flow",
     "version": "1.0.0",
-    "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing.",
+    "description": "Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing. Corresponds to the design-sheet field(s): goals, feedback.",
     "orbitals": [
       {
         "name": "ObjectiveFlowOrbital",
@@ -224,15 +224,6 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "evt_01KXG04TKBYREWC2M92NBD54JB": {
-          "id": "evt_01KXG04TKBYREWC2M92NBD54JB",
-          "kind": "event",
-          "bakedName": "PROGRESS",
-          "curName": "PROGRESS",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5"
-        },
         "ent_01KXG04TKBJ5BFB1E634XZRG5Z": {
           "id": "ent_01KXG04TKBJ5BFB1E634XZRG5Z",
           "kind": "entity",
@@ -250,14 +241,6 @@
           "owner": "workspace",
           "parent": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5"
         },
-        "orb_01KXG04TKBGM96E3HRYPXKM494": {
-          "id": "orb_01KXG04TKBGM96E3HRYPXKM494",
-          "kind": "orbital",
-          "bakedName": "ObjectiveFlowOrbital",
-          "curName": "ObjectiveFlowOrbital",
-          "renames": [],
-          "owner": "workspace"
-        },
         "evt_01KXG04TKB5JDYZ5M3XFQ29B0Y": {
           "id": "evt_01KXG04TKB5JDYZ5M3XFQ29B0Y",
           "kind": "event",
@@ -267,19 +250,28 @@
           "owner": "workspace",
           "parent": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5"
         },
-        "pag_01KXG04TKBTW0GVJQBW5YFC594": {
-          "id": "pag_01KXG04TKBTW0GVJQBW5YFC594",
-          "kind": "page",
-          "bakedName": "ObjectiveFlowPage",
-          "curName": "ObjectiveFlowPage",
+        "evt_01KXG04TKBYREWC2M92NBD54JB": {
+          "id": "evt_01KXG04TKBYREWC2M92NBD54JB",
+          "kind": "event",
+          "bakedName": "PROGRESS",
+          "curName": "PROGRESS",
           "renames": [],
-          "owner": "workspace"
+          "owner": "workspace",
+          "parent": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5"
         },
         "trt_01KXG04TKBC6DPS2TWD1P0Z0K5": {
           "id": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5",
           "kind": "trait",
           "bakedName": "ObjectiveFlow",
           "curName": "ObjectiveFlow",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01KXG04TKBTW0GVJQBW5YFC594": {
+          "id": "pag_01KXG04TKBTW0GVJQBW5YFC594",
+          "kind": "page",
+          "bakedName": "ObjectiveFlowPage",
+          "curName": "ObjectiveFlowPage",
           "renames": [],
           "owner": "workspace"
         },
@@ -291,10 +283,18 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KXG04TKBC6DPS2TWD1P0Z0K5"
+        },
+        "orb_01KXG04TKBGM96E3HRYPXKM494": {
+          "id": "orb_01KXG04TKBGM96E3HRYPXKM494",
+          "kind": "orbital",
+          "bakedName": "ObjectiveFlowOrbital",
+          "curName": "ObjectiveFlowOrbital",
+          "renames": [],
+          "owner": "workspace"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-objective-flow \"1.0.0\"\n\"Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing.\"\norbital ObjectiveFlowOrbital {\n  entity FlowState [runtime, shared] {\n    id : string!\n    result : string = \"none\"\n  }\n\n  trait ObjectiveFlow -> @rebindable FlowState [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.result \"none\")\n\n      PROGRESS -> active when @config.running\n        (set @entity.result (if (<= @payload.objectivesLeft 0) \"won\" (if (<= @payload.movesLeft 0) \"lost\" \"none\")))\n        (if (!= @entity.result \"none\") (emit GAME_END { result: @entity.result }) null)\n\n      RESTART -> active\n        (set @entity.result \"none\")\n    }\n\n    emits {\n      GAME_END -> external {\n        result : string!\n      }\n        @description \"Emitted for parity with round-flow when the round resolves; listeners may react to end-of-round\"\n        @tier \"domain\"\n    }\n\n    listens {\n      PROGRESS { objectivesLeft : number, movesLeft : number }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, PROGRESS signals resolve win/lose; toggle to freeze\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/objective-flow\" as ObjectiveFlowPage -> ObjectiveFlow\n}\n"
+  "lolo": "app std-objective-flow \"1.0.0\"\n\"Headless win/lose authority for objective boards: owns only result. Listens PROGRESS (objectivesLeft + movesLeft) and sets result to won when every objective is reached, lost when the move budget runs out first, else none. Renders nothing. Corresponds to the design-sheet field(s): goals, feedback.\"\norbital ObjectiveFlowOrbital {\n  entity FlowState [runtime, shared] {\n    id : string!\n    result : string = \"none\"\n  }\n\n  trait ObjectiveFlow -> @rebindable FlowState [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.result \"none\")\n\n      PROGRESS -> active when @config.running\n        (set @entity.result (if (<= @payload.objectivesLeft 0) \"won\" (if (<= @payload.movesLeft 0) \"lost\" \"none\")))\n        (if (!= @entity.result \"none\") (emit GAME_END { result: @entity.result }) null)\n\n      RESTART -> active\n        (set @entity.result \"none\")\n    }\n\n    emits {\n      GAME_END -> external {\n        result : string!\n      }\n        @description \"Emitted for parity with round-flow when the round resolves; listeners may react to end-of-round\"\n        @tier \"domain\"\n    }\n\n    listens {\n      PROGRESS { objectivesLeft : number, movesLeft : number }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, PROGRESS signals resolve win/lose; toggle to freeze\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/objective-flow\" as ObjectiveFlowPage -> ObjectiveFlow\n}\n"
 }

@@ -1,0 +1,821 @@
+{
+  "name": "std-camera-rig",
+  "description": "Headless camera authority: the SOLE writer of camX/camY/camZoom on side-view and top-down boards. Every 33ms camera tick it eases camX/camY toward (camTargetX + camLead, camTargetY) — a dead-zone camera: inside deadzoneX/deadzoneY the axis holds, outside it lerps by stiffness — clamps the result to bounds, eases camZoom toward camTargetZoom the same way, and decays camShake toward 0 by shakeDecay. Intents: FOLLOW retargets from a moving body's x/y/vx (vx feeds camLead, the horizontal look-ahead), CUT snaps position+target instantly (no ease, for teleports/cutscenes), SET_ZOOM retargets zoom (clamped to minZoom/maxZoom), SHAKE sets camShake for a consumer to jitter with at bind time — this atom never writes shake into camX/camY itself, RESTART reseeds from config. Emits CAMERA_MOVED every tick. Renders nothing — a board binds its own canvas camera prop straight to camX/camY/camZoom.",
+  "level": "atom",
+  "topic": "ui/game",
+  "schema": {
+    "name": "std-camera-rig",
+    "version": "1.0.0",
+    "description": "Headless camera authority: the SOLE writer of camX/camY/camZoom on side-view and top-down boards. Every 33ms camera tick it eases camX/camY toward (camTargetX + camLead, camTargetY) — a dead-zone camera: inside deadzoneX/deadzoneY the axis holds, outside it lerps by stiffness — clamps the result to bounds, eases camZoom toward camTargetZoom the same way, and decays camShake toward 0 by shakeDecay. Intents: FOLLOW retargets from a moving body's x/y/vx (vx feeds camLead, the horizontal look-ahead), CUT snaps position+target instantly (no ease, for teleports/cutscenes), SET_ZOOM retargets zoom (clamped to minZoom/maxZoom), SHAKE sets camShake for a consumer to jitter with at bind time — this atom never writes shake into camX/camY itself, RESTART reseeds from config. Emits CAMERA_MOVED every tick. Renders nothing — a board binds its own canvas camera prop straight to camX/camY/camZoom.",
+    "orbitals": [
+      {
+        "name": "CameraRigOrbital",
+        "id": "orb_01M1KT7VDHWWAW8CY87TSH63JJ",
+        "entity": {
+          "name": "CameraState",
+          "id": "ent_01M1KT7VDHARACH6QT9FHENHM8",
+          "persistence": "runtime",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "camX",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "camY",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "camZoom",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "camTargetX",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "camTargetY",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "camTargetZoom",
+              "type": "number",
+              "default": 1
+            },
+            {
+              "name": "camLead",
+              "type": "number",
+              "default": 0
+            },
+            {
+              "name": "camShake",
+              "type": "number",
+              "default": 0
+            }
+          ],
+          "shared": true
+        },
+        "traits": [
+          {
+            "name": "CameraRig",
+            "id": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP",
+            "entityRebindable": true,
+            "entityContract": {
+              "requires": [],
+              "provides": [
+                "camLead",
+                "camShake",
+                "camTargetX",
+                "camTargetY",
+                "camTargetZoom",
+                "camX",
+                "camY",
+                "camZoom"
+              ]
+            },
+            "category": "lifecycle",
+            "linkedEntity": "CameraState",
+            "linkedEntityId": "ent_01M1KT7VDHARACH6QT9FHENHM8",
+            "entityRefIds": {
+              "CameraState": "ent_01M1KT7VDHARACH6QT9FHENHM8"
+            },
+            "emits": [
+              {
+                "event": "CAMERA_MOVED",
+                "eventId": "evt_01M1KT7VDHACZBVYWSJ1XT0XT4",
+                "description": "Eased camera position/zoom after this tick.",
+                "tier": "domain",
+                "scope": "external",
+                "payloadSchema": [
+                  {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "zoom",
+                    "type": "number",
+                    "required": true
+                  }
+                ]
+              }
+            ],
+            "stateMachine": {
+              "states": [
+                {
+                  "name": "active",
+                  "isInitial": true
+                }
+              ],
+              "events": [
+                {
+                  "key": "INIT",
+                  "id": "evt_01M1KT7VDHP97MNNBCK21F9XF0",
+                  "name": "Initialize"
+                },
+                {
+                  "key": "FOLLOW",
+                  "id": "evt_01M1KT7VDH27J939V4G8J199KT",
+                  "name": "Follow",
+                  "description": "Retarget from a moving body's position and horizontal velocity (vx drives camLead).",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "vx",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CUT",
+                  "id": "evt_01M1KT7VDHP8EPRYARWY431Q8A",
+                  "name": "Cut",
+                  "description": "Snap position and target instantly, no ease — teleports and cutscenes.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_ZOOM",
+                  "id": "evt_01M1KT7VDH7GM6FBFHVF1VJRNH",
+                  "name": "Set Zoom",
+                  "description": "Retarget zoom, clamped to minZoom/maxZoom.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "zoom",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SHAKE",
+                  "id": "evt_01M1KT7VDH7EM7H3VR4949R1EX",
+                  "name": "Shake",
+                  "description": "Set camShake; a consumer jitters camX/camY with it at bind time — this atom never writes shake into position.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "magnitude",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "RESTART",
+                  "id": "evt_01M1KT7VDHD96YA0S3RPC9MRCC",
+                  "name": "Restart",
+                  "description": "Reseed position/zoom/lead/shake from config.",
+                  "tier": "domain"
+                },
+                {
+                  "key": "CAMERA_MOVED",
+                  "id": "evt_01M1KT7VDHACZBVYWSJ1XT0XT4",
+                  "name": "Camera Moved",
+                  "description": "Eased camera position/zoom after this tick.",
+                  "tier": "domain",
+                  "payloadSchema": [
+                    {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "zoom",
+                      "type": "number",
+                      "required": true
+                    }
+                  ]
+                }
+              ],
+              "transitions": [
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "INIT",
+                  "eventId": "evt_01M1KT7VDHP97MNNBCK21F9XF0",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camZoom",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetZoom",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.camLead",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camShake",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "FOLLOW",
+                  "eventId": "evt_01M1KT7VDH27J939V4G8J199KT",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camTargetX",
+                      "@payload.x"
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetY",
+                      "@payload.y"
+                    ],
+                    [
+                      "set",
+                      "@entity.camLead",
+                      [
+                        "*",
+                        "@payload.vx",
+                        0
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "CUT",
+                  "eventId": "evt_01M1KT7VDHP8EPRYARWY431Q8A",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camX",
+                      "@payload.x"
+                    ],
+                    [
+                      "set",
+                      "@entity.camY",
+                      "@payload.y"
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetX",
+                      "@payload.x"
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetY",
+                      "@payload.y"
+                    ],
+                    [
+                      "set",
+                      "@entity.camLead",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SET_ZOOM",
+                  "eventId": "evt_01M1KT7VDH7GM6FBFHVF1VJRNH",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camTargetZoom",
+                      [
+                        "math/clamp",
+                        "@payload.zoom",
+                        0.5,
+                        3
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SHAKE",
+                  "eventId": "evt_01M1KT7VDH7EM7H3VR4949R1EX",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camShake",
+                      "@payload.magnitude"
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "RESTART",
+                  "eventId": "evt_01M1KT7VDHD96YA0S3RPC9MRCC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.camX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camZoom",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetX",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetY",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camTargetZoom",
+                      1
+                    ],
+                    [
+                      "set",
+                      "@entity.camLead",
+                      0
+                    ],
+                    [
+                      "set",
+                      "@entity.camShake",
+                      0
+                    ]
+                  ]
+                }
+              ]
+            },
+            "ticks": [
+              {
+                "name": "camTick",
+                "interval": 33,
+                "guard": true,
+                "effects": [
+                  [
+                    "do",
+                    [
+                      "set",
+                      "@entity.camX",
+                      [
+                        "math/clamp",
+                        [
+                          "if",
+                          [
+                            ">",
+                            [
+                              "math/abs",
+                              [
+                                "-",
+                                [
+                                  "+",
+                                  "@entity.camTargetX",
+                                  "@entity.camLead"
+                                ],
+                                "@entity.camX"
+                              ]
+                            ],
+                            0
+                          ],
+                          [
+                            "math/lerp",
+                            "@entity.camX",
+                            [
+                              "+",
+                              "@entity.camTargetX",
+                              "@entity.camLead"
+                            ],
+                            0.1
+                          ],
+                          "@entity.camX"
+                        ],
+                        -1000000,
+                        1000000
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.camY",
+                      [
+                        "math/clamp",
+                        [
+                          "if",
+                          [
+                            ">",
+                            [
+                              "math/abs",
+                              [
+                                "-",
+                                "@entity.camTargetY",
+                                "@entity.camY"
+                              ]
+                            ],
+                            0
+                          ],
+                          [
+                            "math/lerp",
+                            "@entity.camY",
+                            "@entity.camTargetY",
+                            0.1
+                          ],
+                          "@entity.camY"
+                        ],
+                        -1000000,
+                        1000000
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.camZoom",
+                      [
+                        "math/clamp",
+                        [
+                          "math/lerp",
+                          "@entity.camZoom",
+                          "@entity.camTargetZoom",
+                          0.1
+                        ],
+                        0.5,
+                        3
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.camShake",
+                      [
+                        "math/max",
+                        0,
+                        [
+                          "-",
+                          "@entity.camShake",
+                          0.1
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "emit",
+                    "CAMERA_MOVED",
+                    {
+                      "x": "@entity.camX",
+                      "zoom": "@entity.camZoom",
+                      "y": "@entity.camY"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "config": {
+              "minZoom": {
+                "type": "number",
+                "default": 0.5,
+                "label": "Min Zoom",
+                "description": "Lower clamp for SET_ZOOM and the eased zoom",
+                "tier": "presentation"
+              },
+              "deadzoneX": {
+                "type": "number",
+                "default": 0,
+                "label": "Dead Zone X",
+                "description": "Horizontal distance from target the camera tolerates without easing",
+                "tier": "presentation"
+              },
+              "deadzoneY": {
+                "type": "number",
+                "default": 0,
+                "label": "Dead Zone Y",
+                "description": "Vertical distance from target the camera tolerates without easing",
+                "tier": "presentation"
+              },
+              "maxZoom": {
+                "type": "number",
+                "default": 3,
+                "label": "Max Zoom",
+                "description": "Upper clamp for SET_ZOOM and the eased zoom",
+                "tier": "presentation"
+              },
+              "shakeDecay": {
+                "type": "number",
+                "default": 0.1,
+                "label": "Shake Decay",
+                "description": "Amount camShake reduces toward 0 every tick",
+                "tier": "presentation"
+              },
+              "start": {
+                "type": "CameraPos",
+                "default": {
+                  "y": 0,
+                  "x": 0
+                },
+                "label": "Start Position",
+                "description": "Initial and RESTART camera position/target",
+                "tier": "domain",
+                "properties": {
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
+                  },
+                  "x": {
+                    "name": "x",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              },
+              "stiffness": {
+                "type": "number",
+                "default": 0.1,
+                "label": "Stiffness",
+                "description": "Per-tick lerp factor easing position/zoom toward target (0-1, higher = snappier)",
+                "tier": "presentation"
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the 33ms camera tick eases toward target; toggle to freeze the camera",
+                "tier": "domain"
+              },
+              "zoom": {
+                "type": "number",
+                "default": 1,
+                "label": "Zoom",
+                "description": "Initial and RESTART zoom level",
+                "tier": "domain"
+              },
+              "bounds": {
+                "type": "CameraBounds",
+                "default": {
+                  "yMax": 1000000,
+                  "yMin": -1000000,
+                  "xMin": -1000000,
+                  "xMax": 1000000
+                },
+                "label": "Bounds",
+                "description": "World-space clamp applied to the eased camera position every tick",
+                "tier": "presentation",
+                "properties": {
+                  "xMin": {
+                    "name": "xMin",
+                    "type": "number",
+                    "required": true
+                  },
+                  "xMax": {
+                    "name": "xMax",
+                    "type": "number",
+                    "required": true
+                  },
+                  "yMax": {
+                    "name": "yMax",
+                    "type": "number",
+                    "required": true
+                  },
+                  "yMin": {
+                    "name": "yMin",
+                    "type": "number",
+                    "required": true
+                  }
+                }
+              },
+              "lead": {
+                "type": "number",
+                "default": 0,
+                "label": "Lead",
+                "description": "Horizontal look-ahead multiplier applied to FOLLOW's vx",
+                "tier": "presentation"
+              }
+            },
+            "scope": "instance"
+          }
+        ],
+        "pages": [
+          {
+            "name": "CameraRigPage",
+            "id": "pag_01M1KT7VDHJG8QACSY95BPKVJH",
+            "path": "/camera-rig",
+            "traits": [
+              {
+                "ref": "CameraRig",
+                "refId": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+              }
+            ]
+          }
+        ],
+        "types": {
+          "CameraBounds": [
+            {
+              "name": "xMin",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "xMax",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "yMin",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "yMax",
+              "type": "number",
+              "required": true
+            }
+          ],
+          "CameraPos": [
+            {
+              "name": "x",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "required": true
+            }
+          ]
+        }
+      }
+    ],
+    "schemaVersion": 1,
+    "ledger": {
+      "schemaVersion": 1,
+      "entries": {
+        "pag_01M1KT7VDHJG8QACSY95BPKVJH": {
+          "id": "pag_01M1KT7VDHJG8QACSY95BPKVJH",
+          "kind": "page",
+          "bakedName": "CameraRigPage",
+          "curName": "CameraRigPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M1KT7VDH7EM7H3VR4949R1EX": {
+          "id": "evt_01M1KT7VDH7EM7H3VR4949R1EX",
+          "kind": "event",
+          "bakedName": "SHAKE",
+          "curName": "SHAKE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "orb_01M1KT7VDHWWAW8CY87TSH63JJ": {
+          "id": "orb_01M1KT7VDHWWAW8CY87TSH63JJ",
+          "kind": "orbital",
+          "bakedName": "CameraRigOrbital",
+          "curName": "CameraRigOrbital",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M1KT7VDH27J939V4G8J199KT": {
+          "id": "evt_01M1KT7VDH27J939V4G8J199KT",
+          "kind": "event",
+          "bakedName": "FOLLOW",
+          "curName": "FOLLOW",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "evt_01M1KT7VDHP97MNNBCK21F9XF0": {
+          "id": "evt_01M1KT7VDHP97MNNBCK21F9XF0",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "trt_01M1KT7VDH3WK1YCKY0NQHHDYP": {
+          "id": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP",
+          "kind": "trait",
+          "bakedName": "CameraRig",
+          "curName": "CameraRig",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01M1KT7VDHARACH6QT9FHENHM8": {
+          "id": "ent_01M1KT7VDHARACH6QT9FHENHM8",
+          "kind": "entity",
+          "bakedName": "CameraState",
+          "curName": "CameraState",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M1KT7VDHACZBVYWSJ1XT0XT4": {
+          "id": "evt_01M1KT7VDHACZBVYWSJ1XT0XT4",
+          "kind": "event",
+          "bakedName": "CAMERA_MOVED",
+          "curName": "CAMERA_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "evt_01M1KT7VDHP8EPRYARWY431Q8A": {
+          "id": "evt_01M1KT7VDHP8EPRYARWY431Q8A",
+          "kind": "event",
+          "bakedName": "CUT",
+          "curName": "CUT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "evt_01M1KT7VDHD96YA0S3RPC9MRCC": {
+          "id": "evt_01M1KT7VDHD96YA0S3RPC9MRCC",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        },
+        "evt_01M1KT7VDH7GM6FBFHVF1VJRNH": {
+          "id": "evt_01M1KT7VDH7GM6FBFHVF1VJRNH",
+          "kind": "event",
+          "bakedName": "SET_ZOOM",
+          "curName": "SET_ZOOM",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1KT7VDH3WK1YCKY0NQHHDYP"
+        }
+      }
+    }
+  },
+  "source": "",
+  "lolo": "app std-camera-rig \"1.0.0\"\n\"Headless camera authority: the SOLE writer of camX/camY/camZoom on side-view and top-down boards. Every 33ms camera tick it eases camX/camY toward (camTargetX + camLead, camTargetY) — a dead-zone camera: inside deadzoneX/deadzoneY the axis holds, outside it lerps by stiffness — clamps the result to bounds, eases camZoom toward camTargetZoom the same way, and decays camShake toward 0 by shakeDecay. Intents: FOLLOW retargets from a moving body's x/y/vx (vx feeds camLead, the horizontal look-ahead), CUT snaps position+target instantly (no ease, for teleports/cutscenes), SET_ZOOM retargets zoom (clamped to minZoom/maxZoom), SHAKE sets camShake for a consumer to jitter with at bind time — this atom never writes shake into camX/camY itself, RESTART reseeds from config. Emits CAMERA_MOVED every tick. Renders nothing — a board binds its own canvas camera prop straight to camX/camY/camZoom.\"\norbital CameraRigOrbital {\n  type CameraPos = {\n    x : number!\n    y : number!\n  }\n  type CameraBounds = {\n    xMin : number!\n    xMax : number!\n    yMin : number!\n    yMax : number!\n  }\n\n  entity CameraState [runtime, shared] {\n    id : string!\n    camX : number = 0\n    camY : number = 0\n    camZoom : number = 1\n    camTargetX : number = 0\n    camTargetY : number = 0\n    camTargetZoom : number = 1\n    camLead : number = 0\n    camShake : number = 0\n  }\n\n  trait CameraRig -> @rebindable CameraState [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.camX @config.start.x)\n        (set @entity.camY @config.start.y)\n        (set @entity.camZoom @config.zoom)\n        (set @entity.camTargetX @config.start.x)\n        (set @entity.camTargetY @config.start.y)\n        (set @entity.camTargetZoom @config.zoom)\n        (set @entity.camLead 0)\n        (set @entity.camShake 0)\n\n      FOLLOW -> active\n        (set @entity.camTargetX ?x)\n        (set @entity.camTargetY ?y)\n        (set @entity.camLead (* ?vx @config.lead))\n\n      CUT -> active\n        (set @entity.camX ?x)\n        (set @entity.camY ?y)\n        (set @entity.camTargetX ?x)\n        (set @entity.camTargetY ?y)\n        (set @entity.camLead 0)\n\n      SET_ZOOM -> active\n        (set @entity.camTargetZoom (math/clamp ?zoom @config.minZoom @config.maxZoom))\n\n      SHAKE -> active\n        (set @entity.camShake ?magnitude)\n\n      RESTART -> active\n        (set @entity.camX @config.start.x)\n        (set @entity.camY @config.start.y)\n        (set @entity.camZoom @config.zoom)\n        (set @entity.camTargetX @config.start.x)\n        (set @entity.camTargetY @config.start.y)\n        (set @entity.camTargetZoom @config.zoom)\n        (set @entity.camLead 0)\n        (set @entity.camShake 0)\n    }\n\n    ticks {\n      camTick every 33ms\n        when @config.running\n        (do\n          (set @entity.camX (math/clamp (if (> (math/abs (- (+ @entity.camTargetX @entity.camLead) @entity.camX)) @config.deadzoneX) (math/lerp @entity.camX (+ @entity.camTargetX @entity.camLead) @config.stiffness) @entity.camX) @config.bounds.xMin @config.bounds.xMax))\n          (set @entity.camY (math/clamp (if (> (math/abs (- @entity.camTargetY @entity.camY)) @config.deadzoneY) (math/lerp @entity.camY @entity.camTargetY @config.stiffness) @entity.camY) @config.bounds.yMin @config.bounds.yMax))\n          (set @entity.camZoom (math/clamp (math/lerp @entity.camZoom @entity.camTargetZoom @config.stiffness) @config.minZoom @config.maxZoom))\n          (set @entity.camShake (math/max 0 (- @entity.camShake @config.shakeDecay))))\n        (emit CAMERA_MOVED { x: @entity.camX, y: @entity.camY, zoom: @entity.camZoom })\n    }\n\n    emits {\n      CAMERA_MOVED -> external {\n        x : number!\n        y : number!\n        zoom : number!\n      }\n        @description \"Eased camera position/zoom after this tick.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      FOLLOW { x : number!, y : number!, vx : number! }\n        @description \"Retarget from a moving body's position and horizontal velocity (vx drives camLead).\"\n        @tier \"domain\"\n      CUT { x : number!, y : number! }\n        @description \"Snap position and target instantly, no ease — teleports and cutscenes.\"\n        @tier \"domain\"\n      SET_ZOOM { zoom : number! }\n        @description \"Retarget zoom, clamped to minZoom/maxZoom.\"\n        @tier \"domain\"\n      SHAKE { magnitude : number! }\n        @description \"Set camShake; a consumer jitters camX/camY with it at bind time — this atom never writes shake into position.\"\n        @tier \"domain\"\n      RESTART\n        @description \"Reseed position/zoom/lead/shake from config.\"\n        @tier \"domain\"\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true the 33ms camera tick eases toward target; toggle to freeze the camera\"\n        @tier \"domain\"\n      start : CameraPos = { x: 0, y: 0 }\n        @label \"Start Position\"\n        @description \"Initial and RESTART camera position/target\"\n        @tier \"domain\"\n      zoom : number = 1\n        @label \"Zoom\"\n        @description \"Initial and RESTART zoom level\"\n        @tier \"domain\"\n      minZoom : number = 0.5\n        @label \"Min Zoom\"\n        @description \"Lower clamp for SET_ZOOM and the eased zoom\"\n        @tier \"presentation\"\n      maxZoom : number = 3\n        @label \"Max Zoom\"\n        @description \"Upper clamp for SET_ZOOM and the eased zoom\"\n        @tier \"presentation\"\n      stiffness : number = 0.1\n        @label \"Stiffness\"\n        @description \"Per-tick lerp factor easing position/zoom toward target (0-1, higher = snappier)\"\n        @tier \"presentation\"\n      deadzoneX : number = 0\n        @label \"Dead Zone X\"\n        @description \"Horizontal distance from target the camera tolerates without easing\"\n        @tier \"presentation\"\n      deadzoneY : number = 0\n        @label \"Dead Zone Y\"\n        @description \"Vertical distance from target the camera tolerates without easing\"\n        @tier \"presentation\"\n      lead : number = 0\n        @label \"Lead\"\n        @description \"Horizontal look-ahead multiplier applied to FOLLOW's vx\"\n        @tier \"presentation\"\n      bounds : CameraBounds = { xMin: -1000000, xMax: 1000000, yMin: -1000000, yMax: 1000000 }\n        @label \"Bounds\"\n        @description \"World-space clamp applied to the eased camera position every tick\"\n        @tier \"presentation\"\n      shakeDecay : number = 0.1\n        @label \"Shake Decay\"\n        @description \"Amount camShake reduces toward 0 every tick\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/camera-rig\" as CameraRigPage -> CameraRig\n}\n"
+}
