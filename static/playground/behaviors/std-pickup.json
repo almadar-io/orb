@@ -1,12 +1,12 @@
 {
   "name": "std-pickup",
-  "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count. kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.",
+  "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). A feature carrying active: false is visible but NOT collectible (gated pickups — e.g. a star that only counts once the curve passes through it); FEATURES_ACTIVE{updates:[{id,active}]} flips gates in place without re-arming collected. When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count (re-arming the live entity set, so SET_FEATURES-injected features survive). SET_FEATURES replaces the collectible set at runtime for boards that import their features; ADD_FEATURES appends without disturbing the live set (mid-game gem drops). kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.",
   "level": "atom",
   "topic": "ui/game",
   "schema": {
     "name": "std-pickup",
     "version": "1.0.0",
-    "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count. kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.",
+    "description": "Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). A feature carrying active: false is visible but NOT collectible (gated pickups — e.g. a star that only counts once the curve passes through it); FEATURES_ACTIVE{updates:[{id,active}]} flips gates in place without re-arming collected. When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count (re-arming the live entity set, so SET_FEATURES-injected features survive). SET_FEATURES replaces the collectible set at runtime for boards that import their features; ADD_FEATURES appends without disturbing the live set (mid-game gem drops). kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.",
     "orbitals": [
       {
         "name": "PickupOrbital",
@@ -28,6 +28,26 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "id": {
+                    "name": "id",
+                    "type": "string",
+                    "required": true
+                  },
+                  "kind": {
+                    "name": "kind",
+                    "type": "string",
+                    "required": true
+                  },
+                  "collected": {
+                    "name": "collected",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "active": {
+                    "name": "active",
+                    "type": "boolean",
+                    "required": false
+                  },
                   "x": {
                     "name": "x",
                     "type": "number",
@@ -38,28 +58,13 @@
                     "type": "number",
                     "required": true
                   },
-                  "collected": {
-                    "name": "collected",
-                    "type": "boolean",
+                  "message": {
+                    "name": "message",
+                    "type": "string",
                     "required": false
-                  },
-                  "kind": {
-                    "name": "kind",
-                    "type": "string",
-                    "required": true
-                  },
-                  "id": {
-                    "name": "id",
-                    "type": "string",
-                    "required": true
                   },
                   "glyph": {
                     "name": "glyph",
-                    "type": "string",
-                    "required": false
-                  },
-                  "message": {
-                    "name": "message",
                     "type": "string",
                     "required": false
                   }
@@ -92,6 +97,32 @@
                 "total"
               ]
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "COLLECT"
+              },
+              {
+                "kind": "emit",
+                "resource": "PICKED"
+              },
+              {
+                "kind": "emit",
+                "resource": "PICKUP_SET_COMPLETED"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.pickupCompleted"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.pickups"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.total"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "PickupData",
             "linkedEntityId": "ent_01M1GJ1RVVTJT76K1YZHQJGRG1",
@@ -210,6 +241,130 @@
                       "name": "speed",
                       "type": "number",
                       "required": true
+                    }
+                  ]
+                },
+                {
+                  "key": "SET_FEATURES",
+                  "id": "evt_01M1PTZX5Z31ST77X2GQFT7GWG",
+                  "name": "Set Features",
+                  "payloadSchema": [
+                    {
+                      "name": "features",
+                      "type": "[object]",
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "x",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "y",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "kind",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "glyph",
+                          "type": "string"
+                        },
+                        {
+                          "name": "message",
+                          "type": "string"
+                        },
+                        {
+                          "name": "collected",
+                          "type": "boolean"
+                        },
+                        {
+                          "name": "active",
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "ADD_FEATURES",
+                  "id": "evt_01M1QFBHTSEH9DETBGERW7K3S2",
+                  "name": "Add Features",
+                  "payloadSchema": [
+                    {
+                      "name": "features",
+                      "type": "[object]",
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "x",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "y",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "kind",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "glyph",
+                          "type": "string"
+                        },
+                        {
+                          "name": "message",
+                          "type": "string"
+                        },
+                        {
+                          "name": "collected",
+                          "type": "boolean"
+                        },
+                        {
+                          "name": "active",
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "key": "FEATURES_ACTIVE",
+                  "id": "evt_01M1QEXGHDMZ87C3AJSYCSP70Q",
+                  "name": "Features Active",
+                  "payloadSchema": [
+                    {
+                      "name": "updates",
+                      "type": "[object]",
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "active",
+                          "type": "boolean",
+                          "required": true
+                        }
+                      ]
                     }
                   ]
                 },
@@ -353,36 +508,48 @@
                                 [
                                   "and",
                                   [
-                                    "<=",
+                                    "!=",
                                     [
-                                      "math/abs",
-                                      [
-                                        "-",
-                                        "@payload.x",
-                                        [
-                                          "object/get",
-                                          "@f",
-                                          "x"
-                                        ]
-                                      ]
+                                      "object/get",
+                                      "@f",
+                                      "active"
                                     ],
-                                    0.7
+                                    false
                                   ],
                                   [
-                                    "<=",
+                                    "and",
                                     [
-                                      "math/abs",
+                                      "<=",
                                       [
-                                        "-",
-                                        "@payload.y",
+                                        "math/abs",
                                         [
-                                          "object/get",
-                                          "@f",
-                                          "y"
+                                          "-",
+                                          "@payload.x",
+                                          [
+                                            "object/get",
+                                            "@f",
+                                            "x"
+                                          ]
                                         ]
-                                      ]
+                                      ],
+                                      0.7
                                     ],
-                                    1.2
+                                    [
+                                      "<=",
+                                      [
+                                        "math/abs",
+                                        [
+                                          "-",
+                                          "@payload.y",
+                                          [
+                                            "object/get",
+                                            "@f",
+                                            "y"
+                                          ]
+                                        ]
+                                      ],
+                                      1.2
+                                    ]
                                   ]
                                 ]
                               ]
@@ -515,25 +682,25 @@
                                     "@f",
                                     "x"
                                   ],
-                                  "y": [
+                                  "glyph": [
                                     "object/get",
                                     "@f",
-                                    "y"
+                                    "glyph"
                                   ],
                                   "id": [
                                     "object/get",
                                     "@f",
                                     "id"
                                   ],
-                                  "glyph": [
-                                    "object/get",
-                                    "@f",
-                                    "glyph"
-                                  ],
                                   "kind": [
                                     "object/get",
                                     "@f",
                                     "kind"
+                                  ],
+                                  "y": [
+                                    "object/get",
+                                    "@f",
+                                    "y"
                                   ]
                                 }
                               ],
@@ -585,6 +752,154 @@
                 {
                   "from": "active",
                   "to": "active",
+                  "event": "SET_FEATURES",
+                  "eventId": "evt_01M1PTZX5Z31ST77X2GQFT7GWG",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pickups",
+                      [
+                        "array/map",
+                        "@payload.features",
+                        [
+                          "fn",
+                          "f",
+                          [
+                            "object/merge",
+                            "@f",
+                            {
+                              "collected": false
+                            }
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.pickupCompleted",
+                      false
+                    ],
+                    [
+                      "set",
+                      "@entity.total",
+                      0
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "ADD_FEATURES",
+                  "eventId": "evt_01M1QFBHTSEH9DETBGERW7K3S2",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pickups",
+                      [
+                        "array/concat",
+                        "@entity.pickups",
+                        [
+                          "array/map",
+                          "@payload.features",
+                          [
+                            "fn",
+                            "f",
+                            [
+                              "object/merge",
+                              "@f",
+                              {
+                                "collected": false
+                              }
+                            ]
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.pickupCompleted",
+                      false
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "FEATURES_ACTIVE",
+                  "eventId": "evt_01M1QEXGHDMZ87C3AJSYCSP70Q",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.pickups",
+                      [
+                        "array/map",
+                        "@entity.pickups",
+                        [
+                          "fn",
+                          "f",
+                          [
+                            "let",
+                            [
+                              [
+                                "m",
+                                [
+                                  "array/filter",
+                                  "@payload.updates",
+                                  [
+                                    "fn",
+                                    "u",
+                                    [
+                                      "==",
+                                      [
+                                        "object/get",
+                                        "@u",
+                                        "id"
+                                      ],
+                                      [
+                                        "object/get",
+                                        "@f",
+                                        "id"
+                                      ]
+                                    ]
+                                  ]
+                                ]
+                              ]
+                            ],
+                            [
+                              "if",
+                              [
+                                ">",
+                                [
+                                  "array/len",
+                                  "@m"
+                                ],
+                                0
+                              ],
+                              [
+                                "object/merge",
+                                "@f",
+                                {
+                                  "active": [
+                                    "object/get",
+                                    [
+                                      "array/first",
+                                      "@m"
+                                    ],
+                                    "active"
+                                  ]
+                                }
+                              ],
+                              "@f"
+                            ]
+                          ]
+                        ]
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
                   "event": "RESTART",
                   "eventId": "evt_01M1GJ1RVV15S8HWFJEVX2B3EE",
                   "effects": [
@@ -593,7 +908,7 @@
                       "@entity.pickups",
                       [
                         "array/map",
-                        [],
+                        "@entity.pickups",
                         [
                           "fn",
                           "f",
@@ -622,20 +937,6 @@
               ]
             },
             "config": {
-              "reachY": {
-                "type": "number",
-                "default": 1.2,
-                "label": "Reach Y",
-                "description": "Vertical tolerance (world units) around a feature's center when testing player contact; generous values catch fly-through pickups.",
-                "tier": "domain"
-              },
-              "running": {
-                "type": "boolean",
-                "default": true,
-                "label": "Running",
-                "description": "When true, BODY_MOVED collects touched features; toggle to freeze the set as-is.",
-                "tier": "domain"
-              },
               "reachX": {
                 "type": "number",
                 "default": 0.7,
@@ -643,44 +944,56 @@
                 "description": "Horizontal tolerance (world units) around a feature's center when testing player contact.",
                 "tier": "domain"
               },
+              "reachY": {
+                "type": "number",
+                "default": 1.2,
+                "label": "Reach Y",
+                "description": "Vertical tolerance (world units) around a feature's center when testing player contact; generous values catch fly-through pickups.",
+                "tier": "domain"
+              },
               "features": {
                 "type": "[PickupFeature]",
                 "default": [],
                 "label": "Features",
-                "description": "One row per collectible: id, center (x, y in world units), board-defined kind (star, boost, …), display glyph and message floated on pickup. collected is stamped at runtime.",
+                "description": "One row per collectible: id, center (x, y in world units), board-defined kind (star, boost, …), display glyph and message floated on pickup. collected is stamped at runtime. Seeded onto the entity on INIT; the live set is entity.pickups — SET_FEATURES replaces it at runtime (boards that import collectibles), and RESTART re-arms the live set rather than re-reading config, so injected features survive respawns.",
                 "tier": "domain",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "y": {
-                      "name": "y",
-                      "type": "number",
-                      "required": true
-                    },
-                    "kind": {
-                      "name": "kind",
-                      "type": "string",
-                      "required": true
-                    },
                     "collected": {
                       "name": "collected",
                       "type": "boolean",
-                      "required": false
-                    },
-                    "glyph": {
-                      "name": "glyph",
-                      "type": "string",
-                      "required": false
-                    },
-                    "message": {
-                      "name": "message",
-                      "type": "string",
                       "required": false
                     },
                     "id": {
                       "name": "id",
                       "type": "string",
                       "required": true
+                    },
+                    "glyph": {
+                      "name": "glyph",
+                      "type": "string",
+                      "required": false
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
+                    },
+                    "active": {
+                      "name": "active",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "kind": {
+                      "name": "kind",
+                      "type": "string",
+                      "required": true
+                    },
+                    "message": {
+                      "name": "message",
+                      "type": "string",
+                      "required": false
                     },
                     "x": {
                       "name": "x",
@@ -689,6 +1002,13 @@
                     }
                   }
                 }
+              },
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true, BODY_MOVED collects touched features; toggle to freeze the set as-is.",
+                "tier": "domain"
               }
             },
             "scope": "instance"
@@ -708,6 +1028,18 @@
           }
         ],
         "types": {
+          "PickupActiveUpdate": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "required": true
+            }
+          ],
           "PickupFeature": [
             {
               "name": "id",
@@ -740,6 +1072,10 @@
             {
               "name": "collected",
               "type": "boolean"
+            },
+            {
+              "name": "active",
+              "type": "boolean"
             }
           ]
         }
@@ -749,23 +1085,6 @@
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF": {
-          "id": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF",
-          "kind": "trait",
-          "bakedName": "Pickup",
-          "curName": "Pickup",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01M1GJ1RVVM5H5ZY0QRFXV9CKE": {
-          "id": "evt_01M1GJ1RVVM5H5ZY0QRFXV9CKE",
-          "kind": "event",
-          "bakedName": "BODY_MOVED",
-          "curName": "BODY_MOVED",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
-        },
         "orb_01M1GJ1RVV19SNFS3EG7ABGGVT": {
           "id": "orb_01M1GJ1RVV19SNFS3EG7ABGGVT",
           "kind": "orbital",
@@ -773,6 +1092,15 @@
           "curName": "PickupOrbital",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01M1PTZX5Z31ST77X2GQFT7GWG": {
+          "id": "evt_01M1PTZX5Z31ST77X2GQFT7GWG",
+          "kind": "event",
+          "bakedName": "SET_FEATURES",
+          "curName": "SET_FEATURES",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
         },
         "pag_01M1GJ1RVVMCZ7HREZ4S52JVK5": {
           "id": "pag_01M1GJ1RVVMCZ7HREZ4S52JVK5",
@@ -782,20 +1110,28 @@
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01M1GJ1RVVSK6CJ213JM62VAQD": {
-          "id": "evt_01M1GJ1RVVSK6CJ213JM62VAQD",
+        "evt_01M1GJ1RVVN8VVR734HESK50D3": {
+          "id": "evt_01M1GJ1RVVN8VVR734HESK50D3",
           "kind": "event",
-          "bakedName": "PICKED",
-          "curName": "PICKED",
+          "bakedName": "PICKUP_SET_COMPLETED",
+          "curName": "PICKUP_SET_COMPLETED",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
         },
-        "evt_01M1GJ1RVV6P5K79BVV55VS8N1": {
-          "id": "evt_01M1GJ1RVV6P5K79BVV55VS8N1",
+        "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF": {
+          "id": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF",
+          "kind": "trait",
+          "bakedName": "Pickup",
+          "curName": "Pickup",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01M1GJ1RVVV01RP71K50TKTX9B": {
+          "id": "evt_01M1GJ1RVVV01RP71K50TKTX9B",
           "kind": "event",
-          "bakedName": "COLLECT",
-          "curName": "COLLECT",
+          "bakedName": "INIT",
+          "curName": "INIT",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
@@ -809,24 +1145,6 @@
           "owner": "workspace",
           "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
         },
-        "evt_01M1GJ1RVVV01RP71K50TKTX9B": {
-          "id": "evt_01M1GJ1RVVV01RP71K50TKTX9B",
-          "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
-        },
-        "evt_01M1GJ1RVVN8VVR734HESK50D3": {
-          "id": "evt_01M1GJ1RVVN8VVR734HESK50D3",
-          "kind": "event",
-          "bakedName": "PICKUP_SET_COMPLETED",
-          "curName": "PICKUP_SET_COMPLETED",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
-        },
         "ent_01M1GJ1RVVTJT76K1YZHQJGRG1": {
           "id": "ent_01M1GJ1RVVTJT76K1YZHQJGRG1",
           "kind": "entity",
@@ -834,10 +1152,55 @@
           "curName": "PickupData",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01M1QEXGHDMZ87C3AJSYCSP70Q": {
+          "id": "evt_01M1QEXGHDMZ87C3AJSYCSP70Q",
+          "kind": "event",
+          "bakedName": "FEATURES_ACTIVE",
+          "curName": "FEATURES_ACTIVE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
+        },
+        "evt_01M1GJ1RVV6P5K79BVV55VS8N1": {
+          "id": "evt_01M1GJ1RVV6P5K79BVV55VS8N1",
+          "kind": "event",
+          "bakedName": "COLLECT",
+          "curName": "COLLECT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
+        },
+        "evt_01M1GJ1RVVSK6CJ213JM62VAQD": {
+          "id": "evt_01M1GJ1RVVSK6CJ213JM62VAQD",
+          "kind": "event",
+          "bakedName": "PICKED",
+          "curName": "PICKED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
+        },
+        "evt_01M1QFBHTSEH9DETBGERW7K3S2": {
+          "id": "evt_01M1QFBHTSEH9DETBGERW7K3S2",
+          "kind": "event",
+          "bakedName": "ADD_FEATURES",
+          "curName": "ADD_FEATURES",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
+        },
+        "evt_01M1GJ1RVVM5H5ZY0QRFXV9CKE": {
+          "id": "evt_01M1GJ1RVVM5H5ZY0QRFXV9CKE",
+          "kind": "event",
+          "bakedName": "BODY_MOVED",
+          "curName": "BODY_MOVED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M1GJ1RVVYNAYXGWNA3EB2RFF"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-pickup \"1.0.0\"\n\"Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count. kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.\"\norbital PickupOrbital {\n  type PickupFeature = {\n    id : string!\n    x : number!\n    y : number!\n    kind : string!\n    glyph : string\n    message : string\n    collected : boolean\n  }\n\n  entity PickupData [runtime, shared] {\n    id : string!\n    pickups : [PickupFeature] = []\n    pickupCompleted : boolean = false\n    total : number = 0\n  }\n\n  trait Pickup -> @rebindable PickupData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.pickups (array/map @config.features (fn f (object/merge @f { collected: false }))))\n        (set @entity.pickupCompleted false)\n        (set @entity.total 0)\n\n      BODY_MOVED -> active when @config.running\n        (let ((touch (array/filter @entity.pickups (fn f\n          (and (== (object/get @f collected) false)\n            (and (<= (math/abs (- @payload.x (object/get @f x))) @config.reachX)\n              (<= (math/abs (- @payload.y (object/get @f y))) @config.reachY)))))))\n        (if (> (array/len @touch) 0)\n          (let ((f (array/first @touch)))\n          (let ((remaining (array/len (array/filter @entity.pickups (fn c (and (== (object/get @c collected) false) (!= (object/get @c id) (object/get @f id))))))))\n          (do\n            (set @entity.pickups (array/map @entity.pickups (fn c (if (== (object/get @c id) (object/get @f id)) (object/merge @c { collected: true }) @c))))\n            (set @entity.total (+ @entity.total 1))\n            (emit PICKED { id: (object/get @f id), kind: (object/get @f kind), x: (object/get @f x), y: (object/get @f y), glyph: (object/get @f glyph), message: (object/get @f message) })\n            (emit COLLECT { total: @entity.total })\n            (if (and (== @entity.pickupCompleted false) (== @remaining 0))\n              (do\n                (set @entity.pickupCompleted true)\n                (emit PICKUP_SET_COMPLETED {}))\n              null))))\n          null))\n\n      RESTART -> active\n        (set @entity.pickups (array/map @config.features (fn f (object/merge @f { collected: false }))))\n        (set @entity.pickupCompleted false)\n        (set @entity.total 0)\n    }\n\n    emits {\n      PICKED -> external {\n        id : string!\n        kind : string!\n        x : number!\n        y : number!\n        glyph : string\n        message : string\n      }\n        @description \"The player touched an uncollected feature; carries the feature identity, board-defined kind (star, boost, …), position and display glyph/message. Fires once per feature per run.\"\n        @tier \"domain\"\n      COLLECT -> external {\n        total : number!\n      }\n        @description \"Running count of collected features after this pickup — the event std-gate-lock consumes to count openings.\"\n        @tier \"domain\"\n      PICKUP_SET_COMPLETED -> external {\n      }\n        @description \"Every feature in the set is collected; fires once per run.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED collects touched features; toggle to freeze the set as-is.\"\n        @tier \"domain\"\n      features : [PickupFeature] = []\n        @label \"Features\"\n        @description \"One row per collectible: id, center (x, y in world units), board-defined kind (star, boost, …), display glyph and message floated on pickup. collected is stamped at runtime.\"\n        @tier \"domain\"\n      reachX : number = 0.7\n        @label \"Reach X\"\n        @description \"Horizontal tolerance (world units) around a feature's center when testing player contact.\"\n        @tier \"domain\"\n      reachY : number = 1.2\n        @label \"Reach Y\"\n        @description \"Vertical tolerance (world units) around a feature's center when testing player contact; generous values catch fly-through pickups.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/pickup\" as PickupPage -> Pickup\n}\n"
+  "lolo": "app std-pickup \"1.0.0\"\n\"Headless side-view collectible authority — the platformer twin of grid std-gather. Listens BODY_MOVED and, when the player touches an uncollected feature (|dx| <= reachX, |dy| <= reachY of the feature center — the coef-pad touch idiom minus the grounded requirement, so airborne pickups work), stamps it collected on the shared entity and emits PICKED once per item (id, kind, position, glyph, message) plus COLLECT{total} with the running count (the event std-gate-lock already consumes). A feature carrying active: false is visible but NOT collectible (gated pickups — e.g. a star that only counts once the curve passes through it); FEATURES_ACTIVE{updates:[{id,active}]} flips gates in place without re-arming collected. When every feature is collected it emits PICKUP_SET_COMPLETED once. RESTART re-arms every feature and zeroes the count (re-arming the live entity set, so SET_FEATURES-injected features survive). SET_FEATURES replaces the collectible set at runtime for boards that import their features; ADD_FEATURES appends without disturbing the live set (mid-game gem drops). kind is board-defined vocabulary (star, boost, …) — this atom reports, boards judge. Renders nothing; boards draw the features and read collected from the shared entity. Corresponds to the design-sheet field(s): rewards.\"\norbital PickupOrbital {\n  type PickupFeature = {\n    id : string!\n    x : number!\n    y : number!\n    kind : string!\n    glyph : string\n    message : string\n    collected : boolean\n    active : boolean\n  }\n\n  type PickupActiveUpdate = {\n    id : string!\n    active : boolean!\n  }\n\n  entity PickupData [runtime, shared] {\n    id : string!\n    pickups : [PickupFeature] = []\n    pickupCompleted : boolean = false\n    total : number = 0\n  }\n\n  trait Pickup -> @rebindable PickupData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.pickups (array/map @config.features (fn f (object/merge @f { collected: false }))))\n        (set @entity.pickupCompleted false)\n        (set @entity.total 0)\n\n      BODY_MOVED -> active when @config.running\n        (let ((touch (array/filter @entity.pickups (fn f\n          (and (== (object/get @f collected) false)\n            (and (!= (object/get @f active) false)\n              (and (<= (math/abs (- @payload.x (object/get @f x))) @config.reachX)\n                (<= (math/abs (- @payload.y (object/get @f y))) @config.reachY))))))))\n        (if (> (array/len @touch) 0)\n          (let ((f (array/first @touch)))\n          (let ((remaining (array/len (array/filter @entity.pickups (fn c (and (== (object/get @c collected) false) (!= (object/get @c id) (object/get @f id))))))))\n          (do\n            (set @entity.pickups (array/map @entity.pickups (fn c (if (== (object/get @c id) (object/get @f id)) (object/merge @c { collected: true }) @c))))\n            (set @entity.total (+ @entity.total 1))\n            (emit PICKED { id: (object/get @f id), kind: (object/get @f kind), x: (object/get @f x), y: (object/get @f y), glyph: (object/get @f glyph), message: (object/get @f message) })\n            (emit COLLECT { total: @entity.total })\n            (if (and (== @entity.pickupCompleted false) (== @remaining 0))\n              (do\n                (set @entity.pickupCompleted true)\n                (emit PICKUP_SET_COMPLETED {}))\n              null))))\n          null))\n\n      SET_FEATURES -> active\n        (set @entity.pickups (array/map @payload.features (fn f (object/merge @f { collected: false }))))\n        (set @entity.pickupCompleted false)\n        (set @entity.total 0)\n\n      ADD_FEATURES -> active\n        (set @entity.pickups (array/concat @entity.pickups (array/map @payload.features (fn f (object/merge @f { collected: false })))))\n        (set @entity.pickupCompleted false)\n\n      FEATURES_ACTIVE -> active\n        (set @entity.pickups (array/map @entity.pickups (fn f\n          (let ((m (array/filter @payload.updates (fn u (== (object/get @u id) (object/get @f id))))))\n          (if (> (array/len @m) 0) (object/merge @f { active: (object/get (array/first @m) active) }) @f)))))\n\n      RESTART -> active\n        (set @entity.pickups (array/map @entity.pickups (fn f (object/merge @f { collected: false }))))\n        (set @entity.pickupCompleted false)\n        (set @entity.total 0)\n    }\n\n    emits {\n      PICKED -> external {\n        id : string!\n        kind : string!\n        x : number!\n        y : number!\n        glyph : string\n        message : string\n      }\n        @description \"The player touched an uncollected feature; carries the feature identity, board-defined kind (star, boost, …), position and display glyph/message. Fires once per feature per run.\"\n        @tier \"domain\"\n      COLLECT -> external {\n        total : number!\n      }\n        @description \"Running count of collected features after this pickup — the event std-gate-lock consumes to count openings.\"\n        @tier \"domain\"\n      PICKUP_SET_COMPLETED -> external {\n      }\n        @description \"Every feature in the set is collected; fires once per run.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      SET_FEATURES { features : [PickupFeature]! }\n      ADD_FEATURES { features : [PickupFeature]! }\n      FEATURES_ACTIVE { updates : [PickupActiveUpdate]! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED collects touched features; toggle to freeze the set as-is.\"\n        @tier \"domain\"\n      features : [PickupFeature] = []\n        @label \"Features\"\n        @description \"One row per collectible: id, center (x, y in world units), board-defined kind (star, boost, …), display glyph and message floated on pickup. collected is stamped at runtime. Seeded onto the entity on INIT; the live set is entity.pickups — SET_FEATURES replaces it at runtime (boards that import collectibles), and RESTART re-arms the live set rather than re-reading config, so injected features survive respawns.\"\n        @tier \"domain\"\n      reachX : number = 0.7\n        @label \"Reach X\"\n        @description \"Horizontal tolerance (world units) around a feature's center when testing player contact.\"\n        @tier \"domain\"\n      reachY : number = 1.2\n        @label \"Reach Y\"\n        @description \"Vertical tolerance (world units) around a feature's center when testing player contact; generous values catch fly-through pickups.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/pickup\" as PickupPage -> Pickup\n}\n"
 }

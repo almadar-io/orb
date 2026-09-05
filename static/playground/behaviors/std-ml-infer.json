@@ -46,36 +46,6 @@
                   "NotATensorViolation"
                 ],
                 "properties": {
-                  "ShapeMismatchViolation": {
-                    "name": "ShapeMismatchViolation",
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "name": "type",
-                        "type": "string",
-                        "required": false,
-                        "values": [
-                          "shape_mismatch"
-                        ]
-                      },
-                      "actual": {
-                        "name": "actual",
-                        "type": "array",
-                        "required": true,
-                        "items": {
-                          "type": "number"
-                        }
-                      },
-                      "expected": {
-                        "name": "expected",
-                        "type": "array",
-                        "required": true,
-                        "items": {
-                          "type": "number"
-                        }
-                      }
-                    }
-                  },
                   "NotATensorViolation": {
                     "name": "NotATensorViolation",
                     "type": "object",
@@ -99,8 +69,13 @@
                     "name": "RangeViolationDetail",
                     "type": "object",
                     "properties": {
-                      "dim": {
-                        "name": "dim",
+                      "actualMax": {
+                        "name": "actualMax",
+                        "type": "number",
+                        "required": true
+                      },
+                      "min": {
+                        "name": "min",
                         "type": "number",
                         "required": true
                       },
@@ -112,8 +87,13 @@
                           "range_violation"
                         ]
                       },
-                      "actualMax": {
-                        "name": "actualMax",
+                      "actualMin": {
+                        "name": "actualMin",
+                        "type": "number",
+                        "required": true
+                      },
+                      "dim": {
+                        "name": "dim",
                         "type": "number",
                         "required": true
                       },
@@ -121,16 +101,36 @@
                         "name": "max",
                         "type": "number",
                         "required": true
+                      }
+                    }
+                  },
+                  "ShapeMismatchViolation": {
+                    "name": "ShapeMismatchViolation",
+                    "type": "object",
+                    "properties": {
+                      "expected": {
+                        "name": "expected",
+                        "type": "array",
+                        "required": true,
+                        "items": {
+                          "type": "number"
+                        }
                       },
-                      "actualMin": {
-                        "name": "actualMin",
-                        "type": "number",
-                        "required": true
+                      "actual": {
+                        "name": "actual",
+                        "type": "array",
+                        "required": true,
+                        "items": {
+                          "type": "number"
+                        }
                       },
-                      "min": {
-                        "name": "min",
-                        "type": "number",
-                        "required": true
+                      "type": {
+                        "name": "type",
+                        "type": "string",
+                        "required": false,
+                        "values": [
+                          "shape_mismatch"
+                        ]
                       }
                     }
                   }
@@ -163,6 +163,48 @@
           {
             "name": "InferenceRun",
             "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
+            "effectRow": [
+              {
+                "kind": "call-service",
+                "resource": "ml.infer"
+              },
+              {
+                "kind": "emit",
+                "resource": "INFERRED"
+              },
+              {
+                "kind": "emit",
+                "resource": "INFER_ABSTAINED"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.confidence"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.input"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.output"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.reason"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.request"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.status"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.violations"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "Inference",
             "linkedEntityId": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
@@ -445,8 +487,8 @@
                       },
                       {
                         "emit": {
-                          "failure": "INFER_CALL_FAILED",
-                          "success": "INFERRED_RAW"
+                          "success": "INFERRED_RAW",
+                          "failure": "INFER_CALL_FAILED"
                         }
                       }
                     ]
@@ -528,9 +570,9 @@
                               "emit",
                               "INFERRED",
                               {
+                                "violations": "@entity.violations",
                                 "confidence": "@entity.confidence",
-                                "output": "@entity.output",
-                                "violations": "@entity.violations"
+                                "output": "@entity.output"
                               }
                             ]
                           ],
@@ -589,9 +631,9 @@
                             "emit",
                             "INFER_ABSTAINED",
                             {
-                              "violations": "@entity.violations",
+                              "reason": "contract violation",
                               "request": "@entity.request",
-                              "reason": "contract violation"
+                              "violations": "@entity.violations"
                             }
                           ]
                         ]
@@ -635,8 +677,8 @@
                       "INFER_ABSTAINED",
                       {
                         "reason": "unavailable",
-                        "request": "@entity.request",
-                        "violations": "@entity.violations"
+                        "violations": "@entity.violations",
+                        "request": "@entity.request"
                       }
                     ]
                   ]
@@ -707,13 +749,6 @@
                 "description": "hf:<id> for off-the-shelf weights, or a masar checkpoint id, forwarded to the ml service infer action",
                 "tier": "infra"
               },
-              "confidenceFloor": {
-                "type": "float",
-                "default": 0.7,
-                "label": "Confidence floor",
-                "description": "Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence",
-                "tier": "policy"
-              },
               "outputContract": {
                 "type": "OutputContract",
                 "default": {
@@ -723,6 +758,14 @@
                 "description": "Declared shape and per-dimension ranges the model output must satisfy; a failing check abstains with reason contract violation. Omit shape to assert ranges only — an empty shape [] asserts a SCALAR output, it does not mean unconstrained",
                 "tier": "domain",
                 "properties": {
+                  "shape": {
+                    "name": "shape",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                      "type": "number"
+                    }
+                  },
                   "ranges": {
                     "name": "ranges",
                     "type": "object",
@@ -742,16 +785,15 @@
                         }
                       }
                     }
-                  },
-                  "shape": {
-                    "name": "shape",
-                    "type": "array",
-                    "required": false,
-                    "items": {
-                      "type": "number"
-                    }
                   }
                 }
+              },
+              "confidenceFloor": {
+                "type": "float",
+                "default": 0.7,
+                "label": "Confidence floor",
+                "description": "Minimum service-reported confidence required to answer; below this the atom abstains with reason low confidence",
+                "tier": "policy"
               }
             },
             "scope": "instance"
@@ -769,35 +811,116 @@
               }
             ]
           }
-        ]
+        ],
+        "types": {
+          "NotATensorViolation": [
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "actualType",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "OutputContract": [
+            {
+              "name": "shape",
+              "type": "[int]"
+            },
+            {
+              "name": "ranges",
+              "type": "Map<string,Range>"
+            }
+          ],
+          "Range": [
+            {
+              "name": "min",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "max",
+              "type": "float",
+              "required": true
+            }
+          ],
+          "RangeViolationDetail": [
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "dim",
+              "type": "int",
+              "required": true
+            },
+            {
+              "name": "min",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "max",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "actualMin",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "actualMax",
+              "type": "float",
+              "required": true
+            }
+          ],
+          "ShapeMismatchViolation": [
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "expected",
+              "type": "[int]",
+              "required": true
+            },
+            {
+              "name": "actual",
+              "type": "[int]",
+              "required": true
+            }
+          ]
+        }
       }
     ],
     "schemaVersion": 1,
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "evt_01KYBPCRRYVWRB6GXDRKPNX561": {
-          "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
-          "kind": "event",
-          "bakedName": "INFER",
-          "curName": "INFER",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
-        "pag_01KYBPCRRY18XQ2SBPNFRTP0SN": {
-          "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
-          "kind": "page",
-          "bakedName": "MlInferPage",
-          "curName": "MlInferPage",
+        "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX": {
+          "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
+          "kind": "trait",
+          "bakedName": "InferenceRun",
+          "curName": "InferenceRun",
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49": {
-          "id": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+        "ent_01KYBPCRRYA4RY273R7TFF3VRF": {
+          "id": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
+          "kind": "entity",
+          "bakedName": "Inference",
+          "curName": "Inference",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRY2FMY57YT8MYD3NWX": {
+          "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
           "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
+          "bakedName": "INFER_CALL_FAILED",
+          "curName": "INFER_CALL_FAILED",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
@@ -820,45 +943,20 @@
           "owner": "workspace",
           "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
         },
-        "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX": {
-          "id": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX",
-          "kind": "trait",
-          "bakedName": "InferenceRun",
-          "curName": "InferenceRun",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KYBPCRRY49ZNB6TD5ZPAY80T": {
-          "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
-          "kind": "event",
-          "bakedName": "INFERRED_RAW",
-          "curName": "INFERRED_RAW",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
-        "ent_01KYBPCRRYA4RY273R7TFF3VRF": {
-          "id": "ent_01KYBPCRRYA4RY273R7TFF3VRF",
-          "kind": "entity",
-          "bakedName": "Inference",
-          "curName": "Inference",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KYBPCRRY2FMY57YT8MYD3NWX": {
-          "id": "evt_01KYBPCRRY2FMY57YT8MYD3NWX",
-          "kind": "event",
-          "bakedName": "INFER_CALL_FAILED",
-          "curName": "INFER_CALL_FAILED",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
-        },
         "evt_01KYBPCRRY466WKYEHEYJJD4NJ": {
           "id": "evt_01KYBPCRRY466WKYEHEYJJD4NJ",
           "kind": "event",
           "bakedName": "INFER_ABSTAINED",
           "curName": "INFER_ABSTAINED",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "evt_01KYBPCRRYVWRB6GXDRKPNX561": {
+          "id": "evt_01KYBPCRRYVWRB6GXDRKPNX561",
+          "kind": "event",
+          "bakedName": "INFER",
+          "curName": "INFER",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
@@ -870,6 +968,32 @@
           "curName": "MlInferOrbital",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49": {
+          "id": "evt_01KYBPCRRYXAYYDX6TXDJ6ZD49",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
+        },
+        "pag_01KYBPCRRY18XQ2SBPNFRTP0SN": {
+          "id": "pag_01KYBPCRRY18XQ2SBPNFRTP0SN",
+          "kind": "page",
+          "bakedName": "MlInferPage",
+          "curName": "MlInferPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "evt_01KYBPCRRY49ZNB6TD5ZPAY80T": {
+          "id": "evt_01KYBPCRRY49ZNB6TD5ZPAY80T",
+          "kind": "event",
+          "bakedName": "INFERRED_RAW",
+          "curName": "INFERRED_RAW",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KYBPCRRYRDWPJQ44M6MKZ2YX"
         }
       }
     }

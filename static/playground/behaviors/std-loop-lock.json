@@ -1,12 +1,12 @@
 {
   "name": "std-loop-lock",
-  "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.",
+  "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every live lock (re-arming the live entity set, so SET_LOCKS-injected locks survive respawns). SET_LOCKS replaces the lock set at runtime for boards that import their locks. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.",
   "level": "atom",
   "topic": "ui/game",
   "schema": {
     "name": "std-loop-lock",
     "version": "1.0.0",
-    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.",
+    "description": "Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every live lock (re-arming the live entity set, so SET_LOCKS-injected locks survive respawns). SET_LOCKS replaces the lock set at runtime for boards that import their locks. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.",
     "orbitals": [
       {
         "name": "LoopLockOrbital",
@@ -28,8 +28,23 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "swept": {
+                    "name": "swept",
+                    "type": "number",
+                    "required": false
+                  },
                   "x": {
                     "name": "x",
+                    "type": "number",
+                    "required": true
+                  },
+                  "inside": {
+                    "name": "inside",
+                    "type": "boolean",
+                    "required": false
+                  },
+                  "band": {
+                    "name": "band",
                     "type": "number",
                     "required": true
                   },
@@ -38,20 +53,20 @@
                     "type": "string",
                     "required": true
                   },
-                  "lastAngle": {
-                    "name": "lastAngle",
-                    "type": "number",
-                    "required": false
-                  },
-                  "band": {
-                    "name": "band",
-                    "type": "number",
-                    "required": true
-                  },
                   "reported": {
                     "name": "reported",
                     "type": "boolean",
                     "required": false
+                  },
+                  "turns": {
+                    "name": "turns",
+                    "type": "number",
+                    "required": true
+                  },
+                  "radius": {
+                    "name": "radius",
+                    "type": "number",
+                    "required": true
                   },
                   "unlocked": {
                     "name": "unlocked",
@@ -63,24 +78,9 @@
                     "type": "number",
                     "required": true
                   },
-                  "radius": {
-                    "name": "radius",
+                  "lastAngle": {
+                    "name": "lastAngle",
                     "type": "number",
-                    "required": true
-                  },
-                  "swept": {
-                    "name": "swept",
-                    "type": "number",
-                    "required": false
-                  },
-                  "turns": {
-                    "name": "turns",
-                    "type": "number",
-                    "required": true
-                  },
-                  "inside": {
-                    "name": "inside",
-                    "type": "boolean",
                     "required": false
                   }
                 }
@@ -100,6 +100,16 @@
                 "locks"
               ]
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "LOOP_UNLOCKED"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.locks"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "LoopLockData",
             "linkedEntityId": "ent_01M119MVXMDX7KPCDQRRYHABX8",
@@ -188,6 +198,70 @@
                   ]
                 },
                 {
+                  "key": "SET_LOCKS",
+                  "id": "evt_01M1PVY2596ZBHHE50Q7R3WDPC",
+                  "name": "Set Locks",
+                  "payloadSchema": [
+                    {
+                      "name": "locks",
+                      "type": "[object]",
+                      "required": true,
+                      "properties": [
+                        {
+                          "name": "id",
+                          "type": "string",
+                          "required": true
+                        },
+                        {
+                          "name": "x",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "y",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "radius",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "band",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "turns",
+                          "type": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "swept",
+                          "type": "number"
+                        },
+                        {
+                          "name": "lastAngle",
+                          "type": "number"
+                        },
+                        {
+                          "name": "inside",
+                          "type": "boolean"
+                        },
+                        {
+                          "name": "unlocked",
+                          "type": "boolean"
+                        },
+                        {
+                          "name": "reported",
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
                   "key": "RESTART",
                   "id": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
                   "name": "Restart",
@@ -243,11 +317,11 @@
                             "object/merge",
                             "@l",
                             {
-                              "reported": false,
-                              "lastAngle": 0,
                               "inside": false,
-                              "swept": 0,
-                              "unlocked": false
+                              "lastAngle": 0,
+                              "reported": false,
+                              "unlocked": false,
+                              "swept": 0
                             }
                           ]
                         ]
@@ -417,7 +491,6 @@
                                       "object/merge",
                                       "@l",
                                       {
-                                        "inside": "@in",
                                         "unlocked": [
                                           "or",
                                           [
@@ -452,7 +525,8 @@
                                             "lastAngle"
                                           ]
                                         ],
-                                        "swept": "@swept"
+                                        "swept": "@swept",
+                                        "inside": "@in"
                                       }
                                     ]
                                   ]
@@ -554,6 +628,14 @@
                             "emit",
                             "LOOP_UNLOCKED",
                             {
+                              "y": [
+                                "object/get",
+                                [
+                                  "array/first",
+                                  "@newly"
+                                ],
+                                "y"
+                              ],
                               "x": [
                                 "object/get",
                                 [
@@ -569,19 +651,42 @@
                                   "@newly"
                                 ],
                                 "id"
-                              ],
-                              "y": [
-                                "object/get",
-                                [
-                                  "array/first",
-                                  "@newly"
-                                ],
-                                "y"
                               ]
                             }
                           ]
                         ],
                         null
+                      ]
+                    ]
+                  ]
+                },
+                {
+                  "from": "active",
+                  "to": "active",
+                  "event": "SET_LOCKS",
+                  "eventId": "evt_01M1PVY2596ZBHHE50Q7R3WDPC",
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.locks",
+                      [
+                        "array/map",
+                        "@payload.locks",
+                        [
+                          "fn",
+                          "l",
+                          [
+                            "object/merge",
+                            "@l",
+                            {
+                              "lastAngle": 0,
+                              "reported": false,
+                              "unlocked": false,
+                              "swept": 0,
+                              "inside": false
+                            }
+                          ]
+                        ]
                       ]
                     ]
                   ]
@@ -597,7 +702,7 @@
                       "@entity.locks",
                       [
                         "array/map",
-                        [],
+                        "@entity.locks",
                         [
                           "fn",
                           "l",
@@ -606,10 +711,10 @@
                             "@l",
                             {
                               "lastAngle": 0,
-                              "inside": false,
+                              "swept": 0,
                               "reported": false,
-                              "unlocked": false,
-                              "swept": 0
+                              "inside": false,
+                              "unlocked": false
                             }
                           ]
                         ]
@@ -624,25 +729,25 @@
                 "type": "[LoopLock]",
                 "default": [],
                 "label": "Locks",
-                "description": "One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime.",
+                "description": "One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime. Seeded onto the entity on INIT; the live set is entity.locks — SET_LOCKS replaces it at runtime (boards that import locks), and RESTART re-arms the live set rather than re-reading config, so injected locks survive respawns.",
                 "tier": "domain",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "turns": {
-                      "name": "turns",
-                      "type": "number",
-                      "required": true
-                    },
-                    "unlocked": {
-                      "name": "unlocked",
-                      "type": "boolean",
-                      "required": false
-                    },
                     "inside": {
                       "name": "inside",
                       "type": "boolean",
                       "required": false
+                    },
+                    "swept": {
+                      "name": "swept",
+                      "type": "number",
+                      "required": false
+                    },
+                    "turns": {
+                      "name": "turns",
+                      "type": "number",
+                      "required": true
                     },
                     "x": {
                       "name": "x",
@@ -654,6 +759,11 @@
                       "type": "number",
                       "required": true
                     },
+                    "lastAngle": {
+                      "name": "lastAngle",
+                      "type": "number",
+                      "required": false
+                    },
                     "radius": {
                       "name": "radius",
                       "type": "number",
@@ -664,25 +774,20 @@
                       "type": "string",
                       "required": true
                     },
-                    "lastAngle": {
-                      "name": "lastAngle",
-                      "type": "number",
+                    "reported": {
+                      "name": "reported",
+                      "type": "boolean",
+                      "required": false
+                    },
+                    "unlocked": {
+                      "name": "unlocked",
+                      "type": "boolean",
                       "required": false
                     },
                     "band": {
                       "name": "band",
                       "type": "number",
                       "required": true
-                    },
-                    "reported": {
-                      "name": "reported",
-                      "type": "boolean",
-                      "required": false
-                    },
-                    "swept": {
-                      "name": "swept",
-                      "type": "number",
-                      "required": false
                     }
                   }
                 }
@@ -779,14 +884,21 @@
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01M119MVXMEM68Q7N4HQT3DPSC": {
-          "id": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
-          "kind": "event",
-          "bakedName": "RESTART",
-          "curName": "RESTART",
+        "trt_01M119MVXMETN5BG3SCSWD03ZZ": {
+          "id": "trt_01M119MVXMETN5BG3SCSWD03ZZ",
+          "kind": "trait",
+          "bakedName": "LoopLock",
+          "curName": "LoopLock",
           "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+          "owner": "workspace"
+        },
+        "ent_01M119MVXMDX7KPCDQRRYHABX8": {
+          "id": "ent_01M119MVXMDX7KPCDQRRYHABX8",
+          "kind": "entity",
+          "bakedName": "LoopLockData",
+          "curName": "LoopLockData",
+          "renames": [],
+          "owner": "workspace"
         },
         "orb_01M119MVXM55QAFWY6F0BTF8FT": {
           "id": "orb_01M119MVXM55QAFWY6F0BTF8FT",
@@ -796,6 +908,15 @@
           "renames": [],
           "owner": "workspace"
         },
+        "evt_01M1PVY2596ZBHHE50Q7R3WDPC": {
+          "id": "evt_01M1PVY2596ZBHHE50Q7R3WDPC",
+          "kind": "event",
+          "bakedName": "SET_LOCKS",
+          "curName": "SET_LOCKS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
+        },
         "evt_01M119MVXMJAZTPAEY07C7C9XC": {
           "id": "evt_01M119MVXMJAZTPAEY07C7C9XC",
           "kind": "event",
@@ -804,14 +925,6 @@
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
-        },
-        "ent_01M119MVXMDX7KPCDQRRYHABX8": {
-          "id": "ent_01M119MVXMDX7KPCDQRRYHABX8",
-          "kind": "entity",
-          "bakedName": "LoopLockData",
-          "curName": "LoopLockData",
-          "renames": [],
-          "owner": "workspace"
         },
         "evt_01M119MVXMEK1Z3KT723H1BM95": {
           "id": "evt_01M119MVXMEK1Z3KT723H1BM95",
@@ -831,17 +944,18 @@
           "owner": "workspace",
           "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
         },
-        "trt_01M119MVXMETN5BG3SCSWD03ZZ": {
-          "id": "trt_01M119MVXMETN5BG3SCSWD03ZZ",
-          "kind": "trait",
-          "bakedName": "LoopLock",
-          "curName": "LoopLock",
+        "evt_01M119MVXMEM68Q7N4HQT3DPSC": {
+          "id": "evt_01M119MVXMEM68Q7N4HQT3DPSC",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
           "renames": [],
-          "owner": "workspace"
+          "owner": "workspace",
+          "parent": "trt_01M119MVXMETN5BG3SCSWD03ZZ"
         }
       }
     }
   },
   "source": "",
-  "lolo": "app std-loop-lock \"1.0.0\"\n\"Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every lock. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.\"\norbital LoopLockOrbital {\n  type LoopLock = {\n    id : string!\n    x : number!\n    y : number!\n    radius : number!\n    band : number!\n    turns : number!\n    swept : number\n    lastAngle : number\n    inside : boolean\n    unlocked : boolean\n    reported : boolean\n  }\n\n  entity LoopLockData [runtime, shared] {\n    id : string!\n    locks : [LoopLock] = []\n  }\n\n  trait LoopLock -> @rebindable LoopLockData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.locks (array/map @config.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n\n      BODY_MOVED -> active when @config.running\n        (set @entity.locks (array/map @entity.locks (fn l\n          (let ((dx (- @payload.x (object/get @l x))) (dy (- @payload.y (object/get @l y))))\n          (let ((dist (math/hypot @dx @dy)) (ang (math/atan2 @dy @dx)))\n          (let ((in (<= (math/abs (- @dist (object/get @l radius))) (object/get @l band))))\n          (let ((d (if (and @in (== (object/get @l inside) true))\n                     (math/atan2 (math/sin (- @ang (object/get @l lastAngle))) (math/cos (- @ang (object/get @l lastAngle))))\n                     0)))\n          (let ((swept (+ (object/get @l swept) @d)))\n            (object/merge @l { inside: @in, lastAngle: (if @in @ang (object/get @l lastAngle)), swept: @swept, unlocked: (or (object/get @l unlocked) (>= (math/abs @swept) (* (object/get @l turns) 6.283185307179586))) })))))))))\n        (let ((newly (array/filter @entity.locks (fn l (and (== (object/get @l unlocked) true) (== (object/get @l reported) false))))))\n        (if (> (array/len @newly) 0)\n          (do\n            (set @entity.locks (array/map @entity.locks (fn l (if (== (object/get @l id) (object/get (array/first @newly) id)) (object/merge @l { reported: true }) @l))))\n            (emit LOOP_UNLOCKED { id: (object/get (array/first @newly) id), x: (object/get (array/first @newly) x), y: (object/get (array/first @newly) y) }))\n          null))\n\n      RESTART -> active\n        (set @entity.locks (array/map @config.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n    }\n\n    emits {\n      LOOP_UNLOCKED -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"A lock's angular sweep reached turns × 2π and it flipped unlocked; boards layer treasure fx and rewards. When several locks open on one move, the first reports and the shared entity carries the rest.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED accumulates angular sweep and unlocks locks; toggle to freeze every lock as-is.\"\n        @tier \"domain\"\n      locks : [LoopLock] = []\n        @label \"Locks\"\n        @description \"One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/loop-lock\" as LoopLockPage -> LoopLock\n}\n"
+  "lolo": "app std-loop-lock \"1.0.0\"\n\"Headless winding-lock mechanic: locks that open only after the player travels a full revolution around their anchor. Listens BODY_MOVED and, while the player stays within a radial band of a lock's ring, accumulates the wrapped angular delta of their position into swept (radians, signed — either direction counts); when |swept| reaches turns × 2π the lock flips unlocked and emits LOOP_UNLOCKED once. Entering the band reseeds the angle so leaving and returning never jumps the sweep; progress is kept across exits, so a revolution can be completed in stages. RESTART re-locks every live lock (re-arming the live entity set, so SET_LOCKS-injected locks survive respawns). SET_LOCKS replaces the lock set at runtime for boards that import their locks. Renders nothing; boards draw the ring/chest and read swept from the shared entity (the render authority). Corresponds to the design-sheet field(s): challenge, rewards.\"\norbital LoopLockOrbital {\n  type LoopLock = {\n    id : string!\n    x : number!\n    y : number!\n    radius : number!\n    band : number!\n    turns : number!\n    swept : number\n    lastAngle : number\n    inside : boolean\n    unlocked : boolean\n    reported : boolean\n  }\n\n  entity LoopLockData [runtime, shared] {\n    id : string!\n    locks : [LoopLock] = []\n  }\n\n  trait LoopLock -> @rebindable LoopLockData [lifecycle] {\n    initial: active\n\n    state active {\n      INIT -> active\n        (set @entity.locks (array/map @config.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n\n      BODY_MOVED -> active when @config.running\n        (set @entity.locks (array/map @entity.locks (fn l\n          (let ((dx (- @payload.x (object/get @l x))) (dy (- @payload.y (object/get @l y))))\n          (let ((dist (math/hypot @dx @dy)) (ang (math/atan2 @dy @dx)))\n          (let ((in (<= (math/abs (- @dist (object/get @l radius))) (object/get @l band))))\n          (let ((d (if (and @in (== (object/get @l inside) true))\n                     (math/atan2 (math/sin (- @ang (object/get @l lastAngle))) (math/cos (- @ang (object/get @l lastAngle))))\n                     0)))\n          (let ((swept (+ (object/get @l swept) @d)))\n            (object/merge @l { inside: @in, lastAngle: (if @in @ang (object/get @l lastAngle)), swept: @swept, unlocked: (or (object/get @l unlocked) (>= (math/abs @swept) (* (object/get @l turns) 6.283185307179586))) })))))))))\n        (let ((newly (array/filter @entity.locks (fn l (and (== (object/get @l unlocked) true) (== (object/get @l reported) false))))))\n        (if (> (array/len @newly) 0)\n          (do\n            (set @entity.locks (array/map @entity.locks (fn l (if (== (object/get @l id) (object/get (array/first @newly) id)) (object/merge @l { reported: true }) @l))))\n            (emit LOOP_UNLOCKED { id: (object/get (array/first @newly) id), x: (object/get (array/first @newly) x), y: (object/get (array/first @newly) y) }))\n          null))\n\n      SET_LOCKS -> active\n        (set @entity.locks (array/map @payload.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n\n      RESTART -> active\n        (set @entity.locks (array/map @entity.locks (fn l (object/merge @l { swept: 0, lastAngle: 0, inside: false, unlocked: false, reported: false }))))\n    }\n\n    emits {\n      LOOP_UNLOCKED -> external {\n        id : string!\n        x : number!\n        y : number!\n      }\n        @description \"A lock's angular sweep reached turns × 2π and it flipped unlocked; boards layer treasure fx and rewards. When several locks open on one move, the first reports and the shared entity carries the rest.\"\n        @tier \"domain\"\n    }\n\n    listens {\n      BODY_MOVED { x : number!, y : number!, vx : number!, vy : number!, grounded : boolean!, skating : boolean!, speed : number! }\n      SET_LOCKS { locks : [LoopLock]! }\n      RESTART { id : string }\n    }\n\n    config {\n      running : boolean = true\n        @label \"Running\"\n        @description \"When true, BODY_MOVED accumulates angular sweep and unlocks locks; toggle to freeze every lock as-is.\"\n        @tier \"domain\"\n      locks : [LoopLock] = []\n        @label \"Locks\"\n        @description \"One row per winding lock: id, anchor (x, y in world units), ring radius, radial tolerance band, and revolutions required. swept/inside/unlocked are stamped at runtime. Seeded onto the entity on INIT; the live set is entity.locks — SET_LOCKS replaces it at runtime (boards that import locks), and RESTART re-arms the live set rather than re-reading config, so injected locks survive respawns.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/loop-lock\" as LoopLockPage -> LoopLock\n}\n"
 }

@@ -40,6 +40,16 @@
               "requires": [],
               "provides": []
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "StatusChanged"
+              },
+              {
+                "kind": "persist",
+                "resource": "StatusRecord"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "StatusRecord",
             "linkedEntityId": "ent_01KXG04FHBGCYC7QC5HAYX5BYC",
@@ -182,16 +192,16 @@
                       "array/some",
                       [
                         {
-                          "event": "ACTIVATE",
                           "from": "draft",
                           "label": "Activate",
+                          "event": "ACTIVATE",
                           "to": "active"
                         },
                         {
                           "event": "ARCHIVE",
-                          "to": "archived",
+                          "from": "active",
                           "label": "Archive",
-                          "from": "active"
+                          "to": "archived"
                         }
                       ],
                       [
@@ -236,8 +246,8 @@
                       ],
                       {
                         "emit": {
-                          "success": "StatusPersisted",
-                          "failure": "StatusChangeFailed"
+                          "failure": "StatusChangeFailed",
+                          "success": "StatusPersisted"
                         }
                       }
                     ]
@@ -285,6 +295,30 @@
               ]
             },
             "config": {
+              "enabled": {
+                "type": "boolean",
+                "default": false,
+                "label": "Enforce status lifecycle rules?",
+                "description": "Validate and apply status transitions against the configured table. Off by default.",
+                "synonyms": "lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply",
+                "tier": "infra"
+              },
+              "initialStatus": {
+                "type": "string",
+                "default": "draft",
+                "label": "What status do new records start in?",
+                "description": "The status assigned when a record is first created.",
+                "synonyms": "starting state, default status, first stage, initial state",
+                "tier": "domain"
+              },
+              "targetEntity": {
+                "type": "entity",
+                "default": "StatusRecord",
+                "label": "Target entity",
+                "description": "Entity name whose status field this lifecycle drives (e.g. 'Contract'). Rebind per composition. Typed `entity`, so a rename of the bound entity threads through to this value automatically.",
+                "tier": "internal",
+                "refId": "ent_01KXG04FHBGCYC7QC5HAYX5BYC"
+              },
               "states": {
                 "type": "[string]",
                 "default": [
@@ -300,36 +334,28 @@
                   "type": "string"
                 }
               },
-              "targetEntity": {
-                "type": "entity",
-                "default": "StatusRecord",
-                "label": "Target entity",
-                "description": "Entity name whose status field this lifecycle drives (e.g. 'Contract'). Rebind per composition. Typed `entity`, so a rename of the bound entity threads through to this value automatically.",
-                "tier": "internal",
-                "refId": "ent_01KXG04FHBGCYC7QC5HAYX5BYC"
-              },
-              "enabled": {
-                "type": "boolean",
-                "default": false,
-                "label": "Enforce status lifecycle rules?",
-                "description": "Validate and apply status transitions against the configured table. Off by default.",
-                "synonyms": "lifecycle, statuses, states, stages, workflow, status transitions, enforce, enable, apply",
+              "statusField": {
+                "type": "string",
+                "default": "status",
+                "label": "Which field holds the status?",
+                "description": "Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').",
+                "synonyms": "state field, stage field, status column, lifecycle field",
                 "tier": "infra"
               },
               "transitions": {
                 "type": "[TransitionSpec]",
                 "default": [
                   {
-                    "event": "ACTIVATE",
                     "from": "draft",
                     "label": "Activate",
+                    "event": "ACTIVATE",
                     "to": "active"
                   },
                   {
                     "event": "ARCHIVE",
-                    "to": "archived",
+                    "from": "active",
                     "label": "Archive",
-                    "from": "active"
+                    "to": "archived"
                   }
                 ],
                 "label": "Which status moves are allowed?",
@@ -339,6 +365,16 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "from": {
+                      "name": "from",
+                      "type": "string",
+                      "required": true
+                    },
+                    "event": {
+                      "name": "event",
+                      "type": "string",
+                      "required": false
+                    },
                     "to": {
                       "name": "to",
                       "type": "string",
@@ -348,35 +384,9 @@
                       "name": "label",
                       "type": "string",
                       "required": false
-                    },
-                    "event": {
-                      "name": "event",
-                      "type": "string",
-                      "required": false
-                    },
-                    "from": {
-                      "name": "from",
-                      "type": "string",
-                      "required": true
                     }
                   }
                 }
-              },
-              "initialStatus": {
-                "type": "string",
-                "default": "draft",
-                "label": "What status do new records start in?",
-                "description": "The status assigned when a record is first created.",
-                "synonyms": "starting state, default status, first stage, initial state",
-                "tier": "domain"
-              },
-              "statusField": {
-                "type": "string",
-                "default": "status",
-                "label": "Which field holds the status?",
-                "description": "Entity field this lifecycle drives (e.g. 'status', 'state', 'stage', 'phase').",
-                "synonyms": "state field, stage field, status column, lifecycle field",
-                "tier": "infra"
               }
             },
             "scope": "instance"
@@ -394,20 +404,51 @@
               }
             ]
           }
-        ]
+        ],
+        "types": {
+          "TransitionSpec": [
+            {
+              "name": "from",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "event",
+              "type": "string"
+            },
+            {
+              "name": "label",
+              "type": "string"
+            }
+          ]
+        }
       }
     ],
     "schemaVersion": 1,
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "pag_01KXG04FHBGPMJ72A9YT2JZGXX": {
-          "id": "pag_01KXG04FHBGPMJ72A9YT2JZGXX",
-          "kind": "page",
-          "bakedName": "StatusLifecyclePage",
-          "curName": "StatusLifecyclePage",
+        "trt_01KXG04FHBK5YSDQ1S4CCJRKYW": {
+          "id": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW",
+          "kind": "trait",
+          "bakedName": "StatusMachine",
+          "curName": "StatusMachine",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01KXG04FHBJGYNN7QWH0R8CGP8": {
+          "id": "evt_01KXG04FHBJGYNN7QWH0R8CGP8",
+          "kind": "event",
+          "bakedName": "ChangeStatusRequested",
+          "curName": "ChangeStatusRequested",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
         },
         "evt_01M16B4D84NQ48FBP2K2PFGP33": {
           "id": "evt_01M16B4D84NQ48FBP2K2PFGP33",
@@ -435,23 +476,6 @@
           "owner": "workspace",
           "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
         },
-        "ent_01KXG04FHBGCYC7QC5HAYX5BYC": {
-          "id": "ent_01KXG04FHBGCYC7QC5HAYX5BYC",
-          "kind": "entity",
-          "bakedName": "StatusRecord",
-          "curName": "StatusRecord",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01KXG04FHBJGYNN7QWH0R8CGP8": {
-          "id": "evt_01KXG04FHBJGYNN7QWH0R8CGP8",
-          "kind": "event",
-          "bakedName": "ChangeStatusRequested",
-          "curName": "ChangeStatusRequested",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
-        },
         "evt_01KXG04FHBQRWXTSQMY1T5XP3R": {
           "id": "evt_01KXG04FHBQRWXTSQMY1T5XP3R",
           "kind": "event",
@@ -461,11 +485,19 @@
           "owner": "workspace",
           "parent": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW"
         },
-        "trt_01KXG04FHBK5YSDQ1S4CCJRKYW": {
-          "id": "trt_01KXG04FHBK5YSDQ1S4CCJRKYW",
-          "kind": "trait",
-          "bakedName": "StatusMachine",
-          "curName": "StatusMachine",
+        "pag_01KXG04FHBGPMJ72A9YT2JZGXX": {
+          "id": "pag_01KXG04FHBGPMJ72A9YT2JZGXX",
+          "kind": "page",
+          "bakedName": "StatusLifecyclePage",
+          "curName": "StatusLifecyclePage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "ent_01KXG04FHBGCYC7QC5HAYX5BYC": {
+          "id": "ent_01KXG04FHBGCYC7QC5HAYX5BYC",
+          "kind": "entity",
+          "bakedName": "StatusRecord",
+          "curName": "StatusRecord",
           "renames": [],
           "owner": "workspace"
         }

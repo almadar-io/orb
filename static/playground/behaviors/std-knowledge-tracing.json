@@ -117,6 +117,24 @@
           {
             "name": "ObservationRelay",
             "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "CAPTURE_LABEL"
+              },
+              {
+                "kind": "emit",
+                "resource": "OBSERVATION_MADE"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.lastOutcome"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.skillId"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "KnowledgeState",
             "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
@@ -201,9 +219,9 @@
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
                   "intervalHigh": "@payload.intervalHigh",
-                  "status": "mastered",
+                  "intervalLow": "@payload.intervalLow",
                   "mean": "@payload.mean",
-                  "intervalLow": "@payload.intervalLow"
+                  "status": "mastered"
                 },
                 "source": {
                   "kind": "trait",
@@ -216,10 +234,10 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "intervalLow": "@payload.intervalLow",
-                  "mean": "@payload.mean",
                   "status": "remediate",
-                  "intervalHigh": "@payload.intervalHigh"
+                  "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow",
+                  "mean": "@payload.mean"
                 },
                 "source": {
                   "kind": "trait",
@@ -232,9 +250,9 @@
                 "triggers": "VERDICT_REACHED",
                 "triggersId": "evt_01M055GH5S6N5RDG1Q63GAB0M8",
                 "payloadMapping": {
-                  "intervalLow": "@payload.intervalLow",
                   "status": "insufficient",
                   "intervalHigh": "@payload.intervalHigh",
+                  "intervalLow": "@payload.intervalLow",
                   "mean": "@payload.mean"
                 },
                 "source": {
@@ -431,17 +449,17 @@
                       "emit",
                       "CAPTURE_LABEL",
                       {
-                        "verdict": {
-                          "intervalLow": "@payload.intervalLow",
-                          "intervalHigh": "@payload.intervalHigh",
-                          "mean": "@payload.mean",
-                          "status": "@payload.status"
-                        },
                         "source": "posterior",
+                        "outcome": "@entity.lastOutcome",
                         "input": {
                           "skillId": "@entity.skillId"
                         },
-                        "outcome": "@entity.lastOutcome"
+                        "verdict": {
+                          "intervalHigh": "@payload.intervalHigh",
+                          "mean": "@payload.mean",
+                          "status": "@payload.status",
+                          "intervalLow": "@payload.intervalLow"
+                        }
                       }
                     ]
                   ]
@@ -466,6 +484,48 @@
                 "status"
               ]
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "EVIDENCE_INSUFFICIENT"
+              },
+              {
+                "kind": "emit",
+                "resource": "MASTERY_REACHED"
+              },
+              {
+                "kind": "emit",
+                "resource": "REMEDIATION_NEEDED"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.alpha"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.beta"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.intervalHigh"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.intervalLow"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.mean"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.observations"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.status"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "KnowledgeState",
             "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
@@ -841,8 +901,8 @@
                               "emit",
                               "EVIDENCE_INSUFFICIENT",
                               {
-                                "intervalLow": "@low",
                                 "mean": "@entity.mean",
+                                "intervalLow": "@low",
                                 "intervalHigh": "@high"
                               }
                             ]
@@ -865,9 +925,9 @@
                                 "emit",
                                 "MASTERY_REACHED",
                                 {
+                                  "intervalLow": "@low",
                                   "mean": "@entity.mean",
-                                  "intervalHigh": "@high",
-                                  "intervalLow": "@low"
+                                  "intervalHigh": "@high"
                                 }
                               ]
                             ],
@@ -889,9 +949,9 @@
                                   "emit",
                                   "REMEDIATION_NEEDED",
                                   {
-                                    "mean": "@entity.mean",
                                     "intervalHigh": "@high",
-                                    "intervalLow": "@low"
+                                    "intervalLow": "@low",
+                                    "mean": "@entity.mean"
                                   }
                                 ]
                               ],
@@ -906,9 +966,9 @@
                                   "emit",
                                   "EVIDENCE_INSUFFICIENT",
                                   {
-                                    "intervalHigh": "@high",
                                     "intervalLow": "@low",
-                                    "mean": "@entity.mean"
+                                    "mean": "@entity.mean",
+                                    "intervalHigh": "@high"
                                   }
                                 ]
                               ]
@@ -922,11 +982,11 @@
               ]
             },
             "config": {
-              "intervalWidthMax": {
+              "masteryFloor": {
                 "type": "float",
-                "default": 0.25,
-                "label": "Max credible-interval width",
-                "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
+                "default": 0.85,
+                "label": "Mastery floor",
+                "description": "Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.",
                 "tier": "policy"
               },
               "priorAlpha": {
@@ -943,18 +1003,18 @@
                 "description": "Beta prior failure pseudo-count before any observation.",
                 "tier": "domain"
               },
-              "masteryFloor": {
-                "type": "float",
-                "default": 0.85,
-                "label": "Mastery floor",
-                "description": "Posterior mean at or above this, with a tight interval, licenses MASTERY_REACHED.",
-                "tier": "policy"
-              },
               "remediationCeiling": {
                 "type": "float",
                 "default": 0.35,
                 "label": "Remediation ceiling",
                 "description": "Posterior mean at or below this, with a tight interval, licenses REMEDIATION_NEEDED.",
+                "tier": "policy"
+              },
+              "intervalWidthMax": {
+                "type": "float",
+                "default": 0.25,
+                "label": "Max credible-interval width",
+                "description": "Above this width the posterior is too uncertain to decide — abstain with EVIDENCE_INSUFFICIENT.",
                 "tier": "policy"
               },
               "sampleCount": {
@@ -1041,6 +1101,40 @@
                 "verdict"
               ]
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "LABEL_CAPTURED"
+              },
+              {
+                "kind": "persist",
+                "resource": "KnowledgeState"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.input"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.outcome"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.recordedAt"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.sink"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.source"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.verdict"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "KnowledgeState",
             "linkedEntityId": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
@@ -1226,20 +1320,20 @@
                           "create",
                           "KnowledgeState",
                           {
-                            "sink": "@entity.sink",
-                            "recordedAt": "@entity.recordedAt",
                             "input": "@entity.input",
-                            "source": "@entity.source",
                             "outcome": "@entity.outcome",
-                            "verdict": "@entity.verdict"
+                            "recordedAt": "@entity.recordedAt",
+                            "source": "@entity.source",
+                            "verdict": "@entity.verdict",
+                            "sink": "@entity.sink"
                           }
                         ],
                         [
                           "emit",
                           "LABEL_CAPTURED",
                           {
-                            "source": "@entity.source",
-                            "sink": "@entity.sink"
+                            "sink": "@entity.sink",
+                            "source": "@entity.source"
                           }
                         ]
                       ],
@@ -1339,26 +1433,57 @@
               }
             ]
           }
-        ]
+        ],
+        "types": {
+          "ObservationLabelInput": [
+            {
+              "name": "skillId",
+              "type": "string",
+              "required": true
+            }
+          ],
+          "ObservationLabelVerdict": [
+            {
+              "name": "status",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "mean",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "intervalLow",
+              "type": "float",
+              "required": true
+            },
+            {
+              "name": "intervalHigh",
+              "type": "float",
+              "required": true
+            }
+          ]
+        }
       }
     ],
     "schemaVersion": 1,
     "ledger": {
       "schemaVersion": 1,
       "entries": {
-        "pag_01M055GH5SSYEVKVNE6QTVE0CV": {
-          "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
-          "kind": "page",
-          "bakedName": "KnowledgeTracingPage",
-          "curName": "KnowledgeTracingPage",
+        "orb_01M055GH5SQ4PW0JE8JXG0YT6E": {
+          "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
+          "kind": "orbital",
+          "bakedName": "KnowledgeTracingOrbital",
+          "curName": "KnowledgeTracingOrbital",
           "renames": [],
           "owner": "workspace"
         },
-        "evt_01M055GH5SC5MER6VGX1V0QMXP": {
-          "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
+        "evt_01M055GH5S8WRWJBGCGT5YQJ9W": {
+          "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
           "kind": "event",
-          "bakedName": "OBSERVATION_MADE",
-          "curName": "OBSERVATION_MADE",
+          "bakedName": "OBSERVE_SKILL",
+          "curName": "OBSERVE_SKILL",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
@@ -1372,11 +1497,11 @@
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
-        "evt_01M055GH5SJRF4GEBT3G9WA18Q": {
-          "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+        "evt_01M055GH5SC5MER6VGX1V0QMXP": {
+          "id": "evt_01M055GH5SC5MER6VGX1V0QMXP",
           "kind": "event",
-          "bakedName": "CAPTURE_LABEL",
-          "curName": "CAPTURE_LABEL",
+          "bakedName": "OBSERVATION_MADE",
+          "curName": "OBSERVATION_MADE",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
@@ -1390,11 +1515,27 @@
           "owner": "workspace",
           "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
-        "orb_01M055GH5SQ4PW0JE8JXG0YT6E": {
-          "id": "orb_01M055GH5SQ4PW0JE8JXG0YT6E",
-          "kind": "orbital",
-          "bakedName": "KnowledgeTracingOrbital",
-          "curName": "KnowledgeTracingOrbital",
+        "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
+          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
+          "kind": "entity",
+          "bakedName": "KnowledgeState",
+          "curName": "KnowledgeState",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "pag_01M055GH5SSYEVKVNE6QTVE0CV": {
+          "id": "pag_01M055GH5SSYEVKVNE6QTVE0CV",
+          "kind": "page",
+          "bakedName": "KnowledgeTracingPage",
+          "curName": "KnowledgeTracingPage",
+          "renames": [],
+          "owner": "workspace"
+        },
+        "trt_01M055GH5S071KYNGZ5DG0J6K3": {
+          "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
+          "kind": "trait",
+          "bakedName": "ObservationRelay",
+          "curName": "ObservationRelay",
           "renames": [],
           "owner": "workspace"
         },
@@ -1406,36 +1547,20 @@
           "renames": [],
           "owner": "workspace"
         },
-        "ent_01M055GH5S23ZDSM86RRZ5D2BQ": {
-          "id": "ent_01M055GH5S23ZDSM86RRZ5D2BQ",
-          "kind": "entity",
-          "bakedName": "KnowledgeState",
-          "curName": "KnowledgeState",
+        "evt_01M055GH5SJRF4GEBT3G9WA18Q": {
+          "id": "evt_01M055GH5SJRF4GEBT3G9WA18Q",
+          "kind": "event",
+          "bakedName": "CAPTURE_LABEL",
+          "curName": "CAPTURE_LABEL",
           "renames": [],
-          "owner": "workspace"
+          "owner": "workspace",
+          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
         },
         "trt_01M055GH5SE12B5GWSSEVJRR69": {
           "id": "trt_01M055GH5SE12B5GWSSEVJRR69",
           "kind": "trait",
           "bakedName": "PosteriorTracker",
           "curName": "PosteriorTracker",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01M055GH5S8WRWJBGCGT5YQJ9W": {
-          "id": "evt_01M055GH5S8WRWJBGCGT5YQJ9W",
-          "kind": "event",
-          "bakedName": "OBSERVE_SKILL",
-          "curName": "OBSERVE_SKILL",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M055GH5S071KYNGZ5DG0J6K3"
-        },
-        "trt_01M055GH5S071KYNGZ5DG0J6K3": {
-          "id": "trt_01M055GH5S071KYNGZ5DG0J6K3",
-          "kind": "trait",
-          "bakedName": "ObservationRelay",
-          "curName": "ObservationRelay",
           "renames": [],
           "owner": "workspace"
         }

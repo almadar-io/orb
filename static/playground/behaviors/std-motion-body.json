@@ -27,11 +27,6 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "y": {
-                    "name": "y",
-                    "type": "number",
-                    "required": true
-                  },
                   "x": {
                     "name": "x",
                     "type": "number",
@@ -39,11 +34,6 @@
                   },
                   "vx": {
                     "name": "vx",
-                    "type": "number",
-                    "required": false
-                  },
-                  "ay": {
-                    "name": "ay",
                     "type": "number",
                     "required": false
                   },
@@ -57,10 +47,20 @@
                     "type": "number",
                     "required": false
                   },
+                  "ay": {
+                    "name": "ay",
+                    "type": "number",
+                    "required": false
+                  },
                   "vy": {
                     "name": "vy",
                     "type": "number",
                     "required": false
+                  },
+                  "y": {
+                    "name": "y",
+                    "type": "number",
+                    "required": true
                   }
                 }
               }
@@ -97,6 +97,38 @@
                 "gravity"
               ]
             },
+            "effectRow": [
+              {
+                "kind": "emit",
+                "resource": "BODY_MOVED",
+                "site": "tick"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.biasAx"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.biasAy"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.bodies"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.bodies",
+                "site": "tick"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.gravity"
+              },
+              {
+                "kind": "ticks",
+                "site": "tick"
+              }
+            ],
             "category": "lifecycle",
             "linkedEntity": "MotionBodyData",
             "linkedEntityId": "ent_01M0F15750RMAD8B3BNR5GE99X",
@@ -668,8 +700,25 @@
                                     "object/merge",
                                     "@b",
                                     {
+                                      "vy": [
+                                        "if",
+                                        [
+                                          "or",
+                                          [
+                                            "==",
+                                            "@ny",
+                                            -1000000
+                                          ],
+                                          [
+                                            "==",
+                                            "@ny",
+                                            1000000
+                                          ]
+                                        ],
+                                        0,
+                                        "@nvy"
+                                      ],
                                       "x": "@nx",
-                                      "y": "@ny",
                                       "vx": [
                                         "if",
                                         [
@@ -688,24 +737,7 @@
                                         0,
                                         "@nvx"
                                       ],
-                                      "vy": [
-                                        "if",
-                                        [
-                                          "or",
-                                          [
-                                            "==",
-                                            "@ny",
-                                            -1000000
-                                          ],
-                                          [
-                                            "==",
-                                            "@ny",
-                                            1000000
-                                          ]
-                                        ],
-                                        0,
-                                        "@nvy"
-                                      ]
+                                      "y": "@ny"
                                     }
                                   ]
                                 ]
@@ -754,6 +786,14 @@
                           ],
                           "y"
                         ],
+                        "id": [
+                          "object/get",
+                          [
+                            "array/first",
+                            "@entity.bodies"
+                          ],
+                          "id"
+                        ],
                         "x": [
                           "object/get",
                           [
@@ -769,14 +809,6 @@
                             "@entity.bodies"
                           ],
                           "vx"
-                        ],
-                        "id": [
-                          "object/get",
-                          [
-                            "array/first",
-                            "@entity.bodies"
-                          ],
-                          "id"
                         ]
                       }
                     ]
@@ -785,18 +817,46 @@
               }
             ],
             "config": {
-              "running": {
-                "type": "boolean",
-                "default": true,
-                "label": "Running",
-                "description": "When true the 50ms motion tick integrates; toggle to freeze all bodies",
+              "gravity": {
+                "type": "number",
+                "default": 0,
+                "label": "Gravity",
+                "description": "Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live",
                 "tier": "domain"
+              },
+              "yMin": {
+                "type": "number",
+                "default": -1000000,
+                "label": "Floor",
+                "description": "Smallest y a body may hold; hitting it zeroes vy",
+                "tier": "presentation"
               },
               "xMin": {
                 "type": "number",
                 "default": -1000000,
                 "label": "Left Wall",
                 "description": "Smallest x a body may hold; hitting it zeroes vx",
+                "tier": "presentation"
+              },
+              "yMax": {
+                "type": "number",
+                "default": 1000000,
+                "label": "Ceiling",
+                "description": "Largest y a body may hold; hitting it zeroes vy",
+                "tier": "presentation"
+              },
+              "damping": {
+                "type": "number",
+                "default": 0.98,
+                "label": "Damping",
+                "description": "Velocity retained each 50ms tick (1 = frictionless coast, 0.9 = quick stop); the ice-to-mud feel knob",
+                "tier": "presentation"
+              },
+              "maxSpeed": {
+                "type": "number",
+                "default": 8,
+                "label": "Max Speed",
+                "description": "Per-axis speed cap in world units per second",
                 "tier": "presentation"
               },
               "bodies": {
@@ -813,23 +873,8 @@
                       "type": "number",
                       "required": false
                     },
-                    "vx": {
-                      "name": "vx",
-                      "type": "number",
-                      "required": false
-                    },
-                    "y": {
-                      "name": "y",
-                      "type": "number",
-                      "required": true
-                    },
-                    "x": {
-                      "name": "x",
-                      "type": "number",
-                      "required": true
-                    },
-                    "ay": {
-                      "name": "ay",
+                    "vy": {
+                      "name": "vy",
                       "type": "number",
                       "required": false
                     },
@@ -838,27 +883,35 @@
                       "type": "string",
                       "required": true
                     },
-                    "vy": {
-                      "name": "vy",
+                    "ay": {
+                      "name": "ay",
                       "type": "number",
                       "required": false
+                    },
+                    "vx": {
+                      "name": "vx",
+                      "type": "number",
+                      "required": false
+                    },
+                    "x": {
+                      "name": "x",
+                      "type": "number",
+                      "required": true
+                    },
+                    "y": {
+                      "name": "y",
+                      "type": "number",
+                      "required": true
                     }
                   }
                 }
               },
-              "yMax": {
-                "type": "number",
-                "default": 1000000,
-                "label": "Ceiling",
-                "description": "Largest y a body may hold; hitting it zeroes vy",
-                "tier": "presentation"
-              },
-              "damping": {
-                "type": "number",
-                "default": 0.98,
-                "label": "Damping",
-                "description": "Velocity retained each 50ms tick (1 = frictionless coast, 0.9 = quick stop); the ice-to-mud feel knob",
-                "tier": "presentation"
+              "running": {
+                "type": "boolean",
+                "default": true,
+                "label": "Running",
+                "description": "When true the 50ms motion tick integrates; toggle to freeze all bodies",
+                "tier": "domain"
               },
               "xMax": {
                 "type": "number",
@@ -866,27 +919,6 @@
                 "label": "Right Wall",
                 "description": "Largest x a body may hold; hitting it zeroes vx",
                 "tier": "presentation"
-              },
-              "maxSpeed": {
-                "type": "number",
-                "default": 8,
-                "label": "Max Speed",
-                "description": "Per-axis speed cap in world units per second",
-                "tier": "presentation"
-              },
-              "yMin": {
-                "type": "number",
-                "default": -1000000,
-                "label": "Floor",
-                "description": "Smallest y a body may hold; hitting it zeroes vy",
-                "tier": "presentation"
-              },
-              "gravity": {
-                "type": "number",
-                "default": 0,
-                "label": "Gravity",
-                "description": "Constant acceleration added to every body's vertical velocity each tick (positive pulls toward +y); seeded onto the entity so SET_GRAVITY can retune it live",
-                "tier": "domain"
               }
             },
             "scope": "instance"
@@ -904,62 +936,62 @@
               }
             ]
           }
-        ]
+        ],
+        "types": {
+          "Body": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "vx",
+              "type": "number"
+            },
+            {
+              "name": "vy",
+              "type": "number"
+            },
+            {
+              "name": "ax",
+              "type": "number"
+            },
+            {
+              "name": "ay",
+              "type": "number"
+            }
+          ]
+        }
       }
     ],
     "schemaVersion": 1,
     "ledger": {
       "schemaVersion": 1,
       "entries": {
+        "evt_01M0F157501DXC9CR3QRNT8SXB": {
+          "id": "evt_01M0F157501DXC9CR3QRNT8SXB",
+          "kind": "event",
+          "bakedName": "SET_GRAVITY",
+          "curName": "SET_GRAVITY",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
         "evt_01M0F15750F9TZKR47X63EBW01": {
           "id": "evt_01M0F15750F9TZKR47X63EBW01",
           "kind": "event",
           "bakedName": "IMPULSE",
           "curName": "IMPULSE",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "evt_01M0F15750TJ4X6Y99S6H34892": {
-          "id": "evt_01M0F15750TJ4X6Y99S6H34892",
-          "kind": "event",
-          "bakedName": "RESTART",
-          "curName": "RESTART",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "orb_01M0F15750P5ST6DKE8H23JASA": {
-          "id": "orb_01M0F15750P5ST6DKE8H23JASA",
-          "kind": "orbital",
-          "bakedName": "MotionBodyOrbital",
-          "curName": "MotionBodyOrbital",
-          "renames": [],
-          "owner": "workspace"
-        },
-        "evt_01M0F15750D79SW7SYK0MEJ1C8": {
-          "id": "evt_01M0F15750D79SW7SYK0MEJ1C8",
-          "kind": "event",
-          "bakedName": "INIT",
-          "curName": "INIT",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "evt_01M0F15750PGMWJG31ZQB877NC": {
-          "id": "evt_01M0F15750PGMWJG31ZQB877NC",
-          "kind": "event",
-          "bakedName": "PLACE",
-          "curName": "PLACE",
-          "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
-        },
-        "evt_01M0F15750TYJ70MCGET9ERBWE": {
-          "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
-          "kind": "event",
-          "bakedName": "SET_BIAS",
-          "curName": "SET_BIAS",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
@@ -981,20 +1013,37 @@
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         },
-        "evt_01M0F157501DXC9CR3QRNT8SXB": {
-          "id": "evt_01M0F157501DXC9CR3QRNT8SXB",
-          "kind": "event",
-          "bakedName": "SET_GRAVITY",
-          "curName": "SET_GRAVITY",
+        "ent_01M0F15750RMAD8B3BNR5GE99X": {
+          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
+          "kind": "entity",
+          "bakedName": "MotionBodyData",
+          "curName": "MotionBodyData",
           "renames": [],
-          "owner": "workspace",
-          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+          "owner": "workspace"
         },
         "evt_01M0F1575079YFH1R7XXJ6NS4H": {
           "id": "evt_01M0F1575079YFH1R7XXJ6NS4H",
           "kind": "event",
           "bakedName": "THRUST",
           "curName": "THRUST",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750D79SW7SYK0MEJ1C8": {
+          "id": "evt_01M0F15750D79SW7SYK0MEJ1C8",
+          "kind": "event",
+          "bakedName": "INIT",
+          "curName": "INIT",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750TJ4X6Y99S6H34892": {
+          "id": "evt_01M0F15750TJ4X6Y99S6H34892",
+          "kind": "event",
+          "bakedName": "RESTART",
+          "curName": "RESTART",
           "renames": [],
           "owner": "workspace",
           "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
@@ -1007,13 +1056,31 @@
           "renames": [],
           "owner": "workspace"
         },
-        "ent_01M0F15750RMAD8B3BNR5GE99X": {
-          "id": "ent_01M0F15750RMAD8B3BNR5GE99X",
-          "kind": "entity",
-          "bakedName": "MotionBodyData",
-          "curName": "MotionBodyData",
+        "orb_01M0F15750P5ST6DKE8H23JASA": {
+          "id": "orb_01M0F15750P5ST6DKE8H23JASA",
+          "kind": "orbital",
+          "bakedName": "MotionBodyOrbital",
+          "curName": "MotionBodyOrbital",
           "renames": [],
           "owner": "workspace"
+        },
+        "evt_01M0F15750TYJ70MCGET9ERBWE": {
+          "id": "evt_01M0F15750TYJ70MCGET9ERBWE",
+          "kind": "event",
+          "bakedName": "SET_BIAS",
+          "curName": "SET_BIAS",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
+        },
+        "evt_01M0F15750PGMWJG31ZQB877NC": {
+          "id": "evt_01M0F15750PGMWJG31ZQB877NC",
+          "kind": "event",
+          "bakedName": "PLACE",
+          "curName": "PLACE",
+          "renames": [],
+          "owner": "workspace",
+          "parent": "trt_01M0F15750C0XA5RAB80SZVBFD"
         }
       }
     }
