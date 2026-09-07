@@ -201,7 +201,7 @@ Pogodbe dogodkov definirajo, katere dogodke komponenta oddaja in zahteva. To je 
 
 ### Integracija z zaprtim krogom
 
-Pogodbe dogodkov poganjajo preverjanje [zaprtega kroga](/docs/sl/core-concepts/closed-circuit):
+Pogodbe dogodkov poganjajo preverjanje [zaprtega kroga](/docs/core-concepts/closed-circuit):
 
 1. **Obvezni dogodki**: Ce `requires: ["SAVE", "CANCEL"]`, preverjevalnik zagotovi, da obstajata prehoda za oba dogodka
 2. **Prekrivni vzorci**: `modal` in `drawer` zahtevata prehode `CLOSE` za preprecevanje obticanja UI stanj
@@ -411,4 +411,4 @@ Ta arhitektura zagotavlja, da programi ostanejo deklarativni, medtem ko prevajal
 
 ---
 
-*Za vec podrobnosti o povezanih konceptih glej [Lastnosti](/docs/sl/core-concepts/traits) in [Zaprt krog](/docs/sl/core-concepts/closed-circuit).*
+*Za vec podrobnosti o povezanih konceptih glej [Lastnosti](/docs/core-concepts/traits) in [Zaprt krog](/docs/core-concepts/closed-circuit).*

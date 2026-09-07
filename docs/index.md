@@ -4,5 +4,6 @@ sidebar_class_name: hidden
 ---
 
 import {Redirect} from '@docusaurus/router';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
-<Redirect to="/docs/getting-started/introduction" />
+<Redirect to={useBaseUrl('/docs/getting-started/introduction')} />

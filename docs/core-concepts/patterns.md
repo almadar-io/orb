@@ -214,7 +214,7 @@ Event contracts define what events a component emits and requires. This is criti
 
 ### Closed Circuit Integration
 
-Event contracts power the [Closed Circuit](/docs/en/core-concepts/closed-circuit) validation:
+Event contracts power the [Closed Circuit](/docs/core-concepts/closed-circuit) validation:
 
 1. **Required Events**: If `requires: ["SAVE", "CANCEL"]`, the validator ensures transitions exist for both events
 2. **Overlay Patterns**: `modal` and `drawer` require `CLOSE` transitions to prevent stuck UI states
@@ -424,4 +424,4 @@ This architecture ensures that schemas remain declarative while the compiler han
 
 ---
 
-*For more details on related concepts, see [Traits](/docs/en/core-concepts/traits) and [Closed Circuit](/docs/en/core-concepts/closed-circuit).*
+*For more details on related concepts, see [Traits](/docs/core-concepts/traits) and [Closed Circuit](/docs/core-concepts/closed-circuit).*

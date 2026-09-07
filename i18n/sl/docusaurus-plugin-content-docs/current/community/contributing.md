@@ -60,14 +60,14 @@ git checkout -b docs/improve-getting-started
 Uporabljamo delovni tok za prevode:
 
 ```bash
-# Arabski prevodi gredo v mapo /ar/
+# Prevodi gredo v i18n/<locale>/
 docs/
-├── en/
-│   └── getting-started/
-│       └── introduction.md      # Vir
-└── ar/
-    └── getting-started/
-        └── introduction.md      # Prevod
+└── getting-started/
+    └── introduction.mdx    # Vir
+
+i18n/ar/docusaurus-plugin-content-docs/current/
+└── getting-started/
+    └── introduction.mdx    # Prevod
 ```
 
 **Smernice za prevajanje:**

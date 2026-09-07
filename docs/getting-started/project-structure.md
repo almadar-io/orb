@@ -134,6 +134,6 @@ Each concept in your `.orb` program maps to concrete files across the three pack
 
 ## Next Steps
 
-- [Core Concepts: Entities](/docs/en/core-concepts/entities) for field types, persistence modes, and relations
-- [Core Concepts: Traits](/docs/en/core-concepts/traits) for state machines, guards, and effects
-- [Core Concepts: Pages](/docs/en/core-concepts/pages) for routing and trait composition
+- [Core Concepts: Entities](/docs/core-concepts/entities) for field types, persistence modes, and relations
+- [Core Concepts: Traits](/docs/core-concepts/traits) for state machines, guards, and effects
+- [Core Concepts: Pages](/docs/core-concepts/pages) for routing and trait composition

@@ -60,14 +60,14 @@ git checkout -b docs/improve-getting-started
 نستخدم سير عمل للترجمة:
 
 ```bash
-# الترجمات العربية تذهب إلى مجلد /ar/
+# الترجمات العربية تذهب إلى i18n/ar/
 docs/
-├── en/
-│   └── getting-started/
-│       └── introduction.md      # المصدر
-└── ar/
-    └── getting-started/
-        └── introduction.md      # الترجمة
+└── getting-started/
+    └── introduction.mdx    # المصدر
+
+i18n/ar/docusaurus-plugin-content-docs/current/
+└── getting-started/
+    └── introduction.mdx    # الترجمة
 ```
 
 **إرشادات الترجمة:**

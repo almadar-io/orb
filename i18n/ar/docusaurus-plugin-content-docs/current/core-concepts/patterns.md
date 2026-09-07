@@ -201,7 +201,7 @@ Schema (render-ui)  →  Pattern Registry  →  Component Mapping  →  Shell Co
 
 ### تكامل الدائرة المغلقة
 
-عقود الأحداث تُشغّل التحقق من [الدائرة المغلقة](/docs/ar/core-concepts/closed-circuit):
+عقود الأحداث تُشغّل التحقق من [الدائرة المغلقة](/docs/core-concepts/closed-circuit):
 
 1. **الأحداث المطلوبة**: إذا كان `requires: ["SAVE", "CANCEL"]`، يضمن المُحقق وجود انتقالات لكلا الحدثين
 2. **أنماط الطبقة**: `modal` و`drawer` تتطلب انتقالات `CLOSE` لمنع حالات واجهة عالقة
@@ -411,4 +411,4 @@ interface ActionablePatternProps {
 
 ---
 
-*لمزيد من التفاصيل حول المفاهيم ذات الصلة، انظر [السمات](/docs/ar/core-concepts/traits) و[الدائرة المغلقة](/docs/ar/core-concepts/closed-circuit).*
+*لمزيد من التفاصيل حول المفاهيم ذات الصلة، انظر [السمات](/docs/core-concepts/traits) و[الدائرة المغلقة](/docs/core-concepts/closed-circuit).*

@@ -122,4 +122,4 @@ Prevajalnik je izvorna binarna datoteka. Izhod je Node.js projekt. To sta loceni
 
 ## Naslednji koraki
 
-Z namescenim CLI nadaljujte na [Hitri zacetek](./quickstart.md) za gradnjo in zagon vase prve Orb aplikacije v manj kot 5 minutah.
+Z namescenim CLI nadaljujte na [Hitri zacetek](./quickstart.mdx) za gradnjo in zagon vase prve Orb aplikacije v manj kot 5 minutah.

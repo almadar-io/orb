@@ -1,3 +1,9 @@
+---
+id: cli
+title: Orb CLI
+sidebar_label: CLI
+---
+
 # Download Orb CLI
 
 The Orb CLI (`orb`) is the command-line tool for validating, compiling, and working with .orb schemas.

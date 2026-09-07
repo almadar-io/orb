@@ -1,3 +1,9 @@
+---
+id: contributing
+title: Contributing to Orb
+sidebar_label: Contributing
+---
+
 # Contributing to Orb
 
 Welcome to the Almadar community! We're excited to have you contribute.
@@ -60,14 +66,14 @@ git checkout -b docs/improve-getting-started
 We use a translation workflow:
 
 ```bash
-# Arabic translations go in /ar/ directory
+# Locale translations live under i18n/<locale>/
 docs/
-├── en/
-│   └── getting-started/
-│       └── introduction.md      # Source
-└── ar/
-    └── getting-started/
-        └── introduction.md      # Translation
+└── getting-started/
+    └── introduction.mdx    # Source
+
+i18n/ar/docusaurus-plugin-content-docs/current/
+└── getting-started/
+    └── introduction.mdx    # Translation
 ```
 
 **Translation guidelines:**

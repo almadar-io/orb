@@ -1,3 +1,9 @@
+---
+id: skills
+title: Orb Skills
+sidebar_label: Skills
+---
+
 # Orb Skills
 
 Enhance your development workflow with AI-powered skills for Orb schema generation.

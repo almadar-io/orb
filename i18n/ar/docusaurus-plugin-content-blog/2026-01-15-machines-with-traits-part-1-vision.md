@@ -1,6 +1,13 @@
-# الآلات بسمات: كيف سيغير المدار مستقبل الروبوتات
+---
+slug: machines-with-traits-part-1-vision
+title: "الآلات بسمات: كيف سيغير المدار مستقبل الروبوتات"
+authors: [almadar]
+tags: [robotics, vision, state-machines, automation]
+---
 
 > **رؤية لمستقبل الأتمتة في العالم العربي**
+
+<!-- truncate -->
 
 ---
 
@@ -246,7 +253,7 @@ orbital Communication {
 ### للمطورين
 
 1. **حمّل المُصرّف** — `curl -fsSL https://orb.almadar.io/install.sh | sh`
-2. **اقرأ التوثيق** — [دليل البداية](../../getting-started/introduction.md)
+2. **اقرأ التوثيق** — [دليل البداية](/docs/getting-started/introduction)
 3. **جرّب المثال** — ابنِ أول سمة روبوتية
 
 ### للشركات
@@ -289,4 +296,4 @@ orbital Communication {
 
 **شارك هذا المقال:**
 
-[Twitter](https://twitter.com/intent/tweet?text=الآلات%20بسمات%20-%20مستقبل%20الروبوتات%20بلغة%20المدار&url=https://orbital.almadar.io/ar/blogs/machines-with-traits/part-1-vision) | [LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https://orbital.almadar.io/ar/blogs/machines-with-traits/part-1-vision)
+[Twitter](https://twitter.com/intent/tweet?text=الآلات%20بسمات%20-%20مستقبل%20الروبوتات%20بلغة%20المدار&url=https://orb.almadar.io/ar/blog/machines-with-traits-part-1-vision) | [LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https://orb.almadar.io/ar/blog/machines-with-traits-part-1-vision)

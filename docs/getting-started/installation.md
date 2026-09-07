@@ -143,4 +143,4 @@ With `orb compile`, the compiler is a native binary and the output is a Node.js 
 
 ## Next Steps
 
-With the CLI installed, move on to the [Quickstart](./quickstart.md) to build and run your first Orb application in under 5 minutes.
+With the CLI installed, move on to the [Quickstart](./quickstart.mdx) to build and run your first Orb application in under 5 minutes.

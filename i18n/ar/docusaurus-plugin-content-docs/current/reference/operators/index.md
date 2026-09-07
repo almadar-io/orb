@@ -37,4 +37,4 @@ sidebar_label: نظرة عامة
 | `get` | `["get", "@entity.x"]` | any |
 | `emit` | `["emit", "EVENT"]` | void |
 
-انظر [المفاهيم الأساسية: المكتبة القياسية](/docs/ar/core-concepts/standard-library) لقائمة العوامل الأساسية الكاملة.
+انظر [المفاهيم الأساسية: المكتبة القياسية](/docs/core-concepts/standard-library) لقائمة العوامل الأساسية الكاملة.

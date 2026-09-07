@@ -37,4 +37,4 @@ Ti operatorji delujejo brez predpone modula:
 | `get` | `["get", "@entity.x"]` | any |
 | `emit` | `["emit", "EVENT"]` | void |
 
-Glej [Kljucni koncepti: Standardna knjiznica](/docs/sl/core-concepts/standard-library) za celoten seznam osnovnih operatorjev.
+Glej [Kljucni koncepti: Standardna knjiznica](/docs/core-concepts/standard-library) za celoten seznam osnovnih operatorjev.

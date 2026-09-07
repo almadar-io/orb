@@ -133,6 +133,6 @@ Vsak koncept v vasem `.orb` programu se preslika na konkretne datoteke v treh pa
 
 ## Naslednji koraki
 
-- [Kljucni koncepti: Entitete](/docs/sl/core-concepts/entities) za tipe polj, nacine trajnosti in relacije
-- [Kljucni koncepti: Lastnosti](/docs/sl/core-concepts/traits) za avtomate stanj, pogoje in ucinke
-- [Kljucni koncepti: Strani](/docs/sl/core-concepts/pages) za usmerjanje in sestavo lastnosti
+- [Kljucni koncepti: Entitete](/docs/core-concepts/entities) za tipe polj, nacine trajnosti in relacije
+- [Kljucni koncepti: Lastnosti](/docs/core-concepts/traits) za avtomate stanj, pogoje in ucinke
+- [Kljucni koncepti: Strani](/docs/core-concepts/pages) za usmerjanje in sestavo lastnosti

@@ -7,12 +7,12 @@ const sidebars: SidebarsConfig = {
     {
       type: "category", label: "Core Concepts",
       items: [
-        "en/core-concepts/entities",
-        "en/core-concepts/traits",
-        "en/core-concepts/pages",
-        "en/core-concepts/closed-circuit",
-        "en/core-concepts/patterns",
-        "en/core-concepts/standard-library",
+        "core-concepts/entities",
+        "core-concepts/traits",
+        "core-concepts/pages",
+        "core-concepts/closed-circuit",
+        "core-concepts/patterns",
+        "core-concepts/standard-library",
       ],
     },
     {
@@ -36,6 +36,7 @@ const sidebars: SidebarsConfig = {
     },
     { type: "category", label: "Downloads", items: ["downloads/cli", "downloads/skills"] },
     { type: "category", label: "Community", items: ["community/contributing"] },
+    { type: "category", label: "Enterprise", items: ["enterprise/index"] },
   ],
 };
 export default sidebars;
