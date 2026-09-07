@@ -10,13 +10,18 @@
  * slots portal into. Without the themes CSS + data-theme the modals render with
  * no chrome (invisible); without the portal host they have nowhere to mount.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { useColorMode } from '@docusaurus/theme-common';
 import { Box, HStack, Button } from '@almadar/ui/marketing';
 // @almadar/ui's CodeBlock supports JSON/orb-style folding (collapse/expand)
 // via the `foldable` prop — unlike the stock Docusaurus CodeBlock.
 import { CodeBlock } from '@almadar/ui';
+import {
+  useLoloTranslator,
+  LANGUAGE_ORDER,
+  type LanguageCode,
+} from '../lib/useLoloTranslator';
 
 // Load all theme CSS so data-theme="<theme>-<mode>" resolves to actual
 // variables — same import the playground relies on. Both the Code tab
@@ -48,12 +53,20 @@ export default function CodePreviewTabs({
 }: CodePreviewTabsProps): React.ReactElement {
   const [tab, setTab] = useState<Tab>('code');
   const [copied, setCopied] = useState(false);
+  // Same language tabs as a markdown fence gets, from the same translator, so
+  // a hand-placed sample (the home page) does not behave differently.
+  const translator = useLoloTranslator();
+  const [codeLanguage, setCodeLanguage] = useState<LanguageCode>(translator.pageLanguage);
+  const shown = useMemo(
+    () => translator.render(code, codeLanguage, language),
+    [translator, code, codeLanguage, language],
+  );
   // Follow the site's light/dark toggle so the code + preview match the page.
   const { colorMode } = useColorMode();
   const appliedTheme = `wireframe-${colorMode}`;
 
   const handleCopy = (): void => {
-    navigator.clipboard?.writeText(code).then(() => {
+    navigator.clipboard?.writeText(shown).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     });
@@ -113,8 +126,31 @@ export default function CodePreviewTabs({
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
+        {translator.available && (
+          <Box
+            display="flex"
+            role="tablist"
+            aria-label="Program language"
+            className="gap-1 px-3 py-2 border-b border-white/10"
+          >
+            {LANGUAGE_ORDER.map((lang) => (
+              <Button
+                key={lang}
+                size="sm"
+                variant={codeLanguage === lang ? 'primary' : 'ghost'}
+                role="tab"
+                aria-selected={codeLanguage === lang}
+                lang={lang}
+                dir={translator.rtl(lang) ? 'rtl' : 'ltr'}
+                onClick={() => setCodeLanguage(lang)}
+              >
+                {translator.labels[lang]}
+              </Button>
+            ))}
+          </Box>
+        )}
         <CodeBlock
-          code={code}
+          code={shown}
           language={language}
           foldable
           showCopyButton={false}
