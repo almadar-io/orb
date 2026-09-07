@@ -40,12 +40,13 @@ jobs:
           exit $fail
 
       - name: Verify
+        # npm view --json strips per-version `deprecated`; read the raw packument.
         run: |
           for pkg in @almadar/orb @almadar/orb-linux-x64 @almadar/orb-linux-arm64 @almadar/orb-darwin-x64 @almadar/orb-darwin-arm64 @almadar/orb-windows-x64; do
-            npm view "$pkg" --json | node -e '
+            curl -sf "https://registry.npmjs.org/${pkg/\//%2F}" | node -e '
               const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
-              const vs = Object.keys(p.versions ?? {});
-              const dep = vs.filter(v => p.versions[v].deprecated);
-              console.log(p.name, "versions:", vs.length, "deprecated:", dep.length, "latest:", p["dist-tags"].latest);
+              const vs = Object.keys(p.versions);
+              const live = vs.filter(v => !p.versions[v].deprecated);
+              console.log(p.name, "total:", vs.length, "deprecated:", vs.length - live.length, "live:", live.join(" "));
             '
           done
