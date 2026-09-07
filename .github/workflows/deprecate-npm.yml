@@ -1,0 +1,51 @@
+name: Deprecate npm versions
+
+# One-off maintenance: marks legacy @almadar/orb* versions deprecated on npm.
+# Runs with the same NPM_TOKEN the publish workflow uses (bypass-2FA granular token).
+
+on:
+  workflow_dispatch:
+    inputs:
+      range:
+        description: "semver range to deprecate"
+        required: true
+        default: "<3.0.0 || >=4.0.0 <4.0.1 || >4.0.1"
+        type: string
+      message:
+        description: "deprecation message (empty string un-deprecates)"
+        required: true
+        default: "Legacy line - install @almadar/orb@latest (4.0.1)"
+        type: string
+
+jobs:
+  deprecate:
+    name: Deprecate legacy versions
+    runs-on: ${{ vars.ALMADAR_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Deprecate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -u
+          fail=0
+          for pkg in @almadar/orb @almadar/orb-linux-x64 @almadar/orb-linux-arm64 @almadar/orb-darwin-x64 @almadar/orb-darwin-arm64 @almadar/orb-windows-x64; do
+            echo "== $pkg @ '${{ inputs.range }}'"
+            npm deprecate "$pkg@${{ inputs.range }}" "${{ inputs.message }}" || fail=1
+          done
+          exit $fail
+
+      - name: Verify
+        run: |
+          for pkg in @almadar/orb @almadar/orb-linux-x64 @almadar/orb-linux-arm64 @almadar/orb-darwin-x64 @almadar/orb-darwin-arm64 @almadar/orb-windows-x64; do
+            npm view "$pkg" --json | node -e '
+              const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
+              const vs = Object.keys(p.versions ?? {});
+              const dep = vs.filter(v => p.versions[v].deprecated);
+              console.log(p.name, "versions:", vs.length, "deprecated:", dep.length, "latest:", p["dist-tags"].latest);
+            '
+          done
