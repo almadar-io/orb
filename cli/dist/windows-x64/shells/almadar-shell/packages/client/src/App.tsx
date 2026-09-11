@@ -15,7 +15,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, UISlotProvider } from '@almadar/ui/context';
-import { UISlotComponent, NotifyListener } from '@almadar/ui/components';
+import { UISlotComponent } from '@almadar/ui/components';
 import {
   EventBusProvider,
   UserProvider,
@@ -85,7 +85,6 @@ function App() {
                   {/* Portal slots rendered by compiled trait views via CompiledPortal */}
                   {/* Toast notifications (non-overlapping, always safe to render here) */}
                   <UISlotComponent slot="toast" portal />
-                  <NotifyListener />
                   <PersonaSwitcher />
                 </BrowserRouter>
               </NavigationProvider>

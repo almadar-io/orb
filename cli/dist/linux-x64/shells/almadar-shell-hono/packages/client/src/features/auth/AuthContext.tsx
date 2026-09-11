@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       clearError();
       await authService.signInWithGoogle();
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       const firebaseErr = err as { code?: string; message?: string };
       const isCancel =
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       clearError();
       await authService.signInWithEmail(email, password);
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       setError((err as { message?: string }).message ?? 'Sign-in failed');
     }
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       clearError();
       await authService.signUpWithEmail(email, password, displayName);
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       setError((err as { message?: string }).message ?? 'Sign-up failed');
     }
@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       await authService.sendSignInLinkToEmail(email, actionCodeSettings);
       setLoading(false);
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       setError((err as { message?: string }).message ?? 'Failed to send sign-in link');
     }
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       clearError();
       await authService.signInWithEmailLink(email, emailLink);
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       setError((err as { message?: string }).message ?? 'Email link sign-in failed');
     }
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.signOut();
       setUser(null);
       setLoading(false);
-    } catch (err: unknown) {
+    } catch (err) {
       setLoading(false);
       setError((err as { message?: string }).message ?? 'Sign-out failed');
     }
