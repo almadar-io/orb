@@ -313,11 +313,12 @@
                 "resource": "ModalRecord"
               },
               {
-                "kind": "notify"
+                "kind": "render-ui",
+                "resource": "modal"
               },
               {
                 "kind": "render-ui",
-                "resource": "modal"
+                "resource": "toast"
               },
               {
                 "kind": "set",
@@ -460,6 +461,24 @@
                   "name": "Initialize"
                 },
                 {
+                  "description": "Indicates a failure to load the record data.",
+                  "id": "evt_01KXG04GVS0KS8WXT183DREMAC",
+                  "key": "ModalRecordLoadFailed",
+                  "name": "ModalRecord load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ],
+                  "synonyms": "error, failure, problem, unsuccessful",
+                  "tier": "internal"
+                },
+                {
                   "description": "Stash the row an edit-mode OPEN will pre-fill from. Hosts route the owning surface's loaded event here (e.g. RecordItemLoaded from a document look) so an OPEN carrying only { id } still opens a fully seeded form.",
                   "id": "evt_01M15CRJ6RE1E1ZFKT9Y1PXNZK",
                   "key": "SEED",
@@ -596,24 +615,6 @@
                   "tier": "domain"
                 },
                 {
-                  "description": "Indicates a failure to load the record data.",
-                  "id": "evt_01KXG04GVS0KS8WXT183DREMAC",
-                  "key": "ModalRecordLoadFailed",
-                  "name": "ModalRecord load failed",
-                  "payloadSchema": [
-                    {
-                      "name": "error",
-                      "type": "string"
-                    },
-                    {
-                      "name": "code",
-                      "type": "string"
-                    }
-                  ],
-                  "synonyms": "error, failure, problem, unsuccessful",
-                  "tier": "internal"
-                },
-                {
                   "description": "Signals that the modal's data has been successfully loaded.",
                   "id": "evt_01KXG04GVS3BQFMQRN09N23MX6",
                   "key": "ModalRecordLoaded",
@@ -680,6 +681,28 @@
                   ],
                   "event": "INIT",
                   "eventId": "evt_01KXG04GVSS6QBKSCYWMBQWZMS",
+                  "from": "closed",
+                  "to": "closed"
+                },
+                {
+                  "effects": [
+                    [
+                      "render-ui",
+                      "toast",
+                      {
+                        "dismissible": true,
+                        "message": [
+                          "str/concat",
+                          "Couldn't load the record — ",
+                          "@payload.error"
+                        ],
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ],
+                  "event": "ModalRecordLoadFailed",
+                  "eventId": "evt_01KXG04GVS0KS8WXT183DREMAC",
                   "from": "closed",
                   "to": "closed"
                 },
@@ -807,9 +830,14 @@
                       null
                     ],
                     [
-                      "notify",
-                      "Cancelled",
-                      "info"
+                      "render-ui",
+                      "toast",
+                      {
+                        "dismissible": true,
+                        "message": "Cancelled",
+                        "type": "alert",
+                        "variant": "info"
+                      }
                     ]
                   ],
                   "event": "CLOSE",
@@ -861,5 +889,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app std-modal \"1.0.0\"\n\"std-modal as a Function\"\n;;\n;; Modal-only trait: renders ONLY to the `modal` slot. The parent molecule's\n;; layout/browse trait is responsible for the `main` slot (the list, the\n;; trigger buttons, etc.). Consumers configure icon/title/fields/mode at\n;; the trait-ref call site via `config: { ... }`. Side effects (persist,\n;; notify) belong in a sibling coordinator trait that\n;; `listens { ModalTrait SAVE -> DO_PERSIST }`.\norbital ModalRecordOrbital {\n    type ModalFieldOverride = {\n      name : string!\n      label : string\n      placeholder : string\n      hint : string\n    }\n\n    type ModalRecordLoaded = Event { data : [ModalRecord] }\n\n    type ModalRecordLoadFailed = Event { error : string, code : string }\n\n  entity ModalRecord [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the modal.\" @synonyms \"title, label, identifier\"\n    description : string @description \"A textual explanation of the modal's content or function.\" @synonyms \"details, explanation, notes, summary\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the record.\" @synonyms \"state, condition, flag\" = active\n    seedRow : ModalRecord @intrinsic @description \"The row an edit-mode OPEN pre-fills from when its payload carries no row. Stashed by SEED — hosts route the surface's loaded event here (e.g. a document look's RecordItemLoaded) so scalar-only action events ({ id }) can still open a fully seeded settings form.\" = {}\n    createdAt : string\n  }\n\n  trait ModalRecordModal -> @rebindable ModalRecord [interaction, instance] {\n    initial: closed\n\n    state closed {\n      INIT -> closed\n        (fetch ModalRecord {\n          emit: { failure: ModalRecordLoadFailed, success: ModalRecordLoaded }\n        })\n      ;; stash only — a SEED never opens anything; OPEN reads it on demand\n      SEED -> closed\n        (set @entity.seedRow (object/merge ?row {}))\n      ;; Mode-aware guard: in create mode the modal opens unconditionally\n      ;; (no row exists yet); in edit mode the row must be present — on the\n      ;; OPEN payload or already stashed by SEED — or the OPEN is rejected\n      ;; (no silent first-row fallback). The @config.mode literal is\n      ;; substituted at molecule inline time — atoms validate this with\n      ;; @config allowed-but-unresolved.\n      OPEN -> open when (or [\"=\", @config.mode, create] ?row [\"!=\", (str/default (object/get @entity.seedRow id) \"\"), \"\"])\n        (set @entity.id ?id)\n        (render-ui @config.detailSlot {\n          children: [{\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            cancelEvent: CLOSE\n            entity: (object/merge @entity.seedRow (object/merge ?row {}))\n            fieldOverrides: @config.fieldOverrides\n            fields: @config.fields\n            mode: @config.mode\n            submitEvent: SAVE\n            type: form-section\n          }]\n          direction: vertical\n          gap: md\n          type: @config.detailPattern\n        })\n    }\n\n    state open {\n      ;; a refetch echo while the modal is open refreshes the stash in place\n      SEED -> open\n        (set @entity.seedRow (object/merge ?row {}))\n      CLOSE -> closed\n        (render-ui @config.detailSlot null)\n        (notify Cancelled info)\n      SAVE -> closed\n        (render-ui @config.detailSlot null)\n    }\n\n    emits {\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data save operation.\"\n        @synonyms \"submit, persist, confirm\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the modal window is being closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      ModalRecordLoadFailed\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n      ModalRecordLoaded\n        @description \"Signals that the modal's data has been successfully loaded.\"\n        @synonyms \"loaded, data ready, populated\"\n        @tier \"domain\"\n    }\n\n    listens {\n      OPEN {\n        id : string\n        row : ModalRecord\n      }\n        @description \"A request to display the modal window.\"\n        @synonyms \"show, display, present, reveal\"\n        @tier \"domain\"\n      SEED {\n        row : ModalRecord\n      }\n        @description \"Stash the row an edit-mode OPEN will pre-fill from. Hosts route the owning surface's loaded event here (e.g. RecordItemLoaded from a document look) so an OPEN carrying only { id } still opens a fully seeded form.\"\n        @synonyms \"preload row, stash record, seed form, prefill\"\n        @tier \"domain\"\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data submission or confirmation.\"\n        @synonyms \"submit, confirm, accept, persist\"\n        @tier \"domain\"\n      ModalRecordLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = layout-panel-top\n        @label \"Which icon appears in the modal header?\"\n        @description \"Lucide icon name shown next to the modal title.\"\n        @synonyms \"header icon, modal icon, title icon\"\n        @tier \"presentation\"\n      title : string = Details\n        @label \"What should the modal heading say?\"\n        @description \"Heading displayed at the top of the modal.\"\n        @synonyms \"modal title, dialog heading, panel title, form title\"\n        @tier \"presentation\"\n      fields : [string] = []\n        @label \"Which fields appear in the form?\"\n        @description \"Entity fields rendered as inputs inside the modal form.\"\n        @synonyms \"form fields, inputs, editable fields, field list\"\n        @tier \"domain\"\n      fieldOverrides : [ModalFieldOverride] = []\n        @label \"Any per-field display copy overrides?\"\n        @description \"Per-field label/placeholder/hint overrides, keyed by field name. Types, options and required-ness stay entity-schema-driven (declare once on the entity); override only display copy the entity's @description doesn't fit.\"\n        @synonyms \"field labels, custom labels, help text overrides, placeholder text\"\n        @tier \"presentation\"\n      mode : \"create\" | \"edit\" = create\n        @label \"Is this for creating or editing?\"\n        @description \"create = blank form; edit = pre-filled from the selected row.\"\n        @synonyms \"form mode, create or edit, new or update, add or modify\"\n        @tier \"internal\"\n      detailSlot : slot = modal\n        @label \"Render slot\"\n        @description \"UI slot the modal renders into\"\n        @tier \"internal\"\n      detailPattern : pattern = stack\n        @label \"Layout pattern\"\n        @description \"Pattern used to arrange the form body\"\n        @tier \"internal\"\n    }\n  }\n\n  ;; consumer: a sibling coordinator trait listens for SAVE to run (persist create|update ...)\n  ;; For edit mode, OPEN's payload.id seeds @entity.id so form-section\n  ;; pre-fills the target row AND carries that id into the SAVE payload\n  ;; (so (persist update X @payload.data) can find the right row).\n  page \"/modalrecords/modal\" as ModalRecordModalPage -> ModalRecordModal\n}"
+  "lolo": "app std-modal \"1.0.0\"\n\"std-modal as a Function\"\n;;\n;; Modal-only trait: renders ONLY to the `modal` slot. The parent molecule's\n;; layout/browse trait is responsible for the `main` slot (the list, the\n;; trigger buttons, etc.). Consumers configure icon/title/fields/mode at\n;; the trait-ref call site via `config: { ... }`. Side effects (persist,\n;; notify) belong in a sibling coordinator trait that\n;; `listens { ModalTrait SAVE -> DO_PERSIST }`.\norbital ModalRecordOrbital {\n    type ModalFieldOverride = {\n      name : string!\n      label : string\n      placeholder : string\n      hint : string\n    }\n\n    type ModalRecordLoaded = Event { data : [ModalRecord] }\n\n    type ModalRecordLoadFailed = Event { error : string, code : string }\n\n  entity ModalRecord [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the modal.\" @synonyms \"title, label, identifier\"\n    description : string @description \"A textual explanation of the modal's content or function.\" @synonyms \"details, explanation, notes, summary\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the record.\" @synonyms \"state, condition, flag\" = active\n    seedRow : ModalRecord @intrinsic @description \"The row an edit-mode OPEN pre-fills from when its payload carries no row. Stashed by SEED — hosts route the surface's loaded event here (e.g. a document look's RecordItemLoaded) so scalar-only action events ({ id }) can still open a fully seeded settings form.\" = {}\n    createdAt : string\n  }\n\n  trait ModalRecordModal -> @rebindable ModalRecord [interaction, instance] {\n    initial: closed\n\n    state closed {\n      INIT -> closed\n        (fetch ModalRecord {\n          emit: { failure: ModalRecordLoadFailed, success: ModalRecordLoaded }\n        })\n      ModalRecordLoadFailed -> closed\n        (notify error (str/concat \"Couldn't load the record — \" ?error))\n      ;; stash only — a SEED never opens anything; OPEN reads it on demand\n      SEED -> closed\n        (set @entity.seedRow (object/merge ?row {}))\n      ;; Mode-aware guard: in create mode the modal opens unconditionally\n      ;; (no row exists yet); in edit mode the row must be present — on the\n      ;; OPEN payload or already stashed by SEED — or the OPEN is rejected\n      ;; (no silent first-row fallback). The @config.mode literal is\n      ;; substituted at molecule inline time — atoms validate this with\n      ;; @config allowed-but-unresolved.\n      OPEN -> open when (or [\"=\", @config.mode, create] ?row [\"!=\", (str/default (object/get @entity.seedRow id) \"\"), \"\"])\n        (set @entity.id ?id)\n        (render-ui @config.detailSlot {\n          children: [{\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            cancelEvent: CLOSE\n            entity: (object/merge @entity.seedRow (object/merge ?row {}))\n            fieldOverrides: @config.fieldOverrides\n            fields: @config.fields\n            mode: @config.mode\n            submitEvent: SAVE\n            type: form-section\n          }]\n          direction: vertical\n          gap: md\n          type: @config.detailPattern\n        })\n    }\n\n    state open {\n      ;; a refetch echo while the modal is open refreshes the stash in place\n      SEED -> open\n        (set @entity.seedRow (object/merge ?row {}))\n      CLOSE -> closed\n        (render-ui @config.detailSlot null)\n        (notify info Cancelled)\n      SAVE -> closed\n        (render-ui @config.detailSlot null)\n    }\n\n    emits {\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data save operation.\"\n        @synonyms \"submit, persist, confirm\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the modal window is being closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      ModalRecordLoadFailed\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n      ModalRecordLoaded\n        @description \"Signals that the modal's data has been successfully loaded.\"\n        @synonyms \"loaded, data ready, populated\"\n        @tier \"domain\"\n    }\n\n    listens {\n      OPEN {\n        id : string\n        row : ModalRecord\n      }\n        @description \"A request to display the modal window.\"\n        @synonyms \"show, display, present, reveal\"\n        @tier \"domain\"\n      SEED {\n        row : ModalRecord\n      }\n        @description \"Stash the row an edit-mode OPEN will pre-fill from. Hosts route the owning surface's loaded event here (e.g. RecordItemLoaded from a document look) so an OPEN carrying only { id } still opens a fully seeded form.\"\n        @synonyms \"preload row, stash record, seed form, prefill\"\n        @tier \"domain\"\n      SAVE {\n        data : @entity!\n      }\n        @description \"Indicates a successful data submission or confirmation.\"\n        @synonyms \"submit, confirm, accept, persist\"\n        @tier \"domain\"\n      ModalRecordLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load the record data.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = layout-panel-top\n        @label \"Which icon appears in the modal header?\"\n        @description \"Lucide icon name shown next to the modal title.\"\n        @synonyms \"header icon, modal icon, title icon\"\n        @tier \"presentation\"\n      title : string = Details\n        @label \"What should the modal heading say?\"\n        @description \"Heading displayed at the top of the modal.\"\n        @synonyms \"modal title, dialog heading, panel title, form title\"\n        @tier \"presentation\"\n      fields : [string] = []\n        @label \"Which fields appear in the form?\"\n        @description \"Entity fields rendered as inputs inside the modal form.\"\n        @synonyms \"form fields, inputs, editable fields, field list\"\n        @tier \"domain\"\n      fieldOverrides : [ModalFieldOverride] = []\n        @label \"Any per-field display copy overrides?\"\n        @description \"Per-field label/placeholder/hint overrides, keyed by field name. Types, options and required-ness stay entity-schema-driven (declare once on the entity); override only display copy the entity's @description doesn't fit.\"\n        @synonyms \"field labels, custom labels, help text overrides, placeholder text\"\n        @tier \"presentation\"\n      mode : \"create\" | \"edit\" = create\n        @label \"Is this for creating or editing?\"\n        @description \"create = blank form; edit = pre-filled from the selected row.\"\n        @synonyms \"form mode, create or edit, new or update, add or modify\"\n        @tier \"internal\"\n      detailSlot : slot = modal\n        @label \"Render slot\"\n        @description \"UI slot the modal renders into\"\n        @tier \"internal\"\n      detailPattern : pattern = stack\n        @label \"Layout pattern\"\n        @description \"Pattern used to arrange the form body\"\n        @tier \"internal\"\n    }\n  }\n\n  ;; consumer: a sibling coordinator trait listens for SAVE to run (persist create|update ...)\n  ;; For edit mode, OPEN's payload.id seeds @entity.id so form-section\n  ;; pre-fills the target row AND carries that id into the SAVE payload\n  ;; (so (persist update X @payload.data) can find the right row).\n  page \"/modalrecords/modal\" as ModalRecordModalPage -> ModalRecordModal\n}"
 }

@@ -242,6 +242,10 @@
                 "resource": "modal"
               },
               {
+                "kind": "render-ui",
+                "resource": "toast"
+              },
+              {
                 "kind": "set",
                 "resource": "@entity.name"
               },
@@ -355,6 +359,24 @@
                   "name": "Initialize"
                 },
                 {
+                  "description": "Indicates failure to load the confirmation action.",
+                  "id": "evt_01KXG04FYCHXE5EC39ZKQW8ETA",
+                  "key": "ConfirmActionLoadFailed",
+                  "name": "ConfirmAction load failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ],
+                  "synonyms": "error, failure, failed, problem",
+                  "tier": "internal"
+                },
+                {
                   "description": "A request for confirmation before proceeding.",
                   "id": "evt_01KXG04FYC7ZGXXG1G3NDHJCX6",
                   "key": "REQUEST",
@@ -431,24 +453,6 @@
                   "tier": "domain"
                 },
                 {
-                  "description": "Indicates failure to load the confirmation action.",
-                  "id": "evt_01KXG04FYCHXE5EC39ZKQW8ETA",
-                  "key": "ConfirmActionLoadFailed",
-                  "name": "ConfirmAction load failed",
-                  "payloadSchema": [
-                    {
-                      "name": "error",
-                      "type": "string"
-                    },
-                    {
-                      "name": "code",
-                      "type": "string"
-                    }
-                  ],
-                  "synonyms": "error, failure, failed, problem",
-                  "tier": "internal"
-                },
-                {
                   "description": "Indicates the confirmation action has been successfully loaded.",
                   "id": "evt_01KXG04FYCT21KVC5HEBG1C4JP",
                   "key": "ConfirmActionLoaded",
@@ -515,6 +519,28 @@
                   ],
                   "event": "INIT",
                   "eventId": "evt_01KXG04FYBVF76N7HDV4519M58",
+                  "from": "idle",
+                  "to": "idle"
+                },
+                {
+                  "effects": [
+                    [
+                      "render-ui",
+                      "toast",
+                      {
+                        "dismissible": true,
+                        "message": [
+                          "str/concat",
+                          "Couldn't load the item to confirm — ",
+                          "@payload.error"
+                        ],
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ],
+                  "event": "ConfirmActionLoadFailed",
+                  "eventId": "evt_01KXG04FYCHXE5EC39ZKQW8ETA",
                   "from": "idle",
                   "to": "idle"
                 },
@@ -657,5 +683,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app std-confirmation \"1.0.0\"\n\"std-confirmation as a Function\"\n;;\n;; Modal-only confirmation trait: renders ONLY to the `modal` slot.\n;; Consumers configure icon/title/alertMessage/confirmLabel at the\n;; trait-ref call site via `config: { ... }`. Side effects (persist delete,\n;; notify, etc.) belong in a sibling coordinator trait that\n;; `listens { ConfirmTrait CONFIRM -> DO_DELETE }`.\norbital ConfirmActionOrbital {\n  type ConfirmActionLoaded = Event { data : [ConfirmAction] }\n\n  type ConfirmActionLoadFailed = Event { error : string, code : string }\n\n  entity ConfirmAction [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the confirmation action.\" @synonyms \"label, title, identifier\"\n    description : string @description \"A detailed explanation of the action being confirmed.\" @synonyms \"details, explanation, notes, information\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Indicates the current operational state of the action.\" @synonyms \"state, condition, enabled\" = active\n    createdAt : string\n    pendingId : string @description \"Unique identifier for the pending confirmation request.\" @synonyms \"requestId, referenceId, confirmationId\" = \"\"\n  }\n\n  trait ConfirmActionConfirmation -> @rebindable ConfirmAction [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (fetch ConfirmAction {\n          emit: { failure: ConfirmActionLoadFailed, success: ConfirmActionLoaded }\n        })\n      ;; Guard: REQUEST is rejected if no `row` payload was provided.\n      ;; \"Confirm an action against X\" is meaningless without X — a\n      ;; confirmation dialog with no entity to display is a precondition\n      ;; violation, not a valid render. Without this guard, an empty\n      ;; REQUEST payload would still open the modal with `@entity.name`\n      ;; rendering empty (post-codegen-fix) which silently looks like a\n      ;; UI bug. The guard surfaces the contract: callers MUST send the\n      ;; targeted row in `payload.row`.\n      REQUEST -> confirming when ?row\n        (set @entity.pendingId ?id)\n        (set @entity.name ?row.name)\n        (render-ui modal {\n          children: [{\n            align: center\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            message: @config.alertMessage\n            type: alert\n            variant: error\n          }, {\n            content: @entity.name\n            type: typography\n            variant: h4\n          }, {\n            color: muted\n            content: @entity.pendingId\n            type: typography\n            variant: caption\n          }, {\n            children: [{\n              action: CANCEL\n              label: Cancel\n              type: button\n              variant: ghost\n            }, {\n              action: CONFIRM\n              actionPayload: { id: @entity.pendingId }\n              icon: check\n              label: @config.confirmLabel\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            justify: end\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state confirming {\n      CONFIRM -> idle\n        (render-ui modal null)\n      CANCEL -> idle\n        (render-ui modal null)\n      CLOSE -> idle\n        (render-ui modal null)\n    }\n\n    emits {\n      CONFIRM {\n        id : string\n      }\n        @description \"Indicates the user has approved the action.\"\n        @synonyms \"approve, accept, ok\"\n        @tier \"domain\"\n      CANCEL\n        @description \"Indicates the action was cancelled by the user.\"\n        @synonyms \"dismiss, reject, undo\"\n        @tier \"domain\"\n      ConfirmActionLoadFailed\n        @description \"Indicates failure to load the confirmation action.\"\n        @synonyms \"error, failure, failed, problem\"\n        @tier \"internal\"\n      ConfirmActionLoaded\n        @description \"Indicates the confirmation action has been successfully loaded.\"\n        @synonyms \"loaded, ready, initialized\"\n        @tier \"internal\"\n    }\n\n    listens {\n      REQUEST {\n        id : string!\n        row : ConfirmAction\n      }\n        @description \"A request for confirmation before proceeding.\"\n        @synonyms \"prompt, ask, verify\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the user dismissed the confirmation.\"\n        @synonyms \"dismiss, decline, reject\"\n        @tier \"domain\"\n      ConfirmActionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates that loading the confirmation action failed.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = alert-triangle\n        @label \"Icon\"\n        @description \"Icon name displayed in the confirmation modal header\"\n        @tier \"presentation\"\n      title : string = \"Confirm Action\"\n        @label \"Modal title\"\n        @description \"Heading shown at the top of the confirmation modal\"\n        @tier \"presentation\"\n      alertMessage : string = \"Are you sure?\"\n        @label \"Alert message\"\n        @description \"Body text explaining what the user is confirming\"\n        @tier \"presentation\"\n      confirmLabel : string = Confirm\n        @label \"Confirm button\"\n        @description \"Label on the primary confirm action button\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/confirmactions/confirm\" as ConfirmActionConfirmPage -> ConfirmActionConfirmation\n}"
+  "lolo": "app std-confirmation \"1.0.0\"\n\"std-confirmation as a Function\"\n;;\n;; Modal-only confirmation trait: renders ONLY to the `modal` slot.\n;; Consumers configure icon/title/alertMessage/confirmLabel at the\n;; trait-ref call site via `config: { ... }`. Side effects (persist delete,\n;; notify, etc.) belong in a sibling coordinator trait that\n;; `listens { ConfirmTrait CONFIRM -> DO_DELETE }`.\norbital ConfirmActionOrbital {\n  type ConfirmActionLoaded = Event { data : [ConfirmAction] }\n\n  type ConfirmActionLoadFailed = Event { error : string, code : string }\n\n  entity ConfirmAction [runtime] {\n    id : string\n    name : string @description \"A user-facing identifier for the confirmation action.\" @synonyms \"label, title, identifier\"\n    description : string @description \"A detailed explanation of the action being confirmed.\" @synonyms \"details, explanation, notes, information\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Indicates the current operational state of the action.\" @synonyms \"state, condition, enabled\" = active\n    createdAt : string\n    pendingId : string @description \"Unique identifier for the pending confirmation request.\" @synonyms \"requestId, referenceId, confirmationId\" = \"\"\n  }\n\n  trait ConfirmActionConfirmation -> @rebindable ConfirmAction [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (fetch ConfirmAction {\n          emit: { failure: ConfirmActionLoadFailed, success: ConfirmActionLoaded }\n        })\n      ConfirmActionLoadFailed -> idle\n        (notify error (str/concat \"Couldn't load the item to confirm — \" ?error))\n      ;; Guard: REQUEST is rejected if no `row` payload was provided.\n      ;; \"Confirm an action against X\" is meaningless without X — a\n      ;; confirmation dialog with no entity to display is a precondition\n      ;; violation, not a valid render. Without this guard, an empty\n      ;; REQUEST payload would still open the modal with `@entity.name`\n      ;; rendering empty (post-codegen-fix) which silently looks like a\n      ;; UI bug. The guard surfaces the contract: callers MUST send the\n      ;; targeted row in `payload.row`.\n      REQUEST -> confirming when ?row\n        (set @entity.pendingId ?id)\n        (set @entity.name ?row.name)\n        (render-ui modal {\n          children: [{\n            align: center\n            children: [{ name: @config.icon, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            message: @config.alertMessage\n            type: alert\n            variant: error\n          }, {\n            content: @entity.name\n            type: typography\n            variant: h4\n          }, {\n            color: muted\n            content: @entity.pendingId\n            type: typography\n            variant: caption\n          }, {\n            children: [{\n              action: CANCEL\n              label: Cancel\n              type: button\n              variant: ghost\n            }, {\n              action: CONFIRM\n              actionPayload: { id: @entity.pendingId }\n              icon: check\n              label: @config.confirmLabel\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            justify: end\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state confirming {\n      CONFIRM -> idle\n        (render-ui modal null)\n      CANCEL -> idle\n        (render-ui modal null)\n      CLOSE -> idle\n        (render-ui modal null)\n    }\n\n    emits {\n      CONFIRM {\n        id : string\n      }\n        @description \"Indicates the user has approved the action.\"\n        @synonyms \"approve, accept, ok\"\n        @tier \"domain\"\n      CANCEL\n        @description \"Indicates the action was cancelled by the user.\"\n        @synonyms \"dismiss, reject, undo\"\n        @tier \"domain\"\n      ConfirmActionLoadFailed\n        @description \"Indicates failure to load the confirmation action.\"\n        @synonyms \"error, failure, failed, problem\"\n        @tier \"internal\"\n      ConfirmActionLoaded\n        @description \"Indicates the confirmation action has been successfully loaded.\"\n        @synonyms \"loaded, ready, initialized\"\n        @tier \"internal\"\n    }\n\n    listens {\n      REQUEST {\n        id : string!\n        row : ConfirmAction\n      }\n        @description \"A request for confirmation before proceeding.\"\n        @synonyms \"prompt, ask, verify\"\n        @tier \"domain\"\n      CLOSE\n        @description \"Indicates the user dismissed the confirmation.\"\n        @synonyms \"dismiss, decline, reject\"\n        @tier \"domain\"\n      ConfirmActionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates that loading the confirmation action failed.\"\n        @synonyms \"error, failure, problem, unsuccessful\"\n        @tier \"internal\"\n    }\n\n    config {\n      icon : string = alert-triangle\n        @label \"Icon\"\n        @description \"Icon name displayed in the confirmation modal header\"\n        @tier \"presentation\"\n      title : string = \"Confirm Action\"\n        @label \"Modal title\"\n        @description \"Heading shown at the top of the confirmation modal\"\n        @tier \"presentation\"\n      alertMessage : string = \"Are you sure?\"\n        @label \"Alert message\"\n        @description \"Body text explaining what the user is confirming\"\n        @tier \"presentation\"\n      confirmLabel : string = Confirm\n        @label \"Confirm button\"\n        @description \"Label on the primary confirm action button\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/confirmactions/confirm\" as ConfirmActionConfirmPage -> ConfirmActionConfirmation\n}"
 }
