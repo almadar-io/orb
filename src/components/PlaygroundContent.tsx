@@ -6,14 +6,10 @@ import {
   Search,
   Sun,
   Moon,
-  Code,
   ChevronDown,
   ChevronUp,
   PanelLeftClose,
   PanelLeft,
-  ArrowLeft,
-  ArrowRight,
-  RotateCcw,
   Info,
 } from "lucide-react";
 import {
@@ -217,7 +213,7 @@ const FEATURED_BEHAVIORS: ReadonlyArray<{ name: string; blurb: string }> = [
   { name: "std-step-flow", blurb: "Approval chain with role-gated steps" },
   { name: "std-record-detail", blurb: "A record presented as an editable document" },
   { name: "std-graphs", blurb: "Histograms and stacked bars driven by config" },
-  { name: "std-dungeon-board-2d", blurb: "Key-move dungeon crawl on a 2D canvas" },
+  { name: "std-platformer-board-2d", blurb: "Run-and-jump platformer on a 2D canvas" },
 ];
 
 function FeaturedStrip({ indexMap, selected, onSelect }: {
@@ -360,113 +356,6 @@ function getBehaviorCategory(name: string, indexMap: Map<string, BehaviorIndexEn
   return TOPIC_LABELS[entry.topic] ?? "OTHER";
 }
 
-
-// ─── Behavior Composition (from source code, not schema) ─────────────────────
-
-/** Convert camelCase function name to kebab behavior name: stdCart -> std-cart */
-function fnToKebab(fn: string): string {
-  return fn.replace(/^std/, 'std-').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
-
-/** Extract which std* behaviors a behavior composes by parsing its source code */
-function extractComposedBehaviors(
-  entry: BehaviorDetail,
-  indexMap: Map<string, BehaviorIndexEntry>,
-): string[] {
-  const calls = (entry.source.match(/\bstd[A-Z]\w+\s*\(/g) ?? [])
-    .map((c: string) => c.replace(/\s*\(/, ''))
-    .map((c: string) => fnToKebab(c))
-    .filter((c: string) => c !== entry.name && indexMap.has(c));
-  return [...new Set(calls)];
-}
-
-// ─── Composition View ────────────────────────────────────────────────────────
-
-function CompositionView({ entry, indexMap, onSelect }: {
-  entry: BehaviorDetail;
-  indexMap: Map<string, BehaviorIndexEntry>;
-  onSelect: (name: string) => void;
-}) {
-  const children = useMemo(() => extractComposedBehaviors(entry, indexMap), [entry, indexMap]);
-  const isAtom = entry.level === 'atom';
-
-  // For each child, surface metadata from the index. Grandchildren require
-  // the child's source, which we no longer preload for the whole catalog.
-  const childEntries = useMemo(() => children.map(name => {
-    const child = indexMap.get(name);
-    if (!child) return null;
-    return { name, level: child.level, description: child.description, grandchildren: [] as string[] };
-  }).filter(Boolean) as { name: string; level: string; description: string; grandchildren: string[] }[], [children, indexMap]);
-
-  return (
-    <VStack className="p-6 gap-6 h-full overflow-y-auto">
-      {/* Header */}
-      <VStack gap="sm">
-        <HStack gap="sm" align="center">
-          <Badge variant={isAtom ? 'info' : entry.level === 'molecule' ? 'primary' : 'warning'} size="sm">
-            {entry.level}
-          </Badge>
-          <Typography variant="h3" className="font-mono">{entry.name}</Typography>
-        </HStack>
-        <Typography variant="body2" color="muted">{entry.description}</Typography>
-      </VStack>
-
-      {isAtom ? (
-        <VStack gap="sm">
-          <Typography variant="body2" color="muted">
-            This is an atom. It does not compose other behaviors. It is a self-contained state machine that can be used as a building block by molecules and organisms.
-          </Typography>
-        </VStack>
-      ) : (
-        <VStack gap="lg">
-          {/* Composition label */}
-          <Typography variant="body2" weight="semibold">
-            Composes {children.length} behavior{children.length !== 1 ? 's' : ''}:
-          </Typography>
-
-          {/* Child behavior cards */}
-          <VStack gap="md">
-            {childEntries.map((child) => (
-              <Card
-                key={child.name}
-                className="p-4 cursor-pointer hover:border-[var(--color-primary)] transition-colors"
-                onClick={() => onSelect(child.name)}
-              >
-                <VStack gap="sm">
-                  <HStack gap="sm" align="center" justify="between">
-                    <HStack gap="sm" align="center">
-                      <Badge
-                        variant={child.level === 'atom' ? 'info' : child.level === 'molecule' ? 'primary' : 'warning'}
-                        size="sm"
-                      >
-                        {child.level}
-                      </Badge>
-                      <Typography variant="body" weight="semibold" className="font-mono text-[0.85rem]">
-                        {child.name}
-                      </Typography>
-                    </HStack>
-                    <Typography variant="caption" color="muted" className="text-[0.7rem]">
-                      click to view &#8594;
-                    </Typography>
-                  </HStack>
-                  <Typography variant="caption" color="muted">{child.description}</Typography>
-                  {child.grandchildren.length > 0 && (
-                    <HStack gap="xs" className="flex-wrap">
-                      <Typography variant="caption" color="muted" className="text-[0.65rem]">composes:</Typography>
-                      {child.grandchildren.map(gc => (
-                        <Badge key={gc} variant="neutral" size="sm" className="font-mono text-[0.6rem]">{gc}</Badge>
-                      ))}
-                    </HStack>
-                  )}
-                </VStack>
-              </Card>
-            ))}
-          </VStack>
-        </VStack>
-      )}
-    </VStack>
-  );
-}
 
 // Mock data + state machine adjustment now live in @almadar/ui/runtime as
 // `prepareSchemaForPreview` and are enabled via `<OrbPreview autoMock />`.
@@ -758,10 +647,9 @@ function BehaviorsTab({
 }) {
   const [previewKey, setPreviewKey] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
-  const [showCode, setShowCode] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [smBarExpanded, setSmBarExpanded] = useState(false);
-  const [viewMode, setViewMode] = useState<"preview" | "composition">("preview");
+  const [viewMode, setViewMode] = useState<"preview" | "code">("preview");
 
   const { entry, loading, error } = useBehaviorDetail(selected);
   const previewSchema = entry?.schema ?? null;
@@ -775,17 +663,13 @@ function BehaviorsTab({
     const portal = document.getElementById("ui-slot-portal-root");
     if (portal) portal.innerHTML = "";
     setPreviewKey((k) => k + 1);
-    setShowCode(false);
+    setViewMode("preview");
     setShowInfo(false);
   }, [selected]);
 
   const handleSelect = useCallback((name: string) => {
     onSelect(name);
   }, [onSelect]);
-
-  const toggleCode = useCallback(() => {
-    setShowCode((v) => !v);
-  }, []);
 
   return (
     <HStack className="flex-1 min-h-0 overflow-hidden">
@@ -838,12 +722,12 @@ function BehaviorsTab({
               Live Preview
             </Button>
             <Button
-              variant={viewMode === "composition" ? "default" : "ghost"}
+              variant={viewMode === "code" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode("composition")}
+              onClick={() => setViewMode("code")}
               className="text-[0.7rem] px-3 py-1 rounded-md"
             >
-              Composition Map
+              Code
             </Button>
           </HStack>
         </HStack>
@@ -858,69 +742,22 @@ function BehaviorsTab({
           </Box>
         )}
 
-        {/* Browser Chrome */}
-        <Box className="bg-[#1a1a2e] border-x border-t border-[var(--color-border)] flex-shrink-0" style={{ borderTopLeftRadius: "0.5rem", borderTopRightRadius: "0.5rem" }}>
-          <HStack className="px-3 py-2 gap-2" align="center">
-            <HStack gap="xs">
-              <Box className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-              <Box className="w-3 h-3 rounded-full bg-[#febc2e]" />
-              <Box className="w-3 h-3 rounded-full bg-[#28c840]" />
-            </HStack>
-            <HStack gap="xs" align="center">
-              <Button variant="ghost" size="sm" className="w-6 h-6 p-0 text-gray-400 hover:text-gray-200">
-                <Icon icon={ArrowLeft} size="xs" />
-              </Button>
-              <Button variant="ghost" size="sm" className="w-6 h-6 p-0 text-gray-400 hover:text-gray-200">
-                <Icon icon={ArrowRight} size="xs" />
-              </Button>
-              <Button variant="ghost" size="sm" className="w-6 h-6 p-0 text-gray-400 hover:text-gray-200">
-                <Icon icon={RotateCcw} size="xs" />
-              </Button>
-            </HStack>
-            <Box className="flex-1 bg-[#0d0d1a] rounded-md px-3 py-1">
-              <Typography variant="caption" className="font-mono text-gray-500 text-[0.7rem]">
-                orb://std-{selected.replace(/^std-/, "")}
-              </Typography>
-            </Box>
-            <HStack gap="xs">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleCode}
-                className={`w-6 h-6 p-0 ${showCode ? "text-teal-400" : "text-gray-400 hover:text-gray-200"}`}
-              >
-                <Icon icon={Code} size="xs" />
-              </Button>
-            </HStack>
-          </HStack>
-        </Box>
-
         {/* Main content area */}
         {loading ? (
-          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-[var(--color-border)]">
+          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-t border-[var(--color-border)] rounded-t-lg">
             <Typography color="muted" size="sm">Loading behavior...</Typography>
           </Box>
         ) : error ? (
-          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-[var(--color-border)]">
+          <Box className="flex-[1_1_0] h-0 flex items-center justify-center border-x border-t border-[var(--color-border)] rounded-t-lg">
             <Typography color="error" size="sm">{error}</Typography>
           </Box>
-        ) : showCode && entry ? (
-          <Box className="flex-[1_1_0] h-0 overflow-hidden border-x border-[var(--color-border)]">
+        ) : viewMode === "code" && entry ? (
+          <Box className="flex-[1_1_0] h-0 overflow-hidden border-x border-t border-[var(--color-border)] rounded-t-lg">
             <CodePanel entry={entry} />
-          </Box>
-        ) : viewMode === "composition" ? (
-          <Box className="flex-[1_1_0] h-0 overflow-auto border-x border-[var(--color-border)]">
-            {entry ? (
-              <CompositionView entry={entry} indexMap={indexMap} onSelect={handleSelect} />
-            ) : (
-              <Box className="flex items-center justify-center h-full">
-                <Typography color="muted">Select a behavior to view its composition</Typography>
-              </Box>
-            )}
           </Box>
         ) : (
           <Box
-            className="flex-[1_1_0] h-0 overflow-x-hidden overflow-y-auto relative border-x border-[var(--color-border)]"
+            className="flex-[1_1_0] h-0 overflow-x-hidden overflow-y-auto relative border-x border-t border-[var(--color-border)] rounded-t-lg"
             style={{
               transform: "translateZ(0)",
               backgroundColor: "var(--color-background, #ffffff)",

@@ -59,7 +59,6 @@ export default function OrbHome(): ReactNode {
         <OrbitalHeroBackground />
         <Box className="site-container py-20 relative z-10">
           <VStack gap="lg" align="start">
-            <Badge variant="primary">{translate({ id: "orb.hero.tag", message: "Open Source" })}</Badge>
             <Typography variant="h1">{translate({ id: "orb.hero.title", message: "Orb" })}</Typography>
             <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "A formal language for describing how software systems behave. Write the model. The compiler proves it correct. AI generates and consumes it natively." })}</Typography>
             <InstallBox command="curl -fsSL https://orb.almadar.io/install.sh | sh" className="max-w-full overflow-hidden" />
