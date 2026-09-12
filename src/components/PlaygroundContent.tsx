@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import BrowserOnly from "@docusaurus/BrowserOnly";
+import { useColorMode } from "@docusaurus/theme-common";
 import {
   Search,
   Sun,
@@ -13,6 +14,7 @@ import {
   ArrowLeft,
   ArrowRight,
   RotateCcw,
+  Info,
 } from "lucide-react";
 import {
   loadBehaviorIndex,
@@ -90,6 +92,7 @@ import {
   Icon,
   Textarea,
   Card,
+  CodeBlock,
 } from "@almadar/ui";
 import type { TabItem } from "@almadar/ui";
 import { BrowserPlayground } from "@almadar/ui/runtime";
@@ -108,9 +111,9 @@ setLogLevel("WARN");
 // core shape = persistence, dots = field count, ring count = state count.
 
 const LEVEL_COLORS: Record<string, string> = {
-  atom: "#14b8a6",
-  molecule: "#6366f1",
-  organism: "#f59e0b",
+  atom: "#3f7d5a",
+  molecule: "#3c6e9c",
+  organism: "#c25d2e",
 };
 
 function BehaviorMiniGlyph({ level, fieldCount, stateCount, persistence }: {
@@ -174,24 +177,104 @@ function BehaviorMiniGlyph({ level, fieldCount, stateCount, persistence }: {
 
 // ─── Theme Options ───────────────────────────────────────────────────────────
 
+// Names must match a `data-theme="<name>-<mode>"` block shipped in
+// @almadar/ui/themes/index.css; a name with no block renders unthemed.
 const THEME_OPTIONS = [
+  { value: "notion-editorial", label: "Editorial" },
+  { value: "gazette", label: "Gazette" },
+  { value: "clay", label: "Clay" },
+  { value: "atelier", label: "Atelier" },
   { value: "wireframe", label: "Wireframe" },
   { value: "minimalist", label: "Minimalist" },
+  { value: "linear-clean", label: "Linear" },
+  { value: "glass", label: "Glass" },
+  { value: "corporate", label: "Corporate" },
+  { value: "bloomberg-dense", label: "Dense" },
+  { value: "kiosk", label: "Kiosk" },
+  { value: "terminal", label: "Terminal" },
+  { value: "retro", label: "Retro" },
+  { value: "comic", label: "Comic" },
+  { value: "neon", label: "Neon" },
+  { value: "prism", label: "Prism" },
   { value: "almadar", label: "Almadar" },
   { value: "trait-wars", label: "Trait Wars" },
-  { value: "ocean", label: "Ocean" },
-  { value: "forest", label: "Forest" },
-  { value: "sunset", label: "Sunset" },
-  { value: "lavender", label: "Lavender" },
-  { value: "rose", label: "Rose" },
-  { value: "slate", label: "Slate" },
-  { value: "ember", label: "Ember" },
-  { value: "midnight", label: "Midnight" },
-  { value: "sand", label: "Sand" },
-  { value: "neon", label: "Neon" },
-  { value: "arctic", label: "Arctic" },
-  { value: "copper", label: "Copper" },
+  { value: "game-adventure", label: "Game Adventure" },
+  { value: "game-rpg", label: "Game RPG" },
+  { value: "game-sci-fi", label: "Game Sci-Fi" },
+  { value: "game-ui-pack", label: "Game UI Pack" },
 ];
+const DEFAULT_PREVIEW_THEME = "notion-editorial";
+
+// ─── Featured behaviors ───────────────────────────────────────────────────────
+// Hand-picked behaviors that render a complete, recognizable screen in the
+// preview. The first entry is the playground's default selection.
+
+const FEATURED_BEHAVIORS: ReadonlyArray<{ name: string; blurb: string }> = [
+  { name: "std-calendar", blurb: "Month, agenda, and week views on one trait" },
+  { name: "std-wizard", blurb: "Multi-step form with guarded advancement" },
+  { name: "std-stats", blurb: "KPI tiles with sparklines and trends" },
+  { name: "std-rating-review", blurb: "Stars, a distribution, and a review composer" },
+  { name: "std-step-flow", blurb: "Approval chain with role-gated steps" },
+  { name: "std-record-detail", blurb: "A record presented as an editable document" },
+  { name: "std-graphs", blurb: "Histograms and stacked bars driven by config" },
+  { name: "std-dungeon-board-2d", blurb: "Key-move dungeon crawl on a 2D canvas" },
+];
+
+function FeaturedStrip({ indexMap, selected, onSelect }: {
+  indexMap: Map<string, BehaviorIndexEntry>;
+  selected: string;
+  onSelect: (name: string) => void;
+}) {
+  const items = FEATURED_BEHAVIORS.filter((f) => indexMap.has(f.name));
+  if (items.length === 0) return null;
+  return (
+    <VStack gap="xs" className="site-container pt-4 pb-2">
+      <HStack gap="sm" align="baseline">
+        <Typography variant="overline" color="muted" weight="bold" className="text-[0.65rem] uppercase tracking-wider">
+          Featured
+        </Typography>
+        <Typography variant="caption" color="muted" className="text-[0.75rem]">
+          Behaviors that show a whole screen. Click one to load it below.
+        </Typography>
+      </HStack>
+      <Box className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" role="list" aria-label="Featured behaviors">
+        {items.map((f) => {
+          const entry = indexMap.get(f.name);
+          const isSelected = f.name === selected;
+          return (
+            <Card
+              key={f.name}
+              role="listitem"
+              className={`flex-shrink-0 w-[220px] p-3 cursor-pointer transition-all ${
+                isSelected
+                  ? "border-[var(--color-primary)] shadow-[var(--shadow-hover)]"
+                  : "hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-hover)]"
+              }`}
+              onClick={() => onSelect(f.name)}
+              tabIndex={0}
+              onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(f.name); } }}
+              aria-pressed={isSelected}
+            >
+              <VStack gap="xs">
+                <HStack gap="sm" align="center" justify="between">
+                  <Typography variant="body2" weight="semibold" className="font-mono text-[0.78rem] truncate">
+                    {f.name.replace(/^std-/, "")}
+                  </Typography>
+                  {entry && (
+                    <BehaviorMiniGlyph level={entry.level} fieldCount={0} stateCount={0} persistence="persistent" />
+                  )}
+                </HStack>
+                <Typography variant="caption" color="muted" className="text-[0.7rem] leading-snug">
+                  {f.blurb}
+                </Typography>
+              </VStack>
+            </Card>
+          );
+        })}
+      </Box>
+    </VStack>
+  );
+}
 
 // ─── Glyph helper ─────────────────────────────────────────────────────────────
 
@@ -392,24 +475,62 @@ function CompositionView({ entry, indexMap, onSelect }: {
 // ─── Code Panel (shows lolo source for each behavior) ────────────────────────
 
 function CodePanel({ entry }: { entry: BehaviorDetail }) {
+  const [view, setView] = useState<"lolo" | "orb">("lolo");
+  const [copied, setCopied] = useState(false);
+  const orbJson = useMemo(() => JSON.stringify(entry.schema, null, 2), [entry.schema]);
+  const code = view === "lolo" ? entry.lolo : orbJson;
+  const handleCopy = useCallback(() => {
+    navigator.clipboard?.writeText(code).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  }, [code]);
   return (
     <VStack className="h-full">
-      <HStack className="border-b border-[var(--color-border)] flex-shrink-0 px-4 py-1.5">
-        <Typography variant="caption" color="muted" className="text-[0.65rem] font-mono uppercase tracking-wider">
-          source (.orb)
-        </Typography>
-      </HStack>
-      <Box className="flex-1 overflow-auto">
-        <Typography
-          as="pre"
-          variant="small"
-          className="m-0 px-5 py-4 font-mono leading-relaxed whitespace-pre"
-          style={{ tabSize: 2 }}
-        >
-          <Typography as="code" color="inherit" className="p-0 border-none">
-            {entry.lolo}
+      <HStack align="center" justify="between" className="border-b border-[var(--color-border)] flex-shrink-0 px-3 py-1.5">
+        <HStack gap="sm" align="center">
+          <Typography variant="caption" color="muted" className="text-[0.65rem] font-mono uppercase tracking-wider">
+            source
           </Typography>
-        </Typography>
+          <Button variant="ghost" size="sm" onClick={handleCopy} aria-label="Copy source" className="text-[0.7rem] px-2 py-0.5">
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </HStack>
+        <HStack gap="xs" role="tablist" aria-label="Source format">
+          <Button
+            variant={view === "lolo" ? "primary" : "ghost"}
+            size="sm"
+            role="tab"
+            aria-selected={view === "lolo"}
+            onClick={() => setView("lolo")}
+            className="text-[0.7rem] px-2 py-0.5 font-mono"
+          >
+            .lolo
+          </Button>
+          <Button
+            variant={view === "orb" ? "primary" : "ghost"}
+            size="sm"
+            role="tab"
+            aria-selected={view === "orb"}
+            onClick={() => setView("orb")}
+            className="text-[0.7rem] px-2 py-0.5 font-mono"
+          >
+            .orb
+          </Button>
+        </HStack>
+      </HStack>
+      {/* The `[&_code]`/`[&_span]` resets strip Docusaurus's global inline-code
+          styling, which otherwise paints a box behind every highlighted token. */}
+      <Box className="flex-1 min-h-0 overflow-auto [&_code]:!bg-transparent [&_code]:!p-0 [&_code]:!border-0 [&_code]:!shadow-none [&_span]:!bg-transparent">
+        <CodeBlock
+          key={`${entry.name}:${view}`}
+          code={code}
+          language={view === "lolo" ? "lolo" : "json"}
+          foldable
+          showCopyButton={false}
+          showLanguageBadge={false}
+          maxHeight="100%"
+        />
       </Box>
     </VStack>
   );
@@ -619,7 +740,8 @@ function useBehaviorDetail(name: string) {
 function BehaviorsTab({
   index,
   indexMap,
-  initialSelected,
+  selected,
+  onSelect,
   selectedTheme,
   selectedMode,
   onThemeChange,
@@ -627,19 +749,17 @@ function BehaviorsTab({
 }: {
   index: BehaviorIndexEntry[];
   indexMap: Map<string, BehaviorIndexEntry>;
-  initialSelected?: string | null;
+  selected: string;
+  onSelect: (name: string) => void;
   selectedTheme: string;
   selectedMode: "light" | "dark";
   onThemeChange: (t: string) => void;
   onModeToggle: () => void;
 }) {
-  const firstName = index[0]?.name ?? "";
-  const [selected, setSelected] = useState(
-    initialSelected && indexMap.has(initialSelected) ? initialSelected : firstName
-  );
   const [previewKey, setPreviewKey] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [smBarExpanded, setSmBarExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<"preview" | "composition">("preview");
 
@@ -649,13 +769,19 @@ function BehaviorsTab({
 
   const appliedTheme = `${selectedTheme}-${selectedMode}`;
 
-  const handleSelect = useCallback((name: string) => {
+  // Selection can change from the browser, the featured strip, or the URL, so
+  // the per-selection resets key off `selected` rather than off the click.
+  useEffect(() => {
     const portal = document.getElementById("ui-slot-portal-root");
     if (portal) portal.innerHTML = "";
-    setSelected(name);
     setPreviewKey((k) => k + 1);
     setShowCode(false);
-  }, []);
+    setShowInfo(false);
+  }, [selected]);
+
+  const handleSelect = useCallback((name: string) => {
+    onSelect(name);
+  }, [onSelect]);
 
   const toggleCode = useCallback(() => {
     setShowCode((v) => !v);
@@ -677,16 +803,29 @@ function BehaviorsTab({
       <VStack className="flex-1 min-h-0 overflow-hidden">
         {/* View Toggle */}
         <HStack align="center" justify="between" className="px-4 py-2 border-b border-[var(--color-border)] flex-shrink-0">
-          <HStack gap="xs" align="center">
+          <HStack gap="xs" align="center" className="min-w-0">
             {entry && (
               <Badge variant="primary" size="sm" className="text-[0.6rem] px-2 py-0.5 rounded-full capitalize tracking-tight">
                 {entry.level}
               </Badge>
             )}
             {entry && (
-              <Typography variant="caption" color="muted" className="text-[0.75rem] ml-1">
-                {entry.description}
+              <Typography variant="body2" weight="medium" className="font-mono text-[0.8rem] truncate">
+                {entry.name}
               </Typography>
+            )}
+            {entry && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInfo((v) => !v)}
+                aria-expanded={showInfo}
+                aria-label={showInfo ? "Hide description" : "Show description"}
+                title="About this behavior"
+                className={`w-7 h-7 p-0 flex-shrink-0 ${showInfo ? "text-[var(--color-primary)]" : ""}`}
+              >
+                <Icon icon={Info} size="xs" />
+              </Button>
             )}
           </HStack>
           <HStack gap="xs" align="center">
@@ -708,6 +847,16 @@ function BehaviorsTab({
             </Button>
           </HStack>
         </HStack>
+
+        {/* Description: hidden by default so a long schema description never
+            squeezes the preview; the info button in the header toggles it. */}
+        {showInfo && entry && (
+          <Box className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex-shrink-0 max-h-[9rem] overflow-y-auto">
+            <Typography variant="caption" color="muted" className="text-[0.75rem] leading-relaxed">
+              {entry.description}
+            </Typography>
+          </Box>
+        )}
 
         {/* Browser Chrome */}
         <Box className="bg-[#1a1a2e] border-x border-t border-[var(--color-border)] flex-shrink-0" style={{ borderTopLeftRadius: "0.5rem", borderTopRightRadius: "0.5rem" }}>
@@ -1196,9 +1345,17 @@ function useCatalogs() {
 function PlaygroundInner(): ReactNode {
   const urlParams = useUrlParams();
   const [activeTab, setActiveTab] = useState<PlaygroundTab>(urlParams.tab);
-  const [selectedTheme, setSelectedTheme] = useState("wireframe");
-  const [selectedMode, setSelectedMode] = useState<"light" | "dark">("light");
+  const [selectedBehavior, setSelectedBehavior] = useState<string>(
+    urlParams.tab === "behaviors" && urlParams.selected ? urlParams.selected : FEATURED_BEHAVIORS[0].name
+  );
+  const [selectedTheme, setSelectedTheme] = useState(DEFAULT_PREVIEW_THEME);
+  // The preview starts in the site's color mode and follows the site toggle;
+  // the playground's own sun/moon button still overrides it locally.
+  const { colorMode } = useColorMode();
+  const [selectedMode, setSelectedMode] = useState<"light" | "dark">(colorMode);
+  useEffect(() => { setSelectedMode(colorMode); }, [colorMode]);
   const { index, indexMap, modules, loading, error } = useCatalogs();
+  const effectiveSelected = indexMap.has(selectedBehavior) ? selectedBehavior : (index[0]?.name ?? "");
 
   const handleModeToggle = useCallback(() => {
     setSelectedMode((m) => (m === "light" ? "dark" : "light"));
@@ -1263,8 +1420,15 @@ function PlaygroundInner(): ReactNode {
         </Box>
       </Box>
 
+      {activeTab === "behaviors" && (
+        <FeaturedStrip indexMap={indexMap} selected={effectiveSelected} onSelect={setSelectedBehavior} />
+      )}
+
       {/* Main content inside site-container */}
-      <Box className="site-container flex-1 flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 180px)', minHeight: 500 }}>
+      <Box
+        className="site-container flex-1 flex flex-col overflow-hidden"
+        style={{ height: activeTab === "behaviors" ? 'calc(100vh - 310px)' : 'calc(100vh - 180px)', minHeight: 500 }}
+      >
         <BrowserOnly fallback={
           <Box className="p-16 text-center">
             <Typography color="muted">Loading...</Typography>
@@ -1275,7 +1439,8 @@ function PlaygroundInner(): ReactNode {
               <BehaviorsTab
                 index={index}
                 indexMap={indexMap}
-                initialSelected={urlParams.tab === "behaviors" ? urlParams.selected : null}
+                selected={effectiveSelected}
+                onSelect={setSelectedBehavior}
                 selectedTheme={selectedTheme}
                 selectedMode={selectedMode}
                 onThemeChange={setSelectedTheme}

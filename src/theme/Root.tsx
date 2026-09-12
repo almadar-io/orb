@@ -14,7 +14,7 @@ export default function Root({ children }: RootProps): React.JSX.Element {
             <BrowserOnly fallback={null}>
                 {() => (
                     <React.Suspense fallback={null}>
-                        <GeometricPattern variant="greek-key" mode="dual" opacity={0.15} className="!fixed !z-0" />
+                        <GeometricPattern variant="seigaiha" mode="dual" opacity={0.05} className="!fixed !z-0" />
                     </React.Suspense>
                 )}
             </BrowserOnly>

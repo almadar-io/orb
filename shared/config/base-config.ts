@@ -24,9 +24,9 @@ interface SiteConfig {
   staticDirectories?: string[];
 }
 
-const SITE_ICONS: Record<string, { logo: string; favicon: string }> = {
+const SITE_ICONS: Record<string, { logo: string; favicon: string; logoDark?: string }> = {
   main: { logo: "img/almadar-icon-transparent.svg", favicon: "img/almadar-icon-transparent.svg" },
-  orb: { logo: "img/orb-icon-transparent.svg", favicon: "img/orb-icon-transparent.svg" },
+  orb: { logo: "img/orb-icon-light.svg", logoDark: "img/orb-icon-dark.svg", favicon: "img/orb-icon-transparent.svg" },
   studio: { logo: "img/studio-icon.svg", favicon: "img/studio-icon.svg" },
   services: { logo: "img/services-icon-transparent.svg", favicon: "img/services-icon-transparent.svg" },
   masar: { logo: "img/masar-icon.svg", favicon: "img/masar-icon.svg" },
@@ -247,6 +247,7 @@ export function createConfig(opts: SiteConfig): Config {
         logo: {
           alt: `${opts.title} Logo`,
           src: SITE_ICONS[opts.site]?.logo || "img/almadar-icon-512.png",
+          ...(SITE_ICONS[opts.site]?.logoDark ? { srcDark: SITE_ICONS[opts.site].logoDark } : {}),
         },
         items: [
           ...(opts.navbarItems || []),
