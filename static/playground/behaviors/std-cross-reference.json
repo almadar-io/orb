@@ -208,6 +208,10 @@
                 "resource": "CrossRefLink"
               },
               {
+                "kind": "render-ui",
+                "resource": "toast"
+              },
+              {
                 "kind": "set",
                 "resource": "@entity.filteredLinks"
               },
@@ -248,12 +252,12 @@
                         "type": "string"
                       },
                       {
-                        "name": "href",
+                        "name": "label",
                         "required": true,
                         "type": "string"
                       },
                       {
-                        "name": "label",
+                        "name": "href",
                         "required": true,
                         "type": "string"
                       }
@@ -435,6 +439,21 @@
                   ]
                 },
                 {
+                  "id": "evt_01KXG04F9C5DE33MZF9WM6X33A",
+                  "key": "LinkOpFailed",
+                  "name": "Link op failed",
+                  "payloadSchema": [
+                    {
+                      "name": "error",
+                      "type": "string"
+                    },
+                    {
+                      "name": "code",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
                   "id": "evt_01KXG04F9C9J69NDMJ8DGS1DE1",
                   "key": "LinkCreated",
                   "name": "Link created",
@@ -465,12 +484,12 @@
                           "type": "string"
                         },
                         {
-                          "name": "href",
+                          "name": "label",
                           "required": true,
                           "type": "string"
                         },
                         {
-                          "name": "label",
+                          "name": "href",
                           "required": true,
                           "type": "string"
                         }
@@ -520,21 +539,6 @@
                         }
                       ],
                       "type": "[object]"
-                    }
-                  ]
-                },
-                {
-                  "id": "evt_01KXG04F9C5DE33MZF9WM6X33A",
-                  "key": "LinkOpFailed",
-                  "name": "Link op failed",
-                  "payloadSchema": [
-                    {
-                      "name": "error",
-                      "type": "string"
-                    },
-                    {
-                      "name": "code",
-                      "type": "string"
                     }
                   ]
                 }
@@ -648,6 +652,28 @@
                   "eventId": "evt_01KXG04F9C4YY3DN15DAVAQB5B",
                   "from": "idle",
                   "to": "idle"
+                },
+                {
+                  "effects": [
+                    [
+                      "render-ui",
+                      "toast",
+                      {
+                        "dismissible": true,
+                        "message": [
+                          "str/concat",
+                          "Couldn't update the link — ",
+                          "@payload.error"
+                        ],
+                        "type": "alert",
+                        "variant": "error"
+                      }
+                    ]
+                  ],
+                  "event": "LinkOpFailed",
+                  "eventId": "evt_01KXG04F9C5DE33MZF9WM6X33A",
+                  "from": "idle",
+                  "to": "idle"
                 }
               ]
             }
@@ -691,5 +717,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app std-cross-reference \"1.0.0\"\n\"std-cross-reference — join-table primitive for N:M relationships. Listens for LinkRequested/UnlinkRequested/FETCH_LINKS_FOR and manages the junction collection (default CrossRefLink [persistent: cross_ref_links]). Rebind via linkedEntity={YourJunction} to your consumer junction; if your junction's id fields differ from leftId/rightId, override them with fields{} renames at the call site. A rebind target must supply leftId, rightId, createdAt, filteredLinks. Emits LinkCreated, LinkRemoved, LinksLoaded as external broadcasts for downstream consumers.\"\ntype LinkSpec = { label : string!, href : string!, icon : string }\ntype ObjectSpec = { id : string, label : string, value : string }\norbital CrossReferenceOrbital {\n    type LinkRequested = Event { leftId : string, rightId : string } \"Request to create a link between leftId and rightId.\"\n\n    type UnlinkRequested = Event { leftId : string, rightId : string } \"Request to delete the link between leftId and rightId.\"\n\n    type FETCH_LINKS_FOR = Event { leftId : string } \"Request the link set for a given leftId.\"\n\n    type LinkCreated = Event @entity \"Fired after a junction row is persisted.\"\n\n    type LinkRemoved = Event { id : string, deleted : boolean } \"Fired after a junction row is deleted — persist delete emits the deleted row's id and a deleted flag, not the link's leftId/rightId.\"\n\n    type LinksLoaded = Event { leftId : string, data : [ObjectSpec] } \"Fired after junction rows for leftId are fetched.\"\n\n    type LinkOpFailed = Event { error : string, code : string } \"Fired when a junction persist or fetch fails.\"\n\n    type LinksFetched = Event { data : [ObjectSpec] } \"Internal: raw fetch result before filtering by leftId.\"\n\n  entity CrossRefLink [persistent: cross_ref_links] {\n    id : string!\n    leftId : string @description \"Identifier for the related entity on the left side.\" @synonyms \"sourceId, originId, parentId\" = \"\"\n    rightId : string @description \"Identifier for the related entity on the right side.\" @synonyms \"targetId, relatedId, counterpartId\" = \"\"\n    createdAt : string = \"\"\n    filteredLinks : [LinkSpec] @description \"A list of filtered link specifications.\" @synonyms \"links, references, connections\" = []\n  }\n\n  trait CrossReferenceGate -> @rebindable CrossRefLink [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      LinkRequested -> idle\n        (persist create CrossRefLink { leftId: ?leftId, rightId: ?rightId } {\n          emit: { failure: LinkOpFailed, success: LinkCreated }\n        })\n      UnlinkRequested -> idle\n        (persist delete CrossRefLink ? {\n          emit: { failure: LinkOpFailed, success: LinkRemoved }\n        })\n      FETCH_LINKS_FOR -> idle\n        (set @entity.leftId ?leftId)\n        (fetch CrossRefLink {\n          emit: { failure: LinkOpFailed, success: LinksFetched }\n        })\n      LinksFetched -> idle\n        (set @entity.filteredLinks (array/filter ?data (fn row [\"=\", (object/get @row leftId), @entity.leftId])))\n        (emit LinksLoaded { data: @entity.filteredLinks, leftId: @entity.leftId })\n    }\n\n    emits {\n      LinkCreated -> external\n      LinkRemoved -> external {\n        id : string\n        deleted : boolean\n      }\n      LinksLoaded -> external {\n        leftId : string\n        data : [ObjectSpec]\n      }\n      LinksFetched -> external {\n        data : [ObjectSpec]\n      }\n      LinkOpFailed -> external {\n        error : string\n        code : string\n      }\n    }\n\n    listens {\n      LinkRequested {\n        leftId : string\n        rightId : string\n      }\n      UnlinkRequested {\n        leftId : string\n        rightId : string\n      }\n      FETCH_LINKS_FOR {\n        leftId : string\n      }\n      LinksFetched {\n        data : [ObjectSpec]\n      }\n    }\n\n    config {}\n  }\n\n  page \"/cross-reference\" as CrossReferencePage -> CrossReferenceGate\n}"
+  "lolo": "app std-cross-reference \"1.0.0\"\n\"std-cross-reference — join-table primitive for N:M relationships. Listens for LinkRequested/UnlinkRequested/FETCH_LINKS_FOR and manages the junction collection (default CrossRefLink [persistent: cross_ref_links]). Rebind via linkedEntity={YourJunction} to your consumer junction; if your junction's id fields differ from leftId/rightId, override them with fields{} renames at the call site. A rebind target must supply leftId, rightId, createdAt, filteredLinks. Emits LinkCreated, LinkRemoved, LinksLoaded as external broadcasts for downstream consumers.\"\ntype LinkSpec = { label : string!, href : string!, icon : string }\ntype ObjectSpec = { id : string, label : string, value : string }\norbital CrossReferenceOrbital {\n    type LinkRequested = Event { leftId : string, rightId : string } \"Request to create a link between leftId and rightId.\"\n\n    type UnlinkRequested = Event { leftId : string, rightId : string } \"Request to delete the link between leftId and rightId.\"\n\n    type FETCH_LINKS_FOR = Event { leftId : string } \"Request the link set for a given leftId.\"\n\n    type LinkCreated = Event @entity \"Fired after a junction row is persisted.\"\n\n    type LinkRemoved = Event { id : string, deleted : boolean } \"Fired after a junction row is deleted — persist delete emits the deleted row's id and a deleted flag, not the link's leftId/rightId.\"\n\n    type LinksLoaded = Event { leftId : string, data : [ObjectSpec] } \"Fired after junction rows for leftId are fetched.\"\n\n    type LinkOpFailed = Event { error : string, code : string } \"Fired when a junction persist or fetch fails.\"\n\n    type LinksFetched = Event { data : [ObjectSpec] } \"Internal: raw fetch result before filtering by leftId.\"\n\n  entity CrossRefLink [persistent: cross_ref_links] {\n    id : string!\n    leftId : string @description \"Identifier for the related entity on the left side.\" @synonyms \"sourceId, originId, parentId\" = \"\"\n    rightId : string @description \"Identifier for the related entity on the right side.\" @synonyms \"targetId, relatedId, counterpartId\" = \"\"\n    createdAt : string = \"\"\n    filteredLinks : [LinkSpec] @description \"A list of filtered link specifications.\" @synonyms \"links, references, connections\" = []\n  }\n\n  trait CrossReferenceGate -> @rebindable CrossRefLink [lifecycle, instance] {\n    initial: idle\n\n    state idle {\n      LinkRequested -> idle\n        (persist create CrossRefLink { leftId: ?leftId, rightId: ?rightId } {\n          emit: { failure: LinkOpFailed, success: LinkCreated }\n        })\n      UnlinkRequested -> idle\n        (persist delete CrossRefLink ? {\n          emit: { failure: LinkOpFailed, success: LinkRemoved }\n        })\n      FETCH_LINKS_FOR -> idle\n        (set @entity.leftId ?leftId)\n        (fetch CrossRefLink {\n          emit: { failure: LinkOpFailed, success: LinksFetched }\n        })\n      LinksFetched -> idle\n        (set @entity.filteredLinks (array/filter ?data (fn row [\"=\", (object/get @row leftId), @entity.leftId])))\n        (emit LinksLoaded { data: @entity.filteredLinks, leftId: @entity.leftId })\n      LinkOpFailed -> idle\n        (notify error (str/concat \"Couldn't update the link — \" ?error))\n    }\n\n    emits {\n      LinkCreated -> external\n      LinkRemoved -> external {\n        id : string\n        deleted : boolean\n      }\n      LinksLoaded -> external {\n        leftId : string\n        data : [ObjectSpec]\n      }\n      LinksFetched -> external {\n        data : [ObjectSpec]\n      }\n      LinkOpFailed -> external {\n        error : string\n        code : string\n      }\n    }\n\n    listens {\n      LinkRequested {\n        leftId : string\n        rightId : string\n      }\n      UnlinkRequested {\n        leftId : string\n        rightId : string\n      }\n      FETCH_LINKS_FOR {\n        leftId : string\n      }\n      LinksFetched {\n        data : [ObjectSpec]\n      }\n    }\n\n    config {}\n  }\n\n  page \"/cross-reference\" as CrossReferencePage -> CrossReferenceGate\n}"
 }
