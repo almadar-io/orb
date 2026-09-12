@@ -128,6 +128,20 @@ export default function OrbHome(): ReactNode {
       {/* Gradient divider */}
       <Box className="w-full h-px" style={{ background: "linear-gradient(to right, transparent, var(--color-primary), transparent)" }} />
 
+      {/* In formal terms */}
+      <Box className="w-full">
+        <Box className="site-container py-16">
+          <VStack gap="md" className="max-w-3xl">
+            <Typography variant="overline" color="muted">
+              <Translate id="orb.formal.title">In formal terms</Translate>
+            </Typography>
+            <Typography variant="body1" color="muted">
+              <Translate id="orb.formal.body">Orb is a domain-specific language for reactive systems. Its unit is an extended finite state machine bound to a typed record: transitions carry an event, an optional guard, and effects drawn from a closed algebra of eight constructors. Machines compose as actors over an event bus with declared event types, so the compiler holds a static communication graph. It checks that graph the way a model checker would, for reachability, handled events, and exits from every blocking state, then interprets the same JSON term into TypeScript, Python, or Rust. The interface is a projection of machine state, and rendering is itself one of the checked effects.</Translate>
+            </Typography>
+          </VStack>
+        </Box>
+      </Box>
+
       {/* Standard Library */}
       <Box className="w-full">
         <Box className="site-container py-24">
