@@ -4,7 +4,7 @@ export default createConfig({
   site: 'orb',
   url: 'https://orb.almadar.io',
   title: 'Orb',
-  tagline: 'Formal world models of software',
+  tagline: 'A programming language for humans and LLMs',
   customCss: './src/css/custom.css',
   docs: {
     sidebarPath: './sidebars.ts',

@@ -26,19 +26,19 @@ import HOME_EXAMPLE_SCHEMA from "../data/home-example-schema.json";
 
 const WHY_FEATURES = [
   {
-    icon: "monitor-smartphone" as const,
-    title: translate({ id: "orb.why.compile.title", message: "Write Once, Compile Anywhere" }),
-    description: translate({ id: "orb.why.compile.desc", message: "One .orb model compiles to web, mobile, desktop, or any future platform. The behavior is platform-independent." }),
+    icon: "shield-check" as const,
+    title: translate({ id: "orb.why.correct.title", message: "The rule is the shape of the graph" }),
+    description: translate({ id: "orb.why.correct.desc", message: "No SHIP under pending means a pending order cannot ship. Not an if in four places, not a disabled button. The compiler walks the graph and refuses a modal with no exit, a state nobody can reach, or an event nobody handles." }),
   },
   {
-    icon: "shield-check" as const,
-    title: translate({ id: "orb.why.correct.title", message: "Compiler-Verified" }),
-    description: translate({ id: "orb.why.correct.desc", message: "The compiler checks every possible screen your app can reach. If it compiles, users never hit a broken or missing page." }),
+    icon: "monitor-smartphone" as const,
+    title: translate({ id: "orb.why.compile.title", message: "One program, many languages" }),
+    description: translate({ id: "orb.why.compile.desc", message: "An Orb program can only say eight kinds of effect, so a new target is a mapping, not a rewrite. The same machine compiles to TypeScript, Python, or Rust, and the browser and server copies can never disagree about a rule." }),
   },
   {
     icon: "bot" as const,
-    title: translate({ id: "orb.why.ai.title", message: "AI Generates It Natively" }),
-    description: translate({ id: "orb.why.ai.desc", message: "Structured, formal, and compact. AI models generate valid .orb programs more reliably than arbitrary code." }),
+    title: translate({ id: "orb.why.ai.title", message: "Built for humans and LLMs" }),
+    description: translate({ id: "orb.why.ai.desc", message: "The structures are declared and the feedback is exact: the compiler names the field, the line, and the fix. A model writes, validates, and repairs. It does not have to be right the first time, and neither do you." }),
   },
 ];
 
@@ -51,8 +51,8 @@ const DOMAIN_TAGS = [
 export default function OrbHome(): ReactNode {
   return (
     <Layout
-      title={translate({ id: "orb.meta.title", message: "Orb — A Programming Language for Formal World Models" })}
-      description={translate({ id: "orb.meta.desc", message: "Orb describes how software systems behave. Write the model, the compiler proves it correct." })}
+      title={translate({ id: "orb.meta.title", message: "Orb — A Programming Language for Humans and LLMs" })}
+      description={translate({ id: "orb.meta.desc", message: "Orb is a programming language where the lifecycle is the primitive. Declare an entity, its states, and what each event does; the compiler checks the whole circuit and emits the app." })}
     >
       {/* Hero */}
       <Box as="header" className="w-full min-h-[60vh] flex items-center relative overflow-hidden">
@@ -60,7 +60,7 @@ export default function OrbHome(): ReactNode {
         <Box className="site-container py-20 relative z-10">
           <VStack gap="lg" align="start">
             <Typography variant="h1">{translate({ id: "orb.hero.title", message: "Orb" })}</Typography>
-            <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "A formal language for describing how software systems behave. Write the model. The compiler proves it correct. AI generates and consumes it natively." })}</Typography>
+            <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "A programming language where the lifecycle is the primitive. Declare an entity, the states it can be in, and what each event does. The data, the effects, the UI, and the routes hang off that, and the compiler walks the graph before anything runs." })}</Typography>
             <InstallBox command="curl -fsSL https://orb.almadar.io/install.sh | sh" className="max-w-full overflow-hidden" />
             <HStack gap="md" className="flex-wrap">
               <Link to="/docs/getting-started/introduction">
@@ -81,7 +81,7 @@ export default function OrbHome(): ReactNode {
             <AnimatedReveal animation="fade-right" className="flex-1 min-w-0 w-full">
               <VStack gap="md">
                 <Typography variant="h2">{translate({ id: "orb.example.title", message: "One File, Full Application" })}</Typography>
-                <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A complete task manager in a single .orb file. Entity, state machine, UI — all in one place. The compiler generates frontend, backend, and database." })}</Typography>
+                <Typography variant="body1" color="muted">{translate({ id: "orb.example.subtitle", message: "A task manager in one file: the entity, its state machine, and the page. Every transition carries its own effects, so the compiler can see the whole circuit and generate the frontend, backend, and database from it." })}</Typography>
               </VStack>
             </AnimatedReveal>
             {/* threshold 0: the code/preview block is taller than the viewport,
@@ -137,7 +137,7 @@ export default function OrbHome(): ReactNode {
                 <AnimatedReveal animation="fade-in">
                   <Typography variant="h2">{translate({ id: "orb.stdlib.title", message: "Standard Library" })}</Typography>
                 </AnimatedReveal>
-                <Typography variant="body1" color="muted">{translate({ id: "orb.stdlib.subtitle", message: "93 production-quality behaviors across 18 domains. 50 atoms, 18 molecules, 25 organisms. Commerce, healthcare, education, gaming, DevOps, and more." })}</Typography>
+                <Typography variant="body1" color="muted">{translate({ id: "orb.stdlib.subtitle", message: "Behaviors are state machines you import. A list page, a wizard, a calendar, a kanban board: bind one to your entity, configure its knobs, rename its events. The topology stays fixed and the compiler checks every wire. Commerce, healthcare, education, games, and more." })}</Typography>
                 <HStack gap="sm" className="flex-wrap mt-2">
                   {DOMAIN_TAGS.map((tag, i) => (
                     <AnimatedReveal key={tag} animation="scale" delay={i * 30}>
