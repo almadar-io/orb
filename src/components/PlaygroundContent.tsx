@@ -45,6 +45,16 @@ function parseSExprToken(t: string): SExpr {
   if (t === "false") return false;
   if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1);
   if (t.startsWith("(")) return parseSExpr(t);
+  if (t.startsWith("{") && t.endsWith("}")) return JSON.parse(t) as SExpr;
+  if (t.startsWith("[") && t.endsWith("]")) {
+    try {
+      const parsed: unknown = JSON.parse(t);
+      if (Array.isArray(parsed)) return parsed as SExpr;
+    } catch {
+      // lolo space-separated array form: [1 2 3]
+    }
+    return tokenizeSExpr(t.slice(1, -1).trim()).map(parseSExprToken);
+  }
   const n = Number(t);
   if (!isNaN(n) && t !== "") return n;
   return t;
@@ -59,17 +69,22 @@ function tokenizeSExpr(input: string): string[] {
       while (j < input.length && !(input[j] === '"' && input[j - 1] !== '\\')) j++;
       tokens.push(input.slice(i, j + 1)); i = j + 1; continue;
     }
-    if (input[i] === '(') {
-      let depth = 0, j = i;
+    if (input[i] === '(' || input[i] === '[' || input[i] === '{') {
+      const open = input[i], close = open === '(' ? ')' : open === '[' ? ']' : '}';
+      let depth = 0, j = i, inString = false;
       while (j < input.length) {
-        if (input[j] === '(') depth++;
-        else if (input[j] === ')') { if (--depth === 0) break; }
+        const ch = input[j];
+        if (ch === '"' && input[j - 1] !== '\\') inString = !inString;
+        if (!inString) {
+          if (ch === open) depth++;
+          else if (ch === close) { if (--depth === 0) break; }
+        }
         j++;
       }
       tokens.push(input.slice(i, j + 1)); i = j + 1; continue;
     }
     let j = i;
-    while (j < input.length && !/\s/.test(input[j]) && input[j] !== '(' && input[j] !== ')') j++;
+    while (j < input.length && !/\s/.test(input[j]) && !'()[]{}'.includes(input[j])) j++;
     if (j > i) tokens.push(input.slice(i, j));
     i = j;
   }
@@ -112,11 +127,12 @@ const LEVEL_COLORS: Record<string, string> = {
   organism: "#c25d2e",
 };
 
-function BehaviorMiniGlyph({ level, fieldCount, stateCount, persistence }: {
+function BehaviorMiniGlyph({ level, fieldCount, stateCount, persistence, size = 32 }: {
   level: string;
   fieldCount: number;
   stateCount: number;
   persistence: string;
+  size?: number;
 }) {
   const color = LEVEL_COLORS[level] ?? "#14b8a6";
   const cx = 16;
@@ -126,7 +142,7 @@ function BehaviorMiniGlyph({ level, fieldCount, stateCount, persistence }: {
   const spokeCount = Math.min(fieldCount, 8);
 
   return (
-    <svg viewBox="0 0 32 32" width={32} height={32} className="inline-block">
+    <svg viewBox="0 0 32 32" width={size} height={size} className="inline-block">
       {/* Core shape */}
       {persistence === "runtime" ? (
         <circle cx={cx} cy={cy} r={coreR} fill="none" stroke={color} strokeWidth={1} strokeDasharray="2 1" opacity={0.9} />
@@ -213,7 +229,6 @@ const FEATURED_BEHAVIORS: ReadonlyArray<{ name: string; blurb: string }> = [
   { name: "std-step-flow", blurb: "Approval chain with role-gated steps" },
   { name: "std-record-detail", blurb: "A record presented as an editable document" },
   { name: "std-graphs", blurb: "Histograms and stacked bars driven by config" },
-  { name: "std-platformer-board-2d", blurb: "Run-and-jump platformer on a 2D canvas" },
 ];
 
 function FeaturedStrip({ indexMap, selected, onSelect }: {
@@ -224,16 +239,16 @@ function FeaturedStrip({ indexMap, selected, onSelect }: {
   const items = FEATURED_BEHAVIORS.filter((f) => indexMap.has(f.name));
   if (items.length === 0) return null;
   return (
-    <VStack gap="xs" className="site-container pt-4 pb-2">
+    <VStack gap="xs" className="site-container flex-shrink-0 pt-2 pb-1">
       <HStack gap="sm" align="baseline">
         <Typography variant="overline" color="muted" weight="bold" className="text-[0.65rem] uppercase tracking-wider">
           Featured
         </Typography>
-        <Typography variant="caption" color="muted" className="text-[0.75rem]">
+        <Typography variant="caption" color="muted" className="text-[0.75rem] [@media(max-height:840px)]:hidden">
           Behaviors that show a whole screen. Click one to load it below.
         </Typography>
       </HStack>
-      <Box className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" role="list" aria-label="Featured behaviors">
+      <Box className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" role="list" aria-label="Featured behaviors">
         {items.map((f) => {
           const entry = indexMap.get(f.name);
           const isSelected = f.name === selected;
@@ -241,7 +256,8 @@ function FeaturedStrip({ indexMap, selected, onSelect }: {
             <Card
               key={f.name}
               role="listitem"
-              className={`flex-shrink-0 w-[220px] p-3 cursor-pointer transition-all ${
+              padding="sm"
+              className={`flex-shrink-0 w-[220px] cursor-pointer transition-all ${
                 isSelected
                   ? "border-[var(--color-primary)] shadow-[var(--shadow-hover)]"
                   : "hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-hover)]"
@@ -257,10 +273,10 @@ function FeaturedStrip({ indexMap, selected, onSelect }: {
                     {f.name.replace(/^std-/, "")}
                   </Typography>
                   {entry && (
-                    <BehaviorMiniGlyph level={entry.level} fieldCount={0} stateCount={0} persistence="persistent" />
+                    <BehaviorMiniGlyph level={entry.level} fieldCount={0} stateCount={0} persistence="persistent" size={20} />
                   )}
                 </HStack>
-                <Typography variant="caption" color="muted" className="text-[0.7rem] leading-snug">
+                <Typography variant="caption" color="muted" truncate className="text-[0.7rem] leading-snug">
                   {f.blurb}
                 </Typography>
               </VStack>
@@ -482,7 +498,7 @@ function BehaviorBrowser({
   }
 
   const toggleSection = (cat: string) => {
-    setCollapsedSections((prev) => ({ ...prev, [cat]: !prev[cat] }));
+    setCollapsedSections((prev) => ({ ...prev, [cat]: !(prev[cat] ?? defaultCollapsed(cat)) }));
   };
 
   if (collapsed) {
@@ -496,7 +512,7 @@ function BehaviorBrowser({
   }
 
   return (
-    <VStack className="w-[320px] flex-shrink-0 border-r border-[var(--color-border)]">
+    <VStack className="w-[320px] flex-shrink-0 min-h-0 self-start sticky top-[var(--ifm-navbar-height,60px)] max-h-[calc(100dvh-var(--ifm-navbar-height,60px)-1rem)] border-r border-[var(--color-border)]">
       <HStack gap="sm" align="center" className="px-3 py-2.5 border-b border-[var(--color-border)] flex-shrink-0">
         <Icon icon={Search} size="sm" className="flex-shrink-0 text-muted-foreground" />
         <Input
@@ -509,13 +525,13 @@ function BehaviorBrowser({
           <Icon icon={PanelLeftClose} size="sm" />
         </Button>
       </HStack>
-      <Box className="overflow-y-auto py-1" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+      <Box className="flex-1 min-h-0 overflow-y-auto py-1">
         {sortedCategories.map((cat) => {
           const isCollapsed = collapsedSections[cat] ?? defaultCollapsed(cat);
           return (
             <Box key={cat} className="mb-0.5">
               <Box
-                className="flex items-center justify-between cursor-pointer px-3.5 pt-2.5 pb-1 hover:bg-[var(--color-muted)]/10"
+                className="flex items-center justify-between w-full cursor-pointer px-3.5 py-2 sticky top-0 z-10 bg-[var(--color-background)] hover:bg-[var(--color-muted)]/10"
                 onClick={() => toggleSection(cat)}
                 role="button"
                 tabIndex={0}
@@ -671,22 +687,41 @@ function BehaviorsTab({
     onSelect(name);
   }, [onSelect]);
 
+  const behaviorOptions = useMemo(
+    () => index.map((b) => ({ value: b.name, label: b.name.replace(/^std-/, "") })),
+    [index],
+  );
+
   return (
-    <HStack className="flex-1 min-h-0 overflow-hidden">
-      {/* Left: Behavior Browser */}
-      <BehaviorBrowser
-        index={index}
-        indexMap={indexMap}
-        selected={selected}
-        onSelect={handleSelect}
-        collapsed={panelCollapsed}
-        onToggleCollapse={() => setPanelCollapsed((v) => !v)}
-      />
+    <VStack className="flex-1 min-h-0 overflow-hidden">
+      {/* Mobile behavior picker: the 320px sidebar can't fit narrow screens,
+          so below md the catalog becomes a dropdown above the preview. */}
+      <HStack align="center" gap="sm" className="md:hidden px-3 py-2 border-b border-[var(--color-border)] flex-shrink-0">
+        <Select
+          value={selected}
+          onChange={(e) => handleSelect(e.target.value)}
+          options={behaviorOptions}
+          title="Select behavior"
+          className="text-xs rounded-md flex-1"
+        />
+      </HStack>
+      <HStack className="flex-1 min-h-0 overflow-hidden">
+      {/* Left: Behavior Browser (md+ only) */}
+      <Box className="hidden md:flex h-full min-h-0 flex-shrink-0">
+        <BehaviorBrowser
+          index={index}
+          indexMap={indexMap}
+          selected={selected}
+          onSelect={handleSelect}
+          collapsed={panelCollapsed}
+          onToggleCollapse={() => setPanelCollapsed((v) => !v)}
+        />
+      </Box>
 
       {/* Right: Preview Panel */}
       <VStack className="flex-1 min-h-0 overflow-hidden">
         {/* View Toggle */}
-        <HStack align="center" justify="between" className="px-4 py-2 border-b border-[var(--color-border)] flex-shrink-0">
+        <HStack align="center" justify="between" className="px-4 py-1 border-b border-[var(--color-border)] flex-shrink-0">
           <HStack gap="xs" align="center" className="min-w-0">
             {entry && (
               <Badge variant="primary" size="sm" className="text-[0.6rem] px-2 py-0.5 rounded-full capitalize tracking-tight">
@@ -712,12 +747,12 @@ function BehaviorsTab({
               </Button>
             )}
           </HStack>
-          <HStack gap="xs" align="center">
+          <HStack gap="xs" align="center" className="flex-shrink-0">
             <Button
               variant={viewMode === "preview" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("preview")}
-              className="text-[0.7rem] px-3 py-1 rounded-md"
+              className="text-[0.7rem] px-3 py-1 rounded-md whitespace-nowrap"
             >
               Live Preview
             </Button>
@@ -725,7 +760,7 @@ function BehaviorsTab({
               variant={viewMode === "code" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("code")}
-              className="text-[0.7rem] px-3 py-1 rounded-md"
+              className="text-[0.7rem] px-3 py-1 rounded-md whitespace-nowrap"
             >
               Code
             </Button>
@@ -796,7 +831,7 @@ function BehaviorsTab({
         {smInfo && (
           <Box className="border-x border-b border-[var(--color-border)] flex-shrink-0" style={{ borderBottomLeftRadius: "0.5rem", borderBottomRightRadius: "0.5rem" }}>
             <Box
-              className="flex items-center justify-between px-4 py-1.5 cursor-pointer bg-[var(--color-muted)]/5 hover:bg-[var(--color-muted)]/10 transition-colors"
+              className="flex items-center justify-between px-4 py-1 cursor-pointer bg-[var(--color-muted)]/5 hover:bg-[var(--color-muted)]/10 transition-colors"
               onClick={() => setSmBarExpanded((v) => !v)}
               role="button"
               tabIndex={0}
@@ -813,7 +848,8 @@ function BehaviorsTab({
           </Box>
         )}
       </VStack>
-    </HStack>
+      </HStack>
+    </VStack>
   );
 }
 
@@ -906,7 +942,8 @@ function exampleJsonToLolo(example: string): string {
     if (!Array.isArray(arr) || arr.length === 0) return exprPart;
     const [op, ...args] = arr;
     const argStr = args.map((a) => {
-      if (typeof a === "string" && !a.startsWith("@")) return `"${a}"`;
+      if (typeof a === "string") return a.startsWith("@") ? a : `"${a}"`;
+      if (a !== null && typeof a === "object") return JSON.stringify(a);
       return String(a);
     }).join(" ");
     return `(${op}${argStr ? " " + argStr : ""})`;
@@ -978,13 +1015,13 @@ function ModuleOperatorPanel({ moduleName, opName, op }: {
         </Button>
       </HStack>
 
-      <Box className="flex-1 min-h-[120px] max-h-[300px] overflow-auto rounded-lg border border-[var(--color-border)]">
+      <Box className="flex-1 min-h-[120px] max-h-[300px] overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
         {result ? (
           <Typography
             as="pre"
-            color={result.isError ? "error" : "primary"}
+            color={result.isError ? "error" : "inherit"}
             variant="small"
-            className="m-0 p-4 font-mono leading-relaxed whitespace-pre-wrap break-words"
+            className={`m-0 p-4 font-mono leading-relaxed whitespace-pre-wrap break-words bg-transparent ${result.isError ? "" : "text-[var(--color-foreground)]"}`}
           >
             {result.text}
           </Typography>
@@ -1002,23 +1039,39 @@ function ModuleDetail({ modules, moduleName }: { modules: ModuleCatalog; moduleN
   const ops = modules[moduleName] ?? {};
   const opNames = Object.keys(ops);
   const [selectedOp, setSelectedOp] = useState(opNames[0] ?? "");
+  const [opQuery, setOpQuery] = useState("");
 
   useEffect(() => {
     setSelectedOp(Object.keys(modules[moduleName] ?? {})[0] ?? "");
+    setOpQuery("");
   }, [modules, moduleName]);
 
+  const oq = opQuery.trim().toLowerCase();
+  const filteredOps = oq
+    ? opNames.filter((op) => op.toLowerCase().includes(oq) || (ops[op].description ?? "").toLowerCase().includes(oq))
+    : opNames;
+
   return (
-    <HStack className="flex-col md:flex-row flex-1 overflow-hidden">
-      <VStack className="w-full md:w-[220px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-y-auto">
+    <HStack className="flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+      <VStack className="w-full md:w-[220px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-hidden">
         <Typography
           variant="overline"
           color="muted"
           weight="bold"
-          className="text-[0.65rem] uppercase tracking-wider px-3.5 pt-3 pb-1.5"
+          className="text-[0.65rem] uppercase tracking-wider px-3.5 pt-3 pb-1.5 flex-shrink-0"
         >
           {moduleName} operators
         </Typography>
-        {opNames.map((op) => (
+        <Box className="px-3 pb-1 flex-shrink-0">
+          <Input
+            value={opQuery}
+            onChange={(e) => setOpQuery(e.target.value)}
+            placeholder="Search operators..."
+            className="w-full text-[0.8rem]"
+          />
+        </Box>
+        <Box className="flex-1 overflow-y-auto pb-2">
+        {filteredOps.map((op) => (
           <Box
             key={op}
             className={`flex flex-col py-1.5 px-3.5 cursor-pointer text-left transition-colors duration-100 ${
@@ -1039,6 +1092,7 @@ function ModuleDetail({ modules, moduleName }: { modules: ModuleCatalog; moduleN
             </Typography>
           </Box>
         ))}
+        </Box>
       </VStack>
 
       <VStack className="flex-1 overflow-y-auto">
@@ -1060,14 +1114,30 @@ function ModulesTab({ modules, initialSelected }: { modules: ModuleCatalog; init
   const [selected, setSelected] = useState(
     initialSelected && modules[initialSelected] ? initialSelected : "math"
   );
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const filteredList = q
+    ? moduleList.filter((m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q) ||
+        Object.keys(modules[m.name] ?? {}).some((op) => op.toLowerCase().includes(q)))
+    : moduleList;
 
   return (
-    <HStack className="flex-col md:flex-row flex-1 overflow-hidden">
+    <HStack className="flex-col md:flex-row flex-1 min-h-0 overflow-hidden md:max-h-[calc(100dvh-var(--ifm-navbar-height,60px)-3rem)]">
       <VStack className="w-full md:w-[260px] flex-shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-[var(--color-border)] overflow-hidden">
+        <Box className="px-3 pt-3 pb-1 flex-shrink-0">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search modules or operators..."
+            className="w-full text-[0.8rem]"
+          />
+        </Box>
         <Box className="flex-1 overflow-y-auto py-2">
           {(() => {
             const byCategory: Record<string, ReturnType<typeof useModuleList>> = {};
-            for (const m of moduleList) {
+            for (const m of filteredList) {
               const cat = getModuleCategory(m.name);
               (byCategory[cat] ||= []).push(m);
             }
@@ -1148,7 +1218,7 @@ function useUrlParams(): { tab: PlaygroundTab; selected: string | null } {
 
 const PAGE_TABS: TabItem[] = [
   { id: "behaviors", label: "Behaviors" },
-  { id: "modules", label: "Modules" },
+  { id: "modules", label: "Operators" },
 ];
 
 function useCatalogs() {
@@ -1215,14 +1285,20 @@ function PlaygroundInner(): ReactNode {
   }
 
   return (
-    <VStack className="min-h-[calc(100vh-60px)]">
-      {/* Page header: title + tabs + controls in natural document flow */}
-      <Box className="w-full bg-[var(--color-background)]">
-        <Box className="site-container pt-6 pb-0">
+    // Minimum viewport height (dvh so mobile browser chrome doesn't
+    // overcount): the page may grow taller when the preview's min-height
+    // floor pushes past short viewports — page scroll is the accepted
+    // tradeoff for a usable preview (owner ruling).
+    <VStack gap="sm" className="min-h-[calc(100dvh-var(--ifm-navbar-height,60px))]">
+      {/* Page header: title + tabs + controls in natural document flow.
+          Compacted (pt-3, 1.25rem title, mt-2 tabs) so the preview panel
+          gets the reclaimed height — see the min-h floor below. */}
+      <Box className="w-full flex-shrink-0 bg-[var(--color-background)]">
+        <Box className="site-container pt-2 pb-0">
           <HStack align="center" justify="between" className="flex-wrap gap-4">
             <VStack gap="xs">
-              <Typography variant="h2" className="text-[1.5rem]">Playground</Typography>
-              <Typography variant="body2" color="muted">
+              <Typography variant="h2" className="text-[1.25rem]">Playground</Typography>
+              <Typography variant="body2" color="muted" className="[@media(max-height:840px)]:hidden">
                 Explore standard behaviors and modules rendered live by the Orbital runtime.
               </Typography>
             </VStack>
@@ -1245,7 +1321,7 @@ function PlaygroundInner(): ReactNode {
               </Button>
             </HStack>
           </HStack>
-          <Box className="mt-4">
+          <Box className="mt-1">
             <Tabs
               items={PAGE_TABS}
               activeTab={activeTab}
@@ -1257,14 +1333,20 @@ function PlaygroundInner(): ReactNode {
         </Box>
       </Box>
 
+      {/* Featured strip: hidden below md — the dropdown in the panel header
+          covers selection there, and the ~110px goes to the preview. */}
       {activeTab === "behaviors" && (
-        <FeaturedStrip indexMap={indexMap} selected={effectiveSelected} onSelect={setSelectedBehavior} />
+        <Box className="hidden md:block flex-shrink-0">
+          <FeaturedStrip indexMap={indexMap} selected={effectiveSelected} onSelect={setSelectedBehavior} />
+        </Box>
       )}
 
-      {/* Main content inside site-container */}
+      {/* Main content inside site-container: flex-1 of the wrapper with a
+          600px floor so the preview stays usable on short viewports (the
+          page scrolls instead of crushing it); min-h-0 + overflow-hidden
+          keep internal scrolling (preview, sidebar) engaged. */}
       <Box
-        className="site-container flex-1 flex flex-col overflow-hidden"
-        style={{ height: activeTab === "behaviors" ? 'calc(100vh - 310px)' : 'calc(100vh - 180px)', minHeight: 500 }}
+        className="site-container flex-1 min-h-[600px] flex flex-col overflow-hidden"
       >
         <BrowserOnly fallback={
           <Box className="p-16 text-center">

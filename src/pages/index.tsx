@@ -21,6 +21,7 @@ import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
 import CodePreviewTabs from "../components/CodePreviewTabs";
+import HeroPlayableDemo from "../components/HeroPlayableDemo";
 import { HOME_EXAMPLE_CODE } from "../data/home-example";
 import HOME_EXAMPLE_SCHEMA from "../data/home-example-schema.json";
 
@@ -54,23 +55,32 @@ export default function OrbHome(): ReactNode {
       title={translate({ id: "orb.meta.title", message: "Orb — A Programming Language for Humans and LLMs" })}
       description={translate({ id: "orb.meta.desc", message: "Orb is a programming language where the lifecycle is the primitive. Declare an entity, its states, and what each event does; the compiler checks the whole circuit and emits the app." })}
     >
-      {/* Hero */}
+      {/* Hero: two-column from xl up so the text block sits beside the demo
+          and the whole hero fits 100vh - 60px navbar. The demo box is
+          h-[600px] — the riya game renders 599px of content (83px HUD/chrome
+          above an 800x480 canvas in a 516px chrome panel); the container fits
+          the demo, the demo is never shrunk. */}
       <Box as="header" className="w-full min-h-[60vh] flex items-center relative overflow-hidden">
         <OrbitalHeroBackground />
-        <Box className="site-container py-20 relative z-10">
-          <VStack gap="lg" align="start">
-            <Typography variant="h1">{translate({ id: "orb.hero.title", message: "Orb" })}</Typography>
-            <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "A programming language where the lifecycle is the primitive. Declare an entity, the states it can be in, and what each event does. The data, the effects, the UI, and the routes hang off that, and the compiler walks the graph before anything runs." })}</Typography>
-            <InstallBox command="curl -fsSL https://orb.almadar.io/install.sh | sh" className="max-w-full overflow-hidden" />
-            <HStack gap="md" className="flex-wrap">
-              <Link to="/docs/getting-started/introduction">
-                <Button variant="primary" size="lg">{translate({ id: "orb.hero.cta1", message: "Get Started" })}</Button>
-              </Link>
-              <Link to="/playground">
-                <Button variant="secondary" size="lg">{translate({ id: "orb.hero.cta2", message: "Standard Library" })}</Button>
-              </Link>
-            </HStack>
-          </VStack>
+        <Box className="site-container site-container--hero py-10 lg:py-6 relative z-10">
+          <HStack gap="lg" align="center" className="flex-col xl:flex-row w-full">
+            <VStack gap="md" align="start" className="flex-1 min-w-0 w-full">
+              <Typography variant="h1">{translate({ id: "orb.hero.title", message: "Orb" })}</Typography>
+              <Typography variant="body1" color="muted">{translate({ id: "orb.hero.subtitle", message: "Orb is a general-purpose language for reactive applications built on a restricted execution model. Every program is a state machine bound to typed data, composed with other machines over declared events. The compiler checks the whole graph before anything runs, then emits the same program as TypeScript, Python, or Rust — UI included." })}</Typography>
+              <InstallBox command="curl -fsSL https://orb.almadar.io/install.sh | sh" className="max-w-full overflow-hidden" />
+              <HStack gap="md" className="flex-wrap">
+                <Link to="/docs/getting-started/introduction">
+                  <Button variant="primary" size="lg">{translate({ id: "orb.hero.cta1", message: "Get Started" })}</Button>
+                </Link>
+                <Link to="/playground">
+                  <Button variant="secondary" size="lg">{translate({ id: "orb.hero.cta2", message: "Standard Library" })}</Button>
+                </Link>
+              </HStack>
+            </VStack>
+            <Box className="w-full xl:w-[848px] xl:flex-shrink-0 h-[600px]">
+              <HeroPlayableDemo height="100%" />
+            </Box>
+          </HStack>
         </Box>
       </Box>
 
@@ -127,20 +137,6 @@ export default function OrbHome(): ReactNode {
 
       {/* Gradient divider */}
       <Box className="w-full h-px" style={{ background: "linear-gradient(to right, transparent, var(--color-primary), transparent)" }} />
-
-      {/* In formal terms */}
-      <Box className="w-full">
-        <Box className="site-container py-16">
-          <VStack gap="md" className="max-w-3xl">
-            <Typography variant="overline" color="muted">
-              <Translate id="orb.formal.title">In formal terms</Translate>
-            </Typography>
-            <Typography variant="body1" color="muted">
-              <Translate id="orb.formal.body">Orb is a general-purpose language for reactive applications with a restricted execution model. It is not narrow in what you can build, but every program is made from one unit, an extended finite state machine bound to a typed record: transitions carry an event, an optional guard, and effects drawn from a closed algebra of eight constructors. Machines compose as actors over an event bus with declared event types, so the compiler holds a static communication graph. It checks that graph the way a model checker would, for reachability, handled events, and exits from every blocking state, then interprets the same JSON term into TypeScript, Python, or Rust. The interface is a projection of machine state, and rendering is itself one of the checked effects.</Translate>
-            </Typography>
-          </VStack>
-        </Box>
-      </Box>
 
       {/* Standard Library */}
       <Box className="w-full">
