@@ -234,6 +234,12 @@
     "topic": "infra"
   },
   {
+    "name": "std-data-import",
+    "description": "std-data-import — staged CSV import run, source-agnostic: upload → staged review → confirm → handoff. UPLOAD_CSV opens a run and persists an ImportBatch row (status uploaded, fieldMappingJson recorded verbatim for provenance); the host's file UI parses the CSV and answers with STAGE_ROWS, one JSON string per raw row, which the atom bulk-persists into import_rows against the batch id and presents as a staged review (row/error counts + Confirm/Discard). CONFIRM_IMPORT marks the batch confirmed and emits IMPORT_CONFIRMED { batchId, sourceName, rowCount } — the mapping+persist half is the CONSUMER organism's: it listens for IMPORT_CONFIRMED, fetches import_rows where batchId matches, maps each rowJson through its own field mapping, and persists into its own target entity (cross-atom persist into a consumer's entity is not expressible from here). This is deliberately the CSV-file path: the atom never calls a source service — sourceName/fieldMappingJson/targetEntity/historyWindowDays are declarative consumer configs, and any persist failure marks the batch row failed and fires IMPORT_FAILED, never a silent swallow. Compose with std-import for the file-picker menu.",
+    "level": "atom",
+    "topic": "infra"
+  },
+  {
     "name": "std-date-range",
     "description": "std-date-range — compact calendar button (Looker / Tableau shape) that opens a popover containing the date-range-picker. Owns a DateRange runtime entity; DATE_RANGE_CHANGED persists @payload.from + @payload.to so cross-trait listeners can route the range into data atoms (Browse REFETCH_FILTER, Stats / Graphs requery).",
     "level": "atom",
@@ -352,6 +358,12 @@
     "description": "std-geosearch — location-aware search variant: search-input + map-view + range-slider for radius. Owns a GeoSearchResult runtime entity; GEO_SEARCH persists @payload.searchTerm/lat/lng/radiusKm so cross-trait listeners can route them into geo-aware data atoms.",
     "level": "atom",
     "topic": "ui/core"
+  },
+  {
+    "name": "std-global-search",
+    "description": "std-global-search — cross-module federated search. Use when a user voices that one search box should query several modules at once (global search, search everything, unified search, cross-module search, federated search, search across records, omnisearch, one search box, aggregated results, grouped results). One SEARCH event fans out to every module key listed in the `modules` config (comma-separated, deterministic — no registry magic): the trait walks the parsed key list with an internal FAN_OUT_STEP sentinel and emits one scoped MODULE_SEARCH_REQUESTED { moduleKey, queryText, typeFilter, scopeJson } -> external per key, so modules respond in parallel rather than in sequence. Modules answer with SEARCH_RESULTS { moduleKey, resultsJson }; each answer appends a SearchResultGroup to the entity, so the merged view stays grouped by module. Client/person/date/type filters ride `scopeJson` — the atom never interprets them. Every query persists as a SearchQuery row (recent/saved searches) when `saveHistory` is on. The input is the mapped `search-input` type rendered inline with event renamed to SEARCH (the std-geosearch idiom); its native {searchTerm}/{value} payloads are bridged via str/default, so programmatic SEARCH { queryText, typeFilter, scopeJson } emitters and the UI box drive the same arm.",
+    "level": "atom",
+    "topic": "infra"
   },
   {
     "name": "std-gold",
@@ -780,6 +792,12 @@
     "topic": "ui/core"
   },
   {
+    "name": "std-notification-preferences",
+    "description": "std-notification-preferences — per-person notification preference store plus a consultable gate. Owns NotificationPreference rows (one per person + event key: channel override in_app/email/push/slack, mode instant/digest, quiet-hours window 'HH:MM-HH:MM' such as 22:00-07:00). The PreferencesManage trait is standard CRUD over the store (list / create / update / delete, persisted, success/failure cascade arms): a data-grid browse plus ModalRecordModal create/edit forms whose SAVE carries the full row payload (std-list daisy-chain idiom). The PreferenceGate trait is the consult half other notify traits call: emit CHECK_PREFERENCE { personId, eventKey } and the gate fetches the matching row (a row whose eventKey is blank applies to every event) and answers PREFERENCE_RESOLVED { personId, eventKey, channel, mode, suppressed } — suppressed is true only when the row's quietHours window covers the current hour; mode 'digest' rides on the verdict for the caller to defer. Default policy: no matching row — or a failed lookup — resolves fail-open to { channel: in_app, mode: instant, suppressed: false }; the absence of a preference never silences a notification.",
+    "level": "atom",
+    "topic": "infra"
+  },
+  {
     "name": "std-notify-on-event",
     "description": "std-notify-on-event — cross-orbital wiring atom. Subscribes to events from another orbital (e.g. CheckoutOrbital emits OrderPlaced, OrderRecordOrbital reacts via this atom) and dispatches a notification. Use when one orbital needs to react to or be notified about events that happen in another orbital — the wiring goes through this atom's `EventOccurred` listener which the molecule renames via traitOverrides.events to the upstream event name. Dispatch gates on `guardOp`: `eq` (default) does string-equality on `triggerStatus` against the upstream event's `status` field; `gt`/`lt`/`gte`/`lte` instead numerically compare `guardField` (read from the event's `data` payload) against `guardValue`, for threshold-crossing asks such as low-stock alerts. Resolves recipient from `recipients` (first entry; multi-recipient fan-out is a future extension), falling back to `fallbackRecipient` when set, or `@user.id` otherwise. Skips dispatch when the recipient is in `suppressionList`. Delivery consults std-notification-center data before dispatching: per-user NotificationPreference rows (matched on `userId` = recipient and `eventType` = this listener's `eventKey`, blank = all) can mute (`mode: off`), defer to the digest drain (`mode: digest`), override the channel, or impose per-user quiet hours; the atom-level `quietStartHour`/`quietEndHour` window and the `frequencyCapPerWeek` rolling cap (counted against dispatched NotificationRecord audit rows for the same recipient + channel) suppress likewise. Every suppression persists an honest audit row (`dispatched: false` with the reason in `error`: quiet-hours / digest-deferred / muted-by-preference / frequency-cap / no-push-subscription) which std-notification-center's digest cycle drains later. Channels: `in-app` emits the `notify` toast; `email`/`sms`/`webhook` dispatch through call-service (email.send / twilio.sendSMS / webhook.send); `push` looks up the recipient's PushSubscription row (owned by std-notification-center) and dispatches web-push via push.send (`pushTitle` falls back to `template`; `pushDeepLink`/`pushIcon` optional). The audit row's `dispatched` flag is honest — true only once the service call succeeds.",
     "level": "atom",
@@ -826,6 +844,12 @@
     "description": "Headless patrol-hazard mechanic for side-view boards: moves each configured patrol back and forth along its [x0, x1] beat at its own speed (33ms tick, ping-pong with clamped turnarounds; a patrol declaring waveAmp/wavePeriod also bobs vertically — cy = y + waveAmp·sin(2πt/wavePeriod from a per-row time accumulator — and the hit test and render read cy, so a waveAmp of 0 keeps the flat beat), tracks the player position off the body authority's BODY_MOVED, and emits PATROL_HIT once per contact — a per-patrol hit flag re-arms only after the player separates, so damage rules stay sparse (when two patrols connect on the same tick the first reports; the other reports on the next tick). Patrols live on a [runtime, shared] entity for the render layer (boards draw them as markers/sprites); damage, lives, and respawn stay downstream (std-lives) — this atom simulates, it never judges. SET_PATROLS replaces the live patrol set at runtime for boards that import their patrols; RESTART re-arms the live set, so injected patrols survive respawns. Renders nothing. Corresponds to the design-sheet field(s): challenge, dynamics.",
     "level": "atom",
     "topic": "ui/game"
+  },
+  {
+    "name": "std-permission-matrix",
+    "description": "std-permission-matrix — role × module permission grant table / capability matrix admin surface. Use when a user voices that permissions must be managed per role and module (permission matrix, role permissions, capability matrix, permission grants, access matrix, who can see finance, hide margins, module-level permissions, admin permission screen, grant management, finance visibility by role, restrict modules by role). Persists PermissionGrant rows (workspaceId + role + module + capability flags canReadFinance / canSeeOthersHours / canSeeMargins) with full CRUD on an admin page mounted at /admin/permissions — create/edit forms are the std-modal ModalRecordModal substrate (the corpus's two-trait CRUD shape, mirroring std-list), persists live in a sibling coordinator trait, and adminRoles is ENFORCED at the persist boundary (a viewer whose role is not listed cannot fire a write, from the button or from the bus). Ships a query trait other traits consult event-wise: CHECK_GRANT { role, module } fetches the matching grant(s) and re-emits GRANT_RESOLVED { role, module, canReadFinance, canSeeOthersHours, canSeeMargins, found }. Grant SURFACE only — entity-layer @read/@update gate integration is a recorded core gap (gates are pure @entity/@user S-expressions and cannot consult another entity's rows), so enforcement stays with the consumer until that core lands.",
+    "level": "atom",
+    "topic": "infra"
   },
   {
     "name": "std-pickup",
@@ -889,7 +913,7 @@
   },
   {
     "name": "std-reminder-scheduler",
-    "description": "std-reminder-scheduler — deadline reminders for a target entity. A periodic tick scans the target for records whose `dateField` deadline (a ms-epoch number or an ISO datetime string) is within `offsetHours` of now and that have not been reminded yet, and emits `ReminderDue` for each — every matching record, via a self-driving scan loop. Marks each record `remindedAt` so it isn't reminded twice. Compose alongside std-notify-on-event to deliver the reminder.",
+    "description": "std-reminder-scheduler — deadline reminders for a target entity. A periodic tick scans the target for records whose `dateField` deadline (a ms-epoch number or an ISO datetime string) is within `offsetHours` of now and that have not been reminded yet, and emits `ReminderDue` for each — every matching record, via a self-driving scan loop. `direction` picks which side of now the scan matches: 'future' (default) fires for deadlines up to `offsetHours` ahead; 'past' fires once a record's date is at least `offsetHours` behind now. Marks each record `remindedAt` so it isn't reminded twice — and only when the record actually matched the scan, so records outside the window stay eligible for later passes. Compose alongside std-notify-on-event to deliver the reminder.",
     "level": "atom",
     "topic": "infra"
   },
