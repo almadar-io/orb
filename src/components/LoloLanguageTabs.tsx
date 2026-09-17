@@ -65,11 +65,13 @@ export default function LoloLanguageTabs({
           </Button>
         ))}
       </Box>
-      {/* Code stays LTR in every language — it is line- and indentation-
-          structured, and RTL reorders `(set @entity.x 1)` into nonsense. The
-          `pre`/`code` LTR rule lives in shared/css/ifm-bridge.css, guarded
-          with `rtl:ignore` so RTLcss cannot flip it for the ar build. */}
-      <Box dir="ltr">
+      {/* Direction follows the ACTIVE tab, not the page: Arabic source renders
+          RTL (owner decision 2026-09-17 — Arabic readers read right-to-left),
+          English/Slovenian stay LTR. The global `pre/code { direction: ltr
+          !important }` guard in shared/css still wins over the `dir`
+          attribute, so the RTL case is un-blocked by a higher-specificity
+          `.lolo-lang-tabs__code[dir="rtl"]` rule in ifm-bridge.css. */}
+      <Box dir={t.rtl(active) ? 'rtl' : 'ltr'} className="lolo-lang-tabs__code">
         <OriginalCodeBlock {...blockProps} language={language}>
           {rendered}
         </OriginalCodeBlock>
