@@ -1,6 +1,6 @@
 name: Deprecate npm versions
 
-# One-off maintenance: marks legacy @almadar/orb* versions deprecated on npm.
+# Maintenance: deprecates (or unpublishes) legacy @almadar/orb* versions on npm.
 # Runs with the same NPM_TOKEN the publish workflow uses (bypass-2FA granular token).
 
 on:
@@ -16,6 +16,12 @@ on:
         required: true
         default: "Legacy line - install @almadar/orb@latest (4.0.1)"
         type: string
+      action:
+        description: "deprecate (default) or unpublish every published version matching the range (npm refuses versions with dependents or >300 weekly downloads after 72h)"
+        required: false
+        default: "deprecate"
+        type: choice
+        options: [deprecate, unpublish]
 
 jobs:
   deprecate:
@@ -28,6 +34,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Deprecate
+        if: ${{ inputs.action != 'unpublish' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -36,6 +43,27 @@ jobs:
           for pkg in @almadar/orb @almadar/orb-linux-x64 @almadar/orb-linux-arm64 @almadar/orb-darwin-x64 @almadar/orb-darwin-arm64 @almadar/orb-windows-x64; do
             echo "== $pkg @ '${{ inputs.range }}'"
             npm deprecate "$pkg@${{ inputs.range }}" "${{ inputs.message }}" || fail=1
+          done
+          exit $fail
+
+      - name: Unpublish
+        if: ${{ inputs.action == 'unpublish' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RANGE: ${{ inputs.range }}
+        run: |
+          set -u
+          fail=0
+          for pkg in @almadar/orb @almadar/orb-linux-x64 @almadar/orb-linux-arm64 @almadar/orb-darwin-x64 @almadar/orb-darwin-arm64 @almadar/orb-windows-x64; do
+            versions=$(npm view "$pkg" versions --json | node -e '
+              const vs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+              const semver = require(require("path").join(process.execPath, "../../lib/node_modules/npm/node_modules/semver"));
+              console.log((Array.isArray(vs) ? vs : [vs]).filter(v => semver.satisfies(v, process.env.RANGE)).join(" "));
+            ')
+            echo "== $pkg unpublish [$versions]"
+            for v in $versions; do
+              npm unpublish "$pkg@$v" --force || { echo "REFUSED $pkg@$v"; fail=1; }
+            done
           done
           exit $fail
 
