@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const platform = process.platform;
 const arch = process.arch;
@@ -49,3 +50,40 @@ console.log(`Orb CLI installed for ${platform}-${arch}:`);
 console.log(`  Binary:  ${hasBinary ? 'ok' : 'missing'}`);
 console.log(`  Bun:     ${hasBun ? 'ok' : 'not bundled (agent features require bun on PATH)'}`);
 console.log(`  Agent:   ${hasAgent ? 'ok' : 'not bundled (agent features unavailable)'}`);
+
+// Behaviors are installed packages, not baked into the binary (Phase 2): populate
+// the user store (~/.orb) with @almadar/std so `orb validate`/`orb verify` resolve
+// std behaviors out of the box. `stdRange` is `^<major>` of the std this release
+// was built against (almadar.stdRange in package.json, written by build-orb-cli.yml
+// from the orbital-rust pin) so a later std major never silently swaps underneath
+// an already-installed CLI.
+const stdRange = (require('../package.json').almadar || {}).stdRange;
+
+if (hasBinary && hasBun && stdRange) {
+  const binaryPath = path.join(platformDir, binaryName);
+  const bunPath = path.join(platformDir, bunName);
+  const manualCommand = 'orb behaviors install --global @almadar/std';
+
+  let result;
+  try {
+    result = spawnSync(binaryPath, ['behaviors', 'install', '--global', `@almadar/std@${stdRange}`], {
+      env: { ...process.env, ORB_BUN_PATH: bunPath },
+      stdio: 'inherit',
+      timeout: 600000,
+    });
+  } catch (err) {
+    console.warn(`\n  Orb CLI: failed to install @almadar/std (${err.message})`);
+    console.warn(`  Run manually: ${manualCommand}\n`);
+    process.exit(0);
+  }
+
+  if (!result || result.status !== 0) {
+    console.warn('\n  Orb CLI: @almadar/std install did not complete');
+    console.warn(`  Run manually: ${manualCommand}\n`);
+  }
+} else if (hasBinary && !hasBun) {
+  console.warn('\n  Orb CLI: bun not bundled, skipping @almadar/std install');
+  console.warn('  Run manually once bun is available: orb behaviors install --global @almadar/std\n');
+}
+
+process.exit(0);

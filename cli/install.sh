@@ -237,6 +237,20 @@ install() {
       mkdir -p "$INSTALL_DIR/shells"
       cp -r shells/* "$INSTALL_DIR/shells/"
     fi
+
+    # Populate the user store (~/.orb) with @almadar/std (Phase 2: behaviors
+    # are installed packages, not baked into the binary). Non-fatal: a
+    # failure prints the manual command and never aborts the installer.
+    if [ -f "$INSTALL_DIR/bun" ]; then
+      if ! ORB_BUN_PATH="$INSTALL_DIR/bun" "$INSTALL_DIR/orb" behaviors install --global "@almadar/std@^16"; then
+        echo ""
+        echo "${YELLOW}Could not install @almadar/std automatically.${NC}"
+        echo "Run manually: orb behaviors install --global @almadar/std"
+      fi
+    else
+      echo "${YELLOW}bun not installed; skipping @almadar/std install.${NC}"
+      echo "Run manually once bun is available: orb behaviors install --global @almadar/std"
+    fi
   fi
 
   echo ""

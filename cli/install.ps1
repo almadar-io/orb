@@ -101,9 +101,32 @@ function Install-OrbCLI {
             }
         }
 
+        # Install Bun runtime next to orb, when the release bundles one (agent
+        # features need it).
+        $BunExePath = Get-ChildItem -Path $TempDir -Filter "bun.exe" -Recurse | Select-Object -First 1
+        if ($BunExePath) {
+            Copy-Item $BunExePath.FullName -Destination $InstallDir -Force
+        }
+
         Write-Output ""
         Write-ColorOutput Green "Orb CLI installed successfully!"
         Write-Output ""
+
+        # Populate the user store (~/.orb) with @almadar/std (Phase 2: behaviors
+        # are installed packages, not baked into the binary). Non-fatal: a
+        # failure prints the manual command and never aborts the installer.
+        $BunPath = Join-Path $InstallDir "bun.exe"
+        if (Test-Path $BunPath) {
+            $env:ORB_BUN_PATH = $BunPath
+            & (Join-Path $InstallDir "orb.exe") behaviors install --global "@almadar/std@^16"
+            if ($LASTEXITCODE -ne 0) {
+                Write-ColorOutput Yellow "Could not install @almadar/std automatically."
+                Write-Output "Run manually: orb behaviors install --global @almadar/std"
+            }
+        } else {
+            Write-ColorOutput Yellow "bun not installed; skipping @almadar/std install."
+            Write-Output "Run manually once bun is available: orb behaviors install --global @almadar/std"
+        }
 
         # Check if in PATH
         $CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")

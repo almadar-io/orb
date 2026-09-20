@@ -14,6 +14,11 @@ Or use the curl installer:
 curl -fsSL https://orb.almadar.io/install.sh | sh
 ```
 
+The installer populates the user store (`~/.orb`) with `@almadar/std` so `orb validate`/`orb verify`
+resolve std behaviors right away; a project can pin its own std instead with
+`orb behaviors install @almadar/std`. Offline, install from a tarball:
+`orb behaviors install --global ./almadar-std-<v>.tgz`.
+
 ## Usage
 
 ```bash
