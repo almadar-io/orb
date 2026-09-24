@@ -1,5 +1,5 @@
 /**
- * HeroPlayableDemo — the riya open-world platformer, playable in the hero.
+ * HeroPlayableDemo — the riya platformer, playable in the hero.
  * Fetches the resolved schema synced by `almadar-sync orb-demo` from
  * /playground/demo/ and runs it through @almadar/ui/runtime's
  * BrowserPlayground (mode="mock"), lazy-loaded via BrowserOnly exactly like
@@ -26,7 +26,7 @@ interface DemoAsset {
 }
 
 export default function HeroPlayableDemo({
-  name = 'riya-game-platformer-open-world',
+  name = 'riya-game-platformer',
   height = '480px',
 }: {
   name?: string;
