@@ -49,6 +49,9 @@ const DOMAIN_TAGS = [
   "Communication", "Content", "Location", "HR", "Legal", "Real Estate",
 ];
 
+// Hidden until the riya demo plays on the published @almadar/ui (G-APPS-002).
+const SHOW_HERO_DEMO = false;
+
 export default function OrbHome(): ReactNode {
   return (
     <Layout
@@ -77,9 +80,11 @@ export default function OrbHome(): ReactNode {
                 </Link>
               </HStack>
             </VStack>
-            <Box className="w-full xl:w-[848px] xl:flex-shrink-0 h-[600px]">
-              <HeroPlayableDemo height="100%" />
-            </Box>
+            {SHOW_HERO_DEMO && (
+              <Box className="w-full xl:w-[848px] xl:flex-shrink-0 h-[600px]">
+                <HeroPlayableDemo height="100%" />
+              </Box>
+            )}
           </HStack>
         </Box>
       </Box>
