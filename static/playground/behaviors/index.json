@@ -109,7 +109,7 @@
   },
   {
     "name": "std-audit-capture",
-    "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind (empty = capture all). Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
+    "description": "std-audit-capture — event-interceptor audit log / audit trail. Use when a user voices that a record's changes must be tracked, logged, or auditable (audit trail, track changes, change history, who edited what, mutation log, record changes, log every edit, edit history, modification log, who did what when, accountability log). Listens for the generic `EntityMutated` sentinel (rename via traitOverrides.events to the real mutation event, e.g. ContactSaved) and persists an AuditEntry row capturing actor, action, entity type/id, before/after snapshots, and timestamp. `captureEventTypes` filters on @payload.data.kind, or on the delivered event's own name when the payload carries no kind (empty = capture all). Every entry also records where the change came from — the delivering event, the behavior and module that emitted it, and the scheduled job when a tick caused it — with no change to the upstream emitter. Compose with `std-lifecycle` to apply retention. Composable via `extraTraits` to interpose audit logging behind any mutating trait.",
     "level": "atom",
     "topic": "infra"
   },
@@ -122,6 +122,12 @@
   {
     "name": "std-board",
     "description": "std-board — generic N-column board primitive. `config.columns` is an array of column definitions ({ key, label, icon, variant }); the trait `array/map`s them on `BoardItemsLoaded` into `@entity.boards` where each board carries its filtered items + a count. The render is a `data-grid` over `@entity.boards` (one card per column) whose `renderItem` lambda nests a `data-list` over `@col.items` (the cards in that stage). N is config-driven — pass any number of columns; the outer `data-grid`'s `cols` is bound to `@config.gridCols` so the grid wraps if you exceed it. Topology = loading / viewing_board / viewing_card / adding / error — distinct from the cookie-cutter `loading/browsing/viewing_single/error` CRUD shape. App-level atoms (e.g. std-pipeline) compose std-board via `uses` and add a sibling persistor + extended source entity. `config.boardLook` switches the board body between the default N-column grid ('columns') and a Trello-style wide-column kanban ('kanban-classic'). `viewing_board` listens for REFETCH_QUERY/REFETCH_FILTER/REFETCH_PAGE (the std-search/std-filter/std-pagination wiring targets, no render on refetch — @entity.boards is bound reactively) and can optionally render its own search box (config.bodySearch, default false) and filter bar (config.filters, default []); no pagination control is rendered — a board's columns are not a paged list.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-book-reader",
+    "description": "std-book-reader — reads a multi-chapter book one chapter at a time. Opens on a cover (cover image, title, subtitle, author, a start button and the table of contents); reading shows a contents rail with the current chapter marked, the chapter title and progress, the chapter text (markdown) and previous/next buttons. Supports right-to-left books. Emits CHAPTER_OPENED on every chapter change. Pick for handbooks, manifestos, course readers and long-form guides.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -154,6 +160,12 @@
     "description": "Headless camera authority: the SOLE writer of camX/camY/camZoom on side-view and top-down boards. Every 33ms camera tick it eases camX/camY toward (camTargetX + camLead, camTargetY) — a dead-zone camera: inside deadzoneX/deadzoneY the axis holds, outside it lerps by stiffness — clamps the result to bounds, eases camZoom toward camTargetZoom the same way, and decays camShake toward 0 by shakeDecay. Intents: FOLLOW retargets from a moving body's x/y/vx (vx feeds camLead, the horizontal look-ahead), CUT snaps position+target instantly (no ease, for teleports/cutscenes), SET_ZOOM retargets zoom (clamped to minZoom/maxZoom), SHAKE sets camShake for a consumer to jitter with at bind time — this atom never writes shake into camX/camY itself, RESTART reseeds from config. Emits CAMERA_MOVED every tick. Renders nothing — a board binds its own canvas camera prop straight to camX/camY/camZoom.",
     "level": "atom",
     "topic": "ui/game"
+  },
+  {
+    "name": "std-card-grid",
+    "description": "std-card-grid — a titled grid of content cards from a config list. Each card can carry an image (screenshots, portfolio, case studies), a portrait (team members), an icon, a badge, a title, a description and a link. `look` picks media cards, centered profile cards, or plain text cards. Pick for showcases, team pages, case studies, service catalogs and testimonials.",
+    "level": "atom",
+    "topic": "ui/core"
   },
   {
     "name": "std-cascade-on-delete",
@@ -367,7 +379,7 @@
   },
   {
     "name": "std-global-search",
-    "description": "std-global-search — cross-module federated search. Use when a user voices that one search box should query several modules at once (global search, search everything, unified search, cross-module search, federated search, search across records, omnisearch, one search box, aggregated results, grouped results). One SEARCH event fans out to every module key listed in the `modules` config (comma-separated, deterministic — no registry magic): the trait walks the parsed key list with an internal FAN_OUT_STEP sentinel and emits one scoped MODULE_SEARCH_REQUESTED { moduleKey, queryText, typeFilter, scopeJson } -> external per key, so modules respond in parallel rather than in sequence. Modules answer with SEARCH_RESULTS { moduleKey, resultsJson }; each answer appends a SearchResultGroup to the entity, so the merged view stays grouped by module. Client/person/date/type filters ride `scopeJson` — the atom never interprets them. Every query persists as a SearchQuery row (recent/saved searches) when `saveHistory` is on. The input is the mapped `search-input` type rendered inline with event renamed to SEARCH (the std-geosearch idiom); its native {searchTerm}/{value} payloads are bridged via str/default, so programmatic SEARCH { queryText, typeFilter, scopeJson } emitters and the UI box drive the same arm.",
+    "description": "std-global-search — cross-module federated search. Use when a user voices that one search box should query several modules at once (global search, search everything, unified search, cross-module search, federated search, search across records, omnisearch, one search box, aggregated results, grouped results). One SEARCH event fans out to every module key listed in the `modules` config (comma-separated, deterministic — no registry magic): the trait walks the parsed key list with an internal FAN_OUT_STEP sentinel and emits one scoped MODULE_SEARCH_REQUESTED { moduleKey, queryText, typeFilter, scopeJson } -> external per key, so modules respond in parallel rather than in sequence. Modules answer with SEARCH_RESULTS { moduleKey, resultsJson }; each answer appends a SearchResultGroup to the entity, so the merged view stays grouped by module. A module that answers twice is counted once, a keyless answer is filed under the answering module's name, and every group records which behavior answered it. Client/person/date/type filters ride `scopeJson` — the atom never interprets them. Every query persists as a SearchQuery row (recent/saved searches) when `saveHistory` is on. The input is the mapped `search-input` type rendered inline with event renamed to SEARCH (the std-geosearch idiom); its native {searchTerm}/{value} payloads are bridged via str/default, so programmatic SEARCH { queryText, typeFilter, scopeJson } emitters and the UI box drive the same arm.",
     "level": "atom",
     "topic": "infra"
   },
@@ -394,6 +406,12 @@
     "description": "Headless grid-tactics unit-authority: the SOLE writer of units. Applies MOVE/ATTACK/SPAWN/HEAL intents from any source (player, AI, production, or progression) and runs the enemy AI_TURN pipeline, emitting BURST hit-particles and UNITS_CHANGED survivor counts. Renders nothing.",
     "level": "atom",
     "topic": "ui/game"
+  },
+  {
+    "name": "std-hero",
+    "description": "std-hero — the headline block at the top of a page, or a call-to-action banner further down. Optional eyebrow badge, headline, supporting text, up to two link actions, an optional copyable command, and optional media below or beside the copy. `look: banner` turns it into a contained call-to-action card. Links follow `href` (in-app path, #anchor, or absolute URL); each click also emits CTA_PRIMARY / CTA_SECONDARY with the href. Pick for landing, product, pricing and campaign pages.",
+    "level": "atom",
+    "topic": "ui/core"
   },
   {
     "name": "std-hero-nav",
@@ -636,76 +654,10 @@
     "topic": "ui/game"
   },
   {
-    "name": "std-marketing-article",
-    "description": "Article section atom for marketing pages. Renders a centered prose block with title and rich content. Pick for about pages, mission statements, and blog-style content.",
+    "name": "std-media-section",
+    "description": "std-media-section — content rows that pair copy with a screenshot or illustration: each row has an eyebrow, heading, body text, a short bullet list and an optional link action on one side and its media on the other, and consecutive rows alternate sides. A row without media sits alone at reading width. Stacks on small screens. Pick for 'how it works', product tours and feature-detail pages.",
     "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-cta",
-    "description": "Call-to-action banner atom for marketing pages. Renders a high-conversion CTA section with title, subtitle, and action buttons. Pick for conversion points at the end of pages or between sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-features",
-    "description": "Feature grid atom for marketing pages. Renders a responsive grid of feature cards with icons, titles, descriptions, and optional links. Pick for product capability showcases and benefit sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-footer",
-    "description": "Marketing footer atom for marketing pages. Renders a full footer with link columns, logo, and copyright. Pick for every marketing page bottom.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-hero",
-    "description": "Hero section atom for marketing pages. Renders a full-width hero with tag, title, subtitle, actions, and optional image. Pick for landing pages, product launches, and campaign microsites.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-nav",
-    "description": "Marketing navigation atom for marketing pages. Renders a sticky header with brand logo and nav links. Pick for site-wide navigation on static pages.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-pricing",
-    "description": "Pricing grid atom for marketing pages. Renders tiered pricing cards with plans, features, and CTAs. Pick for SaaS pricing pages and subscription showcases.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-showcase",
-    "description": "Showcase grid atom for marketing pages. Renders a grid of portfolio or product showcase cards with images, badges, and descriptions. Pick for product galleries and portfolio sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-split",
-    "description": "Split section atom for marketing pages. Renders a two-column layout with text and image alternating sides. Pick for feature deep-dives and alternating content sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-stats",
-    "description": "Stats grid atom for marketing pages. Renders a responsive grid of key metrics with values and labels. Pick for social proof, traction, and credibility sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-steps",
-    "description": "Step flow atom for marketing pages. Renders numbered steps horizontally or vertically. Pick for how-it-works sections and onboarding explainers.",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "std-marketing-team",
-    "description": "Team grid atom for marketing pages. Renders a responsive grid of team member cards with avatars, names, roles, and bios. Pick for about pages and company culture sections.",
-    "level": "atom",
-    "topic": "ui/marketing"
+    "topic": "ui/core"
   },
   {
     "name": "std-mesh-asset-art",
@@ -888,10 +840,22 @@
     "topic": "ui/game"
   },
   {
+    "name": "std-pricing",
+    "description": "std-pricing — side-by-side plan cards from a config list: plan name, price and billing period, a one-line summary, the included features, and a link action per plan; one plan can be highlighted as recommended with a badge. Optional heading and footnote. Clicking a plan's action follows its href and emits PLAN_SELECTED. Pick for pricing pages, subscription tiers and service packages.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-production",
     "description": "Headless unit-production mechanic: accrues productionPoints each turn (AI_TURN) and, on an affordable PRODUCE, emits a SPAWN intent for the grid-tactics authority to place a new unit. Owns only productionPoints (+ its spawn counter); never writes units directly.",
     "level": "atom",
     "topic": "ui/game"
+  },
+  {
+    "name": "std-prose",
+    "description": "std-prose — a block of long-form text at a comfortable reading width: optional eyebrow, heading and meta line (date, author), then markdown body with headings, lists, links and code blocks. Supports right-to-left text. Pick for articles, blog posts, about and mission pages, policy text and install notes.",
+    "level": "atom",
+    "topic": "ui/core"
   },
   {
     "name": "std-rate-limiter",
@@ -926,6 +890,12 @@
   {
     "name": "std-reminder-scheduler",
     "description": "std-reminder-scheduler — deadline reminders for a target entity. A periodic tick scans the target for records whose `dateField` deadline (a ms-epoch number or an ISO datetime string) is within `offsetHours` of now and that have not been reminded yet, and emits `ReminderDue` for each — every matching record, via a self-driving scan loop. `direction` picks which side of now the scan matches: 'future' (default) fires for deadlines up to `offsetHours` ahead; 'past' fires once a record's date is at least `offsetHours` behind now. Marks each record `remindedAt` so it isn't reminded twice — and only when the record actually matched the scan, so records outside the window stay eligible for later passes. Compose alongside std-notify-on-event to deliver the reminder.",
+    "level": "atom",
+    "topic": "infra"
+  },
+  {
+    "name": "std-review-cycle",
+    "description": "std-review-cycle — revise-and-resubmit review workflow (document review, pull-request review, design review, editorial review, submission review, send back for changes, request changes, resubmit, review rounds, four-eyes approval). A record moves draft → in review → changes requested → in review → … → approved. One SUBMIT event serves both the first submission and every resubmission; the atom counts review rounds and marks resubmissions on the emitted ReviewRequested. Every move writes a ReviewEvent history row stamped with the states it left and entered. `requireSeparateApproval` enforces four-eyes review: an approval raised in the same action that submitted the record (an auto-responding rule or bot) is rejected. Headless — the host renders the badge and buttons and routes its actions to SUBMIT / REQUEST_CHANGES / APPROVE.",
     "level": "atom",
     "topic": "infra"
   },
@@ -978,6 +948,30 @@
     "topic": "ui/core"
   },
   {
+    "name": "std-site-footer",
+    "description": "std-site-footer — the footer at the bottom of a public site: brand name and tagline, columns of links, and a bottom row with the copyright line and legal links. Links follow `href` (in-app path, #anchor, or absolute URL) and each click emits FOOTER_LINK_CLICKED. Pick for marketing sites, docs portals and product websites.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-site-header",
+    "description": "std-site-header — the sticky top bar of a public website: brand (logo + name), navigation links with the current page marked, and an optional call-to-action button. On small screens the links fold into a menu opened by a toggle. Links follow `href` (in-app path, #anchor, or absolute URL); the header action and the small-screen menu links also emit NAV_CLICKED { href, label }. Pick for marketing sites, docs portals and product websites; for signed-in app chrome use std-app-layout.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-slide-deck",
+    "description": "std-slide-deck — generic presentation atom. An ordered list of slide nodes (`config.slides`, any render tree or @trait) shown one at a time, with a previous/next arrow on either side, a dot strip and a k / n counter underneath, and keyboard stepping through the host's KEY router (`config.nextKeys` / `config.prevKeys`, captured per `config.keymap`). The cursor clamps at either end unless `loop` is on. Each visit mounts the slide fresh, so its own entry animations replay. Carries no content or visual style: a realization supplies the slides and restyles via `bodyContent`. The default body picks the slide inside a mapped-children lambda, which expands static slides only; a deck whose slides hold stateful traits (forms, live lists) overrides `bodyContent` with one `presence` per slide gated on `@entity.slideIndex`. Every move emits SLIDE_CHANGED for speaker notes, timers or analytics.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-stat-band",
+    "description": "std-stat-band — a band of headline figures from a config list: each item a big value (a number or short text such as '99.9%', '3x' or 'Open source') over a short label, centered in a row that wraps on small screens, under an optional heading. Display only — for figures computed from data use std-stats. Pick for 'by the numbers' strips on landing, about and product pages.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-stat-rows",
     "description": "std-stat-rows — a vertical stack of stat-badge rows rendered from a config-driven list. Exemplar for dynamic collection rendering over an arbitrary container: `(array/map @entity.rows (fn item …))` sits directly in a `children:` position, so no `renderItem` pattern is needed; the map lambda binds each row's fields with `@item.<field>`.",
     "level": "molecule",
@@ -1004,6 +998,12 @@
   {
     "name": "std-step-flow",
     "description": "std-step-flow — generic N-step sequential decision chain (Stripe Connect / TurboTax / Vercel deploy style). `config.steps` is an array of step definitions `{ key, label, description, icon, allowedRoles?: [string] }`; the trait projects the current step into a prominent body card and a `wizard-progress` stepper bar at the top. When a step declares `allowedRoles`, only users whose `@user.role` is in that list can advance through it. One primary button ADVANCEs along the chain; at the last step the same button finalizes (label/icon/variant swap via entity binding, state routed via guard). REJECT/ESCALATE terminate. Topology = loading / running / approved / rejected / escalated / error.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-steps",
+    "description": "std-steps — a numbered 'how it works' sequence from a config list: a numbered marker (or icon), a title and a short description per step, laid out as a row of columns or a vertical list, under an optional heading. Display only — for an interactive stepper use std-step-flow or std-wizard. Pick for onboarding explainers, process overviews and learning paths.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -1178,26 +1178,20 @@
   {
     "name": "ui-animated-counter",
     "description": "AnimatedCounter — UI factory (1:1 with the @almadar/ui animated-counter pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
+    "level": "molecule",
+    "topic": "ui/core"
   },
   {
     "name": "ui-animated-graphic",
     "description": "AnimatedGraphic — UI factory (1:1 with the @almadar/ui animated-graphic pattern).",
     "level": "atom",
-    "topic": "ui/marketing"
+    "topic": "ui/core"
   },
   {
     "name": "ui-animated-reveal",
     "description": "AnimatedReveal — UI factory (1:1 with the @almadar/ui animated-reveal pattern).",
     "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-article-section",
-    "description": "ArticleSection — UI factory (1:1 with the @almadar/ui article-section pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
+    "topic": "ui/core"
   },
   {
     "name": "ui-aside",
@@ -1246,36 +1240,6 @@
     "description": "BloomQuizBlock — UI factory (1:1 with the @almadar/ui bloom-quiz-block pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-book-chapter-view",
-    "description": "BookChapterView — UI factory (1:1 with the @almadar/ui book-chapter-view pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-book-cover-page",
-    "description": "BookCoverPage — UI factory (1:1 with the @almadar/ui book-cover-page pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-book-nav-bar",
-    "description": "BookNavBar — UI factory (1:1 with the @almadar/ui book-nav-bar pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-book-table-of-contents",
-    "description": "BookTableOfContents — UI factory (1:1 with the @almadar/ui book-table-of-contents pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-book-viewer",
-    "description": "BookViewer — UI factory (1:1 with the @almadar/ui book-viewer pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-box",
@@ -1330,18 +1294,6 @@
     "description": "Carousel — UI factory (1:1 with the @almadar/ui carousel pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-case-study-card",
-    "description": "CaseStudyCard — a card summarizing a customer case study with logo, headline result, and link. — UI factory (1:1 with the @almadar/ui case-study-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-case-study-organism",
-    "description": "CaseStudyOrganism — UI factory (1:1 with the @almadar/ui case-study-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-center",
@@ -1404,12 +1356,6 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-community-links",
-    "description": "CommunityLinks — UI factory (1:1 with the @almadar/ui community-links pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-conditional-wrapper",
     "description": "ConditionalWrapper — UI factory (1:1 with the @almadar/ui conditional-wrapper pattern).",
     "level": "atom",
@@ -1446,12 +1392,6 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-content-section",
-    "description": "ContentSection — UI factory (1:1 with the @almadar/ui content-section pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-control-button",
     "description": "ControlButton — UI factory (1:1 with the @almadar/ui control-button pattern).",
     "level": "atom",
@@ -1462,12 +1402,6 @@
     "description": "ControlGrid — UI factory (1:1 with the @almadar/ui control-grid pattern).",
     "level": "atom",
     "topic": "ui/game"
-  },
-  {
-    "name": "ui-cta-banner",
-    "description": "CtaBanner — UI factory (1:1 with the @almadar/ui cta-banner pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-dashboard-grid",
@@ -1706,20 +1640,14 @@
   {
     "name": "ui-feature-card",
     "description": "FeatureCard — an icon-led card pairing a title and description to call out a single product feature. — UI factory (1:1 with the @almadar/ui feature-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
+    "level": "molecule",
+    "topic": "ui/core"
   },
   {
     "name": "ui-feature-grid",
     "description": "FeatureGrid — UI factory (1:1 with the @almadar/ui feature-grid pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-feature-grid-organism",
-    "description": "FeatureGridOrganism — UI factory (1:1 with the @almadar/ui feature-grid-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-file-tree",
@@ -1850,8 +1778,8 @@
   {
     "name": "ui-geometric-pattern",
     "description": "GeometricPattern — UI factory (1:1 with the @almadar/ui geometric-pattern pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
+    "level": "molecule",
+    "topic": "ui/core"
   },
   {
     "name": "ui-gradient-divider",
@@ -1890,18 +1818,6 @@
     "topic": "ui/game"
   },
   {
-    "name": "ui-hero-organism",
-    "description": "HeroOrganism — UI factory (1:1 with the @almadar/ui hero-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-hero-section",
-    "description": "HeroSection — UI factory (1:1 with the @almadar/ui hero-section pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-hstack",
     "description": "Hstack — UI factory (1:1 with the @almadar/ui hstack pattern).",
     "level": "atom",
@@ -1910,6 +1826,12 @@
   {
     "name": "ui-icon",
     "description": "Icon — UI factory (1:1 with the @almadar/ui icon pattern).",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-image",
+    "description": "Image — UI factory (1:1 with the @almadar/ui image pattern).",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -1948,12 +1870,6 @@
     "description": "InputGroup — UI factory (1:1 with the @almadar/ui input-group pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-install-box",
-    "description": "InstallBox — UI factory (1:1 with the @almadar/ui install-box pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-jazari-state-machine",
@@ -2014,18 +1930,6 @@
     "description": "MarkdownContent — UI factory (1:1 with the @almadar/ui markdown-content pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-marketing-footer",
-    "description": "MarketingFooter — UI factory (1:1 with the @almadar/ui marketing-footer pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-marketing-stat-card",
-    "description": "MarketingStatCard — a single number-highlight card pairing a large value with a label and trend delta. — UI factory (1:1 with the @almadar/ui marketing-stat-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-master-detail",
@@ -2145,7 +2049,7 @@
     "name": "ui-pattern-tile",
     "description": "PatternTile — UI factory (1:1 with the @almadar/ui pattern-tile pattern).",
     "level": "atom",
-    "topic": "ui/marketing"
+    "topic": "ui/core"
   },
   {
     "name": "ui-physics-canvas",
@@ -2172,24 +2076,6 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-pricing-card",
-    "description": "PricingCard — a single pricing-tier card with price, billing period, feature list, and call-to-action. — UI factory (1:1 with the @almadar/ui pricing-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-pricing-grid",
-    "description": "PricingGrid — UI factory (1:1 with the @almadar/ui pricing-grid pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-pricing-organism",
-    "description": "PricingOrganism — UI factory (1:1 with the @almadar/ui pricing-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-progress-bar",
     "description": "ProgressBar — UI factory (1:1 with the @almadar/ui progress-bar pattern).",
     "level": "atom",
@@ -2200,12 +2086,6 @@
     "description": "ProgressDots — UI factory (1:1 with the @almadar/ui progress-dots pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-pull-quote",
-    "description": "PullQuote — UI factory (1:1 with the @almadar/ui pull-quote pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-pull-to-refresh",
@@ -2322,24 +2202,6 @@
     "topic": "ui/game"
   },
   {
-    "name": "ui-service-catalog",
-    "description": "ServiceCatalog — UI factory (1:1 with the @almadar/ui service-catalog pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-showcase-card",
-    "description": "ShowcaseCard — UI factory (1:1 with the @almadar/ui showcase-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-showcase-organism",
-    "description": "ShowcaseOrganism — UI factory (1:1 with the @almadar/ui showcase-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-side-panel",
     "description": "SidePanel — UI factory (1:1 with the @almadar/ui side-panel pattern).",
     "level": "molecule",
@@ -2412,12 +2274,6 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-split-section",
-    "description": "SplitSection — UI factory (1:1 with the @almadar/ui split-section pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-stack",
     "description": "Stack — UI factory (1:1 with the @almadar/ui stack pattern).",
     "level": "atom",
@@ -2466,34 +2322,10 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-stats-grid",
-    "description": "StatsGrid — UI factory (1:1 with the @almadar/ui stats-grid pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-stats-organism",
-    "description": "StatsOrganism — UI factory (1:1 with the @almadar/ui stats-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-status-dot",
     "description": "StatusDot — UI factory (1:1 with the @almadar/ui status-dot pattern).",
     "level": "atom",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-step-flow",
-    "description": "StepFlow — UI factory (1:1 with the @almadar/ui step-flow pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-step-flow-organism",
-    "description": "StepFlowOrganism — UI factory (1:1 with the @almadar/ui step-flow-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-subagent-trace-panel",
@@ -2604,28 +2436,10 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-tag-cloud",
-    "description": "TagCloud — UI factory (1:1 with the @almadar/ui tag-cloud pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
     "name": "ui-tag-input",
     "description": "TagInput — UI factory (1:1 with the @almadar/ui tag-input pattern).",
     "level": "molecule",
     "topic": "ui/core"
-  },
-  {
-    "name": "ui-team-card",
-    "description": "TeamCard — UI factory (1:1 with the @almadar/ui team-card pattern).",
-    "level": "atom",
-    "topic": "ui/marketing"
-  },
-  {
-    "name": "ui-team-organism",
-    "description": "TeamOrganism — UI factory (1:1 with the @almadar/ui team-organism pattern).",
-    "level": "organism",
-    "topic": "ui/marketing"
   },
   {
     "name": "ui-text-highlight",
