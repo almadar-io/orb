@@ -21,4 +21,7 @@ module.exports = {
   createRoutesFromElements: function createRoutesFromElements() { return []; },
   useNavigate: function useNavigate() { return function noop() {}; },
   useSearchParams: function useSearchParams() { return [new URLSearchParams(), function noop() {}]; },
+  // Docusaurus's v5 router is not a v6+ host router, so OrbPreview keeps its own navigation.
+  useInRouterContext: function useInRouterContext() { return false; },
+  useHref: function useHref(to) { return typeof to === 'string' ? to : (to && to.pathname) || '/'; },
 };
