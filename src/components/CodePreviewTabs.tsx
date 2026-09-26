@@ -13,7 +13,7 @@
 import React, { useMemo, useState } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { useColorMode } from '@docusaurus/theme-common';
-import { Box, HStack, Button } from '@almadar/ui/marketing';
+import { Box, HStack, Button } from '@almadar/ui/ssr';
 // @almadar/ui's CodeBlock supports JSON/orb-style folding (collapse/expand)
 // via the `foldable` prop — unlike the stock Docusaurus CodeBlock.
 import { CodeBlock } from '@almadar/ui';

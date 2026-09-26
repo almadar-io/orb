@@ -3,20 +3,8 @@ import type { ReactNode } from "react";
 import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import Translate, { translate } from "@docusaurus/Translate";
-import {
-  VStack,
-  HStack,
-  Typography,
-  Button,
-  Badge,
-  Icon,
-  Card,
-  Box,
-  SimpleGrid,
-  Divider,
-  AnimatedReveal,
-  InstallBox,
-} from "@almadar/ui/marketing";
+import { VStack, HStack, Typography, Button, Badge, Icon, Card, Box, SimpleGrid, Divider, AnimatedReveal } from '@almadar/ui/ssr';
+import { InstallBox } from '../../shared/components/sections';
 import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import { OrbitalHeroBackground } from "../components/OrbitalHeroBackground";
@@ -49,9 +37,6 @@ const DOMAIN_TAGS = [
   "Communication", "Content", "Location", "HR", "Legal", "Real Estate",
 ];
 
-// Hidden until the riya demo plays on the published @almadar/ui (G-APPS-002).
-const SHOW_HERO_DEMO = false;
-
 export default function OrbHome(): ReactNode {
   return (
     <Layout
@@ -80,11 +65,9 @@ export default function OrbHome(): ReactNode {
                 </Link>
               </HStack>
             </VStack>
-            {SHOW_HERO_DEMO && (
-              <Box className="w-full xl:w-[848px] xl:flex-shrink-0 h-[600px]">
-                <HeroPlayableDemo height="100%" />
-              </Box>
-            )}
+            <Box className="w-full xl:w-[848px] xl:flex-shrink-0 h-[600px]">
+              <HeroPlayableDemo height="100%" />
+            </Box>
           </HStack>
         </Box>
       </Box>

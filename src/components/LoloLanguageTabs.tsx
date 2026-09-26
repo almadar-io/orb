@@ -8,7 +8,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import OriginalCodeBlock from '@theme-original/CodeBlock';
-import { Box, Button } from '@almadar/ui/marketing';
+import { Box, Button } from '@almadar/ui/ssr';
 import {
   useLoloTranslator,
   LANGUAGE_ORDER,

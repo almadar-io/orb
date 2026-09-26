@@ -15,7 +15,7 @@ import React, { useEffect, useState } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import { useColorMode } from '@docusaurus/theme-common';
-import { Box, Button } from '@almadar/ui/marketing';
+import { Box, Button } from '@almadar/ui/ssr';
 import { Modal, CodeBlock } from '@almadar/ui';
 import '@almadar/ui/themes/index.css';
 

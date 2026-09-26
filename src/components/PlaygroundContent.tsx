@@ -338,7 +338,6 @@ const TOPIC_LABELS: Record<string, string> = {
   "core-variations": "VARIATIONS",
   infra: "INFRA",
   "ui/core": "UI CORE",
-  "ui/marketing": "UI MARKETING",
   "ui/game": "UI GAME",
   "ui/game/2d": "UI GAME 2D",
   "ui/game/3d": "UI GAME 3D",

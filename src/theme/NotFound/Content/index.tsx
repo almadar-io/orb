@@ -1,11 +1,6 @@
 import React from "react";
 import Link from "@docusaurus/Link";
-import {
-  Box,
-  VStack,
-  Typography,
-  Button,
-} from "@almadar/ui/marketing";
+import { Box, VStack, Typography, Button } from '@almadar/ui/ssr';
 
 export default function NotFoundContent(): React.ReactNode {
   return (

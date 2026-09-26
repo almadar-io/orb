@@ -3,16 +3,7 @@ import type { ReactNode } from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import Translate, { translate } from "@docusaurus/Translate";
-import {
-  Box,
-  VStack,
-  Typography,
-  Button,
-  Badge,
-  Card,
-  SimpleGrid,
-  HStack,
-} from "@almadar/ui/marketing";
+import { Box, VStack, Typography, Button, Badge, Card, SimpleGrid, HStack } from '@almadar/ui/ssr';
 import { AvlOrbitalUnit } from "@almadar/ui/illustrations";
 
 const DOMAINS = [

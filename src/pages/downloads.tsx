@@ -3,16 +3,7 @@ import type { ReactNode } from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import { translate } from "@docusaurus/Translate";
-import {
-  Box,
-  VStack,
-  HStack,
-  Typography,
-  Button,
-  Card,
-  Icon,
-  SimpleGrid,
-} from "@almadar/ui/marketing";
+import { Box, VStack, HStack, Typography, Button, Card, Icon, SimpleGrid } from '@almadar/ui/ssr';
 import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 

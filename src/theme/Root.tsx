@@ -2,7 +2,7 @@ import React from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 
 const AlmadarChat = React.lazy(() => import('@shared/AlmadarChat'));
-const GeometricPattern = React.lazy(() => import('@almadar/ui/marketing').then(m => ({ default: m.GeometricPattern })));
+const GeometricPattern = React.lazy(() => import('@almadar/ui/ssr').then(m => ({ default: m.GeometricPattern })));
 
 interface RootProps {
     children: React.ReactNode;
