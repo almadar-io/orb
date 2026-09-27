@@ -1,6 +1,6 @@
 {
   "name": "std-version-history",
-  "description": "std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares two revisions in `comparing` with intrinsic version-diff; persists rollback. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.",
+  "description": "std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares the opened revision with the newest in `comparing`; Rollback emits RevisionRolledBack { row } for the consumer to restore onto its source document. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.",
   "level": "atom",
   "topic": "ui/core",
   "schema": {
@@ -40,7 +40,7 @@
         ]
       }
     },
-    "description": "std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares two revisions in `comparing` with intrinsic version-diff; persists rollback. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.",
+    "description": "std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares the opened revision with the newest in `comparing`; Rollback emits RevisionRolledBack { row } for the consumer to restore onto its source document. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.",
     "ledger": {
       "entries": {
         "ent_01KXG04HV98PSNYWMGHCREKPA4": {
@@ -91,15 +91,6 @@
           "bakedName": "COMPARE",
           "curName": "COMPARE",
           "id": "evt_01KXG04HVBEZ06BVBH4XD7GTKS",
-          "kind": "event",
-          "owner": "workspace",
-          "parent": "trt_01KXG04HV9PK97EVFG9ZP3V3V4",
-          "renames": []
-        },
-        "evt_01KXG04HVBH229SNRGQZE7P45W": {
-          "bakedName": "RevisionRollbackFailed",
-          "curName": "RevisionRollbackFailed",
-          "id": "evt_01KXG04HVBH229SNRGQZE7P45W",
           "kind": "event",
           "owner": "workspace",
           "parent": "trt_01KXG04HV9PK97EVFG9ZP3V3V4",
@@ -213,7 +204,7 @@
               "type": "string"
             },
             {
-              "description": "The snapshotted body of the revision — plain text or the rich-text HTML a document-look record carries. Rollback hands the whole row back to the host, which restores content onto the source document.",
+              "description": "The snapshotted body of the revision — plain text or the rich-text HTML a document-look record carries. Rollback emits RevisionRolledBack { row }; the consumer restores row.content onto its source document.",
               "name": "content",
               "synonyms": "text, body, data, value",
               "type": "string"
@@ -243,6 +234,19 @@
               "name": "scopeKey",
               "synonyms": "scope, filter key, document scope",
               "type": "string"
+            },
+            {
+              "default": [],
+              "description": "The loaded revisions, newest first — what Compare diffs against.",
+              "intrinsic": true,
+              "name": "revisions",
+              "relation": {
+                "cardinality": "many",
+                "entity": "Revision",
+                "entityId": "ent_01KXG04HV98PSNYWMGHCREKPA4"
+              },
+              "synonyms": "versions, history",
+              "type": "relation"
             }
           ],
           "id": "ent_01KXG04HV98PSNYWMGHCREKPA4",
@@ -313,11 +317,11 @@
             },
             "effectRow": [
               {
-                "kind": "fetch",
-                "resource": "Revision"
+                "kind": "emit",
+                "resource": "RevisionRolledBack"
               },
               {
-                "kind": "persist",
+                "kind": "fetch",
                 "resource": "Revision"
               },
               {
@@ -351,6 +355,10 @@
               {
                 "kind": "set",
                 "resource": "@entity.id"
+              },
+              {
+                "kind": "set",
+                "resource": "@entity.revisions"
               },
               {
                 "kind": "set",
@@ -427,6 +435,10 @@
                       {
                         "name": "scopeKey",
                         "type": "string"
+                      },
+                      {
+                        "name": "revisions",
+                        "type": "[Revision]"
                       }
                     ],
                     "type": "object"
@@ -443,7 +455,7 @@
                 "tier": "domain"
               },
               {
-                "description": "Signals a request to compare two versions.",
+                "description": "Signals a request to compare the opened revision with the newest one.",
                 "event": "COMPARE",
                 "eventId": "evt_01KXG04HVBEZ06BVBH4XD7GTKS",
                 "payloadSchema": [
@@ -451,20 +463,19 @@
                     "name": "id",
                     "required": true,
                     "type": "string"
-                  },
-                  {
-                    "name": "beforeId",
-                    "required": true,
-                    "type": "string"
-                  },
-                  {
-                    "name": "afterId",
-                    "required": true,
-                    "type": "string"
-                  },
+                  }
+                ],
+                "synonyms": "compare, diff, contrast",
+                "tier": "presentation"
+              },
+              {
+                "description": "Requests a rollback to this revision.",
+                "event": "ROLLBACK",
+                "eventId": "evt_01KXG04HVB3W2EFBR9ZX8EZ233",
+                "payloadSchema": [
                   {
                     "entity": "Revision",
-                    "name": "revisions",
+                    "name": "row",
                     "properties": [
                       {
                         "name": "id",
@@ -513,23 +524,14 @@
                       {
                         "name": "scopeKey",
                         "type": "string"
+                      },
+                      {
+                        "name": "revisions",
+                        "type": "[Revision]"
                       }
                     ],
-                    "type": "[object]"
-                  }
-                ],
-                "synonyms": "compare, diff, contrast",
-                "tier": "presentation"
-              },
-              {
-                "description": "Indicates a revision has been successfully reverted.",
-                "event": "ROLLBACK",
-                "eventId": "evt_01KXG04HVB3W2EFBR9ZX8EZ233",
-                "payloadSchema": [
-                  {
-                    "name": "id",
                     "required": true,
-                    "type": "string"
+                    "type": "object"
                   }
                 ],
                 "synonyms": "reverted, undone, restored",
@@ -591,6 +593,10 @@
                       {
                         "name": "scopeKey",
                         "type": "string"
+                      },
+                      {
+                        "name": "revisions",
+                        "type": "[Revision]"
                       }
                     ],
                     "type": "[object]"
@@ -617,72 +623,74 @@
                 "tier": "internal"
               },
               {
-                "description": "Indicates a revision has been successfully restored to a previous state.",
+                "description": "The revision to roll back to; the consumer restores row.content onto its source document.",
                 "event": "RevisionRolledBack",
                 "eventId": "evt_01KXG04HVBATTVD4EEQ7M0KAJR",
-                "payloadEntity": "Revision",
                 "payloadSchema": [
                   {
-                    "name": "id",
+                    "entity": "Revision",
+                    "name": "row",
+                    "properties": [
+                      {
+                        "name": "id",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "name": "documentId",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "name": "documentType",
+                        "required": true,
+                        "type": "string"
+                      },
+                      {
+                        "name": "versionNumber",
+                        "required": true,
+                        "type": "number"
+                      },
+                      {
+                        "name": "authorId",
+                        "type": "string"
+                      },
+                      {
+                        "name": "authorName",
+                        "type": "string"
+                      },
+                      {
+                        "name": "content",
+                        "type": "string"
+                      },
+                      {
+                        "name": "summary",
+                        "type": "string"
+                      },
+                      {
+                        "name": "searchTerm",
+                        "type": "string"
+                      },
+                      {
+                        "name": "createdAt",
+                        "type": "string"
+                      },
+                      {
+                        "name": "scopeKey",
+                        "type": "string"
+                      },
+                      {
+                        "name": "revisions",
+                        "type": "[Revision]"
+                      }
+                    ],
                     "required": true,
-                    "type": "string"
-                  },
-                  {
-                    "name": "documentId",
-                    "required": true,
-                    "type": "string"
-                  },
-                  {
-                    "name": "documentType",
-                    "required": true,
-                    "type": "string"
-                  },
-                  {
-                    "name": "versionNumber",
-                    "required": true,
-                    "type": "number"
-                  },
-                  {
-                    "name": "authorId",
-                    "type": "string"
-                  },
-                  {
-                    "name": "authorName",
-                    "type": "string"
-                  },
-                  {
-                    "name": "content",
-                    "type": "string"
-                  },
-                  {
-                    "name": "summary",
-                    "type": "string"
-                  },
-                  {
-                    "name": "createdAt",
-                    "type": "string"
+                    "type": "object"
                   }
                 ],
-                "scope": "internal",
+                "scope": "external",
                 "synonyms": "restored, reverted, undone",
-                "tier": "presentation"
-              },
-              {
-                "description": "Indicates that a revision rollback operation was unsuccessful.",
-                "event": "RevisionRollbackFailed",
-                "eventId": "evt_01KXG04HVBH229SNRGQZE7P45W",
-                "payloadSchema": [
-                  {
-                    "name": "error",
-                    "type": "string"
-                  },
-                  {
-                    "name": "code",
-                    "type": "string"
-                  }
-                ],
-                "synonyms": "rollback failed, revert error, undo failure",
-                "tier": "internal"
+                "tier": "domain"
               }
             ],
             "entityContract": {
@@ -692,6 +700,7 @@
                 "content",
                 "documentId",
                 "documentType",
+                "revisions",
                 "scopeKey",
                 "summary",
                 "versionNumber"
@@ -780,6 +789,10 @@
                         {
                           "name": "scopeKey",
                           "type": "string"
+                        },
+                        {
+                          "name": "revisions",
+                          "type": "[Revision]"
                         }
                       ],
                       "type": "[object]"
@@ -787,75 +800,6 @@
                   ],
                   "synonyms": "loaded, fetched, retrieved, available",
                   "tier": "domain"
-                },
-                {
-                  "description": "Indicates a revision has been successfully restored to a previous state.",
-                  "id": "evt_01KXG04HVBATTVD4EEQ7M0KAJR",
-                  "key": "RevisionRolledBack",
-                  "name": "Revision rolled back",
-                  "payloadEntity": "Revision",
-                  "payloadSchema": [
-                    {
-                      "name": "id",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
-                      "name": "documentId",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
-                      "name": "documentType",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
-                      "name": "versionNumber",
-                      "required": true,
-                      "type": "number"
-                    },
-                    {
-                      "name": "authorId",
-                      "type": "string"
-                    },
-                    {
-                      "name": "authorName",
-                      "type": "string"
-                    },
-                    {
-                      "name": "content",
-                      "type": "string"
-                    },
-                    {
-                      "name": "summary",
-                      "type": "string"
-                    },
-                    {
-                      "name": "createdAt",
-                      "type": "string"
-                    }
-                  ],
-                  "synonyms": "restored, reverted, undone",
-                  "tier": "presentation"
-                },
-                {
-                  "description": "Indicates that a revision rollback operation was unsuccessful.",
-                  "id": "evt_01KXG04HVBH229SNRGQZE7P45W",
-                  "key": "RevisionRollbackFailed",
-                  "name": "Revision rollback failed",
-                  "payloadSchema": [
-                    {
-                      "name": "error",
-                      "type": "string"
-                    },
-                    {
-                      "name": "code",
-                      "type": "string"
-                    }
-                  ],
-                  "synonyms": "rollback failed, revert error, undo failure",
-                  "tier": "internal"
                 },
                 {
                   "description": "Indicates a failure to load revision data.",
@@ -952,6 +896,10 @@
                         {
                           "name": "scopeKey",
                           "type": "string"
+                        },
+                        {
+                          "name": "revisions",
+                          "type": "[Revision]"
                         }
                       ],
                       "type": "object"
@@ -961,52 +909,14 @@
                   "tier": "domain"
                 },
                 {
-                  "description": "Indicates a revision has been successfully reverted.",
+                  "description": "Requests a rollback to this revision.",
                   "id": "evt_01KXG04HVB3W2EFBR9ZX8EZ233",
                   "key": "ROLLBACK",
                   "name": "Rollback",
                   "payloadSchema": [
                     {
-                      "name": "id",
-                      "required": true,
-                      "type": "string"
-                    }
-                  ],
-                  "synonyms": "reverted, undone, restored",
-                  "tier": "domain"
-                },
-                {
-                  "description": "Indicates the view has been closed or dismissed.",
-                  "id": "evt_01KXG04HVBM6NSHVBM3KEDER8C",
-                  "key": "CLOSE_VIEW",
-                  "name": "Close View",
-                  "synonyms": "dismiss, hide, close",
-                  "tier": "domain"
-                },
-                {
-                  "description": "Signals a request to compare two versions.",
-                  "id": "evt_01KXG04HVBEZ06BVBH4XD7GTKS",
-                  "key": "COMPARE",
-                  "name": "Compare",
-                  "payloadSchema": [
-                    {
-                      "name": "id",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
-                      "name": "beforeId",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
-                      "name": "afterId",
-                      "required": true,
-                      "type": "string"
-                    },
-                    {
                       "entity": "Revision",
-                      "name": "revisions",
+                      "name": "row",
                       "properties": [
                         {
                           "name": "id",
@@ -1055,13 +965,111 @@
                         {
                           "name": "scopeKey",
                           "type": "string"
+                        },
+                        {
+                          "name": "revisions",
+                          "type": "[Revision]"
                         }
                       ],
-                      "type": "[object]"
+                      "required": true,
+                      "type": "object"
+                    }
+                  ],
+                  "synonyms": "reverted, undone, restored",
+                  "tier": "domain"
+                },
+                {
+                  "description": "Indicates the view has been closed or dismissed.",
+                  "id": "evt_01KXG04HVBM6NSHVBM3KEDER8C",
+                  "key": "CLOSE_VIEW",
+                  "name": "Close View",
+                  "synonyms": "dismiss, hide, close",
+                  "tier": "domain"
+                },
+                {
+                  "description": "Signals a request to compare the opened revision with the newest one.",
+                  "id": "evt_01KXG04HVBEZ06BVBH4XD7GTKS",
+                  "key": "COMPARE",
+                  "name": "Compare",
+                  "payloadSchema": [
+                    {
+                      "name": "id",
+                      "required": true,
+                      "type": "string"
                     }
                   ],
                   "synonyms": "compare, diff, contrast",
                   "tier": "presentation"
+                },
+                {
+                  "description": "The revision to roll back to; the consumer restores row.content onto its source document.",
+                  "id": "evt_01KXG04HVBATTVD4EEQ7M0KAJR",
+                  "key": "RevisionRolledBack",
+                  "name": "Revision rolled back",
+                  "payloadSchema": [
+                    {
+                      "entity": "Revision",
+                      "name": "row",
+                      "properties": [
+                        {
+                          "name": "id",
+                          "required": true,
+                          "type": "string"
+                        },
+                        {
+                          "name": "documentId",
+                          "required": true,
+                          "type": "string"
+                        },
+                        {
+                          "name": "documentType",
+                          "required": true,
+                          "type": "string"
+                        },
+                        {
+                          "name": "versionNumber",
+                          "required": true,
+                          "type": "number"
+                        },
+                        {
+                          "name": "authorId",
+                          "type": "string"
+                        },
+                        {
+                          "name": "authorName",
+                          "type": "string"
+                        },
+                        {
+                          "name": "content",
+                          "type": "string"
+                        },
+                        {
+                          "name": "summary",
+                          "type": "string"
+                        },
+                        {
+                          "name": "searchTerm",
+                          "type": "string"
+                        },
+                        {
+                          "name": "createdAt",
+                          "type": "string"
+                        },
+                        {
+                          "name": "scopeKey",
+                          "type": "string"
+                        },
+                        {
+                          "name": "revisions",
+                          "type": "[Revision]"
+                        }
+                      ],
+                      "required": true,
+                      "type": "object"
+                    }
+                  ],
+                  "synonyms": "restored, reverted, undone",
+                  "tier": "domain"
                 }
               ],
               "states": [
@@ -1161,6 +1169,16 @@
                 {
                   "effects": [
                     [
+                      "set",
+                      "@entity.revisions",
+                      [
+                        "array/sort",
+                        "@payload.data",
+                        "versionNumber",
+                        "desc"
+                      ]
+                    ],
+                    [
                       "render-ui",
                       "main",
                       {
@@ -1237,83 +1255,6 @@
                   "eventId": "evt_01KXG04HVBDSC5Z57AVTE0FN13",
                   "from": "loading",
                   "to": "browsing"
-                },
-                {
-                  "effects": [
-                    [
-                      "set",
-                      "@entity.scopeKey",
-                      [
-                        "object/get",
-                        "@payload",
-                        "",
-                        ""
-                      ]
-                    ],
-                    [
-                      "fetch",
-                      "Revision",
-                      {
-                        "emit": {
-                          "failure": "RevisionLoadFailed",
-                          "success": "RevisionLoaded"
-                        },
-                        "filter": [
-                          "or",
-                          [
-                            "=",
-                            "",
-                            ""
-                          ],
-                          [
-                            "=",
-                            [
-                              "object/get",
-                              "@payload",
-                              "",
-                              ""
-                            ],
-                            ""
-                          ],
-                          [
-                            "=",
-                            [
-                              "object/get",
-                              "@entity",
-                              ""
-                            ],
-                            [
-                              "object/get",
-                              "@payload",
-                              "",
-                              ""
-                            ]
-                          ]
-                        ]
-                      }
-                    ]
-                  ],
-                  "event": "RevisionRolledBack",
-                  "eventId": "evt_01KXG04HVBATTVD4EEQ7M0KAJR",
-                  "from": "loading",
-                  "to": "loading"
-                },
-                {
-                  "effects": [
-                    [
-                      "render-ui",
-                      "main",
-                      {
-                        "message": "@payload.error",
-                        "type": "alert",
-                        "variant": "error"
-                      }
-                    ]
-                  ],
-                  "event": "RevisionRollbackFailed",
-                  "eventId": "evt_01KXG04HVBH229SNRGQZE7P45W",
-                  "from": "loading",
-                  "to": "error"
                 },
                 {
                   "effects": [
@@ -1655,7 +1596,7 @@
                               {
                                 "action": "ROLLBACK",
                                 "actionPayload": {
-                                  "id": "@entity.id"
+                                  "row": "@entity"
                                 },
                                 "label": "Rollback",
                                 "type": "button",
@@ -1681,20 +1622,62 @@
                 {
                   "effects": [
                     [
-                      "set",
-                      "@entity.id",
-                      "@payload.id"
+                      "emit",
+                      "RevisionRolledBack",
+                      {
+                        "row": "@payload.row"
+                      }
                     ],
                     [
-                      "persist",
-                      "update",
+                      "set",
+                      "@entity.scopeKey",
+                      [
+                        "object/get",
+                        "@payload.row",
+                        "",
+                        ""
+                      ]
+                    ],
+                    [
+                      "fetch",
                       "Revision",
-                      "@entity",
                       {
                         "emit": {
-                          "failure": "RevisionRollbackFailed",
-                          "success": "RevisionRolledBack"
-                        }
+                          "failure": "RevisionLoadFailed",
+                          "success": "RevisionLoaded"
+                        },
+                        "filter": [
+                          "or",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ],
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              ""
+                            ],
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ]
+                          ]
+                        ]
                       }
                     ],
                     [
@@ -1788,7 +1771,29 @@
                         "emit": {
                           "failure": "RevisionLoadFailed",
                           "success": "RevisionLoaded"
-                        }
+                        },
+                        "filter": [
+                          "or",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          [
+                            "=",
+                            "@entity.scopeKey",
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              ""
+                            ],
+                            "@entity.scopeKey"
+                          ]
+                        ]
                       }
                     ],
                     [
@@ -1859,10 +1864,39 @@
                             "type": "divider"
                           },
                           {
-                            "afterId": "@payload.afterId",
-                            "beforeId": "@payload.beforeId",
-                            "onRevert": "ROLLBACK",
-                            "revisions": "@payload.revisions",
+                            "afterId": [
+                              "object/get",
+                              [
+                                "array/first",
+                                "@entity.revisions"
+                              ],
+                              "id",
+                              ""
+                            ],
+                            "beforeId": "@entity.id",
+                            "revisions": [
+                              "array/map",
+                              "@entity.revisions",
+                              [
+                                "fn",
+                                "r",
+                                {
+                                  "author": "@r.authorName",
+                                  "content": "@r.content",
+                                  "id": "@r.id",
+                                  "label": [
+                                    "str/concat",
+                                    "v",
+                                    [
+                                      "str/default",
+                                      "@r.versionNumber",
+                                      ""
+                                    ]
+                                  ],
+                                  "timestamp": "@r.createdAt"
+                                }
+                              ]
+                            ],
                             "type": "version-diff",
                             "view": "side-by-side"
                           },
@@ -1872,7 +1906,7 @@
                               {
                                 "action": "ROLLBACK",
                                 "actionPayload": {
-                                  "id": "@entity.id"
+                                  "row": "@entity"
                                 },
                                 "label": "Rollback",
                                 "type": "button",
@@ -1898,20 +1932,62 @@
                 {
                   "effects": [
                     [
-                      "set",
-                      "@entity.id",
-                      "@payload.id"
+                      "emit",
+                      "RevisionRolledBack",
+                      {
+                        "row": "@payload.row"
+                      }
                     ],
                     [
-                      "persist",
-                      "update",
+                      "set",
+                      "@entity.scopeKey",
+                      [
+                        "object/get",
+                        "@payload.row",
+                        "",
+                        ""
+                      ]
+                    ],
+                    [
+                      "fetch",
                       "Revision",
-                      "@entity",
                       {
                         "emit": {
-                          "failure": "RevisionRollbackFailed",
-                          "success": "RevisionRolledBack"
-                        }
+                          "failure": "RevisionLoadFailed",
+                          "success": "RevisionLoaded"
+                        },
+                        "filter": [
+                          "or",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ],
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              ""
+                            ],
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ]
+                          ]
+                        ]
                       }
                     ],
                     [
@@ -2005,7 +2081,29 @@
                         "emit": {
                           "failure": "RevisionLoadFailed",
                           "success": "RevisionLoaded"
-                        }
+                        },
+                        "filter": [
+                          "or",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          [
+                            "=",
+                            "@entity.scopeKey",
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              ""
+                            ],
+                            "@entity.scopeKey"
+                          ]
+                        ]
                       }
                     ],
                     [
@@ -2039,20 +2137,62 @@
                 {
                   "effects": [
                     [
-                      "set",
-                      "@entity.id",
-                      "@payload.id"
+                      "emit",
+                      "RevisionRolledBack",
+                      {
+                        "row": "@payload.row"
+                      }
                     ],
                     [
-                      "persist",
-                      "update",
+                      "set",
+                      "@entity.scopeKey",
+                      [
+                        "object/get",
+                        "@payload.row",
+                        "",
+                        ""
+                      ]
+                    ],
+                    [
+                      "fetch",
                       "Revision",
-                      "@entity",
                       {
                         "emit": {
-                          "failure": "RevisionRollbackFailed",
-                          "success": "RevisionRolledBack"
-                        }
+                          "failure": "RevisionLoadFailed",
+                          "success": "RevisionLoaded"
+                        },
+                        "filter": [
+                          "or",
+                          [
+                            "=",
+                            "",
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ],
+                            ""
+                          ],
+                          [
+                            "=",
+                            [
+                              "object/get",
+                              "@entity",
+                              ""
+                            ],
+                            [
+                              "object/get",
+                              "@payload.row",
+                              "",
+                              ""
+                            ]
+                          ]
+                        ]
                       }
                     ],
                     [
@@ -2248,5 +2388,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app std-version-history \"1.0.0\"\n\"std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares two revisions in `comparing` with intrinsic version-diff; persists rollback. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.\"\norbital RevisionOrbital {\n    type RevisionLoaded = Event { data : [Revision] } \"Fired when the revision collection finishes loading\"\n\n    type RevisionLoadFailed = Event { error : string, code : string } \"Fired when the revision collection fails to load\"\n\n    type RevisionRolledBack = Event Revision \"Fired after a rollback persists successfully on the source document\"\n\n    type RevisionRollbackFailed = Event { error : string, code : string } \"Fired when a rollback fails to persist\"\n\n  entity Revision [persistent: revisions] {\n    id : string!\n    documentId : string! @description \"Unique identifier for the associated document.\" @synonyms \"reference, identifier, source\"\n    documentType : string! @description \"Specifies the kind of document this revision belongs to.\" @synonyms \"type, kind, category\"\n    versionNumber : number! @description \"A sequential identifier representing the revision's order.\" @synonyms \"sequence, order, iteration\"\n    authorId : string @description \"Unique identifier for the user who made the change.\" @synonyms \"user identifier, creator, contributor\"\n    authorName : string @description \"The name of the user who made the change.\" @synonyms \"user, contributor, owner\"\n    content : string @description \"The snapshotted body of the revision — plain text or the rich-text HTML a document-look record carries. Rollback hands the whole row back to the host, which restores content onto the source document.\" @synonyms \"text, body, data, value\"\n    summary : string @description \"A brief explanation of the revision's changes.\" @synonyms \"description, note, comment, explanation\"\n    searchTerm : string @intrinsic @description \"The current search query the user submitted.\" @synonyms \"query, term, q\" = \"\"\n    createdAt : string\n    scopeKey : string @intrinsic @description \"The parent document id the feed is currently scoped to, set by SHOW_HISTORY. Empty when browsing the unfiltered global feed.\" @synonyms \"scope, filter key, document scope\" = \"\"\n  }\n\n  trait RevisionManage -> @rebindable Revision [interaction, collection] {\n    initial: loading\n\n    state loading {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      RevisionLoaded -> browsing\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{ name: history, size: lg, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, {\n            cols: 1\n            entity: ?data\n            fields: [{\n              label: Version\n              name: versionNumber\n              variant: badge\n            }, {\n              label: Author\n              name: authorName\n              variant: caption\n            }, {\n              label: Summary\n              name: summary\n              variant: caption\n            }, {\n              label: Saved\n              name: createdAt\n              variant: caption\n            }]\n            gap: sm\n            itemActions: [{\n              event: OPEN_REVISION\n              icon: arrow-right\n              label: Open\n              variant: ghost\n            }, {\n              event: ROLLBACK\n              icon: rotate-ccw\n              label: Rollback\n              variant: danger\n            }]\n            look: @config.tableLook\n            type: data-grid\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      RevisionRolledBack -> loading\n        (set @entity.scopeKey (object/get @payload @config.scopeField \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (object/get @payload @config.scopeField \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), (object/get @payload @config.scopeField \"\")])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n      RevisionRollbackFailed -> error\n        (render-ui main {\n          message: ?error\n          type: alert\n          variant: error\n        })\n      RevisionLoadFailed -> error\n        (render-ui main {\n          message: ?error\n          type: alert\n          variant: error\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state browsing {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      OPEN_REVISION -> viewing_single\n        (set @entity.id ?row.id)\n        (set @entity.documentId ?row.documentId)\n        (set @entity.documentType ?row.documentType)\n        (set @entity.versionNumber ?row.versionNumber)\n        (set @entity.authorId ?row.authorId)\n        (set @entity.authorName ?row.authorName)\n        (set @entity.content ?row.content)\n        (set @entity.summary ?row.summary)\n        (set @entity.createdAt ?row.createdAt)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              action: CLOSE_VIEW\n              label: Back\n              type: button\n              variant: ghost\n            }, { name: file-text, size: lg, type: icon }, {\n              content: @entity.summary\n              type: typography\n              variant: h3\n            }, {\n              label: @entity.versionNumber\n              type: badge\n              variant: default\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            children: [{\n              children: [{\n                color: muted\n                content: Author\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.authorName\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, {\n              children: [{\n                color: muted\n                content: Saved\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.createdAt\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, {\n              children: [{\n                color: muted\n                content: Content\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.content\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }]\n            direction: vertical\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            children: [{\n              icon: tag\n              label: Version\n              look: @config.statLook\n              type: stat-display\n              value: @entity.versionNumber\n            }, {\n              icon: file\n              label: Document\n              look: @config.statLook\n              type: stat-display\n              ;; The captured title, never the raw foreign id — also keeps this\n              ;; binding scalar when a consumer retypes documentId as a relation.\n              value: (str/default @entity.summary \"\")\n            }, {\n              icon: layers\n              label: Type\n              look: @config.statLook\n              type: stat-display\n              value: @entity.documentType\n            }]\n            cols: 3\n            type: simple-grid\n          }, {\n            align: center\n            children: [{\n              action: COMPARE\n              actionPayload: { id: @entity.id }\n              label: Compare\n              type: button\n              variant: secondary\n            }, {\n              action: ROLLBACK\n              actionPayload: { id: @entity.id }\n              label: Rollback\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (set @entity.id ?id)\n        (persist update Revision @entity {\n          emit: { failure: RevisionRollbackFailed, success: RevisionRolledBack }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state viewing_single {\n      CLOSE_VIEW -> loading\n        (fetch Revision {\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      COMPARE -> comparing\n        (set @entity.id ?id)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              action: CLOSE_VIEW\n              label: Back\n              type: button\n              variant: ghost\n            }, { name: git-compare, size: lg, type: icon }, {\n              content: \"Compare versions\"\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            afterId: ?afterId\n            beforeId: ?beforeId\n            onRevert: ROLLBACK\n            revisions: ?revisions\n            type: version-diff\n            view: side-by-side\n          }, {\n            align: center\n            children: [{\n              action: ROLLBACK\n              actionPayload: { id: @entity.id }\n              label: Rollback\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (set @entity.id ?id)\n        (persist update Revision @entity {\n          emit: { failure: RevisionRollbackFailed, success: RevisionRolledBack }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state comparing {\n      CLOSE_VIEW -> loading\n        (fetch Revision {\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (set @entity.id ?id)\n        (persist update Revision @entity {\n          emit: { failure: RevisionRollbackFailed, success: RevisionRolledBack }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state error {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main { size: sm, type: spinner })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main { size: sm, type: spinner })\n    }\n\n    emits {\n      OPEN_REVISION {\n        id : string!\n        row : Revision\n      }\n        @description \"Signals a revision has been selected for viewing.\"\n        @synonyms \"select, choose, display\"\n        @tier \"domain\"\n      CLOSE_VIEW\n        @description \"Indicates the view has been closed or dismissed.\"\n        @synonyms \"dismiss, hide, close\"\n        @tier \"domain\"\n      COMPARE {\n        id : string!\n        beforeId : string!\n        afterId : string!\n        revisions : [Revision]\n      }\n        @description \"Signals a request to compare two versions.\"\n        @synonyms \"compare, diff, contrast\"\n        @tier \"presentation\"\n      ROLLBACK {\n        id : string!\n      }\n        @description \"Indicates a revision has been successfully reverted.\"\n        @synonyms \"reverted, undone, restored\"\n        @tier \"domain\"\n      RevisionLoaded {\n        data : [Revision]\n      }\n        @description \"Signals a revision has been successfully retrieved and is ready.\"\n        @synonyms \"loaded, fetched, retrieved, available\"\n        @tier \"domain\"\n      RevisionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load revision data.\"\n        @synonyms \"error, fail, problem, unsuccessful\"\n        @tier \"internal\"\n      RevisionRolledBack\n        @description \"Indicates a revision has been successfully restored to a previous state.\"\n        @synonyms \"restored, reverted, undone\"\n        @tier \"presentation\"\n      RevisionRollbackFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates that a revision rollback operation was unsuccessful.\"\n        @synonyms \"rollback failed, revert error, undo failure\"\n        @tier \"internal\"\n    }\n\n    listens {\n      INIT {\n        id : string\n      }\n        @description \"Optional route param delivered on mount (e.g. an :id page segment); scopes INIT's own fetch to rows whose scopeField equals id. Absent id or empty scopeField config keeps the unfiltered global feed.\"\n        @synonyms \"route id, deep link, initial scope\"\n        @tier \"domain\"\n      OPEN_REVISION {\n        id : string!\n        row : Revision\n      }\n        @description \"A revision has been selected for viewing.\"\n        @synonyms \"select, choose, load\"\n        @tier \"domain\"\n      CLOSE_VIEW\n        @description \"Indicates the revision history view has been closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      COMPARE {\n        id : string!\n        beforeId : string!\n        afterId : string!\n        revisions : [Revision]\n      }\n        @description \"Indicates a request to compare two versions.\"\n        @synonyms \"diff, compare, contrast\"\n        @tier \"presentation\"\n      ROLLBACK {\n        id : string!\n      }\n        @description \"A revision has been successfully reverted to a previous state.\"\n        @synonyms \"reverted, undone, restored\"\n        @tier \"domain\"\n      RevisionLoaded {\n        data : [Revision]\n      }\n        @description \"Indicates a revision has been successfully retrieved and is ready.\"\n        @synonyms \"loaded, fetched, retrieved, available\"\n        @tier \"domain\"\n      RevisionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to retrieve revision data.\"\n        @synonyms \"error, failure, problem, fetch failed\"\n        @tier \"internal\"\n      RevisionRolledBack\n        @description \"Indicates a revision has been successfully reverted.\"\n        @synonyms \"reverted, undone, restored\"\n        @tier \"internal\"\n      RevisionRollbackFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates that a revision rollback operation has failed.\"\n        @synonyms \"rollback error, revert failure, undo failed\"\n        @tier \"internal\"\n      SHOW_HISTORY {\n        key : string!\n      }\n        @description \"Requests the revision feed scoped to one parent document; stores the key and refetches filtered by config.scopeField.\"\n        @synonyms \"view history, doc history, filter revisions\"\n        @tier \"domain\"\n    }\n\n    config {\n      title : string = \"Version History\"\n        @label \"Section title\"\n        @description \"Heading shown above the revision list\"\n        @tier \"presentation\"\n      tableLook : \"dense\" | \"spacious\" | \"striped\" | \"borderless\" | \"card-rows\" = dense\n        @label \"Table look\"\n        @description \"Layer 2 visual treatment for the data table rendered by this atom.\"\n        @tier \"presentation\"\n      statLook : \"elevated\" | \"flat\" | \"progress-backed\" | \"gauge\" | \"sparkline\" = elevated\n        @label \"Stat display look\"\n        @description \"Layer 2 visual treatment for stat / KPI cards.\"\n        @tier \"presentation\"\n      scopeField : string = \"\"\n        @label \"Scope field\"\n        @description \"Revision entity field holding the parent document's id. When set, a page-mounted {id} route param scopes INIT's fetch, and a SHOW_HISTORY { key } event rescopes the feed, to rows whose scopeField equals the id/key; rollback and retry refetches stay scoped too. Empty (default) or no id = unfiltered global feed, unchanged from prior behavior.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/revisions/manage\" as RevisionManagePage -> RevisionManage\n}"
+  "lolo": "app std-version-history \"1.0.0\"\n\"std-version-history — wiki/CMS revision history with diff + rollback. Browses revisions; opens detail in `viewing_single`; compares the opened revision with the newest in `comparing`; Rollback emits RevisionRolledBack { row } for the consumer to restore onto its source document. `RevisionManage` is a rebindable single-entity trait: a consumer rebinds it to its own entity via `linkedEntity`. `config.scopeField` names the Revision field holding the parent document id; a page-mounted `{id}` route param scopes INIT's own fetch, and a consumer forwards SHOW_HISTORY { key } (via a `listens` override) to rescope the feed to one document — empty scopeField (default) or no id keeps today's unfiltered global feed. Rollback and retry refetches stay scoped.\"\norbital RevisionOrbital {\n    type RevisionLoaded = Event { data : [Revision] } \"Fired when the revision collection finishes loading\"\n\n    type RevisionLoadFailed = Event { error : string, code : string } \"Fired when the revision collection fails to load\"\n\n    type RevisionRolledBack = Event { row : Revision! } \"The revision to roll back to: the consumer restores row.content onto its source document (listen for it)\"\n\n  entity Revision [persistent: revisions] {\n    id : string!\n    documentId : string! @description \"Unique identifier for the associated document.\" @synonyms \"reference, identifier, source\"\n    documentType : string! @description \"Specifies the kind of document this revision belongs to.\" @synonyms \"type, kind, category\"\n    versionNumber : number! @description \"A sequential identifier representing the revision's order.\" @synonyms \"sequence, order, iteration\"\n    authorId : string @description \"Unique identifier for the user who made the change.\" @synonyms \"user identifier, creator, contributor\"\n    authorName : string @description \"The name of the user who made the change.\" @synonyms \"user, contributor, owner\"\n    content : string @description \"The snapshotted body of the revision — plain text or the rich-text HTML a document-look record carries. Rollback emits RevisionRolledBack { row }; the consumer restores row.content onto its source document.\" @synonyms \"text, body, data, value\"\n    summary : string @description \"A brief explanation of the revision's changes.\" @synonyms \"description, note, comment, explanation\"\n    searchTerm : string @intrinsic @description \"The current search query the user submitted.\" @synonyms \"query, term, q\" = \"\"\n    createdAt : string\n    scopeKey : string @intrinsic @description \"The parent document id the feed is currently scoped to, set by SHOW_HISTORY. Empty when browsing the unfiltered global feed.\" @synonyms \"scope, filter key, document scope\" = \"\"\n    revisions : [Revision] @intrinsic @description \"The loaded revisions, newest first — what Compare diffs against.\" @synonyms \"versions, history\" = []\n  }\n\n  trait RevisionManage -> @rebindable Revision [interaction, collection] {\n    initial: loading\n\n    state loading {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      RevisionLoaded -> browsing\n        (set @entity.revisions (array/sort ?data \"versionNumber\" \"desc\"))\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{ name: history, size: lg, type: icon }, {\n              content: @config.title\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, {\n            cols: 1\n            entity: ?data\n            fields: [{\n              label: Version\n              name: versionNumber\n              variant: badge\n            }, {\n              label: Author\n              name: authorName\n              variant: caption\n            }, {\n              label: Summary\n              name: summary\n              variant: caption\n            }, {\n              label: Saved\n              name: createdAt\n              variant: caption\n            }]\n            gap: sm\n            itemActions: [{\n              event: OPEN_REVISION\n              icon: arrow-right\n              label: Open\n              variant: ghost\n            }, {\n              event: ROLLBACK\n              icon: rotate-ccw\n              label: Rollback\n              variant: danger\n            }]\n            look: @config.tableLook\n            type: data-grid\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      RevisionLoadFailed -> error\n        (render-ui main {\n          message: ?error\n          type: alert\n          variant: error\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state browsing {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      OPEN_REVISION -> viewing_single\n        (set @entity.id ?row.id)\n        (set @entity.documentId ?row.documentId)\n        (set @entity.documentType ?row.documentType)\n        (set @entity.versionNumber ?row.versionNumber)\n        (set @entity.authorId ?row.authorId)\n        (set @entity.authorName ?row.authorName)\n        (set @entity.content ?row.content)\n        (set @entity.summary ?row.summary)\n        (set @entity.createdAt ?row.createdAt)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              action: CLOSE_VIEW\n              label: Back\n              type: button\n              variant: ghost\n            }, { name: file-text, size: lg, type: icon }, {\n              content: @entity.summary\n              type: typography\n              variant: h3\n            }, {\n              label: @entity.versionNumber\n              type: badge\n              variant: default\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            children: [{\n              children: [{\n                color: muted\n                content: Author\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.authorName\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, {\n              children: [{\n                color: muted\n                content: Saved\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.createdAt\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, {\n              children: [{\n                color: muted\n                content: Content\n                type: typography\n                variant: caption\n              }, {\n                content: @entity.content\n                type: typography\n                variant: body\n              }]\n              direction: horizontal\n              gap: md\n              type: stack\n            }]\n            direction: vertical\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            children: [{\n              icon: tag\n              label: Version\n              look: @config.statLook\n              type: stat-display\n              value: @entity.versionNumber\n            }, {\n              icon: file\n              label: Document\n              look: @config.statLook\n              type: stat-display\n              ;; The captured title, never the raw foreign id — also keeps this\n              ;; binding scalar when a consumer retypes documentId as a relation.\n              value: (str/default @entity.summary \"\")\n            }, {\n              icon: layers\n              label: Type\n              look: @config.statLook\n              type: stat-display\n              value: @entity.documentType\n            }]\n            cols: 3\n            type: simple-grid\n          }, {\n            align: center\n            children: [{\n              action: COMPARE\n              actionPayload: { id: @entity.id }\n              label: Compare\n              type: button\n              variant: secondary\n            }, {\n              action: ROLLBACK\n              actionPayload: { row: @entity }\n              label: Rollback\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (emit RevisionRolledBack { row: ?row })\n        (set @entity.scopeKey (object/get ?row @config.scopeField \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (object/get ?row @config.scopeField \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), (object/get ?row @config.scopeField \"\")])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state viewing_single {\n      CLOSE_VIEW -> loading\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", @entity.scopeKey, \"\"] [\"=\", (object/get @entity @config.scopeField), @entity.scopeKey])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      COMPARE -> comparing\n        (set @entity.id ?id)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              action: CLOSE_VIEW\n              label: Back\n              type: button\n              variant: ghost\n            }, { name: git-compare, size: lg, type: icon }, {\n              content: \"Compare versions\"\n              type: typography\n              variant: h3\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }, { type: divider }, {\n            afterId: (object/get (array/first @entity.revisions) \"id\" \"\")\n            beforeId: @entity.id\n            revisions: (array/map @entity.revisions (fn r { id: @r.id, label: (str/concat \"v\" (str/default @r.versionNumber \"\")), author: @r.authorName, timestamp: @r.createdAt, content: @r.content }))\n            type: version-diff\n            view: side-by-side\n          }, {\n            align: center\n            children: [{\n              action: ROLLBACK\n              actionPayload: { row: @entity }\n              label: Rollback\n              type: button\n              variant: danger\n            }]\n            direction: horizontal\n            gap: sm\n            type: stack\n          }]\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (emit RevisionRolledBack { row: ?row })\n        (set @entity.scopeKey (object/get ?row @config.scopeField \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (object/get ?row @config.scopeField \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), (object/get ?row @config.scopeField \"\")])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state comparing {\n      CLOSE_VIEW -> loading\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", @entity.scopeKey, \"\"] [\"=\", (object/get @entity @config.scopeField), @entity.scopeKey])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      ROLLBACK -> loading\n        (emit RevisionRolledBack { row: ?row })\n        (set @entity.scopeKey (object/get ?row @config.scopeField \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (object/get ?row @config.scopeField \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), (object/get ?row @config.scopeField \"\")])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Rolling back…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main {\n          align: center\n          children: [{ type: spinner }, {\n            color: muted\n            content: \"Loading version history…\"\n            type: typography\n            variant: caption\n          }]\n          className: py-12\n          direction: vertical\n          gap: md\n          type: stack\n        })\n    }\n\n    state error {\n      INIT -> loading\n        (set @entity.scopeKey (str/default ?id \"\"))\n        (fetch Revision {\n          filter: (or [\"=\", @config.scopeField, \"\"] [\"=\", (str/default ?id \"\"), \"\"] [\"=\", (object/get @entity @config.scopeField), ?id])\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main { size: sm, type: spinner })\n      SHOW_HISTORY -> loading\n        (set @entity.scopeKey ?key)\n        (fetch Revision {\n          filter: [\"=\", (object/get @entity @config.scopeField), ?key]\n          emit: { failure: RevisionLoadFailed, success: RevisionLoaded }\n        })\n        (render-ui main { size: sm, type: spinner })\n    }\n\n    emits {\n      OPEN_REVISION {\n        id : string!\n        row : Revision\n      }\n        @description \"Signals a revision has been selected for viewing.\"\n        @synonyms \"select, choose, display\"\n        @tier \"domain\"\n      CLOSE_VIEW\n        @description \"Indicates the view has been closed or dismissed.\"\n        @synonyms \"dismiss, hide, close\"\n        @tier \"domain\"\n      COMPARE {\n        id : string!\n      }\n        @description \"Signals a request to compare the opened revision with the newest one.\"\n        @synonyms \"compare, diff, contrast\"\n        @tier \"presentation\"\n      ROLLBACK {\n        row : Revision!\n      }\n        @description \"Requests a rollback to this revision.\"\n        @synonyms \"reverted, undone, restored\"\n        @tier \"domain\"\n      RevisionLoaded {\n        data : [Revision]\n      }\n        @description \"Signals a revision has been successfully retrieved and is ready.\"\n        @synonyms \"loaded, fetched, retrieved, available\"\n        @tier \"domain\"\n      RevisionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to load revision data.\"\n        @synonyms \"error, fail, problem, unsuccessful\"\n        @tier \"internal\"\n      RevisionRolledBack -> external {\n        row : Revision!\n      }\n        @description \"The revision to roll back to; the consumer restores row.content onto its source document.\"\n        @synonyms \"restored, reverted, undone\"\n        @tier \"domain\"\n    }\n\n    listens {\n      INIT {\n        id : string\n      }\n        @description \"Optional route param delivered on mount (e.g. an :id page segment); scopes INIT's own fetch to rows whose scopeField equals id. Absent id or empty scopeField config keeps the unfiltered global feed.\"\n        @synonyms \"route id, deep link, initial scope\"\n        @tier \"domain\"\n      OPEN_REVISION {\n        id : string!\n        row : Revision\n      }\n        @description \"A revision has been selected for viewing.\"\n        @synonyms \"select, choose, load\"\n        @tier \"domain\"\n      CLOSE_VIEW\n        @description \"Indicates the revision history view has been closed.\"\n        @synonyms \"dismiss, hide, cancel\"\n        @tier \"domain\"\n      COMPARE {\n        id : string!\n      }\n        @description \"Indicates a request to compare the opened revision with the newest one.\"\n        @synonyms \"diff, compare, contrast\"\n        @tier \"presentation\"\n      ROLLBACK {\n        row : Revision!\n      }\n        @description \"A rollback to this revision was requested.\"\n        @synonyms \"reverted, undone, restored\"\n        @tier \"domain\"\n      RevisionLoaded {\n        data : [Revision]\n      }\n        @description \"Indicates a revision has been successfully retrieved and is ready.\"\n        @synonyms \"loaded, fetched, retrieved, available\"\n        @tier \"domain\"\n      RevisionLoadFailed {\n        error : string\n        code : string\n      }\n        @description \"Indicates a failure to retrieve revision data.\"\n        @synonyms \"error, failure, problem, fetch failed\"\n        @tier \"internal\"\n      SHOW_HISTORY {\n        key : string!\n      }\n        @description \"Requests the revision feed scoped to one parent document; stores the key and refetches filtered by config.scopeField.\"\n        @synonyms \"view history, doc history, filter revisions\"\n        @tier \"domain\"\n    }\n\n    config {\n      title : string = \"Version History\"\n        @label \"Section title\"\n        @description \"Heading shown above the revision list\"\n        @tier \"presentation\"\n      tableLook : \"dense\" | \"spacious\" | \"striped\" | \"borderless\" | \"card-rows\" = dense\n        @label \"Table look\"\n        @description \"Layer 2 visual treatment for the data table rendered by this atom.\"\n        @tier \"presentation\"\n      statLook : \"elevated\" | \"flat\" | \"progress-backed\" | \"gauge\" | \"sparkline\" = elevated\n        @label \"Stat display look\"\n        @description \"Layer 2 visual treatment for stat / KPI cards.\"\n        @tier \"presentation\"\n      scopeField : string = \"\"\n        @label \"Scope field\"\n        @description \"Revision entity field holding the parent document's id. When set, a page-mounted {id} route param scopes INIT's fetch, and a SHOW_HISTORY { key } event rescopes the feed, to rows whose scopeField equals the id/key; rollback and retry refetches stay scoped too. Empty (default) or no id = unfiltered global feed, unchanged from prior behavior.\"\n        @tier \"domain\"\n    }\n  }\n\n  page \"/revisions/manage\" as RevisionManagePage -> RevisionManage\n}"
 }
