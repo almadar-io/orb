@@ -44,16 +44,16 @@ A user clicks a button. That click emits an event onto the event bus. The state 
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
-  states={[
-    {name: 'browsing', isInitial: true},
-    {name: 'creating'},
-  ]}
-  transitions={[
-    {from: 'browsing', to: 'creating', event: 'CREATE', effects: ['render-ui']},
-    {from: 'creating', to: 'browsing', event: 'SAVE', effects: ['persist', 'render-ui']},
-    {from: 'creating', to: 'browsing', event: 'CANCEL', effects: ['render-ui']}
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'browsing', 'isInitial': true, 'isTerminal': false},
+      {'name': 'creating', 'isInitial': false, 'isTerminal': false},
+    ],
+    transitions: [
+    ],
+  }}
 />
 </div>
 

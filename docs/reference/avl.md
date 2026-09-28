@@ -48,10 +48,6 @@ The data nucleus. The stroke style tells you how data is stored:
 <svg viewBox="0 0 120 120" width="120" height="120"><AvlEntity x={60} y={60} r={24} fieldCount={3} persistence="runtime" /></svg>
 <div style={{fontSize: 12, marginTop: 4}}>Runtime (dashed)</div>
 </div>
-<div style={{textAlign: 'center'}}>
-<svg viewBox="0 0 120 120" width="120" height="120"><AvlEntity x={60} y={60} r={24} fieldCount={2} persistence="singleton" /></svg>
-<div style={{fontSize: 12, marginTop: 4}}>Singleton (double)</div>
-</div>
 </div>
 
 ### Orbital, Trait, Page
@@ -81,20 +77,23 @@ States are rounded rectangles arranged in a ring. Transitions are arrows between
 
 <div style={{maxWidth: 500, margin: '2rem auto'}}>
 <AvlStateMachine
-  states={[
-    { name: "idle", isInitial: true },
-    { name: "loading" },
-    { name: "success" },
-    { name: "error" },
-  ]}
-  transitions={[
-    { from: "idle", to: "loading", event: "FETCH" },
-    { from: "loading", to: "success", event: "DONE", effects: ["render-ui"] },
-    { from: "loading", to: "error", event: "FAIL", effects: ["notify"] },
-    { from: "error", to: "idle", event: "RETRY" },
-    { from: "success", to: "idle", event: "RESET" },
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'idle', 'isInitial': true, 'isTerminal': false},
+      {'name': 'loading', 'isInitial': false, 'isTerminal': false},
+      {'name': 'success', 'isInitial': false, 'isTerminal': false},
+      {'name': 'error', 'isInitial': false, 'isTerminal': false},
+    ],
+    transitions: [
+      {'from': 'idle', 'to': 'loading', 'event': 'FETCH', 'guard': null, 'effects': [], 'index': 0},
+      {'from': 'loading', 'to': 'success', 'event': 'DONE', 'guard': null, 'effects': [{'type': 'render-ui', 'args': []}], 'index': 1},
+      {'from': 'loading', 'to': 'error', 'event': 'FAIL', 'guard': null, 'effects': [{'type': 'notify', 'args': []}], 'index': 2},
+      {'from': 'error', 'to': 'idle', 'event': 'RETRY', 'guard': null, 'effects': [], 'index': 3},
+      {'from': 'success', 'to': 'idle', 'event': 'RESET', 'guard': null, 'effects': [], 'index': 4},
+    ],
+  }}
 />
 </div>
 
@@ -238,12 +237,11 @@ Pages have named regions where traits render their UI. The slot map shows which 
 
 ---
 
-## Operator Namespace Colors
+## Operator Category Colors
 
-S-expression operators are color-coded by namespace:
+Every S-expression operator is tinted by its **operator category** from the standard library (`arithmetic`, `comparison`, `logic`, `control`, `std-str`, `std-array`, `std-time`, `std-async`, …: every category the registry declares). Colors come from the active theme's tokens, so a diagram repaints with the theme instead of using fixed hex values.
 
-| Namespace | Color | Example |
-|-----------|-------|---------|
+-----------|-------|---------|
 | arithmetic | Blue `#4A90D9` | `+`, `-`, `*`, `/` |
 | comparison | Orange `#E8913A` | `gt`, `lt`, `eq`, `neq` |
 | logic | Purple `#9B59B6` | `and`, `or`, `not` |
@@ -287,11 +285,11 @@ The AVL Cosmic Zoom lets you explore an entire application interactively. Click 
 
 ## How to Read AVL Diagrams
 
-1. **Find the Entity nucleus** at the center. The stroke style tells you the persistence kind (solid = persistent, dashed = runtime, double = singleton).
+1. **Find the Entity nucleus** at the center. The stroke style tells you the persistence kind (solid = persistent, dashed = runtime).
 2. **Count the radiating lines** to see how many fields the entity has.
 3. **Follow the elliptical orbits** to identify traits (state machines).
 4. **Look for square markers** on the orbital boundary for pages (routes).
 5. **Inside each trait**, states form a layout with transition arrows between them.
 6. **Transition labels** show: event name (bold), effect icons (below).
 7. **Dashed arrows** between orbitals show cross-orbital event flow (emit/listen).
-8. **Color coding**: operator namespace colors follow the table above.
+8. **Color coding**: operators are tinted by their standard-library category, in the active theme's colors.

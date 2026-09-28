@@ -59,21 +59,24 @@ The `TaskLifecycle` trait tracks where a task is in its workflow: `todo → inPr
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
-  states={[
-    { name: 'todo', isInitial: true },
-    { name: 'inProgress' },
-    { name: 'review' },
-    { name: 'done', isTerminal: true }
-  ]}
-  transitions={[
-    { from: 'todo', to: 'todo', event: 'INIT' },
-    { from: 'todo', to: 'inProgress', event: 'START' },
-    { from: 'inProgress', to: 'review', event: 'SUBMIT_FOR_REVIEW' },
-    { from: 'review', to: 'done', event: 'APPROVE' },
-    { from: 'review', to: 'inProgress', event: 'REJECT' },
-    { from: 'inProgress', to: 'done', event: 'COMPLETE' }
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'todo', 'isInitial': true, 'isTerminal': false},
+      {'name': 'inProgress', 'isInitial': false, 'isTerminal': false},
+      {'name': 'review', 'isInitial': false, 'isTerminal': false},
+      {'name': 'done', 'isInitial': false, 'isTerminal': true},
+    ],
+    transitions: [
+      {'from': 'todo', 'to': 'todo', 'event': 'INIT', 'guard': null, 'effects': [], 'index': 0},
+      {'from': 'todo', 'to': 'inProgress', 'event': 'START', 'guard': null, 'effects': [], 'index': 1},
+      {'from': 'inProgress', 'to': 'review', 'event': 'SUBMIT_FOR_REVIEW', 'guard': null, 'effects': [], 'index': 2},
+      {'from': 'review', 'to': 'done', 'event': 'APPROVE', 'guard': null, 'effects': [], 'index': 3},
+      {'from': 'review', 'to': 'inProgress', 'event': 'REJECT', 'guard': null, 'effects': [], 'index': 4},
+      {'from': 'inProgress', 'to': 'done', 'event': 'COMPLETE', 'guard': null, 'effects': [], 'index': 5},
+    ],
+  }}
 />
 </div>
 

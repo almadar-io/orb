@@ -66,15 +66,18 @@ Every state machine needs at least one initial state, declared with `initial:`. 
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
-  states={[
-    { name: 'Pending', isInitial: true },
-    { name: 'Done', isTerminal: true }
-  ]}
-  transitions={[
-    { from: 'Pending', to: 'Pending', event: 'INIT' },
-    { from: 'Pending', to: 'Done', event: 'COMPLETE' }
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'Pending', 'isInitial': true, 'isTerminal': false},
+      {'name': 'Done', 'isInitial': false, 'isTerminal': true},
+    ],
+    transitions: [
+      {'from': 'Pending', 'to': 'Pending', 'event': 'INIT', 'guard': null, 'effects': [], 'index': 0},
+      {'from': 'Pending', 'to': 'Done', 'event': 'COMPLETE', 'guard': null, 'effects': [], 'index': 1},
+    ],
+  }}
 />
 </div>
 

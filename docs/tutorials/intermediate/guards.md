@@ -8,16 +8,19 @@ Guards are conditions that must be true for a transition to fire. They act as th
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
-  states={[
-    { name: 'active', isInitial: true },
-    { name: 'frozen' }
-  ]}
-  transitions={[
-    { from: 'active', to: 'active', event: 'WITHDRAW', guard: 'balance >= amount AND isVerified' },
-    { from: 'active', to: 'frozen', event: 'FREEZE' },
-    { from: 'frozen', to: 'active', event: 'UNFREEZE' }
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'active', 'isInitial': true, 'isTerminal': false},
+      {'name': 'frozen', 'isInitial': false, 'isTerminal': false},
+    ],
+    transitions: [
+      {'from': 'active', 'to': 'active', 'event': 'WITHDRAW', 'guard': ['and', ['>=', '@entity.balance', '@payload.amount'], '@entity.isVerified'], 'effects': [], 'index': 0},
+      {'from': 'active', 'to': 'frozen', 'event': 'FREEZE', 'guard': null, 'effects': [], 'index': 1},
+      {'from': 'frozen', 'to': 'active', 'event': 'UNFREEZE', 'guard': null, 'effects': [], 'index': 2},
+    ],
+  }}
 />
 </div>
 

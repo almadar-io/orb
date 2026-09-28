@@ -19,8 +19,6 @@ AVL هي التدوين المرئي الرسمي لبرامج Orb. كل ذرة 
 |-------------|----------|
 | `persistent` (مستمر) | خط متصل، سمك 2.5 |
 | `runtime` (وقت التشغيل) | متقطع: `6 3` |
-| `singleton` (مفرد) | حد مزدوج، سمك 3.5 |
-| `instance` (نسخة) | تقطيع دقيق: `2 3` |
 
 ### المدار (Orbital)
 
@@ -141,9 +139,7 @@ AVL هي التدوين المرئي الرسمي لبرامج Orb. كل ذرة 
 import { AvlStateMachine, AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <AvlStateMachine
-  states={[...]}
-  transitions={[...]}
-  animated
+  trait={{ name: 'Tasks', linkedEntity: 'Task', states: [...], transitions: [...], emittedEvents: [], listenedEvents: [] }}
 />
 ```
 

@@ -19,8 +19,6 @@ Jedro orbitalne enote. Sevajoci crte predstavljajo polja. Slog crte oznacuje vrs
 |------------|----------|
 | `persistent` (obstojna) | Polna, debelina 2.5 |
 | `runtime` (med izvajanjem) | Crtkan: `6 3` |
-| `singleton` (edinec) | Dvojni rob, debelina 3.5 |
-| `instance` (primerek) | Drobne crtkice: `2 3` |
 
 ### Orbital
 
@@ -141,9 +139,7 @@ Uvozite AVL komponente v katero koli datoteko `.md` ali `.mdx`:
 import { AvlStateMachine, AvlOrbitalUnit } from '@almadar/ui/illustrations';
 
 <AvlStateMachine
-  states={[...]}
-  transitions={[...]}
-  animated
+  trait={{ name: 'Tasks', linkedEntity: 'Task', states: [...], transitions: [...], emittedEvents: [], listenedEvents: [] }}
 />
 ```
 

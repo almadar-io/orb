@@ -29,23 +29,20 @@ Every Trait has five parts:
 
 <div style={{margin: '2rem 0'}}>
 <AvlStateMachine
-  states={[
-    {name: 'browsing', isInitial: true},
-    {name: 'creating'},
-    {name: 'editing'},
-    {name: 'viewing'}
-  ]}
-  transitions={[
-    {from: 'browsing', to: 'creating', event: 'CREATE'},
-    {from: 'browsing', to: 'viewing', event: 'SELECT'},
-    {from: 'creating', to: 'browsing', event: 'SAVE', effects: ['persist']},
-    {from: 'creating', to: 'browsing', event: 'CANCEL'},
-    {from: 'viewing', to: 'editing', event: 'EDIT'},
-    {from: 'viewing', to: 'browsing', event: 'BACK'},
-    {from: 'editing', to: 'browsing', event: 'SAVE', effects: ['persist']},
-    {from: 'editing', to: 'browsing', event: 'CANCEL'}
-  ]}
-  animated
+  showHeader={false}
+  trait={{
+    name: '', linkedEntity: '', emittedEvents: [], listenedEvents: [],
+    states: [
+      {'name': 'browsing', 'isInitial': true, 'isTerminal': false},
+      {'name': 'creating', 'isInitial': false, 'isTerminal': false},
+      {'name': 'editing', 'isInitial': false, 'isTerminal': false},
+      {'name': 'viewing', 'isInitial': false, 'isTerminal': false},
+    ],
+    transitions: [
+      {'from': 'browsing', 'to': 'creating', 'event': 'CREATE', 'guard': null, 'effects': [], 'index': 0},
+      {'from': 'browsing', 'to': 'viewing', 'event': 'SELECT', 'guard': null, 'effects': [], 'index': 1},
+    ],
+  }}
 />
 </div>
 
