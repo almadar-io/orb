@@ -14,6 +14,12 @@
             "trait": "CountMeter"
           },
           {
+            "knob": "viewerRole",
+            "patternPath": "root",
+            "prop": "actions",
+            "trait": "CountMeter"
+          },
+          {
             "knob": "isLoading",
             "patternPath": "root",
             "prop": "isLoading",
@@ -621,6 +627,24 @@
           "parent": "trt_01KXG04FG0Z6SKFKJ8FG00CD2Y",
           "renames": []
         },
+        "evt_01M3RWG8DSSY9YMYT1VKYANSFG": {
+          "bakedName": "WINDOW_ELAPSED",
+          "curName": "WINDOW_ELAPSED",
+          "id": "evt_01M3RWG8DSSY9YMYT1VKYANSFG",
+          "kind": "event",
+          "owner": "workspace",
+          "parent": "trt_01KXG04FG0Z6SKFKJ8FG00CD2Y",
+          "renames": []
+        },
+        "evt_01M3RWZEZRFJBDSH3PTSQ5MZRW": {
+          "bakedName": "CONFIGURE",
+          "curName": "CONFIGURE",
+          "id": "evt_01M3RWZEZRFJBDSH3PTSQ5MZRW",
+          "kind": "event",
+          "owner": "workspace",
+          "parent": "trt_01KXG04FG0Z6SKFKJ8FG00CD2Y",
+          "renames": []
+        },
         "evt_1TCXG35EYHQF8YEE5KXP3HEAKX": {
           "bakedName": "INIT",
           "curName": "INIT",
@@ -907,6 +931,13 @@
               "name": "limiterStatus",
               "synonyms": "state, condition, mode",
               "type": "string"
+            },
+            {
+              "default": 60,
+              "description": "Requests this bucket admits per window before it throttles; set from requestsPerMinute when the limiter mounts.",
+              "name": "limit",
+              "synonyms": "cap, quota, ceiling, maximum requests",
+              "type": "number"
             }
           ],
           "id": "ent_01KXG04FG0R4NF2MX692M3D599",
@@ -2366,6 +2397,14 @@
                       "required": false,
                       "type": "string"
                     },
+                    "roles": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "name": "roles",
+                      "required": false,
+                      "type": "array"
+                    },
                     "variant": {
                       "name": "variant",
                       "required": false,
@@ -2431,7 +2470,7 @@
                 "type": "string"
               },
               "max": {
-                "default": 100,
+                "default": "@entity.limit",
                 "description": "Maximum value",
                 "label": "Max",
                 "tier": "presentation",
@@ -2521,6 +2560,13 @@
                   "radial",
                   "segmented"
                 ]
+              },
+              "viewerRole": {
+                "default": "",
+                "description": "The viewer's role that each action's `roles` is checked against; bind it at the call site (e.g. `viewerRole: @user.role`). Empty = only actions with no `roles` show.",
+                "label": "Viewer's role",
+                "tier": "policy",
+                "type": "string"
               }
             },
             "effectRow": [
@@ -2580,12 +2626,45 @@
                       "render-ui",
                       "main",
                       {
-                        "actions": [],
+                        "actions": [
+                          "array/filter",
+                          [],
+                          [
+                            "fn",
+                            "action",
+                            [
+                              "or",
+                              [
+                                "=",
+                                [
+                                  "array/len",
+                                  [
+                                    "object/get",
+                                    "@action",
+                                    "roles",
+                                    []
+                                  ]
+                                ],
+                                0
+                              ],
+                              [
+                                "array/includes",
+                                [
+                                  "object/get",
+                                  "@action",
+                                  "roles",
+                                  []
+                                ],
+                                ""
+                              ]
+                            ]
+                          ]
+                        ],
                         "className": "@config.className",
                         "error": "@config.error",
                         "isLoading": false,
                         "label": "@config.label",
-                        "max": 100,
+                        "max": "@entity.limit",
                         "min": 0,
                         "segments": 5,
                         "showValue": true,
@@ -2637,7 +2716,7 @@
                 "type": "string"
               },
               "max": {
-                "default": 100,
+                "default": "@entity.limit",
                 "description": "Maximum value (for calculating percentage)",
                 "label": "Max",
                 "tier": "presentation",
@@ -2771,7 +2850,7 @@
                         "className": "@config.className",
                         "color": "default",
                         "label": "@config.label",
-                        "max": 100,
+                        "max": "@entity.limit",
                         "progressType": "linear",
                         "showLabel": false,
                         "showPercentage": true,
@@ -3930,14 +4009,6 @@
             ],
             "category": "interaction",
             "config": {
-              "burstSize": {
-                "default": 10,
-                "description": "Requests allowed to burst above the per-minute rate before steady-state throttling kicks in. Lower burst = strict/no-spikes; higher burst = forgiving/allow-spikes.",
-                "label": "Burst size",
-                "synonyms": "burst capacity, allowance, spike allowance, no-spike (low) vs allow-bursts (high)",
-                "tier": "domain",
-                "type": "number"
-              },
               "enabled": {
                 "default": false,
                 "description": "Whether rate limiting is active for the host orbital. Off by default; turn on to throttle requests.",
@@ -3946,34 +4017,9 @@
                 "tier": "domain",
                 "type": "boolean"
               },
-              "keyStrategy": {
-                "default": "user",
-                "description": "What identifier the per-bucket counter is keyed on: source IP, authenticated user, API key, or one global bucket.",
-                "label": "Rate-limit key strategy",
-                "synonyms": "limiter key, bucket key",
-                "tier": "domain",
-                "type": "string",
-                "values": [
-                  "ip",
-                  "user",
-                  "api-key",
-                  "global"
-                ]
-              },
-              "overrideRoles": {
-                "default": [],
-                "description": "Roles exempt from rate limiting (e.g. internal services, admin override). Empty = no exemptions.",
-                "items": {
-                  "type": "string"
-                },
-                "label": "Override roles",
-                "synonyms": "exempt roles, bypass list",
-                "tier": "domain",
-                "type": "[string]"
-              },
               "requestsPerMinute": {
                 "default": 60,
-                "description": "Maximum number of requests allowed per minute before throttling begins.",
+                "description": "Requests a bucket admits per one-minute window; the next request throttles it, and each elapsed minute (or RESET) reopens it.",
                 "label": "Requests per minute",
                 "synonyms": "rate limit, request cap, RPS, throttle threshold",
                 "tier": "domain",
@@ -3996,6 +4042,11 @@
             },
             "effectRow": [
               {
+                "kind": "emit",
+                "resource": "WINDOW_ELAPSED",
+                "site": "tick"
+              },
+              {
                 "kind": "render-ui",
                 "resource": "main"
               },
@@ -4005,11 +4056,27 @@
               },
               {
                 "kind": "set",
+                "resource": "@entity.limit"
+              },
+              {
+                "kind": "set",
                 "resource": "@entity.limiterStatus"
               },
               {
                 "kind": "set",
                 "resource": "@entity.window"
+              },
+              {
+                "kind": "ticks",
+                "site": "tick"
+              }
+            ],
+            "emits": [
+              {
+                "description": "One rate-limit window (a minute) has elapsed; the request count starts over.",
+                "event": "WINDOW_ELAPSED",
+                "eventId": "evt_01M3RWG8DSSY9YMYT1VKYANSFG",
+                "scope": "internal"
               }
             ],
             "entityRefIds": {
@@ -4018,41 +4085,6 @@
             "id": "trt_01KXG04FG0Z6SKFKJ8FG00CD2Y",
             "linkedEntity": "RateBucket",
             "linkedEntityId": "ent_01KXG04FG0R4NF2MX692M3D599",
-            "listens": [
-              {
-                "event": "REQUEST",
-                "eventId": "evt_01KXG04FG0VC7PYC8M4YHN135D",
-                "source": {
-                  "kind": "trait",
-                  "trait": "RequestButton",
-                  "traitId": "trt_01KXZ44Y74BVWRJJSS79FFTHAG"
-                },
-                "triggers": "REQUEST",
-                "triggersId": "evt_01KXG04FG0VC7PYC8M4YHN135D"
-              },
-              {
-                "event": "RESET",
-                "eventId": "evt_01KXG04FG0VTPGS05M6XYYTKW0",
-                "source": {
-                  "kind": "trait",
-                  "trait": "ResetButton",
-                  "traitId": "trt_01KXZ44Y74WN9F55NWDE7BQRJN"
-                },
-                "triggers": "RESET",
-                "triggersId": "evt_01KXG04FG0VTPGS05M6XYYTKW0"
-              },
-              {
-                "event": "RESET",
-                "eventId": "evt_01KXG04FG0VTPGS05M6XYYTKW0",
-                "source": {
-                  "kind": "trait",
-                  "trait": "ResetPrimaryButton",
-                  "traitId": "trt_01KXZ44Y74CNCGXS8AAK4QWSRT"
-                },
-                "triggers": "RESET",
-                "triggersId": "evt_01KXG04FG0VTPGS05M6XYYTKW0"
-              }
-            ],
             "name": "RateBucketRateLimiter",
             "scope": "collection",
             "stateMachine": {
@@ -4076,6 +4108,24 @@
                   "id": "evt_01KXG04FG0VTPGS05M6XYYTKW0",
                   "key": "RESET",
                   "name": "Reset"
+                },
+                {
+                  "description": "One rate-limit window (a minute) has elapsed; the request count starts over.",
+                  "id": "evt_01M3RWG8DSSY9YMYT1VKYANSFG",
+                  "key": "WINDOW_ELAPSED",
+                  "name": "Window Elapsed"
+                },
+                {
+                  "description": "Sets this bucket's limit (requests per window), e.g. from the host row's own rate limit.",
+                  "id": "evt_01M3RWZEZRFJBDSH3PTSQ5MZRW",
+                  "key": "CONFIGURE",
+                  "name": "Configure",
+                  "payloadSchema": [
+                    {
+                      "name": "limit",
+                      "type": "number"
+                    }
+                  ]
                 }
               ],
               "states": [
@@ -4098,6 +4148,11 @@
                     [
                       "set",
                       "@entity.window",
+                      60
+                    ],
+                    [
+                      "set",
+                      "@entity.limit",
                       60
                     ],
                     [
@@ -4159,6 +4214,94 @@
                 {
                   "effects": [
                     [
+                      "set",
+                      "@entity.count",
+                      [
+                        "+",
+                        "@entity.count",
+                        1
+                      ]
+                    ],
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "throttled"
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "align": "center",
+                                "children": [
+                                  "@trait.ShieldIcon",
+                                  "@trait.RateBucketTitle"
+                                ],
+                                "direction": "horizontal",
+                                "gap": "md",
+                                "type": "stack"
+                              },
+                              "@trait.ThrottledStatusDot"
+                            ],
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between",
+                            "type": "stack"
+                          },
+                          "@trait.RateBucketDivider",
+                          "@trait.RateLimitAlert",
+                          "@trait.StatsGrid",
+                          "@trait.CountMeter",
+                          {
+                            "children": [
+                              "@trait.ResetPrimaryButton"
+                            ],
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "justify": "center",
+                            "type": "stack"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "gap": "lg",
+                        "type": "stack"
+                      }
+                    ]
+                  ],
+                  "event": "REQUEST",
+                  "eventId": "evt_01KXG04FG0VC7PYC8M4YHN135D",
+                  "from": "open",
+                  "guard": [
+                    "and",
+                    false,
+                    [
+                      ">=",
+                      [
+                        "+",
+                        "@entity.count",
+                        1
+                      ],
+                      "@entity.limit"
+                    ]
+                  ],
+                  "to": "throttled"
+                },
+                {
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.count",
+                      [
+                        "+",
+                        "@entity.count",
+                        1
+                      ]
+                    ],
+                    [
                       "render-ui",
                       "main",
                       {
@@ -4207,7 +4350,19 @@
                   "event": "REQUEST",
                   "eventId": "evt_01KXG04FG0VC7PYC8M4YHN135D",
                   "from": "open",
-                  "guard": false,
+                  "guard": [
+                    "and",
+                    false,
+                    [
+                      "<",
+                      [
+                        "+",
+                        "@entity.count",
+                        1
+                      ],
+                      "@entity.limit"
+                    ]
+                  ],
                   "to": "open"
                 },
                 {
@@ -4334,6 +4489,108 @@
                   "effects": [
                     [
                       "set",
+                      "@entity.count",
+                      0
+                    ]
+                  ],
+                  "event": "WINDOW_ELAPSED",
+                  "eventId": "evt_01M3RWG8DSSY9YMYT1VKYANSFG",
+                  "from": "open",
+                  "to": "open"
+                },
+                {
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.limit",
+                      "@payload.limit"
+                    ]
+                  ],
+                  "event": "CONFIGURE",
+                  "eventId": "evt_01M3RWZEZRFJBDSH3PTSQ5MZRW",
+                  "from": "open",
+                  "to": "open"
+                },
+                {
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.limit",
+                      "@payload.limit"
+                    ]
+                  ],
+                  "event": "CONFIGURE",
+                  "eventId": "evt_01M3RWZEZRFJBDSH3PTSQ5MZRW",
+                  "from": "throttled",
+                  "to": "throttled"
+                },
+                {
+                  "effects": [
+                    [
+                      "set",
+                      "@entity.limiterStatus",
+                      "open"
+                    ],
+                    [
+                      "set",
+                      "@entity.count",
+                      0
+                    ],
+                    [
+                      "render-ui",
+                      "main",
+                      {
+                        "children": [
+                          {
+                            "align": "center",
+                            "children": [
+                              {
+                                "align": "center",
+                                "children": [
+                                  "@trait.ShieldIcon",
+                                  "@trait.RateBucketTitle"
+                                ],
+                                "direction": "horizontal",
+                                "gap": "md",
+                                "type": "stack"
+                              },
+                              "@trait.OpenStatusDot"
+                            ],
+                            "direction": "horizontal",
+                            "gap": "md",
+                            "justify": "between",
+                            "type": "stack"
+                          },
+                          "@trait.RateBucketDivider",
+                          "@trait.StatsGrid",
+                          "@trait.CountMeter",
+                          "@trait.CountProgressBar",
+                          {
+                            "children": [
+                              "@trait.RequestButton",
+                              "@trait.ResetButton"
+                            ],
+                            "direction": "horizontal",
+                            "gap": "sm",
+                            "justify": "center",
+                            "type": "stack"
+                          }
+                        ],
+                        "direction": "vertical",
+                        "gap": "lg",
+                        "type": "stack"
+                      }
+                    ]
+                  ],
+                  "event": "WINDOW_ELAPSED",
+                  "eventId": "evt_01M3RWG8DSSY9YMYT1VKYANSFG",
+                  "from": "throttled",
+                  "to": "open"
+                },
+                {
+                  "effects": [
+                    [
+                      "set",
                       "@entity.limiterStatus",
                       "open"
                     ],
@@ -4447,6 +4704,18 @@
                 }
               ]
             },
+            "ticks": [
+              {
+                "effects": [
+                  [
+                    "emit",
+                    "WINDOW_ELAPSED"
+                  ]
+                ],
+                "interval": 60000,
+                "name": "windowElapsed"
+              }
+            ],
             "traitEmbedIds": {
               "CountMeter": "trt_01KXZ44Y74H7C0JKXEVTDA5ZZB",
               "CountProgressBar": "trt_01KXZ44Y74HS8AQBFB2VWAF5WY",
@@ -4511,5 +4780,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app std-rate-limiter \"1.0.0\"\n\"std-rate-limiter as a Function\"\norbital RateBucketOrbital {\n    uses Icon from \"std/behaviors/ui-icon\"\n    uses Typography from \"std/behaviors/ui-typography\"\n    uses StatusDot from \"std/behaviors/ui-status-dot\"\n    uses Alert from \"std/behaviors/ui-alert\"\n    uses StatDisplay from \"std/behaviors/ui-stat-display\"\n    uses Meter from \"std/behaviors/ui-meter\"\n    uses ProgressBar from \"std/behaviors/ui-progress-bar\"\n    uses Button from \"std/behaviors/ui-button\"\n    uses Divider from \"std/behaviors/ui-divider\"\n    uses SimpleGrid from \"std/behaviors/ui-simple-grid\"\n\n  entity RateBucket [runtime] {\n    id : string\n    name : string @description \"A user-defined identifier for the rate limiting bucket.\" @synonyms \"label, identifier, alias\"\n    description : string @description \"A textual explanation of the rate bucket's purpose.\" @synonyms \"explanation, details, notes\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the rate limiting bucket.\" @synonyms \"state, condition, operationalStatus\" = active\n    createdAt : string\n    count : number @description \"The current value of a counter.\" @synonyms \"value, amount, total\" = 0\n    window : number @description \"The duration of the rate limiting window, in seconds.\" @synonyms \"duration, time, interval, period\" = 0\n    limiterStatus : string @description \"Current operational state of the rate limiter.\" @synonyms \"state, condition, mode\" = open\n  }\n\n  trait ShieldIcon = Icon.traits.IconRender -> RateBucket {\n    config {\n      name: shield\n    }\n  }\n\n  trait RateBucketTitle = Typography.traits.TypographyRender -> RateBucket {\n    config {\n      content: \"RateBucket Rate Limiter\"\n      variant: h2\n    }\n  }\n\n  trait OpenStatusDot = StatusDot.traits.StatusDotRender -> RateBucket {\n    config {\n      label: Open\n      pulse: false\n      status: online\n    }\n  }\n\n  trait ThrottledStatusDot = StatusDot.traits.StatusDotRender -> RateBucket {\n    config {\n      label: Throttled\n      pulse: true\n      status: critical\n    }\n  }\n\n  trait RateLimitAlert = Alert.traits.AlertRender -> RateBucket {\n    config {\n      message: \"Rate limit exceeded. Requests are being throttled.\"\n      variant: error\n    }\n  }\n\n  trait RequestsStat = StatDisplay.traits.StatDisplayRender -> RateBucket {\n    config {\n      label: Requests\n      look: @config.statLook\n      value: @entity.count\n    }\n  }\n\n  trait WindowStat = StatDisplay.traits.StatDisplayRender -> RateBucket {\n    config {\n      label: Window\n      look: @config.statLook\n      value: @entity.window\n    }\n  }\n\n  trait CountMeter = Meter.traits.MeterRender -> RateBucket {\n    config {\n      max: 100\n      min: 0\n      value: @entity.count\n    }\n  }\n\n  trait CountProgressBar = ProgressBar.traits.ProgressBarRender -> RateBucket {\n    config {\n      max: 100\n      showPercentage: true\n      value: @entity.count\n    }\n  }\n\n  trait RequestButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: REQUEST\n      icon: send\n      label: Request\n      variant: primary\n    }\n  }\n\n  trait ResetButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: RESET\n      icon: rotate-ccw\n      label: Reset\n      variant: ghost\n    }\n  }\n\n  trait ResetPrimaryButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: RESET\n      icon: rotate-ccw\n      label: Reset\n      variant: primary\n    }\n  }\n\n  trait RateBucketDivider = Divider.traits.DividerRender -> RateBucket {\n    config {}\n  }\n\n  trait StatsGrid = SimpleGrid.traits.SimpleGridRender -> RateBucket {\n    config {\n      children: [@trait.RequestsStat, @trait.WindowStat]\n      cols: 2\n    }\n  }\n\n  trait RateBucketRateLimiter -> RateBucket [interaction, collection, rate-limit] {\n    initial: open\n\n    state open {\n      INIT -> open\n        (set @entity.count 0)\n        (set @entity.window 60)\n        (set @entity.limiterStatus open)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      REQUEST -> open when @config.enabled\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      THROTTLE -> throttled\n        (set @entity.limiterStatus throttled)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.ThrottledStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.RateLimitAlert, @trait.StatsGrid, @trait.CountMeter, {\n            children: [@trait.ResetPrimaryButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      RESET -> open\n        (set @entity.count 0)\n        (set @entity.limiterStatus open)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n    }\n\n    state throttled {\n      RESET -> open\n        (set @entity.limiterStatus open)\n        (set @entity.count 0)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      INIT -> throttled\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.ThrottledStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.RateLimitAlert, @trait.StatsGrid, @trait.CountMeter, {\n            children: [@trait.ResetPrimaryButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n    }\n\n    listens {\n      RequestButton.REQUEST -> REQUEST\n      ResetButton.RESET -> RESET\n      ResetPrimaryButton.RESET -> RESET\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Enabled\"\n        @description \"Whether rate limiting is active for the host orbital. Off by default; turn on to throttle requests.\"\n        @synonyms \"enable, turn on, enforce, require, activate, apply, switch on, rate limit, throttle, requests per minute, slow down, cap usage, request cap, limit traffic, prevent abuse\"\n        @tier \"domain\"\n      requestsPerMinute : number = 60\n        @label \"Requests per minute\"\n        @description \"Maximum number of requests allowed per minute before throttling begins.\"\n        @synonyms \"rate limit, request cap, RPS, throttle threshold\"\n        @tier \"domain\"\n      burstSize : number = 10\n        @label \"Burst size\"\n        @description \"Requests allowed to burst above the per-minute rate before steady-state throttling kicks in. Lower burst = strict/no-spikes; higher burst = forgiving/allow-spikes.\"\n        @synonyms \"burst capacity, allowance, spike allowance, no-spike (low) vs allow-bursts (high)\"\n        @tier \"domain\"\n      keyStrategy : \"ip\" | \"user\" | \"api-key\" | \"global\" = user\n        @label \"Rate-limit key strategy\"\n        @description \"What identifier the per-bucket counter is keyed on: source IP, authenticated user, API key, or one global bucket.\"\n        @synonyms \"limiter key, bucket key\"\n        @tier \"domain\"\n      overrideRoles : [string] = []\n        @label \"Override roles\"\n        @description \"Roles exempt from rate limiting (e.g. internal services, admin override). Empty = no exemptions.\"\n        @synonyms \"exempt roles, bypass list\"\n        @tier \"domain\"\n      statLook : \"elevated\" | \"flat\" | \"progress-backed\" | \"gauge\" | \"sparkline\" = elevated\n        @label \"Stat display look\"\n        @description \"Layer 2 visual treatment for stat / KPI cards.\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/ratebuckets/rate-limiter\" as RateBucketRateLimiterPage -> RateBucketRateLimiter\n}"
+  "lolo": "app std-rate-limiter \"1.0.0\"\n\"std-rate-limiter as a Function\"\norbital RateBucketOrbital {\n    uses Icon from \"std/behaviors/ui-icon\"\n    uses Typography from \"std/behaviors/ui-typography\"\n    uses StatusDot from \"std/behaviors/ui-status-dot\"\n    uses Alert from \"std/behaviors/ui-alert\"\n    uses StatDisplay from \"std/behaviors/ui-stat-display\"\n    uses Meter from \"std/behaviors/ui-meter\"\n    uses ProgressBar from \"std/behaviors/ui-progress-bar\"\n    uses Button from \"std/behaviors/ui-button\"\n    uses Divider from \"std/behaviors/ui-divider\"\n    uses SimpleGrid from \"std/behaviors/ui-simple-grid\"\n\n  entity RateBucket [runtime] {\n    id : string\n    name : string @description \"A user-defined identifier for the rate limiting bucket.\" @synonyms \"label, identifier, alias\"\n    description : string @description \"A textual explanation of the rate bucket's purpose.\" @synonyms \"explanation, details, notes\"\n    status : \"active\" | \"inactive\" | \"pending\" @description \"Current operational state of the rate limiting bucket.\" @synonyms \"state, condition, operationalStatus\" = active\n    createdAt : string\n    count : number @description \"The current value of a counter.\" @synonyms \"value, amount, total\" = 0\n    window : number @description \"The duration of the rate limiting window, in seconds.\" @synonyms \"duration, time, interval, period\" = 0\n    limiterStatus : string @description \"Current operational state of the rate limiter.\" @synonyms \"state, condition, mode\" = open\n    limit : number @description \"Requests this bucket admits per window before it throttles; set from requestsPerMinute when the limiter mounts.\" @synonyms \"cap, quota, ceiling, maximum requests\" = 60\n  }\n\n  trait ShieldIcon = Icon.traits.IconRender -> RateBucket {\n    config {\n      name: shield\n    }\n  }\n\n  trait RateBucketTitle = Typography.traits.TypographyRender -> RateBucket {\n    config {\n      content: \"RateBucket Rate Limiter\"\n      variant: h2\n    }\n  }\n\n  trait OpenStatusDot = StatusDot.traits.StatusDotRender -> RateBucket {\n    config {\n      label: Open\n      pulse: false\n      status: online\n    }\n  }\n\n  trait ThrottledStatusDot = StatusDot.traits.StatusDotRender -> RateBucket {\n    config {\n      label: Throttled\n      pulse: true\n      status: critical\n    }\n  }\n\n  trait RateLimitAlert = Alert.traits.AlertRender -> RateBucket {\n    config {\n      message: \"Rate limit exceeded. Requests are being throttled.\"\n      variant: error\n    }\n  }\n\n  trait RequestsStat = StatDisplay.traits.StatDisplayRender -> RateBucket {\n    config {\n      label: Requests\n      look: @config.statLook\n      value: @entity.count\n    }\n  }\n\n  trait WindowStat = StatDisplay.traits.StatDisplayRender -> RateBucket {\n    config {\n      label: Window\n      look: @config.statLook\n      value: @entity.window\n    }\n  }\n\n  trait CountMeter = Meter.traits.MeterRender -> RateBucket {\n    config {\n      max: @entity.limit\n      min: 0\n      value: @entity.count\n    }\n  }\n\n  trait CountProgressBar = ProgressBar.traits.ProgressBarRender -> RateBucket {\n    config {\n      max: @entity.limit\n      showPercentage: true\n      value: @entity.count\n    }\n  }\n\n  trait RequestButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: REQUEST\n      icon: send\n      label: Request\n      variant: primary\n    }\n  }\n\n  trait ResetButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: RESET\n      icon: rotate-ccw\n      label: Reset\n      variant: ghost\n    }\n  }\n\n  trait ResetPrimaryButton = Button.traits.ButtonRender -> RateBucket {\n    config {\n      action: RESET\n      icon: rotate-ccw\n      label: Reset\n      variant: primary\n    }\n  }\n\n  trait RateBucketDivider = Divider.traits.DividerRender -> RateBucket {\n    config {}\n  }\n\n  trait StatsGrid = SimpleGrid.traits.SimpleGridRender -> RateBucket {\n    config {\n      children: [@trait.RequestsStat, @trait.WindowStat]\n      cols: 2\n    }\n  }\n\n  trait RateBucketRateLimiter -> RateBucket [interaction, collection, rate-limit] {\n    initial: open\n\n    state open {\n      INIT -> open\n        (set @entity.count 0)\n        (set @entity.window 60)\n        (set @entity.limit @config.requestsPerMinute)\n        (set @entity.limiterStatus open)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      REQUEST -> throttled when (and @config.enabled (>= (+ @entity.count 1) @entity.limit))\n        (set @entity.count (+ @entity.count 1))\n        (set @entity.limiterStatus throttled)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.ThrottledStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.RateLimitAlert, @trait.StatsGrid, @trait.CountMeter, {\n            children: [@trait.ResetPrimaryButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      REQUEST -> open when (and @config.enabled (< (+ @entity.count 1) @entity.limit))\n        (set @entity.count (+ @entity.count 1))\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      THROTTLE -> throttled\n        (set @entity.limiterStatus throttled)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.ThrottledStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.RateLimitAlert, @trait.StatsGrid, @trait.CountMeter, {\n            children: [@trait.ResetPrimaryButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      RESET -> open\n        (set @entity.count 0)\n        (set @entity.limiterStatus open)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      WINDOW_ELAPSED -> open\n        (set @entity.count 0)\n      CONFIGURE -> open\n        (set @entity.limit ?limit)\n    }\n\n    state throttled {\n      CONFIGURE -> throttled\n        (set @entity.limit ?limit)\n      WINDOW_ELAPSED -> open\n        (set @entity.limiterStatus open)\n        (set @entity.count 0)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      RESET -> open\n        (set @entity.limiterStatus open)\n        (set @entity.count 0)\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.OpenStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.StatsGrid, @trait.CountMeter, @trait.CountProgressBar, {\n            children: [@trait.RequestButton, @trait.ResetButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n      INIT -> throttled\n        (render-ui main {\n          children: [{\n            align: center\n            children: [{\n              align: center\n              children: [@trait.ShieldIcon, @trait.RateBucketTitle]\n              direction: horizontal\n              gap: md\n              type: stack\n            }, @trait.ThrottledStatusDot]\n            direction: horizontal\n            gap: md\n            justify: between\n            type: stack\n          }, @trait.RateBucketDivider, @trait.RateLimitAlert, @trait.StatsGrid, @trait.CountMeter, {\n            children: [@trait.ResetPrimaryButton]\n            direction: horizontal\n            gap: sm\n            justify: center\n            type: stack\n          }]\n          direction: vertical\n          gap: lg\n          type: stack\n        })\n    }\n\n    listens {\n      CONFIGURE {\n        limit : number\n      }\n        @description \"Sets this bucket's limit (requests per window), e.g. from the host row's own rate limit.\"\n    }\n\n    ticks {\n      windowElapsed every 1m\n        (emit WINDOW_ELAPSED)\n    }\n\n    emits {\n      WINDOW_ELAPSED -> internal {\n      }\n        @description \"One rate-limit window (a minute) has elapsed; the request count starts over.\"\n    }\n\n    config {\n      enabled : boolean = false\n        @label \"Enabled\"\n        @description \"Whether rate limiting is active for the host orbital. Off by default; turn on to throttle requests.\"\n        @synonyms \"enable, turn on, enforce, require, activate, apply, switch on, rate limit, throttle, requests per minute, slow down, cap usage, request cap, limit traffic, prevent abuse\"\n        @tier \"domain\"\n      requestsPerMinute : number = 60\n        @label \"Requests per minute\"\n        @description \"Requests a bucket admits per one-minute window; the next request throttles it, and each elapsed minute (or RESET) reopens it.\"\n        @synonyms \"rate limit, request cap, RPS, throttle threshold\"\n        @tier \"domain\"\n      statLook : \"elevated\" | \"flat\" | \"progress-backed\" | \"gauge\" | \"sparkline\" = elevated\n        @label \"Stat display look\"\n        @description \"Layer 2 visual treatment for stat / KPI cards.\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/ratebuckets/rate-limiter\" as RateBucketRateLimiterPage -> RateBucketRateLimiter\n}"
 }

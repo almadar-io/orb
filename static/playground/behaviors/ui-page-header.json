@@ -14,6 +14,12 @@
             "trait": "PageHeaderRender"
           },
           {
+            "knob": "viewerRole",
+            "patternPath": "root",
+            "prop": "actions",
+            "trait": "PageHeaderRender"
+          },
+          {
             "knob": "backEvent",
             "patternPath": "root",
             "prop": "backEvent",
@@ -180,6 +186,14 @@
                       "required": false,
                       "type": "string"
                     },
+                    "roles": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "name": "roles",
+                      "required": false,
+                      "type": "array"
+                    },
                     "variant": {
                       "name": "variant",
                       "required": false,
@@ -273,6 +287,12 @@
                 "tier": "presentation",
                 "type": "PageHeaderError"
               },
+              "icon": {
+                "description": "Icon shown before the title.",
+                "label": "Icon",
+                "tier": "presentation",
+                "type": "icon"
+              },
               "isLoading": {
                 "description": "Loading state indicator",
                 "label": "Is Loading",
@@ -356,6 +376,13 @@
                 "label": "Title",
                 "tier": "presentation",
                 "type": "scalar"
+              },
+              "viewerRole": {
+                "default": "",
+                "description": "The viewer's role that each action's `roles` is checked against; bind it at the call site (e.g. `viewerRole: @user.role`). Empty = only actions with no `roles` show.",
+                "label": "Viewer's role",
+                "tier": "policy",
+                "type": "string"
               }
             },
             "effectRow": [
@@ -442,13 +469,47 @@
                       "render-ui",
                       "main",
                       {
-                        "actions": [],
+                        "actions": [
+                          "array/filter",
+                          [],
+                          [
+                            "fn",
+                            "action",
+                            [
+                              "or",
+                              [
+                                "=",
+                                [
+                                  "array/len",
+                                  [
+                                    "object/get",
+                                    "@action",
+                                    "roles",
+                                    []
+                                  ]
+                                ],
+                                0
+                              ],
+                              [
+                                "array/includes",
+                                [
+                                  "object/get",
+                                  "@action",
+                                  "roles",
+                                  []
+                                ],
+                                ""
+                              ]
+                            ]
+                          ]
+                        ],
                         "activeTab": "@config.activeTab",
                         "backEvent": "BACK",
                         "breadcrumbs": [],
                         "children": "@config.children",
                         "className": "@config.className",
                         "error": "@config.error",
+                        "icon": "@config.icon",
                         "isLoading": "@config.isLoading",
                         "onTabChange": "TAB_CHANGE",
                         "showBack": false,
@@ -499,6 +560,10 @@
             {
               "name": "disabled",
               "type": "boolean"
+            },
+            {
+              "name": "roles",
+              "type": "[string]"
             }
           ],
           "PageHeaderBreadcrumbsItem": [
@@ -565,5 +630,5 @@
     "version": "1.0.0"
   },
   "source": "",
-  "lolo": "app ui-page-header \"1.0.0\"\n\"PageHeader — UI factory (1:1 with the @almadar/ui page-header pattern).\"\n;; @pattern \"page-header\"\norbital PageHeaderOrbital {\n  type PageHeaderBreadcrumbsItem = {\n    label : string!\n    href : string\n  }\n  type PageHeaderStatus = {\n    label : string!\n    variant : \"default\" | \"success\" | \"warning\" | \"danger\" | \"info\"\n  }\n  type PageHeaderActionsItem = {\n    label : string!\n    navigatesTo : string\n    event : event\n    variant : \"primary\" | \"secondary\" | \"ghost\" | \"danger\"\n    icon : icon\n    loading : boolean\n    disabled : boolean\n  }\n  type PageHeaderError = {\n    message : string!\n    name : string\n    code : string\n    stack : string\n  }\n  type PageHeaderTabsItem = {\n    label : string!\n    value : string!\n    count : number\n  }\n\n  entity PageHeaderItem [runtime] {\n    id : string!\n  }\n\n  trait PageHeaderRender -> @rebindable PageHeaderItem [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (render-ui main {\n          title: @config.title\n          subtitle: @config.subtitle\n          showBack: @config.showBack\n          backEvent: @config.backEvent\n          breadcrumbs: @config.breadcrumbs\n          status: @config.status\n          actions: @config.actions\n          isLoading: @config.isLoading\n          error: @config.error\n          tabs: @config.tabs\n          activeTab: @config.activeTab\n          onTabChange: @config.onTabChange\n          children: @config.children\n          className: @config.className\n          type: page-header\n        })\n    }\n\n    emits {\n      @config.backEvent -> external { }\n        @description \"Event to emit when back is clicked (default: BACK)\"\n        @tier \"essential\"\n      @config.onTabChange -> external {\n        value : string\n      }\n        @description \"onTabChange prop\"\n        @tier \"essential\"\n    }\n\n    config {\n      title : scalar\n        @label \"Title\"\n        @description \"Page title - accepts string or number from generated code accessing dynamic entity data\"\n        @tier \"presentation\"\n      subtitle : scalar\n        @label \"Subtitle\"\n        @description \"Optional subtitle/description\"\n        @tier \"presentation\"\n      showBack : boolean = false\n        @label \"Show Back\"\n        @description \"Show back button\"\n        @tier \"presentation\"\n      backEvent : event = \"BACK\"\n        @label \"Back Event\"\n        @description \"Event to emit when back is clicked (default: BACK)\"\n        @tier \"presentation\"\n      breadcrumbs : [PageHeaderBreadcrumbsItem] = []\n        @label \"Breadcrumbs\"\n        @description \"Breadcrumbs\"\n        @tier \"presentation\"\n      status : PageHeaderStatus\n        @label \"Status\"\n        @description \"Status badge — a bare string (an entity's status field bound directly, e.g. `status: @entity.status`) renders as a default-variant badge\"\n        @tier \"presentation\"\n      actions : [PageHeaderActionsItem] = []\n        @label \"Actions\"\n        @description \"Actions array - first action with variant='primary' (or first action) is the main action\"\n        @tier \"presentation\"\n      isLoading : boolean\n        @label \"Is Loading\"\n        @description \"Loading state indicator\"\n        @tier \"presentation\"\n      error : PageHeaderError\n        @label \"Error\"\n        @description \"Error state\"\n        @tier \"presentation\"\n      tabs : [PageHeaderTabsItem] = []\n        @label \"Tabs\"\n        @description \"Tabs for sub-navigation\"\n        @tier \"presentation\"\n      activeTab : string\n        @label \"Active Tab\"\n        @description \"activeTab prop\"\n        @tier \"presentation\"\n      onTabChange : event = \"TAB_CHANGE\"\n        @label \"On Tab Change\"\n        @description \"onTabChange prop\"\n        @tier \"presentation\"\n      children : node\n        @label \"Children\"\n        @description \"Custom content in the header\"\n        @tier \"presentation\"\n      className : string\n        @label \"Class Name\"\n        @description \"className prop\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/page-header\" as PageHeaderPage -> PageHeaderRender\n}\n"
+  "lolo": "app ui-page-header \"1.0.0\"\n\"PageHeader — UI factory (1:1 with the @almadar/ui page-header pattern).\"\n;; @pattern \"page-header\"\norbital PageHeaderOrbital {\n  type PageHeaderBreadcrumbsItem = {\n    label : string!\n    href : string\n  }\n  type PageHeaderStatus = {\n    label : string!\n    variant : \"default\" | \"success\" | \"warning\" | \"danger\" | \"info\"\n  }\n  type PageHeaderActionsItem = {\n    label : string!\n    navigatesTo : string\n    event : event\n    variant : \"primary\" | \"secondary\" | \"ghost\" | \"danger\"\n    icon : icon\n    loading : boolean\n    disabled : boolean\n    roles : [string]\n  }\n  type PageHeaderError = {\n    message : string!\n    name : string\n    code : string\n    stack : string\n  }\n  type PageHeaderTabsItem = {\n    label : string!\n    value : string!\n    count : number\n  }\n\n  entity PageHeaderItem [runtime] {\n    id : string!\n  }\n\n  trait PageHeaderRender -> @rebindable PageHeaderItem [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (render-ui main {\n          title: @config.title\n          icon: @config.icon\n          subtitle: @config.subtitle\n          showBack: @config.showBack\n          backEvent: @config.backEvent\n          breadcrumbs: @config.breadcrumbs\n          status: @config.status\n          actions: (array/filter @config.actions (fn action (or (= (array/len (object/get @action roles [])) 0) (array/includes (object/get @action roles []) @config.viewerRole))))\n          isLoading: @config.isLoading\n          error: @config.error\n          tabs: @config.tabs\n          activeTab: @config.activeTab\n          onTabChange: @config.onTabChange\n          children: @config.children\n          className: @config.className\n          type: page-header\n        })\n    }\n\n    emits {\n      @config.backEvent -> external { }\n        @description \"Event to emit when back is clicked (default: BACK)\"\n        @tier \"essential\"\n      @config.onTabChange -> external {\n        value : string\n      }\n        @description \"onTabChange prop\"\n        @tier \"essential\"\n    }\n\n    config {\n      title : scalar\n        @label \"Title\"\n        @description \"Page title - accepts string or number from generated code accessing dynamic entity data\"\n        @tier \"presentation\"\n      icon : icon\n        @label \"Icon\"\n        @description \"Icon shown before the title.\"\n        @tier \"presentation\"\n      subtitle : scalar\n        @label \"Subtitle\"\n        @description \"Optional subtitle/description\"\n        @tier \"presentation\"\n      showBack : boolean = false\n        @label \"Show Back\"\n        @description \"Show back button\"\n        @tier \"presentation\"\n      backEvent : event = \"BACK\"\n        @label \"Back Event\"\n        @description \"Event to emit when back is clicked (default: BACK)\"\n        @tier \"presentation\"\n      breadcrumbs : [PageHeaderBreadcrumbsItem] = []\n        @label \"Breadcrumbs\"\n        @description \"Breadcrumbs\"\n        @tier \"presentation\"\n      status : PageHeaderStatus\n        @label \"Status\"\n        @description \"Status badge — a bare string (an entity's status field bound directly, e.g. `status: @entity.status`) renders as a default-variant badge\"\n        @tier \"presentation\"\n      actions : [PageHeaderActionsItem] = []\n        @label \"Actions\"\n        @description \"Actions array - first action with variant='primary' (or first action) is the main action\"\n        @tier \"presentation\"\n      isLoading : boolean\n        @label \"Is Loading\"\n        @description \"Loading state indicator\"\n        @tier \"presentation\"\n      error : PageHeaderError\n        @label \"Error\"\n        @description \"Error state\"\n        @tier \"presentation\"\n      tabs : [PageHeaderTabsItem] = []\n        @label \"Tabs\"\n        @description \"Tabs for sub-navigation\"\n        @tier \"presentation\"\n      activeTab : string\n        @label \"Active Tab\"\n        @description \"activeTab prop\"\n        @tier \"presentation\"\n      onTabChange : event = \"TAB_CHANGE\"\n        @label \"On Tab Change\"\n        @description \"onTabChange prop\"\n        @tier \"presentation\"\n      children : node\n        @label \"Children\"\n        @description \"Custom content in the header\"\n        @tier \"presentation\"\n      className : string\n        @label \"Class Name\"\n        @description \"className prop\"\n        @tier \"presentation\"\n      viewerRole : string = \"\"\n        @label \"Viewer's role\"\n        @description \"The viewer's role that each action's `roles` is checked against; bind it at the call site (e.g. `viewerRole: @user.role`). Empty = only actions with no `roles` show.\"\n        @tier \"policy\"\n    }\n  }\n\n  page \"/page-header\" as PageHeaderPage -> PageHeaderRender\n}\n"
 }

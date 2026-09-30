@@ -50,6 +50,12 @@
             "trait": "Menu1"
           },
           {
+            "knob": "viewerRole",
+            "patternPath": "root",
+            "prop": "items",
+            "trait": "Menu1"
+          },
+          {
             "knob": "position",
             "patternPath": "root",
             "prop": "position",
@@ -562,6 +568,14 @@
                       "required": true,
                       "type": "string"
                     },
+                    "roles": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "name": "roles",
+                      "required": false,
+                      "type": "array"
+                    },
                     "subMenu": {
                       "items": {
                         "type": "union",
@@ -624,6 +638,13 @@
                 "label": "Trigger",
                 "tier": "presentation",
                 "type": "node"
+              },
+              "viewerRole": {
+                "default": "",
+                "description": "The viewer's role that each action's `roles` is checked against; bind it at the call site (e.g. `viewerRole: @user.role`). Empty = only actions with no `roles` show.",
+                "label": "Viewer's role",
+                "tier": "policy",
+                "type": "string"
               }
             },
             "effectRow": [
@@ -687,24 +708,57 @@
                         "footer": "@config.footer",
                         "header": "@config.header",
                         "items": [
-                          {
-                            "event": "EXPORT_REQUESTED",
-                            "format": "csv",
-                            "id": "csv",
-                            "label": "CSV"
-                          },
-                          {
-                            "event": "EXPORT_REQUESTED",
-                            "format": "xlsx",
-                            "id": "xlsx",
-                            "label": "XLSX"
-                          },
-                          {
-                            "event": "EXPORT_REQUESTED",
-                            "format": "pdf",
-                            "id": "pdf",
-                            "label": "PDF"
-                          }
+                          "array/filter",
+                          [
+                            {
+                              "event": "EXPORT_REQUESTED",
+                              "format": "csv",
+                              "id": "csv",
+                              "label": "CSV"
+                            },
+                            {
+                              "event": "EXPORT_REQUESTED",
+                              "format": "xlsx",
+                              "id": "xlsx",
+                              "label": "XLSX"
+                            },
+                            {
+                              "event": "EXPORT_REQUESTED",
+                              "format": "pdf",
+                              "id": "pdf",
+                              "label": "PDF"
+                            }
+                          ],
+                          [
+                            "fn",
+                            "action",
+                            [
+                              "or",
+                              [
+                                "=",
+                                [
+                                  "array/len",
+                                  [
+                                    "object/get",
+                                    "@action",
+                                    "roles",
+                                    []
+                                  ]
+                                ],
+                                0
+                              ],
+                              [
+                                "array/includes",
+                                [
+                                  "object/get",
+                                  "@action",
+                                  "roles",
+                                  []
+                                ],
+                                ""
+                              ]
+                            ]
+                          ]
                         ],
                         "position": "bottom-start",
                         "trigger": [
@@ -731,14 +785,6 @@
                 "label": "Button label",
                 "synonyms": "the text on the export trigger button. user phrases: 'rename export button to X' / 'set the button label to X' / 'call the button X' / 'change export button text to X' -> X (e.g. 'Download CSV', 'Download', 'Export Data')",
                 "tier": "presentation",
-                "type": "string"
-              },
-              "event": {
-                "default": "EXPORT_REQUESTED",
-                "description": "Event emitted when the user picks a format. Each entry in formats[] carries its own literal event field (no per-item templating in .lolo) — overriding this alone does not retarget the click; also set formats[].event to match.",
-                "label": "Export event",
-                "synonyms": "bus event name. internal wiring; users rarely target directly",
-                "tier": "internal",
                 "type": "string"
               },
               "formats": {
@@ -797,14 +843,6 @@
                 "synonyms": "list of export format entries (csv / xlsx / pdf / png / json). user phrases: 'only CSV' -> keep only csv entry; 'add JSON' -> append json entry; 'no PNG' -> remove png; 'allow X and Y' -> set the array to those two",
                 "tier": "presentation",
                 "type": "[FormatOption]"
-              },
-              "tileId": {
-                "default": "",
-                "description": "Identifier of the dashboard tile being exported",
-                "label": "Tile id",
-                "synonyms": "internal identifier — host orbital wires this; users rarely set it directly",
-                "tier": "internal",
-                "type": "string"
               }
             },
             "effectRow": [
@@ -963,5 +1001,5 @@
     "version": "3.0.0"
   },
   "source": "",
-  "lolo": "app std-export \"3.0.0\"\n\"std-export — a dropdown format menu (CSV/XLSX/PDF defaults; caller can override via config.formats). Emits EXPORT_REQUESTED { itemId, label } on the bus — itemId is the picked format id; host or sibling orbital generates the file. A format entry may carry `url`: the menu then downloads that file directly on pick (gesture-driven; the event still emits) — used for pre-baked artifacts like sprite sheets. tileId is a static per-instance config value, not echoed in the click payload.\"\norbital ExportOrbital {\n    uses Button from \"std/behaviors/ui-button\"\n    uses Menu from \"std/behaviors/ui-menu\"\n\n    type FormatOption = { id : string!, format : string!, label : string!, event : string, url : string }\n\n  entity ExportPanel [runtime] {\n    id : string!\n  }\n\n  trait Button1 = Button.traits.ButtonRender -> ExportPanel {\n    config {\n      action: OPEN_EXPORT\n      icon: download\n      label: @config.buttonLabel\n      size: sm\n      variant: ghost\n    }\n  }\n\n  trait Menu1 = Menu.traits.MenuRender -> ExportPanel {\n    config {\n      items: @config.formats\n      position: bottom-start\n      trigger: [@trait.Button1]\n    }\n  }\n\n  trait ExportMenu -> ExportPanel [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (render-ui main { children: [@trait.Menu1], type: box })\n      OPEN_EXPORT -> idle\n      EXPORT_REQUESTED -> idle\n    }\n\n    emits {\n      EXPORT_REQUESTED -> external {\n        itemId : string!\n        label : string!\n      }\n        @description \"Requests export of data in the picked format. itemId is the format id (matches the FormatOption.id/format of the picked entry).\"\n        @synonyms \"export, save, download, generate\"\n        @tier \"domain\"\n    }\n\n    listens {\n      EXPORT_REQUESTED {\n        itemId : string!\n        label : string!\n      }\n        @description \"A request to export data in a specific format. itemId is the picked format id.\"\n        @synonyms \"export, generate, save, download\"\n        @tier \"domain\"\n    }\n\n    config {\n      tileId : string = \"\"\n        @label \"Tile id\"\n        @description \"Identifier of the dashboard tile being exported\"\n        @synonyms \"internal identifier — host orbital wires this; users rarely set it directly\"\n        @tier \"internal\"\n      event : string = EXPORT_REQUESTED\n        @label \"Export event\"\n        @description \"Event emitted when the user picks a format. Each entry in formats[] carries its own literal event field (no per-item templating in .lolo) — overriding this alone does not retarget the click; also set formats[].event to match.\"\n        @synonyms \"bus event name. internal wiring; users rarely target directly\"\n        @tier \"internal\"\n      formats : [FormatOption] = [{\n        event: EXPORT_REQUESTED\n        format: csv\n        id: csv\n        label: CSV\n      }, {\n        event: EXPORT_REQUESTED\n        format: xlsx\n        id: xlsx\n        label: XLSX\n      }, {\n        event: EXPORT_REQUESTED\n        format: pdf\n        id: pdf\n        label: PDF\n      }]\n        @label \"Available formats\"\n        @description \"Export formats shown to the user in the popover\"\n        @synonyms \"list of export format entries (csv / xlsx / pdf / png / json). user phrases: 'only CSV' -> keep only csv entry; 'add JSON' -> append json entry; 'no PNG' -> remove png; 'allow X and Y' -> set the array to those two\"\n        @tier \"presentation\"\n      buttonLabel : string = Export\n        @label \"Button label\"\n        @description \"Text shown on the toolbar button that opens the export popover\"\n        @synonyms \"the text on the export trigger button. user phrases: 'rename export button to X' / 'set the button label to X' / 'call the button X' / 'change export button text to X' -> X (e.g. 'Download CSV', 'Download', 'Export Data')\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/exports/menu\" as ExportMenuPage -> ExportMenu, Button1, Menu1\n}"
+  "lolo": "app std-export \"3.0.0\"\n\"std-export — a dropdown format menu (CSV/XLSX/PDF defaults; caller can override via config.formats). Emits EXPORT_REQUESTED { itemId, label } on the bus — itemId is the picked format id; host or sibling orbital generates the file. A format entry may carry `url`: the menu then downloads that file directly on pick (gesture-driven; the event still emits) — used for pre-baked artifacts like sprite sheets. tileId is a static per-instance config value, not echoed in the click payload.\"\norbital ExportOrbital {\n    uses Button from \"std/behaviors/ui-button\"\n    uses Menu from \"std/behaviors/ui-menu\"\n\n    type FormatOption = { id : string!, format : string!, label : string!, event : string, url : string }\n\n  entity ExportPanel [runtime] {\n    id : string!\n  }\n\n  trait Button1 = Button.traits.ButtonRender -> ExportPanel {\n    config {\n      action: OPEN_EXPORT\n      icon: download\n      label: @config.buttonLabel\n      size: sm\n      variant: ghost\n    }\n  }\n\n  trait Menu1 = Menu.traits.MenuRender -> ExportPanel {\n    config {\n      items: @config.formats\n      position: bottom-start\n      trigger: [@trait.Button1]\n    }\n  }\n\n  trait ExportMenu -> ExportPanel [interaction, instance] {\n    initial: idle\n\n    state idle {\n      INIT -> idle\n        (render-ui main { children: [@trait.Menu1], type: box })\n      OPEN_EXPORT -> idle\n      EXPORT_REQUESTED -> idle\n    }\n\n    emits {\n      EXPORT_REQUESTED -> external {\n        itemId : string!\n        label : string!\n      }\n        @description \"Requests export of data in the picked format. itemId is the format id (matches the FormatOption.id/format of the picked entry).\"\n        @synonyms \"export, save, download, generate\"\n        @tier \"domain\"\n    }\n\n    listens {\n      EXPORT_REQUESTED {\n        itemId : string!\n        label : string!\n      }\n        @description \"A request to export data in a specific format. itemId is the picked format id.\"\n        @synonyms \"export, generate, save, download\"\n        @tier \"domain\"\n    }\n\n    config {\n      formats : [FormatOption] = [{\n        event: EXPORT_REQUESTED\n        format: csv\n        id: csv\n        label: CSV\n      }, {\n        event: EXPORT_REQUESTED\n        format: xlsx\n        id: xlsx\n        label: XLSX\n      }, {\n        event: EXPORT_REQUESTED\n        format: pdf\n        id: pdf\n        label: PDF\n      }]\n        @label \"Available formats\"\n        @description \"Export formats shown to the user in the popover\"\n        @synonyms \"list of export format entries (csv / xlsx / pdf / png / json). user phrases: 'only CSV' -> keep only csv entry; 'add JSON' -> append json entry; 'no PNG' -> remove png; 'allow X and Y' -> set the array to those two\"\n        @tier \"presentation\"\n      buttonLabel : string = Export\n        @label \"Button label\"\n        @description \"Text shown on the toolbar button that opens the export popover\"\n        @synonyms \"the text on the export trigger button. user phrases: 'rename export button to X' / 'set the button label to X' / 'call the button X' / 'change export button text to X' -> X (e.g. 'Download CSV', 'Download', 'Export Data')\"\n        @tier \"presentation\"\n    }\n  }\n\n  page \"/exports/menu\" as ExportMenuPage -> ExportMenu, Button1, Menu1\n}"
 }

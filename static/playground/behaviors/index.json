@@ -247,7 +247,7 @@
   },
   {
     "name": "std-data-import",
-    "description": "std-data-import — staged CSV import run, source-agnostic: upload → staged review → confirm → parse+map → handoff. UPLOAD_CSV opens a run and persists an ImportBatch row (status uploaded, fieldMappingJson recorded verbatim for provenance); the host's file UI parses the CSV and answers with STAGE_ROWS, one JSON string per raw row, which the atom bulk-persists into import_rows against the batch id and presents as a staged review (row/error counts + Confirm/Discard). CONFIRM_IMPORT marks the batch confirmed, emits IMPORT_CONFIRMED { batchId, sourceName, rowCount }, and fetches the batch's staged rows; on fetch success the atom parses each rowJson via json/parse, remaps keys through the batch's mappingJson, and emits IMPORT_ROWS_PARSED { batchId, rows, failed } — the persist half is the CONSUMER organism's: it listens for IMPORT_ROWS_PARSED and persists the mapped rows into its own target entity (cross-atom persist into a consumer's entity is not expressible from here). This is deliberately the CSV-file path: the atom never calls a source service — sourceName/fieldMappingJson/targetEntity/historyWindowDays are declarative consumer configs, and any persist failure marks the batch row failed and fires IMPORT_FAILED, never a silent swallow. Compose with std-import for the file-picker menu.",
+    "description": "std-data-import — staged CSV import run, source-agnostic: upload → staged review → confirm → parse+map → handoff. UPLOAD_CSV opens a run and persists an ImportBatch row (status uploaded, fieldMappingJson recorded verbatim for provenance); the host's file UI parses the CSV and answers with STAGE_ROWS, one JSON string per raw row, which the atom bulk-persists into import_rows against the batch id and presents as a staged review (row/error counts + Confirm/Discard). CONFIRM_IMPORT marks the batch confirmed, emits IMPORT_CONFIRMED { batchId, sourceName, rowCount }, and fetches the batch's staged rows; on fetch success the atom parses each rowJson via json/parse, remaps keys through the batch's mappingJson, and emits IMPORT_ROWS_PARSED { batchId, rows, failed } — the persist half is the CONSUMER organism's: it listens for IMPORT_ROWS_PARSED and persists the mapped rows into its own target entity (cross-atom persist into a consumer's entity is not expressible from here). This is deliberately the CSV-file path: the atom never calls a source service — sourceName/fieldMappingJson/targetEntity are consumer configs, and any persist failure marks the batch row failed and fires IMPORT_FAILED, never a silent swallow. Compose with std-import for the file-picker menu.",
     "level": "atom",
     "topic": "infra"
   },
@@ -319,7 +319,7 @@
   },
   {
     "name": "std-form-advanced",
-    "description": "std-form-advanced — full-typed form-section primitive. Hosts the `editing` state with a configurable `fields` array (each entry mirrors @almadar/ui's `form-section` field schema: `{ name, label, type?, values?, relation?, required? }`). Field-level constraints live in `config.fieldValidation` as `[{ field, format?: 'email'|'url'|'phone', regex?, minLength?, maxLength?, message? }]` — form-section surfaces inline errors when a submit violates a declared constraint. Agents drive shape by overriding `config.fields` + `config.fieldValidation` per-call-site.",
+    "description": "std-form-advanced — full-typed form-section primitive. Hosts the `editing` state with a configurable `fields` array (each entry mirrors @almadar/ui's `form-section` field schema: `{ name, label, type?, values?, relation?, required? }`). Agents drive shape by overriding `config.fields` per-call-site.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -397,7 +397,7 @@
   },
   {
     "name": "std-graphs",
-    "description": "std-graphs — embeddable chart atom. ITEMS_LOADED groups @payload.data by @config.categoryField (or @config.timeField when timeAxis=true) and aggregates per bucket. Multi-series rendering via @config.series (preformatted ChartSeries shape). Histograms via chartType=histogram pass pre-binned @payload.data through unchanged. Stacked / 100% stacked bars via @config.stack. Post-process sort + limit. Clicking a data point emits UI:@config.drillEvent with { label, value, seriesLabel? }. Drop into a dashboard alongside std-stats / std-browse.",
+    "description": "std-graphs — embeddable chart atom. ITEMS_LOADED keeps the rows whose @config.filterField equals @config.filterValue (blank = all), groups them by @config.categoryField, or (timeAxis=true) by the @config.period bucket of @config.timeField — rows without a time value have no place on a time axis and are left out — and aggregates per bucket. Multi-series rendering via @config.series (preformatted ChartSeries shape). Histograms via chartType=histogram pass pre-binned @payload.data through unchanged. Stacked / 100% stacked bars via @config.stack. Post-process sort + limit. Clicking a data point emits UI:@config.drillEvent with { label, value, seriesLabel? }. Drop into a dashboard alongside std-stats / std-browse.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -841,7 +841,7 @@
   },
   {
     "name": "std-platformer-puzzle",
-    "description": "Platformer + puzzle genre substrate organism. Composes the standard authorities — platformer-body, pickup, objective-flow, choice-gate, fx-particles, fx-narrative, tutorial-overlay — and enforces five trait-typed pillar slots: agency, challenge, goal, reward, feedback. Levels consume this organism, fill every slot with a local rebinding trait, and add their own geometry, render, and math rules. Math targets and grade levels stay downstream in the domain package; this substrate is domain-agnostic.",
+    "description": "Platformer + puzzle genre substrate organism. Composes the standard authorities — platformer-body, pickup, objective-flow, choice-gate, fx-particles, fx-narrative, tutorial-overlay — as the pillars a level rebinds: agency (body), challenge (choice), goal (objective), reward (pickup), feedback (fx, narrative, tutorial). Levels rebind these authorities locally and add their own geometry, render, and math rules. Math targets and grade levels stay downstream in the domain package; this substrate is domain-agnostic.",
     "level": "organism",
     "topic": "ui/game"
   },
@@ -904,6 +904,12 @@
     "description": "std-review-cycle — revise-and-resubmit review workflow (document review, pull-request review, design review, editorial review, submission review, send back for changes, request changes, resubmit, review rounds, four-eyes approval). A record moves draft → in review → changes requested → in review → … → approved. One SUBMIT event serves both the first submission and every resubmission; the atom counts review rounds and marks resubmissions on the emitted ReviewRequested. Every move writes a ReviewEvent history row stamped with the states it left and entered. `requireSeparateApproval` enforces four-eyes review: an approval raised in the same action that submitted the record (an auto-responding rule or bot) is rejected. Headless — the host renders the badge and buttons and routes its actions to SUBMIT / REQUEST_CHANGES / APPROVE.",
     "level": "atom",
     "topic": "infra"
+  },
+  {
+    "name": "std-role-gate",
+    "description": "std-role-gate — explicit role gate around ONE piece of UI. Renders its `content` trait only when `roles` is empty or lists the viewer's role; any other viewer gets nothing rendered. Wrap a single button, FAB or panel in it, bind `viewerRole` at the call site (e.g. `viewerRole: @user.role`), and list the roles that may see it.",
+    "level": "atom",
+    "topic": "ui/core"
   },
   {
     "name": "std-round-flow",
@@ -1063,7 +1069,7 @@
   },
   {
     "name": "std-thread",
-    "description": "std-thread — forum-style nested replies with collapse + flat-mode toggle. Owns ThreadPost (persistent). flat:true covers 1:1 linear inquiry threads; flat:false renders forum-style nested. INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). REPLY persists a child post under @payload.parentId, stamped with the real @user identity. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps @entity.replyRootId (scratch — the persisted threadRootId column is written only by the reply persist create) and refetches filtered by the payload; a plain INIT re-entry now also falls back through @entity.replyRootId before @config.threadRootId, so it stays scoped to the last SET_THREAD_ROOT instead of re-widening — only the after-create/after-select refetches still scope directly off their own event payload. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens. A non-empty sectionTitle switches the default bodyContent into titled-comments mode: header + post list + a standalone composer button (without it an empty thread has no REPLY emitter at all — the affordance only existed per-row).",
+    "description": "std-thread — forum-style nested replies with collapse. Owns ThreadPost (persistent). INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). REPLY persists a child post under @payload.parentId, stamped with the real @user identity. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps @entity.replyRootId (scratch — the persisted threadRootId column is written only by the reply persist create) and refetches filtered by the payload; a plain INIT re-entry now also falls back through @entity.replyRootId before @config.threadRootId, so it stays scoped to the last SET_THREAD_ROOT instead of re-widening — only the after-create/after-select refetches still scope directly off their own event payload. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens. A non-empty sectionTitle switches the default bodyContent into titled-comments mode: header + post list + a standalone composer button (without it an empty thread has no REPLY emitter at all — the affordance only existed per-row).",
     "level": "atom",
     "topic": "ui/core"
   },
