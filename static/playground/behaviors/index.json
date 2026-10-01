@@ -7,7 +7,7 @@
   },
   {
     "name": "std-agent-context",
-    "description": "Wraps llm/token-count + llm/compact — context window management.",
+    "description": "std-agent-context — keeps what an in-app assistant sends the model bounded. COMPACT { messages } passes a conversation of at most `keepMessages` turns straight through as COMPACTED; a longer one has its older turns summarized with `call-service llm summarize` into one leading note and keeps the last `keepMessages` turns verbatim. If summarizing fails, the older turns are dropped and the recent ones still go through, with a visible warning — a summarizer outage never blocks the assistant. Headless. Nothing is persisted: the conversation itself lives in std-agent-session.",
     "level": "atom",
     "topic": "agent"
   },
@@ -19,7 +19,7 @@
   },
   {
     "name": "std-agent-memory",
-    "description": "Wraps memory/recall + memory/store — semantic memory for agent loops.",
+    "description": "std-agent-memory — what an in-app assistant remembers across conversations. Owns AgentMemory rows (content + its embedding, ownerId = the real @user). RECALL { messages } embeds the last turn with `call-service llm embed`, ranks the stored memories whose embedding is comparable (same length as the query's) by cosine similarity and emits RECALLED { messages, context } with the closest `recallLimit` memories joined into one context string (empty when nothing is stored); if embedding fails it emits RECALLED with an empty context, so a memory outage never blocks the assistant. REMEMBER { reply } stores the exchange it just recalled for (asked + answered) with its embedding. AgentMemoryRecall is headless (failures show as toasts); AgentMemoryBrowse is the list view. Rows are meant to be private to their owner: the binding organism declares the @read scoping.",
     "level": "atom",
     "topic": "agent"
   },
@@ -31,7 +31,7 @@
   },
   {
     "name": "std-agent-session",
-    "description": "Wraps session/read-spec + session/write-spec + session/read-history — orbital session data.",
+    "description": "std-agent-session — the persisted conversation with an in-app assistant. Owns AgentMessage rows (role, content, ownerId stamped with the real @user, createdAt). SEND stores the user's message, reloads the thread and emits CONVERSE with the whole conversation, oldest first, for std-agent-tool-loop to answer; REPLIED stores the assistant's reply and redraws; REPLY_FAILED redraws the conversation (the tool loop shows the error). Rows are meant to be private to their owner: owner-scoped access needs an [identity] roster, so the binding organism declares the @read/@create scoping on AgentMessage — this generic atom cannot.",
     "level": "atom",
     "topic": "agent"
   },
@@ -43,13 +43,13 @@
   },
   {
     "name": "std-agent-tool-loop",
-    "description": "Agent tool-loop molecule — call-tools, check response, emit result for iteration.",
+    "description": "std-agent-tool-loop — answers a conversation by operating the running app as the caller, through `call-service llm call-tools`. The `tools` allowlist names declared external inputs (addressed like a listens source: `Trait.EVENT`, `Orbital.Trait.EVENT`) and entities to read; each input fires as the signed-in user through the ordinary dispatch (guards and entity policies apply) and each read returns only the rows the caller may read. Headless: the conversation UI (std-agent-session) shows the reply; a failure shows as a toast. CONVERSE carries the conversation (and optionally what std-agent-memory recalled); REPLIED carries the reply, every tool step and the token usage; REPLY_FAILED carries the error. Compose with std-agent-session (the conversation) and std-agent-trace (the step record).",
     "level": "atom",
     "topic": "agent"
   },
   {
     "name": "std-agent-trace",
-    "description": "Wraps trace/emit + trace/log — observability for agent loops.",
+    "description": "std-agent-trace — the persisted record of what an in-app assistant did. Each REPLIED (from std-agent-tool-loop) stores one AgentRun row: the reply, every tool step (which input or entity, the arguments, whether it took effect and why not), the tokens and the model calls; each REPLY_FAILED stores a failed run with its error. The record verification grades and later optimisation reads, in one format for tests and production. AgentTraceRecorder is headless; AgentRunBrowse is the run list. Rows carry ownerId (the real @user); the binding organism scopes @read.",
     "level": "atom",
     "topic": "agent"
   },
@@ -259,7 +259,7 @@
   },
   {
     "name": "std-detail-layout",
-    "description": "std-detail-layout — detail-page chrome band (back button + navigation-stack breadcrumb trail) above a single contentTrait slot. Use as the contentTrait of a detail page's AppShell binding: the band renders `← Back | Contracts › Contract details` from the orbital-scoped client navigation stack (session history, seeded from declared page-path ancestry on cold loads — the trail is never empty), and the consumer's detail trait renders below it. Back pops the stack; crumb clicks navigate to their level; a list router's `(navigate path payload { crumb: ?row.title })` labels the detail crumb with the real record title. Bind once per detail page — `XDetailLayout = DetailShell.traits.DetailLayout` with `contentTrait: @trait.XDetail`.",
+    "description": "std-detail-layout — detail-page chrome band (back button + navigation-stack breadcrumb trail) above a single contentTrait slot. Use as the contentTrait of a detail page's AppShell binding: the band renders `Contracts › Contract details` (phones: `← Back`) from the orbital-scoped client navigation stack (session history, seeded from declared page-path ancestry on cold loads — the trail is never empty), and the consumer's detail trait renders below it. Back pops the stack; crumb clicks navigate to their level; a list router's `(navigate path payload { crumb: ?row.title })` labels the detail crumb with the real record title. Bind once per detail page — `XDetailLayout = DetailShell.traits.DetailLayout` with `contentTrait: @trait.XDetail`.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -936,6 +936,12 @@
     "topic": "ui/core"
   },
   {
+    "name": "std-scoped-list",
+    "description": "std-scoped-list — the rows that belong to one parent record, scoped at runtime. SET_SCOPE { value } (forward the parent's own loaded event, e.g. a detail page's `TaskDetailLoaded -> SET_SCOPE with { value: ?data.id }`) lists only the rows whose `scopeField` equals that value; the scope is kept, so a later INIT (a reload after a row is created, edited or removed) lists the same parent's rows again. Before a scope arrives the list shows every row, or with `whenUnscoped: nothing` its empty state. Rows render through data-list (fields, row actions filtered by viewerRole, click event, sortBy). Opt in where a list must follow a parent picked elsewhere on the page: the bound entity carries the scope as an @intrinsic field — std-browse stays the general list.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
     "name": "std-score",
     "description": "Headless scoring mechanic: awards points when the enemy survivor count drops on a UNITS_CHANGED signal. Owns only score (+ its kill baseline); renders nothing.",
     "level": "atom",
@@ -1069,7 +1075,7 @@
   },
   {
     "name": "std-thread",
-    "description": "std-thread — forum-style nested replies with collapse. Owns ThreadPost (persistent). INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). REPLY persists a child post under @payload.parentId, stamped with the real @user identity. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps @entity.replyRootId (scratch — the persisted threadRootId column is written only by the reply persist create) and refetches filtered by the payload; a plain INIT re-entry now also falls back through @entity.replyRootId before @config.threadRootId, so it stays scoped to the last SET_THREAD_ROOT instead of re-widening — only the after-create/after-select refetches still scope directly off their own event payload. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens. A non-empty sectionTitle switches the default bodyContent into titled-comments mode: header + post list + a standalone composer button (without it an empty thread has no REPLY emitter at all — the affordance only existed per-row).",
+    "description": "std-thread — forum-style nested replies with collapse. Owns ThreadPost (persistent). INIT fetches, scoped by @config.threadRootId when set (blank = every root, the default). The list holds top-level posts, each with its replies nested (one level). REPLY persists a child post under @payload.parentId in the same thread root, stamped with the real @user identity, and adds it to the parent's replies and replyCount. A consumer that mounts this as page comments forwards its own document-opened signal to SET_THREAD_ROOT { rootId }, which stamps @entity.replyRootId (scratch — the persisted threadRootId column is written only by the reply persist create) and refetches filtered by the payload; a plain INIT re-entry now also falls back through @entity.replyRootId before @config.threadRootId, so it stays scoped to the last SET_THREAD_ROOT instead of re-widening — only the after-create/after-select refetches still scope directly off their own event payload. Layer 3 variants override `bodyContent` to deliver chat-bubble, email-threaded, or linear-comments UX while inheriting the same trait, state machine, emits, and listens. A non-empty sectionTitle switches the default bodyContent into titled-comments mode: header + post list + a standalone composer button (without it an empty thread has no REPLY emitter at all — the affordance only existed per-row).",
     "level": "atom",
     "topic": "ui/core"
   },
