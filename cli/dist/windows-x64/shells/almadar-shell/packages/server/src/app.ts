@@ -18,6 +18,7 @@ import {
   PUSH_SERVICE_WORKER_PATH,
   reportsRouter,
   createHooksRouter,
+  compressionMiddleware,
 } from '@almadar/server';
 import { hookProviders } from './hooks-providers.js';
 import { broadcastBusEvent } from './sse.js';
@@ -27,6 +28,8 @@ export const app: Express = express();
 
 // Middleware
 app.use(helmet());
+// brotli/gzip for responses of 1 KB and more; the SSE event stream is left uncompressed.
+app.use(compressionMiddleware());
 // CORS: env-driven allowlist (CORS_ORIGIN) — never reflect arbitrary origins with credentials.
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '1mb' }));

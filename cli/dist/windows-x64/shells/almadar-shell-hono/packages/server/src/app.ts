@@ -4,6 +4,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { compress } from 'hono/compress';
 import {
   errorHandler,
   notFoundHandler,
@@ -23,6 +24,8 @@ export const app = new Hono<AppEnv>();
 
 // Middleware
 app.use('*', cors({ origin: (origin) => origin, credentials: true }));
+// gzip for responses of 1 KB and more; hono/compress leaves text/event-stream uncompressed.
+app.use('*', compress());
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }));
