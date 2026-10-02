@@ -9,7 +9,10 @@ const path = require('node:path');
 const SCRIPTS = ['static/install.sh', 'cli/install.sh'].map((p) => path.join(__dirname, '..', p));
 
 function pick(script, releasesJson) {
-  return execFileSync('sh', ['-c', `. "${script}" --source-only; pick_cli_tag`], { input: releasesJson }).toString().trim();
+  return execFileSync('sh', ['-c', `. "${script}"; pick_cli_tag`], {
+    input: releasesJson,
+    env: { ...process.env, ORB_INSTALL_SOURCE_ONLY: '1' },
+  }).toString().trim();
 }
 
 const releases = (...tags) => JSON.stringify(tags.map((tag_name) => ({ tag_name, draft: false })), null, 2);

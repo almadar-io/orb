@@ -25,14 +25,8 @@ VERSION="${ORB_VERSION:-latest}"
 GITHUB_REPO="almadar-io/orb"
 
 # Parse arguments
-SOURCE_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --source-only)
-      # Define the functions without installing (the installer's tests).
-      SOURCE_ONLY=1
-      shift
-      ;;
     --version)
       VERSION="$2"
       shift 2
@@ -247,4 +241,6 @@ install() {
   esac
 }
 
-[ "$SOURCE_ONLY" = 1 ] || install
+# ORB_INSTALL_SOURCE_ONLY=1 defines the functions without installing (the
+# installer's tests; an env var because POSIX `.` passes no arguments).
+[ "${ORB_INSTALL_SOURCE_ONLY:-0}" = 1 ] || install
