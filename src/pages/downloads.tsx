@@ -6,6 +6,7 @@ import { translate } from "@docusaurus/Translate";
 import { Box, VStack, HStack, Typography, Button, Card, Icon, SimpleGrid } from '@almadar/ui/ssr';
 import ThemedImage from '@theme/ThemedImage';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import StudioDownloads from '@site/src/components/StudioDownloads';
 
 const EXTENSIONS = [
   {
@@ -25,15 +26,15 @@ const EXTENSIONS = [
 export default function Downloads(): ReactNode {
   return (
     <Layout
-      title={translate({ id: "downloads.meta.title", message: "Downloads — CLI & Editor Extensions" })}
-      description={translate({ id: "downloads.meta.desc", message: "Download the Orbital CLI, VS Code extension, and Zed extension." })}
+      title={translate({ id: "downloads.meta.title", message: "Downloads — Studio, CLI & Editor Extensions" })}
+      description={translate({ id: "downloads.meta.desc", message: "Download Almadar Studio for desktop, the Orbital CLI, and the VS Code and Zed extensions." })}
     >
       {/* Hero + CLI combined */}
       <Box className="w-full">
         <Box className="site-container py-20">
           <VStack gap="lg" align="start" className="mb-12">
             <Typography variant="h1">{translate({ id: "downloads.hero.title", message: "Downloads" })}</Typography>
-            <Typography variant="body1" color="muted">{translate({ id: "downloads.hero.subtitle", message: "Get the CLI, editor extensions, and start building." })}</Typography>
+            <Typography variant="body1" color="muted">{translate({ id: "downloads.hero.subtitle", message: "Get Almadar Studio, the CLI and editor extensions, and start building." })}</Typography>
           </VStack>
           <HStack gap="xl" className="flex-col lg:flex-row items-center">
             <Box className="flex-1">
@@ -72,6 +73,9 @@ export default function Downloads(): ReactNode {
           </HStack>
         </Box>
       </Box>
+
+      {/* Almadar Studio desktop */}
+      <StudioDownloads />
 
       {/* Editor Extensions */}
       <Box className="w-full bg-[var(--color-surface)]">

@@ -25,8 +25,14 @@ VERSION="${ORB_VERSION:-latest}"
 GITHUB_REPO="almadar-io/orb"
 
 # Parse arguments
+SOURCE_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
+    --source-only)
+      # Define the functions without installing (the installer's tests).
+      SOURCE_ONLY=1
+      shift
+      ;;
     --version)
       VERSION="$2"
       shift 2
@@ -90,12 +96,19 @@ detect_platform() {
   echo "${PLATFORM}-${ARCH}"
 }
 
+# The newest CLI release tag (`v<semver>`) from a GitHub releases list on
+# stdin. The repo also carries Almadar Studio's `studio-v*` releases, so its
+# "latest" release is not necessarily the CLI's.
+pick_cli_tag() {
+  grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' | grep -E '^v[0-9]' | head -n 1
+}
+
 # Get latest version from GitHub
 get_latest_version() {
   if command -v curl > /dev/null 2>&1; then
-    curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
+    curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=100" | pick_cli_tag
   elif command -v wget > /dev/null 2>&1; then
-    wget -qO- "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'
+    wget -qO- "https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=100" | pick_cli_tag
   else
     echo "${RED}Error: curl or wget is required${NC}"
     exit 1
@@ -272,4 +285,4 @@ install() {
   esac
 }
 
-install
+[ "$SOURCE_ONLY" = 1 ] || install

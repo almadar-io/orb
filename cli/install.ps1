@@ -37,9 +37,13 @@ function Get-Platform {
     }
 }
 
+# The newest CLI release (`v<semver>`): the repo also carries Almadar Studio's
+# `studio-v*` releases, so its "latest" release is not necessarily the CLI's.
 function Get-LatestVersion {
-    $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$GitHubRepo/releases/latest" -Headers @{ "User-Agent" = "Orb-Installer" }
-    return $response.tag_name
+    $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$GitHubRepo/releases?per_page=100" -Headers @{ "User-Agent" = "Orb-Installer" }
+    $cli = $releases | Where-Object { $_.tag_name -match '^v[0-9]' } | Select-Object -First 1
+    if (-not $cli) { throw "no orb CLI release found" }
+    return $cli.tag_name
 }
 
 function Install-OrbCLI {
