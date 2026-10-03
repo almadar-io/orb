@@ -31,7 +31,7 @@
   },
   {
     "name": "std-agent-session",
-    "description": "std-agent-session — the persisted conversation with an in-app assistant. Owns AgentMessage rows (role, content, ownerId stamped with the real @user, createdAt). SEND stores the user's message, reloads the thread and emits CONVERSE with the whole conversation, oldest first, for std-agent-tool-loop to answer; REPLIED stores the assistant's reply and redraws; REPLY_FAILED redraws the conversation (the tool loop shows the error). Rows are meant to be private to their owner: owner-scoped access needs an [identity] roster, so the binding organism declares the @read/@create scoping on AgentMessage — this generic atom cannot.",
+    "description": "std-agent-session — the conversation with an in-app assistant. AgentThread owns the persisted AgentMessage rows (role, content, ownerId stamped with the real @user, createdAt): SEND stores the user's message, reloads the thread and emits CONVERSE with the whole conversation, oldest first, for std-agent-tool-loop to answer; REPLIED stores the reply. AgentConversation is what the user sees, in the browser: the thread as chat bubbles with every step the assistant takes interleaved live (STEP: each model call, each tool it used and what the app answered), a thinking row while it works, and a chat bar. Rows are meant to be private to their owner: owner-scoped access needs an [identity] roster, so the binding organism declares the @read/@create scoping on AgentMessage — this generic atom cannot.",
     "level": "atom",
     "topic": "agent"
   },
@@ -43,13 +43,13 @@
   },
   {
     "name": "std-agent-tool-loop",
-    "description": "std-agent-tool-loop — answers a conversation by operating the running app as the caller, through `call-service llm call-tools`. The `tools` allowlist names declared external inputs (addressed like a listens source: `Trait.EVENT`, `Orbital.Trait.EVENT`) and entities to read; each input fires as the signed-in user through the ordinary dispatch (guards and entity policies apply) and each read returns only the rows the caller may read. Headless: the conversation UI (std-agent-session) shows the reply; a failure shows as a toast. CONVERSE carries the conversation (and optionally what std-agent-memory recalled); REPLIED carries the reply, every tool step and the token usage; REPLY_FAILED carries the error. Compose with std-agent-session (the conversation) and std-agent-trace (the step record).",
+    "description": "std-agent-tool-loop — answers a conversation by operating the running app as the caller, through `call-service llm call-tools`. The `tools` allowlist names declared external inputs (addressed like a listens source: `Trait.EVENT`, `Orbital.Trait.EVENT`) and entities to read; each input fires as the signed-in user through the ordinary dispatch (guards and entity policies apply) and each read returns only the rows the caller may read. Headless: the conversation UI (std-agent-session) shows the reply; a failure shows as a toast. CONVERSE carries the conversation (and optionally what std-agent-memory recalled); STEP carries each step live while it works (a model call, a tool it used, what the app answered) to the asking tab; REPLIED carries the reply, every step and the token usage; REPLY_FAILED carries the error. Compose with std-agent-session (the conversation) and std-agent-trace (the step record).",
     "level": "atom",
     "topic": "agent"
   },
   {
     "name": "std-agent-trace",
-    "description": "std-agent-trace — the persisted record of what an in-app assistant did. Each REPLIED (from std-agent-tool-loop) stores one AgentRun row: the reply, every tool step (which input or entity, the arguments, whether it took effect and why not), the tokens and the model calls; each REPLY_FAILED stores a failed run with its error. The record verification grades and later optimisation reads, in one format for tests and production. AgentTraceRecorder is headless; AgentRunBrowse is the run list. Rows carry ownerId (the real @user); the binding organism scopes @read.",
+    "description": "std-agent-trace — the persisted record of what an in-app assistant did. Each REPLIED (from std-agent-tool-loop) stores one AgentRun row: the reply, every step (each model call, each tool used with its arguments, whether it took effect and why not), the tokens and the model calls; each REPLY_FAILED stores a failed run with its error. The record verification grades and later optimisation reads, in one format for tests and production. AgentTraceRecorder is headless; AgentRunBrowse is the run list. Rows carry ownerId (the real @user); the binding organism scopes @read.",
     "level": "atom",
     "topic": "agent"
   },
@@ -397,7 +397,7 @@
   },
   {
     "name": "std-graphs",
-    "description": "std-graphs — embeddable chart atom. ITEMS_LOADED keeps the rows whose @config.filterField equals @config.filterValue (blank = all), groups them by @config.categoryField, or (timeAxis=true) by the @config.period bucket of @config.timeField — rows without a time value have no place on a time axis and are left out — and aggregates per bucket. Multi-series rendering via @config.series (preformatted ChartSeries shape). Histograms via chartType=histogram pass pre-binned @payload.data through unchanged. Stacked / 100% stacked bars via @config.stack. Post-process sort + limit. Clicking a data point emits UI:@config.drillEvent with { label, value, seriesLabel? }. Drop into a dashboard alongside std-stats / std-browse.",
+    "description": "std-graphs — embeddable chart atom. ITEMS_LOADED keeps the rows whose @config.filterField equals @config.filterValue (blank = all), groups them by @config.categoryField, or (timeAxis=true) by the @config.period bucket of @config.timeField — rows without a time value (or, by category, without a category value) have no bucket to land in and are left out — and aggregates per bucket. Multi-series rendering via @config.series (preformatted ChartSeries shape). Histograms via chartType=histogram pass pre-binned @payload.data through unchanged. Stacked / 100% stacked bars via @config.stack. Post-process sort + limit. Clicking a data point emits UI:@config.drillEvent with { label, value, seriesLabel? }. Drop into a dashboard alongside std-stats / std-browse.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -630,12 +630,6 @@
     "topic": "infra"
   },
   {
-    "name": "std-list",
-    "description": "std-list as a Function",
-    "level": "atom",
-    "topic": "ui/core"
-  },
-  {
     "name": "std-lives",
     "description": "Headless lives + checkpoint authority for boards with stakes: owns lives, the current respawn point, and nothing else. DAMAGE (call sites rename their hazard sources — BODY_HAZARD, BODY_FELL, PATROL_HIT — onto it) costs one life, respecting an invulnerability window so overlapping hazards can't chain-drain; losing a life emits LIFE_LOST plus RESPAWN with the current checkpoint (boards route RESPAWN to the body authority's PLACE), and losing the last emits GAME_OVER instead. Checkpoints advance automatically: BODY_MOVED crossing a configured checkpoint's atX moves the respawn point forward and emits CHECKPOINT_REACHED once per checkpoint (tracked by furthest atX reached, so checkpoints are ordered along the run). RESTART reseeds lives and respawn to the spawn. Renders nothing — HUDs read lives off the shared entity. Corresponds to the design-sheet field(s): challenge, feedback.",
     "level": "atom",
@@ -800,6 +794,12 @@
   {
     "name": "std-pagination",
     "description": "std-pagination — single primitive: pagination control. PAGE accepts the Pagination component's `{page}` emit; ITEMS_LOADED accepts an upstream `{data:[ObjectSpec]}` payload and derives totalPages = ceil(len/pageSize). Molecules wire `BrowseItemLoaded -> ITEMS_LOADED` to keep it in lockstep with the data hub.",
+    "level": "atom",
+    "topic": "ui/core"
+  },
+  {
+    "name": "std-panel-launcher",
+    "description": "std-panel-launcher — a floating button on the page that opens a side panel holding one trait (an assistant, a help panel, a cart). Closed: the button floats bottom-right. Open: the panel shows `contentTrait` under `title` and the button steps aside; the panel's close button (or Escape on small screens) brings the button back. The panel slot defaults to `dock`, which pushes the page aside on wide screens and becomes a side sheet below 1024px. List the trait on every page that should carry the button — it never injects itself.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -973,7 +973,7 @@
   },
   {
     "name": "std-site-header",
-    "description": "std-site-header — the sticky top bar of a public website: brand (logo + name), navigation links with the current page marked (a link with children opens a dropdown), an optional language picker (std-language-picker: the same page in each language, default language at the root and the others under /<code>/), and an optional call-to-action button. On small screens the links fold into a menu opened by a toggle, with child links indented under their parent and the call-to-action button at the bottom. Links follow `href` (in-app path, #anchor, or absolute URL); the header action and the small-screen menu links also emit NAV_CLICKED { href, label }. Pick for marketing sites, docs portals and product websites; for signed-in app chrome use std-app-layout.",
+    "description": "std-site-header — the sticky top bar of a public website: brand (logo + name, linking home when `homeHref` is set), navigation links with the current page marked (a link with children opens a dropdown), an optional light/dark toggle, an optional language picker (std-language-picker: the same page in each language, default language at the root and the others under /<code>/), and an optional call-to-action button. On small screens the links fold into a menu opened by a toggle, with child links indented under their parent and the call-to-action button at the bottom. Links follow `href` (in-app path, #anchor, or absolute URL); the header action and the small-screen menu links also emit NAV_CLICKED { href, label }. Pick for marketing sites, docs portals and product websites; for signed-in app chrome use std-app-layout.",
     "level": "atom",
     "topic": "ui/core"
   },
@@ -1172,6 +1172,24 @@
   {
     "name": "ui-activation-block",
     "description": "ActivationBlock — UI factory (1:1 with the @almadar/ui activation-block pattern).",
+    "level": "molecule",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-agent-activity-feed",
+    "description": "AgentActivityFeed — UI factory (1:1 with the @almadar/ui agent-activity-feed pattern).",
+    "level": "molecule",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-agent-activity-row",
+    "description": "AgentActivityRow — UI factory (1:1 with the @almadar/ui agent-activity-row pattern).",
+    "level": "molecule",
+    "topic": "ui/core"
+  },
+  {
+    "name": "ui-agent-chat-feed",
+    "description": "AgentChatFeed — UI factory (1:1 with the @almadar/ui agent-chat-feed pattern).",
     "level": "molecule",
     "topic": "ui/core"
   },
@@ -1650,24 +1668,6 @@
     "topic": "ui/core"
   },
   {
-    "name": "ui-entity-cards",
-    "description": "EntityCards — UI factory (1:1 with the @almadar/ui entity-cards pattern).",
-    "level": "organism",
-    "topic": "ui/core"
-  },
-  {
-    "name": "ui-entity-list",
-    "description": "EntityList — UI factory (1:1 with the @almadar/ui entity-list pattern).",
-    "level": "organism",
-    "topic": "ui/core"
-  },
-  {
-    "name": "ui-entity-table",
-    "description": "EntityTable — UI factory (1:1 with the @almadar/ui entity-table pattern).",
-    "level": "organism",
-    "topic": "ui/core"
-  },
-  {
     "name": "ui-error-boundary",
     "description": "ErrorBoundary — UI factory (1:1 with the @almadar/ui error-boundary pattern).",
     "level": "molecule",
@@ -1977,12 +1977,6 @@
     "name": "ui-markdown-content",
     "description": "MarkdownContent — UI factory (1:1 with the @almadar/ui markdown-content pattern).",
     "level": "molecule",
-    "topic": "ui/core"
-  },
-  {
-    "name": "ui-master-detail",
-    "description": "MasterDetail — UI factory (1:1 with the @almadar/ui master-detail pattern).",
-    "level": "organism",
     "topic": "ui/core"
   },
   {
