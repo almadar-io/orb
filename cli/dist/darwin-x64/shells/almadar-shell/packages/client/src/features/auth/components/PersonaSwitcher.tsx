@@ -1,31 +1,25 @@
 /**
- * Dev persona switch — view the app as each identity its domain implies.
+ * Dev persona switch — view the app as each identity its `[identity]` entity declares.
  *
- * Renders only when auth is mocked (no Firebase credentials), so it cannot appear
- * in a real deployment. Role gates and ownership-scoped lists are the parts of an
- * app that look identical whether they work or are simply empty; switching viewer
- * in one click is how you tell the difference.
+ * Exists only in a build pointed at the Auth emulator (`VITE_FIREBASE_AUTH_EMULATOR_HOST`), so it
+ * never appears, or calls the server, in a real deployment or a client-only site. Choosing a
+ * persona signs in as that emulated user: a real ID token, so `@user` resolves as in production.
  */
 
 import React from 'react';
 import { HStack, Select, Typography } from '@almadar/ui';
-import { isAuthEnabled } from '../../../config/firebase';
-import { listMockAccounts, onMockRosterChanged } from '../../../config/mockAuth';
-import { authService } from '../authService';
+import { useDevPersonas } from '@almadar/auth/react';
 import { useAuthContext } from '../AuthContext';
 
-export function PersonaSwitcher(): React.ReactElement | null {
+const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
+const EMULATOR_HOST: string | undefined = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST;
+
+function DevPersonaPicker(): React.ReactElement | null {
   const { user } = useAuthContext();
-  // The roster arrives over HTTP after first paint. Without this the picker
-  // renders its empty pre-fetch state and never updates, because the signed-out
-  // viewer never changes and so the auth listener never fires.
-  const [accounts, setAccounts] = React.useState(() => listMockAccounts());
+  const { personas, signInAs } = useDevPersonas(API_BASE);
+  if (personas.length === 0) return null;
 
-  React.useEffect(() => onMockRosterChanged(() => setAccounts(listMockAccounts())), []);
-
-  if (isAuthEnabled()) return null;
-
-  const options = accounts.map((p) => ({
+  const options = personas.map((p) => ({
     value: p.id,
     label: `${String(p.name ?? p.id)} — ${String(p.role ?? 'no role')}`,
   }));
@@ -40,11 +34,15 @@ export function PersonaSwitcher(): React.ReactElement | null {
         value={user?.uid ?? ''}
         placeholder="Signed out"
         onChange={(event) => {
-          void authService.signInAsPersona(event.target.value);
+          void signInAs(event.target.value);
         }}
       />
     </HStack>
   );
+}
+
+export function PersonaSwitcher(): React.ReactElement | null {
+  return EMULATOR_HOST ? <DevPersonaPicker /> : null;
 }
 
 export default PersonaSwitcher;

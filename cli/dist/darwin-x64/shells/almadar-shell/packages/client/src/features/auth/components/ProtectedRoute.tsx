@@ -1,14 +1,13 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from '../AuthContext';
-import { isAuthEnabled } from '../../../config/firebase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuthContext();
+  const { auth, user, loading } = useAuthContext();
 
   if (loading) {
     return (
@@ -22,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // gating would strand every route on /login — pass straight through.
   // Checked after `loading` so a configured-but-initializing Firebase
   // still shows the spinner instead of flashing protected content.
-  if (!isAuthEnabled()) {
+  if (auth === null) {
     return <>{children}</>;
   }
 

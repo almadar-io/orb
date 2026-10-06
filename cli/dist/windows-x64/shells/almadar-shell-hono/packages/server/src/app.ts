@@ -9,6 +9,7 @@ import {
   errorHandler,
   notFoundHandler,
   debugEventsRouter,
+  personasRouter,
   pushRouter,
   pushServiceWorkerHandler,
   PUSH_SERVICE_WORKER_PATH,
@@ -19,6 +20,7 @@ import {
 import { hookProviders } from './hooks-providers.js';
 import { broadcastBusEvent } from './sse.js';
 import { registerRoutes } from './routes.js';
+import { identityRoster } from './viewer.js';
 
 export const app = new Hono<AppEnv>();
 
@@ -62,6 +64,10 @@ app.route(
 );
 
 // Register generated routes
+// Dev personas: the [identity] rows as Auth-emulator users (mounted only while
+// FIREBASE_AUTH_EMULATOR_HOST is set). Signing in as one yields a real ID token.
+app.route('/api', personasRouter(identityRoster));
+
 registerRoutes(app);
 
 // Server-side report export (Excel/PDF/CSV). Mounted AFTER registerRoutes so

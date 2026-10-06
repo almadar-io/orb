@@ -1,9 +1,9 @@
-import type { RawUserClaims } from '@almadar/core';
+import type { VerifiedUser } from '@almadar/auth';
 
 declare global {
   namespace Express {
     interface Request {
-      firebaseUser?: RawUserClaims & { uid: string };
+      authUser?: VerifiedUser;
     }
   }
 }

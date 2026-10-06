@@ -52,12 +52,13 @@ const queryClient = new QueryClient({
  * Bridges the signed-in viewer into `UserProvider`. Generated trait hooks read
  * `@user.x` through `useUser()`, so without this every role gate takes its
  * negative branch and every "only mine" list renders empty — with no error, since
- * `useUser()` falls back to anonymous. `normalizeUserContext` maps the provider's
+ * `useUser()` falls back to anonymous. `normalizeUserContext` maps the token's claims and
  * `uid`/`displayName` onto the `id`/`name` the behaviors read.
  */
 function ViewerProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
-  return <UserProvider user={normalizeUserContext(user) ?? null}>{children}</UserProvider>;
+  const viewer = user ? normalizeUserContext({ ...user.claims, uid: user.uid, email: user.email, name: user.name }) : undefined;
+  return <UserProvider user={viewer ?? null}>{children}</UserProvider>;
 }
 
 function App() {

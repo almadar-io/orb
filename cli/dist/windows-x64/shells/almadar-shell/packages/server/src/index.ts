@@ -21,13 +21,15 @@ try {
   logger.warn(`Firebase not configured — auth/db routes disabled: ${message}`);
 }
 
-import { validateIntegrationEnv, FirestoreCredentialPersistence } from '@almadar/server';
+import { validateIntegrationEnv, validateDeploymentEnv, FirestoreCredentialPersistence } from '@almadar/server';
 import { app } from './app.js';
 import { invokedServices, installTenantCredentialStore } from './services/clients.js';
 
 // Fail fast in production when a required integration credential is missing
 // (see SECRETS.md); registers the invoked services for /health reporting.
 validateIntegrationEnv(invokedServices);
+// Fail fast in production on incomplete auth config or a dev-only emulator host (see .env.example).
+validateDeploymentEnv();
 
 const PORT = env.PORT || 3030;
 

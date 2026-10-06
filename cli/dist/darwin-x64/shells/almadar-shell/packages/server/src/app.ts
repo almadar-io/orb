@@ -23,6 +23,7 @@ import {
 import { hookProviders } from './hooks-providers.js';
 import { broadcastBusEvent } from './sse.js';
 import { registerRoutes } from './routes.js';
+import { identityRoster } from './viewer.js';
 
 export const app: Express = express();
 
@@ -77,10 +78,9 @@ app.use(
   }),
 );
 
-// Dev persona roster (no-op unless ALLOW_DEV_AUTH_BYPASS). Mounted BEFORE
-// registerRoutes, which applies authenticateFirebase to /api — a pre-login
-// persona picker cannot present a token it does not have yet.
-app.use('/api', personasRouter());
+// Dev personas: the [identity] rows as Auth-emulator users (mounted only while
+// FIREBASE_AUTH_EMULATOR_HOST is set). Signing in as one yields a real ID token.
+app.use('/api', personasRouter(identityRoster));
 
 // Register generated routes
 registerRoutes(app);

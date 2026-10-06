@@ -31,11 +31,11 @@ const UserProfile: React.FC = () => {
           <img
             className="h-8 w-8 rounded-full ring-2 ring-gray-200 dark:ring-gray-700"
             src={user.photoURL}
-            alt={user.displayName || 'User'}
+            alt={user.name || 'User'}
           />
         ) : (
           <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
-            {(user.displayName || user.email || 'U')[0].toUpperCase()}
+            {(user.name || user.email || 'U')[0].toUpperCase()}
           </div>
         )}
       </button>
@@ -44,7 +44,7 @@ const UserProfile: React.FC = () => {
         <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black/5 dark:ring-white/10 z-50">
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-              {user.displayName || 'User'}
+              {user.name || 'User'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
               {user.email}
