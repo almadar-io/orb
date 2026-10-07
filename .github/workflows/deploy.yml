@@ -25,36 +25,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: pnpm
-
-      # Cache Docusaurus build artifacts: webpack5's filesystem cache
-      # (node_modules/.cache/webpack) and Docusaurus's plugin output
-      # (.docusaurus). On a warm hit webpack reuses ~95% of compiled
-      # modules, dropping a 25-min build to ~8-10 min. Keyed on patches/**:
-      # webpack snapshots node_modules by version, so a patched package would
-      # otherwise be served from a stale cache.
-      - name: Cache Docusaurus build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            .docusaurus
-            node_modules/.cache
-          key: docusaurus-${{ runner.os }}-${{ hashFiles('patches/**') }}-${{ hashFiles('pnpm-lock.yaml', 'docusaurus.config.ts', 'shared/**', 'docs/**', 'blog/**', 'src/**', 'static/**') }}
-          restore-keys: |
-            docusaurus-${{ runner.os }}-${{ hashFiles('patches/**') }}-
 
       - name: Install dependencies
         run: pnpm install --ignore-workspace --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Test
         run: pnpm test
 
       - name: Build
-        run: npx docusaurus build
+        run: pnpm build
         env:
-          NODE_ENV: production
-          # 3 locales build sequentially in one process; default heap OOMs (exit 137) mid-[ar].
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Authenticate to Firebase

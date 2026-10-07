@@ -400,9 +400,8 @@ The Orb CLI distribution and the [orb.almadar.io](https://orb.almadar.io) site.
 | Path | What it is |
 |---|---|
 | `cli/` | The `orb` CLI: installers (`install.sh`, `install.ps1`), Homebrew formula, the [`@almadar/orb`](https://www.npmjs.com/package/@almadar/orb) npm wrapper, and the shell templates the compiler copies into generated apps |
-| `docs/` | The documentation: [getting started](https://orb.almadar.io/docs/getting-started/introduction), [core concepts](https://orb.almadar.io/docs/core-concepts/entities), [tutorials](https://orb.almadar.io/docs/tutorials/beginner/complete-orbital), and the generated [behavior reference](https://orb.almadar.io/docs/reference/behaviors) |
-| `blog/` | The [blog](https://orb.almadar.io/blog) |
-| `src/`, `static/` | The Docusaurus site, including the in-browser [playground](https://orb.almadar.io/playground) and the [standard library catalog](https://orb.almadar.io/stdlib) |
+| `scripts/` | The site build: compiles the `std-almadar-orb` organism with `orb compile --mode client`, then prerenders every route. The docs, blog, [playground](https://orb.almadar.io/playground) and [standard library catalog](https://orb.almadar.io/stdlib) are `.lolo` behaviors, not files in this repo |
+| `static/` | Files served as-is: the CLI installers (`install.sh`, `install.ps1`) and images |
 | `skills/` | Agent skills for writing Orb |
 
 The language itself lives across the `@almadar/*` packages on [npm](https://www.npmjs.com/org/almadar): `@almadar/core` (types and the pattern registry), `@almadar/std` (the standard library of behaviors), `@almadar/runtime` (the JS interpreter behind the playground), and `@almadar/ui` (the React render substrate).
@@ -411,9 +410,8 @@ The language itself lives across the `@almadar/*` packages on [npm](https://www.
 
 ```bash
 pnpm install
-pnpm start          # dev server on http://localhost:3000
-pnpm build          # production build
-pnpm serve          # serve the production build locally
+pnpm build          # compile + prerender into build/
+pnpm test           # installer and build-script tests
 ```
 
 ## Community
