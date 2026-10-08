@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyStudioRelease, findOrganism, installerLabel } from './site-lib.mjs';
+import { applySeo, applyStudioRelease, findOrganism, installerLabel } from './site-lib.mjs';
 
 const downloads = (name, config) => ({ name, reference: { ref: 'Downloads.orbitals.OrbDownloads', ...(config ? { config } : {}) } });
 const release = {
@@ -44,4 +44,13 @@ test('the organism is found only under an organisms folder', () => {
   const files = ['websites/atoms/std-almadar-orb.orb', 'websites/organisms/std-almadar-orb.orb', 'websites/organisms/std-almadar-orb-x.orb'];
   assert.equal(findOrganism(files, 'std-almadar-orb'), 'websites/organisms/std-almadar-orb.orb');
   assert.equal(findOrganism(files, 'std-missing'), undefined);
+});
+
+test('SEO metadata identifies Orb and the canonical page URL', () => {
+  const html = applySeo('<html><head><title>Almadar App</title></head><body></body></html>', 'https://orb.almadar.io/docs/');
+  assert.match(html, /<title>Orb — Build full-stack apps from state machines<\/title>/);
+  assert.match(html, /<meta name="description" content="Orb is an open-source language/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/orb\.almadar\.io\/docs\/">/);
+  assert.match(html, /<meta property="og:title" content="Orb — Build full-stack apps from state machines">/);
+  assert.match(html, /<meta name="twitter:card" content="summary">/);
 });

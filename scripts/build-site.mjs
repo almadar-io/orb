@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { applyStudioRelease, findOrganism } from './site-lib.mjs';
+import { applyStudioRelease, findOrganism, writeSeoMetadata } from './site-lib.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -57,6 +57,8 @@ run('pnpm', ['exec', 'playwright', 'install', 'chromium'], client);
 // 174 routes in one bundle: the default heap runs out mid-chunking.
 run('pnpm', ['exec', 'vite', 'build', '--logLevel', 'warn'], client, { ...process.env, NODE_OPTIONS: '--max-old-space-size=6144' });
 run('node', ['scripts/prerender.mjs', '--routes', path.join(app, 'routes.json'), '--origin', values.origin, '--dist', 'dist'], client);
+const seoPages = writeSeoMetadata(path.join(client, 'dist'), values.origin);
+console.log(`[build-site] SEO metadata → ${seoPages} page(s)`);
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(client, 'dist'), out, { recursive: true });
