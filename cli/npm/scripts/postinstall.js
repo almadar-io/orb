@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { bunPath } = require('./bun-path.js');
 
 const platform = process.platform;
 const arch = process.arch;
@@ -40,15 +41,15 @@ if (!platformDir) {
 
 // Verify components
 const binaryName = platform === 'win32' ? 'orb.exe' : 'orb';
-const bunName = platform === 'win32' ? 'bun.exe' : 'bun';
 
 const hasBinary = fs.existsSync(path.join(platformDir, binaryName));
-const hasBun = fs.existsSync(path.join(platformDir, bunName));
+const bun = bunPath(platformDir);
+const hasBun = bun !== null;
 const hasAgent = fs.existsSync(path.join(platformDir, 'agent', 'cli.js'));
 
 console.log(`Orb CLI installed for ${platform}-${arch}:`);
 console.log(`  Binary:  ${hasBinary ? 'ok' : 'missing'}`);
-console.log(`  Bun:     ${hasBun ? 'ok' : 'not bundled (agent features require bun on PATH)'}`);
+console.log(`  Bun:     ${hasBun ? 'ok' : 'missing (reinstall: npm install -g @almadar/orb)'}`);
 console.log(`  Agent:   ${hasAgent ? 'ok' : 'not bundled (agent features unavailable)'}`);
 
 // Set orb up in the user store (~/.orb): the @almadar/core this orb pins, @almadar/std,
@@ -58,11 +59,10 @@ console.log(`  Agent:   ${hasAgent ? 'ok' : 'not bundled (agent features unavail
 // sets the store up on its first command.
 if (hasBinary && hasBun) {
   const binaryPath = path.join(platformDir, binaryName);
-  const bunPath = path.join(platformDir, bunName);
   let result;
   try {
     result = spawnSync(binaryPath, ['update', '--global'], {
-      env: { ...process.env, ORB_BUN_PATH: bunPath },
+      env: { ...process.env, ORB_BUN_PATH: bun },
       stdio: 'inherit',
       timeout: 600000,
     });
@@ -74,7 +74,7 @@ if (hasBinary && hasBun) {
     console.warn('\n  Orb CLI: language setup did not complete; orb will retry on its first command.\n');
   }
 } else if (hasBinary && !hasBun) {
-  console.warn('\n  Orb CLI: bun not bundled; orb sets the language up on its first command once bun is available.\n');
+  console.warn('\n  Orb CLI: bun is missing (a dependency of @almadar/orb); reinstall to set the language up.\n');
 }
 
 process.exit(0);
