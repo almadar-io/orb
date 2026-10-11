@@ -211,7 +211,7 @@ install() {
     tar -xzf "$FILENAME"
   fi
 
-  # Install full distribution (binary + agent + bun + shells)
+  # Install full distribution (binary + agent + bun)
   echo "Installing to ${INSTALL_DIR}..."
   mkdir -p "$INSTALL_DIR"
 
@@ -239,24 +239,18 @@ install() {
       cp -r agent/* "$INSTALL_DIR/agent/"
     fi
 
-    # Install shell templates (used by orb compile)
-    if [ -d shells ]; then
-      mkdir -p "$INSTALL_DIR/shells"
-      cp -r shells/* "$INSTALL_DIR/shells/"
-    fi
 
-    # Populate the user store (~/.orb) with @almadar/std (Phase 2: behaviors
-    # are installed packages, not baked into the binary). Non-fatal: a
-    # failure prints the manual command and never aborts the installer.
+    # Set orb up in the user store (~/.orb): the @almadar/core this orb pins,
+    # @almadar/std, the first-party language packs, the TypeScript shell and
+    # orb-desktop (`orb update --global`). Non-fatal: orb also does this on its
+    # first command.
     if [ -f "$INSTALL_DIR/bun" ]; then
-      if ! ORB_BUN_PATH="$INSTALL_DIR/bun" "$INSTALL_DIR/orb" behaviors install --global "@almadar/std@^16"; then
+      if ! ORB_BUN_PATH="$INSTALL_DIR/bun" "$INSTALL_DIR/orb" update --global; then
         echo ""
-        echo "${YELLOW}Could not install @almadar/std automatically.${NC}"
-        echo "Run manually: orb behaviors install --global @almadar/std"
+        echo "${YELLOW}Could not set the language up now; orb will retry on its first command.${NC}"
       fi
     else
-      echo "${YELLOW}bun not installed; skipping @almadar/std install.${NC}"
-      echo "Run manually once bun is available: orb behaviors install --global @almadar/std"
+      echo "${YELLOW}bun not installed; orb sets the language up on its first command once bun is available.${NC}"
     fi
   fi
 

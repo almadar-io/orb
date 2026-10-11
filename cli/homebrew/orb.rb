@@ -30,7 +30,18 @@ class Orb < Formula
   end
 
   def install
-    bin.install "orb"
+    # orb and its bundled bun side by side, so orb finds bun to set the
+    # language up (~/.orb) on its first command; only orb goes on PATH.
+    libexec.install "orb"
+    libexec.install "bun" if File.exist?("bun")
+    bin.write_exec_script libexec/"orb"
+  end
+
+  def caveats
+    <<~EOS
+      orb sets the language up in ~/.orb on its first command
+      (or run: orb update --global).
+    EOS
   end
 
   test do

@@ -116,20 +116,19 @@ function Install-OrbCLI {
         Write-ColorOutput Green "Orb CLI installed successfully!"
         Write-Output ""
 
-        # Populate the user store (~/.orb) with @almadar/std (Phase 2: behaviors
-        # are installed packages, not baked into the binary). Non-fatal: a
-        # failure prints the manual command and never aborts the installer.
+        # Set the language up in the user store (~/.orb): the @almadar/core this orb
+        # pins, @almadar/std, the first-party language packs, the TypeScript shell
+        # and orb-desktop (`orb update --global`). Non-fatal: orb
+        # also sets the store up on its first command.
         $BunPath = Join-Path $InstallDir "bun.exe"
         if (Test-Path $BunPath) {
             $env:ORB_BUN_PATH = $BunPath
-            & (Join-Path $InstallDir "orb.exe") behaviors install --global "@almadar/std@^16"
+            & (Join-Path $InstallDir "orb.exe") update --global
             if ($LASTEXITCODE -ne 0) {
-                Write-ColorOutput Yellow "Could not install @almadar/std automatically."
-                Write-Output "Run manually: orb behaviors install --global @almadar/std"
+                Write-ColorOutput Yellow "Could not set the language up now; orb will retry on its first command."
             }
         } else {
-            Write-ColorOutput Yellow "bun not installed; skipping @almadar/std install."
-            Write-Output "Run manually once bun is available: orb behaviors install --global @almadar/std"
+            Write-ColorOutput Yellow "bun not installed; orb sets the language up on its first command once bun is available."
         }
 
         # Check if in PATH

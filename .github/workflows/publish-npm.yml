@@ -114,21 +114,6 @@ jobs:
           mkdir -p "$PKG_DIR"
           cp -r cli/npm/* "$PKG_DIR/"
 
-          # Copy shell templates if available
-          if [ -d "cli/shells" ]; then
-            echo "Copying shell templates..."
-            mkdir -p "$PKG_DIR/shells"
-            for shell_dir in cli/shells/*/; do
-              [ -d "$shell_dir" ] || continue
-              shell_name=$(basename "$shell_dir")
-              echo "  Copying $shell_name..."
-              mkdir -p "$PKG_DIR/shells/$shell_name"
-              # tar, not rsync: the almadar-local fleet runners don't ship rsync (exit 127, 2026-09-03)
-              tar -C "$shell_dir" --exclude='node_modules' --exclude='.git' --exclude='generated' --exclude='dist' -cf - . \
-                | tar -C "$PKG_DIR/shells/$shell_name" -xf -
-            done
-          fi
-
           cd "$PKG_DIR"
           # Stamp version + align optionalDependencies versions
           jq --arg v "$VERSION" '.version = $v | .optionalDependencies |= with_entries(.value = $v)' package.json > tmp.json && mv tmp.json package.json
@@ -208,9 +193,18 @@ jobs:
             end
 
             def install
-              bin.install "orb"
-              # Install shell templates
-              (lib/"orb/shells").install Dir["shells/*"] if Dir.exist?("shells")
+              # orb and its bundled bun side by side, so orb finds bun to set the
+              # language up (~/.orb) on its first command; only orb goes on PATH.
+              libexec.install "orb"
+              libexec.install "bun" if File.exist?("bun")
+              bin.write_exec_script libexec/"orb"
+            end
+
+            def caveats
+              <<~EOS
+                orb sets the language up in ~/.orb on its first command
+                (or run: orb update --global).
+              EOS
             end
 
             test do

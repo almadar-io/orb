@@ -15,9 +15,10 @@ curl -fsSL https://orb.almadar.io/install.sh | sh
 ```
 
 The installer populates the user store (`~/.orb`) with `@almadar/std` so `orb validate`/`orb verify`
-resolve std behaviors right away; a project can pin its own std instead with
-`orb behaviors install @almadar/std`. Offline, install from a tarball:
-`orb behaviors install --global ./almadar-std-<v>.tgz`.
+resolve std behaviors right away (`orb update --global` refreshes everything orb installed); a
+project can pin its own std instead with `orb add @almadar/std`. Offline, install from a tarball:
+`orb add --global ./almadar-std-<v>.tgz`. Shells beyond TypeScript and other packages install the
+same way: `orb add @almadar/orb-shell-python`; `orb list` shows what is installed.
 
 ## Usage
 

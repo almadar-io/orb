@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { applyStudioRelease, findOrganism, writeSeoMetadata } from './site-lib.mjs';
+import { applyStudioRelease } from './site-lib.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -36,10 +36,14 @@ const out = path.resolve(values.out);
 const orb = process.env.ORB_BIN ?? path.join(root, 'node_modules', '.bin', 'orb');
 const run = (cmd, args, cwd, env = process.env) => execFileSync(cmd, args, { cwd, env, stdio: 'inherit' });
 
-const registry = path.join(root, 'node_modules', '@almadar-io', 'behaviors', 'behaviors', 'registry');
-const source = findOrganism(fs.readdirSync(registry, { recursive: true }).map(String), values.organism);
-if (source === undefined) throw new Error(`${values.organism}.orb is not in the installed @almadar-io/behaviors registry`);
-const program = JSON.parse(fs.readFileSync(path.join(registry, source), 'utf8'));
+// `orb` resolves the organism through the installed package's manifest (the
+// published package's materialized registry, or a workspace package's live
+// `.lolo` — docs/Almadar_Behavior_Packages.md §15) and lowers it to its program.
+const located = execFileSync(orb, ['behaviors', 'which', `almadar-behaviors/${values.organism}`], { cwd: root, encoding: 'utf8' }).trim();
+const sourceFile = located.replace(/ \(@[^)]*\)$/, '');
+const lowered = JSON.parse(execFileSync(orb, ['lower', sourceFile], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 30 }).trim().split('\n')[0]);
+if (lowered.error !== undefined) throw new Error(`${values.organism}: ${lowered.error}`);
+const program = lowered.orb;
 if (values['studio-release']) {
   const filled = applyStudioRelease(program, JSON.parse(fs.readFileSync(values['studio-release'], 'utf8')));
   console.log(`[build-site] studio release → ${filled} Downloads orbital(s)`);
@@ -56,9 +60,8 @@ run('pnpm', ['install', '--no-frozen-lockfile'], app);
 run('pnpm', ['exec', 'playwright', 'install', 'chromium'], client);
 // 174 routes in one bundle: the default heap runs out mid-chunking.
 run('pnpm', ['exec', 'vite', 'build', '--logLevel', 'warn'], client, { ...process.env, NODE_OPTIONS: '--max-old-space-size=6144' });
+run('node', ['scripts/route-documents.mjs', '--manifest', path.join(app, 'routes.json'), '--dist', 'dist'], client);
 run('node', ['scripts/prerender.mjs', '--routes', path.join(app, 'routes.json'), '--origin', values.origin, '--dist', 'dist'], client);
-const seoPages = writeSeoMetadata(path.join(client, 'dist'), values.origin);
-console.log(`[build-site] SEO metadata → ${seoPages} page(s)`);
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(client, 'dist'), out, { recursive: true });
