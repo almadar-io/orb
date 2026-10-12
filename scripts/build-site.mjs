@@ -56,6 +56,10 @@ fs.writeFileSync(programFile, JSON.stringify(program, null, 2));
 
 run(orb, ['compile', programFile, '--mode', 'client', '-o', app], root);
 if (fs.existsSync(values.static)) fs.cpSync(values.static, path.join(client, 'public'), { recursive: true });
+// The installers the site serves are the CLI's own (cli/), never a second copy.
+for (const installer of ['install.sh', 'install.ps1']) {
+  fs.copyFileSync(path.join(root, 'cli', installer), path.join(client, 'public', installer));
+}
 run('pnpm', ['install', '--no-frozen-lockfile'], app);
 run('pnpm', ['exec', 'playwright', 'install', 'chromium'], client);
 // 174 routes in one bundle: the default heap runs out mid-chunking.
