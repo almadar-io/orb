@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const ROOT = path.join(import.meta.dirname, '..');
-const SCRIPTS = ['static/install.sh', 'cli/install.sh'].map((p) => path.join(ROOT, p));
+const SCRIPTS = ['cli/install.sh'].map((p) => path.join(ROOT, p));
 
 function pick(script, releasesJson) {
   return execFileSync('sh', ['-c', `. "${script}"; pick_cli_tag`], {
