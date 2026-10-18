@@ -5,14 +5,16 @@
  * every route the compiler listed, and copy the static files beside it.
  *
  * Usage: node scripts/build-site.mjs --organism <name> --origin <https://site>
- *          [--static static] [--studio-release src/data/studio-release.json] [--out build]
+ *          [--static static] [--studio-release src/data/studio-release.json] [--out build] [--recapture-posters]
+ * Demos shown as images (`presentation: "image"`) get their posters captured from their demo
+ * behavior into the static dir when missing (or always, with --recapture-posters).
  * The compiler is the installed @almadar/orb (node_modules/.bin/orb), or ORB_BIN.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { applyStudioRelease } from './site-lib.mjs';
+import { applyStudioRelease, posterSources } from './site-lib.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -21,6 +23,7 @@ const { values } = parseArgs({
     static: { type: 'string', default: 'static' },
     'studio-release': { type: 'string' },
     out: { type: 'string', default: 'build' },
+    'recapture-posters': { type: 'boolean', default: false },
   },
 });
 if (!values.organism || !values.origin) {
@@ -54,11 +57,23 @@ fs.mkdirSync(work, { recursive: true });
 const programFile = path.join(work, `${values.organism}.orb`);
 fs.writeFileSync(programFile, JSON.stringify(program, null, 2));
 
+const resolvedFile = path.join(work, 'resolved', `${values.organism}.orb`);
+fs.mkdirSync(path.dirname(resolvedFile), { recursive: true });
+execFileSync(orb, ['resolve', programFile, '-o', resolvedFile], { cwd: root, stdio: 'inherit' });
+const resolved = JSON.parse(fs.readFileSync(resolvedFile, 'utf8'));
+const staticDir = path.resolve(values.static);
+const onDisk = values['recapture-posters'] ? () => false : (p) => fs.existsSync(path.join(staticDir, p.replace(/^\//, '')));
+for (const from of posterSources(resolved, onDisk)) {
+  const demo = execFileSync(orb, ['behaviors', 'which', from], { cwd: root, encoding: 'utf8' }).trim().replace(/ \(@[^)]*\)$/, '');
+  console.log(`[build-site] posters ← ${from}`);
+  run(orb, ['verify', demo, '--compiled', '--screenshot-frames', staticDir], root);
+}
+
 run(orb, ['compile', programFile, '--mode', 'client', '-o', app], root);
 if (fs.existsSync(values.static)) fs.cpSync(values.static, path.join(client, 'public'), { recursive: true });
 // The installers the site serves are the CLI's own (cli/), never a second copy.
 for (const installer of ['install.sh', 'install.ps1']) {
-  fs.copyFileSync(path.join(root, 'cli', installer), path.join(client, 'public', installer));
+  fs.copyFileSync(path.join(import.meta.dirname, '..', 'cli', installer), path.join(client, 'public', installer));
 }
 run('pnpm', ['install', '--no-frozen-lockfile'], app);
 run('pnpm', ['exec', 'playwright', 'install', 'chromium'], client);

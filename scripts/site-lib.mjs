@@ -1,5 +1,6 @@
 /**
- * Pure helpers for build-site.mjs: fill the Downloads orbitals' studio-release knobs.
+ * Pure helpers for build-site.mjs: fill the Downloads orbitals' studio-release knobs, and find the
+ * demo behaviors whose posters still need capturing.
  */
 
 export function installerLabel(installer) {
@@ -31,4 +32,31 @@ export function applyStudioRelease(schema, release) {
     };
   }
   return targets.length;
+}
+
+const knob = (trait, key) => trait.config?.[key]?.default;
+
+/**
+ * The behaviors whose posters the site still needs: every trait of the resolved site program shown
+ * as `presentation: "image"` names its demo atom in `sourceBehavior`, and that atom is captured when
+ * one of its poster files (`poster`, `posterDark`) is not on disk yet (`exists(path)`).
+ */
+export function posterSources(schema, exists) {
+  const sources = new Set();
+  for (const orbital of schema.orbitals) {
+    for (const trait of orbital.traits ?? []) {
+      if (knob(trait, 'presentation') !== 'image') continue;
+      const poster = knob(trait, 'poster');
+      if (typeof poster !== 'string' || poster === '') {
+        throw new Error(`${trait.name} is presented as an image but declares no poster`);
+      }
+      if (trait.sourceBehavior === undefined) {
+        throw new Error(`${trait.name} is presented as an image but is not composed from a demo behavior to capture`);
+      }
+      const dark = knob(trait, 'posterDark');
+      const files = typeof dark === 'string' && dark !== '' ? [poster, dark] : [poster];
+      if (files.some((p) => !exists(p))) sources.add(trait.sourceBehavior.behavior);
+    }
+  }
+  return [...sources];
 }

@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { bunPath } = require('./bun-path.js');
+const { ensureBun } = require('./bun-path.js');
 
 const platform = process.platform;
 const arch = process.arch;
@@ -43,7 +43,7 @@ if (!platformDir) {
 const binaryName = platform === 'win32' ? 'orb.exe' : 'orb';
 
 const hasBinary = fs.existsSync(path.join(platformDir, binaryName));
-const bun = bunPath(platformDir);
+const bun = ensureBun(platformDir);
 const hasBun = bun !== null;
 const hasAgent = fs.existsSync(path.join(platformDir, 'agent', 'cli.js'));
 
