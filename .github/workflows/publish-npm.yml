@@ -112,34 +112,6 @@ jobs:
           # Stamp version + align optionalDependencies versions
           jq --arg v "$VERSION" '.version = $v | .optionalDependencies |= with_entries(.value = $v)' package.json > tmp.json && mv tmp.json package.json
 
-      # G-CROSS-231: install the packed tarballs the way a user does, into a clean HOME, before anything is published.
-      # std is fetched at first run from the registry: that is the real user path.
-      - name: Clean-HOME install smoke on the packed artifacts
-        run: |
-          ROOT_DIR="$(pwd)"
-          case "$(uname -s)-$(uname -m)" in
-            Linux-x86_64) PLATFORM=linux-x64 ;;
-            Linux-aarch64|Linux-arm64) PLATFORM=linux-arm64 ;;
-            *) echo "ERROR: no packed platform package for $(uname -s)-$(uname -m)"; exit 1 ;;
-          esac
-          test -d "npm-packages/@almadar/orb-${PLATFORM}" || { echo "ERROR: @almadar/orb-${PLATFORM} was not staged"; exit 1; }
-          PACK_DIR="$(mktemp -d)"
-          (cd "npm-packages/@almadar/orb-${PLATFORM}" && npm pack --pack-destination "$PACK_DIR")
-          (cd "npm-packages/@almadar/orb" && npm pack --pack-destination "$PACK_DIR")
-          PLATFORM_TGZ="$(ls "$PACK_DIR"/almadar-orb-${PLATFORM}-*.tgz)"
-          WRAPPER_TGZ="$(ls "$PACK_DIR"/almadar-orb-[0-9]*.tgz)"
-          SMOKE_ROOT="$(mktemp -d)"
-          export HOME="$SMOKE_ROOT/home"
-          mkdir -p "$HOME" "$SMOKE_ROOT/app"
-          unset ORB_NO_AUTO_SETUP
-          cd "$SMOKE_ROOT/app"
-          jq -n --arg wrapper "file:$WRAPPER_TGZ" --arg platform "file:$PLATFORM_TGZ" --arg name "@almadar/orb-${PLATFORM}" \
-            '{name: "orb-smoke", private: true, dependencies: {"@almadar/orb": $wrapper}, overrides: {($name): $platform}}' > package.json
-          npm install
-          LISTING="$(./node_modules/.bin/orb list --global)"
-          echo "$LISTING"
-          echo "$LISTING" | grep -q "@almadar/std" || { echo "ERROR: orb list --global does not list @almadar/std after a clean-HOME install of the packed orb"; exit 1; }
-
       - name: Publish platform packages, then the wrapper
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -154,7 +126,8 @@ jobs:
               echo "${NAME}@${VERSION} already on the registry — skipping publish."
             else
               echo "Publishing ${NAME}@${VERSION}..."
-              (cd "$PKG_DIR" && npm publish --access public)
+              # Published under the next dist-tag; the orb release smoke (orbital-rust release-smoke.yml) promotes it to latest.
+              (cd "$PKG_DIR" && npm publish --access public --tag next)
             fi
           done
 
