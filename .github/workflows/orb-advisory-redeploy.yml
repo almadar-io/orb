@@ -1,0 +1,66 @@
+name: orb advisory redeploy
+
+# Reusable. An app repo redeploys on an urgent orb release; a running app is never patched in place.
+# Any red step stops before deploy, so the running revision stays.
+#
+# Caller, in the app repo (.github/workflows/orb-advisory.yml):
+#
+#   on:
+#     repository_dispatch:
+#       types: [orb-advisory]
+#   jobs:
+#     redeploy:
+#       uses: almadar-io/orb/.github/workflows/orb-advisory-redeploy.yml@main
+#       with:
+#         programs: "app.lolo"            # one entry program per line
+#         deploy-command: "npm run deploy"
+#       secrets: inherit
+
+on:
+  workflow_call:
+    inputs:
+      programs:
+        description: "Entry programs to validate, one path per line"
+        required: true
+        type: string
+      deploy-command:
+        description: "Shell command that deploys the app"
+        required: true
+        type: string
+      node-version:
+        required: false
+        type: string
+        default: "22"
+
+jobs:
+  redeploy:
+    name: Update, validate, deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Update to the advised packages
+        run: npx -y @almadar/orb@latest update
+      - name: Validate every entry program
+        env:
+          PROGRAMS: ${{ inputs.programs }}
+        run: |
+          failed=0
+          while read -r program; do
+            test -n "$program" || continue
+            echo "validate $program"
+            npx -y @almadar/orb@latest validate "$program" || failed=1
+          done <<< "$PROGRAMS"
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::orb advisory: validation failed, NOT deploying; the running revision stays"
+            exit 1
+          fi
+      - name: Deploy
+        env:
+          DEPLOY_COMMAND: ${{ inputs.deploy-command }}
+        run: bash -e -c "$DEPLOY_COMMAND"
