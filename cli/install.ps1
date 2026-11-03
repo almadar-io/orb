@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 # Default values
 $InstallDir = if ($env:ORB_INSTALL_DIR) { $env:ORB_INSTALL_DIR } else { "$HOME\.orb\bin" }
 $Version = if ($env:ORB_VERSION) { $env:ORB_VERSION } else { "latest" }
-$GitHubRepo = "almadar-io/almadar"
+$GitHubRepo = "almadar-io/orb"
 
 function Write-ColorOutput($ForegroundColor) {
     $fc = $host.UI.RawUI.ForegroundColor
