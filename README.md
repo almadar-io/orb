@@ -7,26 +7,37 @@
 
 # Orb
 
-### The rule is the program.
+### A programming language of composable state machines.
 
-Declare the rules. Orb builds the app, or tells you why it can't.
+Orb is a programming language in which every program is a composition of finite-state behaviors represented as data.
+The compiler checks every path, and one source compiles to five platforms.
 
-[Website](https://orb.almadar.io) · [Docs](https://orb.almadar.io/docs) · [Playground](https://orb.almadar.io/playground) · [Standard library](https://orb.almadar.io/stdlib) · [Blog](https://orb.almadar.io/blog)
+[Docs](https://orb.almadar.io/docs) · [Playground](https://orb.almadar.io/playground) · [Standard library](https://orb.almadar.io/stdlib) · [Blog](https://orb.almadar.io/blog)
 
 [![npm](https://img.shields.io/npm/v/@almadar/orb?label=%40almadar%2Forb)](https://www.npmjs.com/package/@almadar/orb)
 [![CI](https://github.com/almadar-io/orb/actions/workflows/ci.yml/badge.svg)](https://github.com/almadar-io/orb/actions/workflows/ci.yml)
 
 </div>
 
+## Getting started
+
 ```sh
-curl -fsSL https://orb.almadar.io/install.sh | sh          # macOS, Linux
-irm https://orb.almadar.io/install.ps1 | iex               # Windows PowerShell
-npm install -g @almadar/orb                                # or through npm
+npx -y @almadar/orb serve checkout.lolo     # run a program; nothing to install
+npm install -g @almadar/orb                 # or install orb
+curl -fsSL https://orb.almadar.io/install.sh | sh
 ```
 
-## Write the rule
+Or hand Orb to an agent. Orb provides a Model Context Protocol (MCP) server; any MCP-capable agent can run it through npx and use its tools to write and check programs:
 
-Most software is rules: an order cannot ship before it is paid, a refund needs a manager, a ticket must be answered within a day. In most codebases those rules are spread across the frontend, the API, the database and the tests, and they drift apart. In Orb the rule *is* the shape of the program.
+```text
+Build me a chat app in Orb.
+Orb runs through npx. Register its MCP server with `npx -y @almadar/orb mcp install --client <your client>`, or start it directly with `npx -y @almadar/orb mcp`.
+Then build with its tools: read `reference`, find behaviors with `behaviors` and `describe_behavior`, compose them, run `validate` until it reports 0 errors and 0 warnings, `play` the machine, and run it with `npx -y @almadar/orb serve <file>`.
+```
+
+## Programs as state machines
+
+An order that cannot ship before it is paid. Each step is a transition; the data (`entity`), the states, the events that move between them, the guard (`when`) and the screen at each step live in one file.
 
 `checkout.lolo`:
 
@@ -75,22 +86,41 @@ orbital Orders {
 }
 ```
 
-There is no `SHIP` out of `pending`, so an unpaid order cannot ship. That is not a test you hope someone wrote: it is the program. The data (`entity`), the states, the events that move between them, the guard (`when`) and the screen at each step live in one file, and the same file is the specification, the implementation and the input to verification.
+There is no `SHIP` out of `pending`, so an unpaid order cannot ship. That is not a test you hope someone wrote: it is the shape of the program, and the state diagram is generated from the same source.
 
-## Run it everywhere
+## Composition of library behaviors
 
-```sh
-orb validate checkout.lolo                       # 0 errors and 0 warnings is the bar
-orb verify checkout.lolo                         # play every transition and check it does what it declares
-orb serve checkout.lolo --open                   # run it in the browser
-orb compile checkout.lolo --output ./checkout    # a full application you can deploy
+You rarely write every state machine yourself. Each component on the screen is a library behavior: the application imports it and supplies its data, event names and configuration; the state machine is defined by the library.
+
+```lisp
+uses Browse from "std/behaviors/std-browse"
+uses Stats from "std/behaviors/std-stats"
+uses Graphs from "std/behaviors/std-graphs"
+
+trait DemoStockPageList = Browse.traits.BrowseItemBrowse -> DemoStockItem {
+  config {
+    browseLook: "dense"
+    searchField: "name"
+    orderBy: "position"
+    displayPageSize: 12
+    itemClickEvent: VIEW
+  }
+}
 ```
 
-One `.lolo` program, many hosts: a web app (TypeScript and React), a Python service, a native Rust desktop or terminal app, iOS (Swift) and Android (Kotlin). One kernel carries the meaning of the program on every one of them, so a rule behaves the same everywhere.
+The [standard library](https://orb.almadar.io/stdlib) covers lists, forms, wizards, dashboards, data tables, games and learning instruments, each one a `.lolo` file.
 
-## Every mistake gets a name and a line
+## Agents as behaviors
 
-Delete the `SHIP` transition and validate again:
+An assistant composed into an application uses the application's declared inputs as its tools. It acts as the signed-in user, through the same transitions as user interaction.
+
+- Each added module extends the assistant's available actions.
+- Guards and access rules apply to the assistant as they apply to a user.
+- The state machine, not the prompt, determines the outcome.
+
+## A closed vocabulary
+
+Orb has a fixed set of operators, UI patterns and validation codes, counted from the installed catalog. A model selects from this closed vocabulary rather than inventing an API, and each error is reported with a code, a source location and a suggested fix. Delete the `SHIP` transition and validate again:
 
 ```console
 $ orb validate checkout.lolo
@@ -101,18 +131,19 @@ $ orb validate checkout.lolo
 Error: Schema validation failed with 3 error(s)
 ```
 
-A button that sends an event nothing handles, a state you can never reach or leave, an event emitted to nobody, a page that renders nothing: all are errors before anything runs. Every interaction is a closed circuit, **Event → Guard → Transition → Effects → UI → Event**, and the compiler checks that each one closes.
+## Multilingual syntax
 
-## What you get
+A program can be written with English, Arabic or Slovenian keywords; all versions compile to the same code. Further languages can be added by the community as language packs ([lolo-ar](https://github.com/almadar-io/lolo-ar), [lolo-sl](https://github.com/almadar-io/lolo-sl)).
 
-- **A standard library of behaviors.** Lists, forms, wizards, dashboards, data tables, games and learning instruments, each one a `.lolo` file you import with `uses` and bind to your own data. [Browse it](https://orb.almadar.io/stdlib).
-- **Keywords in your language.** Programs read in English, Arabic or Slovenian; the language packs ([lolo-ar](https://github.com/almadar-io/lolo-ar), [lolo-sl](https://github.com/almadar-io/lolo-sl)) are installed packages, not forks.
-- **A playground.** Write and run Orb in the browser at [orb.almadar.io/playground](https://orb.almadar.io/playground), with each trait drawn as its state machine as it runs.
-- **Updates that keep up.** `orb update` keeps the CLI and its packages current; security and critical fixes apply automatically, everything else waits for you.
+## Compilation targets
+
+The compiler produces each of the following from the same `.lolo` source: **TypeScript + React**, **Python**, **Rust**, **Swift for iOS** and **Kotlin for Android**.
 
 ```sh
-orb update --global      # the CLI and its packages, in ~/.orb
-orb update               # this project's packages
+orb validate checkout.lolo                       # 0 errors and 0 warnings is the bar
+orb verify checkout.lolo                         # play every transition and check it does what it declares
+orb serve checkout.lolo --open                   # run it in the browser
+orb compile checkout.lolo --output ./checkout    # a full application you can deploy
 ```
 
 ## How it fits together
