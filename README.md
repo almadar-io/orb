@@ -177,7 +177,8 @@ CI runs test and build on push; `deploy.yml` deploys the site to Firebase Hostin
 
 ## Docs
 
-[orb.almadar.io/docs](https://orb.almadar.io/docs/getting-started/introduction), and in the monorepo [itechdom/kflow.ai](https://github.com/itechdom/kflow.ai): `docs/Almadar_Summary.md`, `docs/Almadar_Orbital_CLI.md`, `docs/Almadar_Execution_Semantics.md`.
+- [Orb documentation](https://orb.almadar.io/docs): the language, the `orb` CLI and how the pieces fit
+- [Getting started](https://orb.almadar.io/docs/getting-started/introduction)
 
 ## License
 
