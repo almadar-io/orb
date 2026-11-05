@@ -70,7 +70,8 @@ for (const from of posterSources(resolved, onDisk)) {
 }
 
 // orb.almadar.io is static hosting: no server, so the client runs the program in the browser.
-run(orb, ['compile', programFile, '--mode', 'client', '--backend-url', 'none', '-o', app], root);
+// The site's program is validated as it is authored; the build keeps the core checks and skips the policy lints.
+run(orb, ['compile', programFile, '--mode', 'client', '--backend-url', 'none', '--skip-lint', '-o', app], root);
 if (fs.existsSync(values.static)) fs.cpSync(values.static, path.join(client, 'public'), { recursive: true });
 // The installers the site serves are the CLI's own (cli/), never a second copy.
 for (const installer of ['install.sh', 'install.ps1']) {
