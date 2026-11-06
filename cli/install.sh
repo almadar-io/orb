@@ -211,7 +211,7 @@ install() {
     tar -xzf "$FILENAME"
   fi
 
-  # Install full distribution (binary + agent + bun)
+  # Install the binary
   echo "Installing to ${INSTALL_DIR}..."
   mkdir -p "$INSTALL_DIR"
 
@@ -227,30 +227,14 @@ install() {
       chmod +x "$INSTALL_DIR/almadar"
     fi
 
-    # Install Bun runtime (agent needs it)
-    if [ -f bun ]; then
-      mv bun "$INSTALL_DIR/"
-      chmod +x "$INSTALL_DIR/bun"
-    fi
-
-    # Install agent CLI bundle
-    if [ -d agent ]; then
-      mkdir -p "$INSTALL_DIR/agent"
-      cp -r agent/* "$INSTALL_DIR/agent/"
-    fi
-
 
     # Set orb up in the user store (~/.orb): the @almadar/core this orb pins,
     # @almadar/std, the first-party language packs, the TypeScript shell and
     # orb-desktop (`orb update --global`). Non-fatal: orb also does this on its
     # first command.
-    if [ -f "$INSTALL_DIR/bun" ]; then
-      if ! ORB_BUN_PATH="$INSTALL_DIR/bun" "$INSTALL_DIR/orb" update --global; then
-        echo ""
-        echo "${YELLOW}Could not set the language up now; orb will retry on its first command.${NC}"
-      fi
-    else
-      echo "${YELLOW}bun not installed; orb sets the language up on its first command once bun is available.${NC}"
+    if ! "$INSTALL_DIR/orb" update --global; then
+      echo ""
+      echo "${YELLOW}Could not set the language up now; orb will retry on its first command.${NC}"
     fi
   fi
 

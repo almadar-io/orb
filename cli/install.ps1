@@ -105,13 +105,6 @@ function Install-OrbCLI {
             }
         }
 
-        # Install Bun runtime next to orb, when the release bundles one (agent
-        # features need it).
-        $BunExePath = Get-ChildItem -Path $TempDir -Filter "bun.exe" -Recurse | Select-Object -First 1
-        if ($BunExePath) {
-            Copy-Item $BunExePath.FullName -Destination $InstallDir -Force
-        }
-
         Write-Output ""
         Write-ColorOutput Green "Orb CLI installed successfully!"
         Write-Output ""
@@ -120,15 +113,9 @@ function Install-OrbCLI {
         # pins, @almadar/std, the first-party language packs, the TypeScript shell
         # and orb-desktop (`orb update --global`). Non-fatal: orb
         # also sets the store up on its first command.
-        $BunPath = Join-Path $InstallDir "bun.exe"
-        if (Test-Path $BunPath) {
-            $env:ORB_BUN_PATH = $BunPath
-            & (Join-Path $InstallDir "orb.exe") update --global
-            if ($LASTEXITCODE -ne 0) {
-                Write-ColorOutput Yellow "Could not set the language up now; orb will retry on its first command."
-            }
-        } else {
-            Write-ColorOutput Yellow "bun not installed; orb sets the language up on its first command once bun is available."
+        & (Join-Path $InstallDir "orb.exe") update --global
+        if ($LASTEXITCODE -ne 0) {
+            Write-ColorOutput Yellow "Could not set the language up now; orb will retry on its first command."
         }
 
         # Check if in PATH
