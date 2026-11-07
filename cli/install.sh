@@ -229,12 +229,11 @@ install() {
 
 
     # Set orb up in the user store (~/.orb): the @almadar/core this orb pins,
-    # @almadar/std, the first-party language packs, the TypeScript shell and
-    # orb-desktop (`orb update --global`). Non-fatal: orb also does this on its
-    # first command.
+    # @almadar/std, the first-party language packs and the TypeScript shell
+    # (`orb update --global`). Non-fatal: it can be run again by hand.
     if ! "$INSTALL_DIR/orb" update --global; then
       echo ""
-      echo "${YELLOW}Could not set the language up now; orb will retry on its first command.${NC}"
+      echo "${YELLOW}Could not set the language up now; run 'orb update --global' to finish.${NC}"
     fi
   fi
 

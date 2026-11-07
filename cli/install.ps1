@@ -110,12 +110,11 @@ function Install-OrbCLI {
         Write-Output ""
 
         # Set the language up in the user store (~/.orb): the @almadar/core this orb
-        # pins, @almadar/std, the first-party language packs, the TypeScript shell
-        # and orb-desktop (`orb update --global`). Non-fatal: orb
-        # also sets the store up on its first command.
+        # pins, @almadar/std, the first-party language packs and the TypeScript
+        # shell (`orb update --global`). Non-fatal: it can be run again by hand.
         & (Join-Path $InstallDir "orb.exe") update --global
         if ($LASTEXITCODE -ne 0) {
-            Write-ColorOutput Yellow "Could not set the language up now; orb will retry on its first command."
+            Write-ColorOutput Yellow "Could not set the language up now; run orb update --global to finish."
         }
 
         # Check if in PATH
