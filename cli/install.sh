@@ -218,20 +218,17 @@ install() {
   if [ "$PLATFORM" = "windows" ]; then
     mv orb.exe "$INSTALL_DIR/"
   else
-    mv orb "$INSTALL_DIR/"
-    chmod +x "$INSTALL_DIR/orb"
-
-    # Install symlink
-    if [ -f almadar ]; then
-      mv almadar "$INSTALL_DIR/"
-      chmod +x "$INSTALL_DIR/almadar"
-    fi
-
-
-    # Set orb up in the user store (~/.orb): the @almadar/core this orb pins,
-    # @almadar/std, the first-party language packs and the TypeScript shell
-    # (`orb update --global`). Non-fatal: it can be run again by hand.
-    if ! "$INSTALL_DIR/orb" update --global; then
+    # The store (~/.orb) holds the one orb binary, as @almadar/orb-<platform>;
+    # `orb update --global` installs it there with the language, and bin/orb
+    # points at it, so an update replaces the only copy.
+    chmod +x orb
+    STORE_ORB="$HOME/.orb/node_modules/@almadar/orb-${PLATFORM_ARCH}/orb"
+    rm -f "$INSTALL_DIR/almadar"
+    if ./orb update --global && [ -x "$STORE_ORB" ]; then
+      rm -f "$INSTALL_DIR/orb"
+      ln -s "$STORE_ORB" "$INSTALL_DIR/orb"
+    else
+      mv orb "$INSTALL_DIR/orb"
       echo ""
       echo "${YELLOW}Could not set the language up now; run 'orb update --global' to finish.${NC}"
     fi
