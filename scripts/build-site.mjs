@@ -5,10 +5,14 @@
  * every route the compiler listed, and copy the static files beside it.
  *
  * Usage: node scripts/build-site.mjs --organism <name> --origin <https://site>
- *          [--static static] [--studio-release src/data/studio-release.json] [--out build] [--recapture-posters]
+ *          [--static static] [--studio-release src/data/studio-release.json] [--out build] [--recapture-posters] [--web-client]
  * Demos shown as images (`presentation: "image"`) get their posters captured from their demo
  * behavior into the static dir when missing (or always, with --recapture-posters).
  * The compiler is the installed @almadar/orb (node_modules/.bin/orb), or ORB_BIN.
+ *
+ * --web-client ships the compiler's own prebuilt client instead of vite-building the generated app against the
+ * installed packages: under a development ORB_BIN that is the local build of the shell and the kernel, for a site
+ * that needs language work no release carries yet.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -23,6 +27,7 @@ const { values } = parseArgs({
     static: { type: 'string', default: 'static' },
     'studio-release': { type: 'string' },
     out: { type: 'string', default: 'build' },
+    'web-client': { type: 'boolean', default: false },
     'recapture-posters': { type: 'boolean', default: false },
   },
 });
@@ -71,19 +76,24 @@ for (const from of posterSources(resolved, onDisk)) {
 
 // orb.almadar.io is static hosting: no server, so the client runs the program in the browser.
 // The site's program is validated as it is authored; the build keeps the core checks and skips the policy lints.
-run(orb, ['compile', programFile, '--mode', 'client', '--backend-url', 'none', '--skip-lint', '-o', app], root);
-if (fs.existsSync(values.static)) fs.cpSync(values.static, path.join(client, 'public'), { recursive: true });
+const prebuilt = values['web-client'];
+run(orb, ['compile', programFile, '--mode', 'client', '--backend-url', 'none', '--skip-lint', ...(prebuilt ? ['--web-client'] : []), '-o', app], root);
+// the files the site serves as they are: vite copies `public` into its build, the prebuilt client takes them directly
+const dist = prebuilt ? path.join(app, 'web-client') : path.join(client, 'dist');
+const served = prebuilt ? dist : path.join(client, 'public');
+if (fs.existsSync(values.static)) fs.cpSync(values.static, served, { recursive: true });
 // The installers the site serves are the CLI's own (cli/), never a second copy.
 for (const installer of ['install.sh', 'install.ps1']) {
-  fs.copyFileSync(path.join(import.meta.dirname, '..', 'cli', installer), path.join(client, 'public', installer));
+  fs.copyFileSync(path.join(import.meta.dirname, '..', 'cli', installer), path.join(served, installer));
 }
 run('pnpm', ['install', '--no-frozen-lockfile'], app);
 run('pnpm', ['exec', 'playwright', 'install', 'chromium'], client);
 // 174 routes in one bundle: the default heap runs out mid-chunking.
-run('pnpm', ['exec', 'vite', 'build', '--logLevel', 'warn'], client, { ...process.env, NODE_OPTIONS: '--max-old-space-size=6144' });
-run('node', ['scripts/route-documents.mjs', '--manifest', path.join(app, 'routes.json'), '--dist', 'dist'], client);
-run('node', ['scripts/prerender.mjs', '--routes', path.join(app, 'routes.json'), '--origin', values.origin, '--dist', 'dist'], client);
+if (!prebuilt) run('pnpm', ['exec', 'vite', 'build', '--logLevel', 'warn'], client, { ...process.env, NODE_OPTIONS: '--max-old-space-size=6144' });
+const distArg = path.relative(client, dist);
+run('node', ['scripts/route-documents.mjs', '--manifest', path.join(app, 'routes.json'), '--dist', distArg], client);
+run('node', ['scripts/prerender.mjs', '--routes', path.join(app, 'routes.json'), '--origin', values.origin, '--dist', distArg], client);
 
 fs.rmSync(out, { recursive: true, force: true });
-fs.cpSync(path.join(client, 'dist'), out, { recursive: true });
+fs.cpSync(dist, out, { recursive: true });
 console.log(`[build-site] ${values.organism} → ${path.relative(root, out)}`);
