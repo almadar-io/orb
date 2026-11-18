@@ -94,6 +94,8 @@ const distArg = path.relative(client, dist);
 run('node', ['scripts/route-documents.mjs', '--manifest', path.join(app, 'routes.json'), '--dist', distArg], client);
 run('node', ['scripts/prerender.mjs', '--routes', path.join(app, 'routes.json'), '--origin', values.origin, '--dist', distArg], client);
 
+// a picture of each route for the first paint, and preload hints for the engine and the program
+run('node', [path.join(import.meta.dirname, 'site-posters.mjs'), '--dist', dist, '--routes', path.join(app, 'routes.json'), '--client', client], root);
 fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(dist, out, { recursive: true });
 console.log(`[build-site] ${values.organism} → ${path.relative(root, out)}`);
